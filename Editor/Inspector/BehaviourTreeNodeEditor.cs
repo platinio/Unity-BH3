@@ -1,0 +1,28 @@
+﻿using Unity.VisualScripting;
+using UnityEngine;
+
+namespace Platinio.BehaviourTree
+{
+    [Editor(typeof(BehaviourTreeNode))]
+    public class BehaviourTreeNodeEditor : Inspector
+    {
+        public BehaviourTreeNodeEditor(Metadata metadata) : base(metadata)
+        {
+        }
+
+        protected override float GetHeight(float width, GUIContent label)
+        {
+            return 200.0f;
+        }
+
+        protected override void OnGUI(Rect position, GUIContent label)
+        {
+            Vector2 margin = new Vector2(15.0f, 20.0f);
+            
+            position.size -= margin;
+            position.position += margin * 0.5f;
+            
+            LudiqGUI.Inspector(metadata, position, GUIContent.none);
+        }
+    }
+}
