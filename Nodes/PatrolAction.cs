@@ -17,6 +17,9 @@ namespace Platinio.BehaviourTree
 
         [Serialize] [Inspectable]
         private BooleanBlackboardVariable m_test = new BooleanBlackboardVariable();
+        
+        [Serialize] [Inspectable]
+        private float aFloatValue = 10;
 
         public override void OnAwake()
         {
