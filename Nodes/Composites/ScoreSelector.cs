@@ -13,19 +13,30 @@ namespace Platinio.BehaviourTree
         public override void OnEnter()
         {
             float maxScore = float.MinValue;
+            int selectedVariableScoreIndex = -1;
             
             for (int n = 0; n < GetChildren().Count; n++)
             {
                 var child = GetChildren()[n];
-                float score = child.CalculateScore();
+                float score = child.CalculateScore(out int bestVariableScoreIndex);
 
                 if (score > maxScore)
                 {
+                    selectedVariableScoreIndex = bestVariableScoreIndex;
                     m_selectedChildIndex = n;
                     maxScore = score;
                 }
             }
+            
+            OnTraverseChildren(selectedVariableScoreIndex);
         }
+
+        private void OnTraverseChildren(int bestScoreIndex)
+        {
+            if (GetChildren().Count == 0) return;
+            GetChildren()[m_selectedChildIndex].OnTraverse(bestScoreIndex);
+        }
+
 
         public override ExecutionStatus OnUpdate()
         {

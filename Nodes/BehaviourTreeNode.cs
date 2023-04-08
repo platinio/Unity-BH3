@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Platinio.AI;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
+using UnityEngine;
 
 namespace Platinio.BehaviourTree
 {
@@ -10,13 +11,18 @@ namespace Platinio.BehaviourTree
     /// </summary>
     public class BehaviourTreeNode : BaseGraphNode<BehaviourTreeGraph, BehaviourTreeNode, BehaviourTreeTransition>
     {
-        [Serialize] [Inspectable] protected List<ScoredCondition> m_scoredConditions;
+        [Serialize] [Inspectable] protected ConditionScorePackage m_scoredConditions;
 
         private AIScoreEvaluator m_scoreEvaluator = new();
 
-        public float CalculateScore()
+        public float CalculateScore(out int bestVariableScoreIndex)
         {
-            return m_scoreEvaluator.CalculateScore(Machine.VariableDeclarations, m_scoredConditions);
+            return m_scoreEvaluator.CalculateScore(Machine.VariableDeclarations, m_scoredConditions.ScoredConditions, out bestVariableScoreIndex);
+        }
+
+        public void OnTraverse(int bestScoreIndex)
+        {
+            m_scoredConditions.OnTraverse(Machine.VariableDeclarations, bestScoreIndex);
         }
     }
 
