@@ -15,20 +15,10 @@ namespace Platinio.BehaviourTree
         
         public BehaviourTreeGraph()
         {
-            Transitions = new GraphConnectionCollection<BehaviourTreeTransition, BehaviourTreeNode, BehaviourTreeNode>(this);
-            Groups = new GraphElementCollection<GraphGroup>(this);
-            Sticky = new GraphElementCollection<StickyNote>(this);
-            Nodes = new GraphElementCollection<BehaviourTreeNode>(this);
-
             m_entryNode = new Entry();
             m_entryNode.Position = new Rect(new Vector2(-100, -15), m_entryNode.StartingSize);
 
             Nodes.Add(m_entryNode);
-
-            elements.Include(Transitions);
-            elements.Include(Groups);
-            elements.Include(Sticky);
-            elements.Include(Nodes);
         }
 
         public override IGraphData CreateData()
