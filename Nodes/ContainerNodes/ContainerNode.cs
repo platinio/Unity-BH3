@@ -28,6 +28,7 @@ namespace Platinio.BehaviourTree
 
         public virtual void SortChildren()
         {
+            if (m_children == null || m_children.Count == 0) return;
             m_children = m_children.OrderBy(x => x.Position.x).ToList();
         }
 

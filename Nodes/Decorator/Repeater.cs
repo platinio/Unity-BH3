@@ -11,6 +11,8 @@ namespace Platinio.BehaviourTree
 
         public override ExecutionStatus OnUpdate()
         {
+            if (GetChildren().Count == 0) return ExecutionStatus.Success; 
+            
             var task = GetChildren()[0];
             var result = task.OnUpdate();
 
