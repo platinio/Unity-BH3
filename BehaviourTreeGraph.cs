@@ -84,6 +84,13 @@ namespace Platinio.BehaviourTree
         {
             ConvertTransitionNodesIntoTaskNodeChild();
             SortContainerNodesChildren();
+            
+            var nodes = Nodes;
+
+            foreach (var node in nodes)
+            {
+                node.OnAwake();
+            }
         }
 
         public override void OnEnter()

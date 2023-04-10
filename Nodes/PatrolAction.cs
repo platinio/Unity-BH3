@@ -5,31 +5,34 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviourTree
 {
-    [GraphCreateMenu("Action/Create Patrol")]
-    public class PatrolAction : ActionNode
+    [GraphCreateMenu("Gameplay/Create Patrol")]
+    public class PatrolAction : GameplayNode
     {
         public override string NodeName => "Patrol";
         protected override string NodeIconPath => "NodeIcons/Patrol";
         private NavMeshAgent m_navMhesAgent;
         
-        [Serialize] [Inspectable]
-        private float m_patrolRange = 10;
+        [Serialize] [Inspectable] private string m_minPatrolDistanceKey = "MinPatrolDistance";
+        [Serialize] [Inspectable] private string m_maxPatrolDistanceKey = "MaxPatrolDistance";
+        [Serialize] [Inspectable] private string m_distanceToNavTarget = "DistanceToNavTarget";
 
-        [Serialize] [Inspectable]
-        private BooleanBlackboardVariable m_test = new BooleanBlackboardVariable();
-        
-        [Serialize] [Inspectable]
-        private float aFloatValue = 10;
 
         public override void OnAwake()
         {
             m_navMhesAgent = GetComponent<NavMeshAgent>();
-            m_patrolRange = 25.0f;
         }
 
         public override void OnEnter()
         {
-            m_navMhesAgent.SetDestination(GetRandomPointInsideNavMesh());
+            Vector2 direction = new Vector2(Random.Range(-1, 1), Random.Range(-1, 1));
+            direction.Normalize();
+
+            float minPatrolDistance = VariableDeclarations.Get<float>(m_minPatrolDistanceKey);
+            float maxPatrolDistance = VariableDeclarations.Get<float>(m_maxPatrolDistanceKey);
+            float distance = Random.Range(minPatrolDistance, maxPatrolDistance);
+            Vector3 patrolPosition = transform.position + (new Vector3(direction.x, 0.0f, direction.y) * distance);
+            
+            m_navMhesAgent.SetDestination(patrolPosition);
         }
 
         public override ExecutionStatus OnUpdate()
@@ -38,15 +41,6 @@ namespace Platinio.BehaviourTree
 
             bool isComplete = Vector3.Distance(m_navMhesAgent.destination, transform.position) < 0.25f;
             return isComplete ? ExecutionStatus.Success : ExecutionStatus.Running;
-        }
-
-        private Vector3 GetRandomPointInsideNavMesh()
-        {
-            Vector3 dir = Random.insideUnitSphere;
-            dir.y = 0.0f;
-            Vector3 position = dir * m_patrolRange;
-            return transform.position + position;
-
         }
     }
 }

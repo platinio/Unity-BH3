@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace Platinio.BehaviourTree
 {
-    [GraphCreateMenu("Action/Create Idle")]
-    public class IdleTask : ActionNode
+    [GraphCreateMenu("Gameplay/Create Idle")]
+    public class IdleTask : GameplayNode
     {
         public override string NodeName => "Idle";
         protected override string NodeIconPath => "NodeIcons/Idle";

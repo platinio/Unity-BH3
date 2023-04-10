@@ -1,4 +1,5 @@
 ﻿using System;
+using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -25,7 +26,7 @@ namespace Platinio.BehaviourTree
 
         [Serialize] private bool m_foldout;
         
-        public T GetValue(BehaviourTreeMachine machine)
+        public T GetValue(IGraphMachine machine)
         {
             T result = m_defaultValue;
             
@@ -51,7 +52,7 @@ namespace Platinio.BehaviourTree
             return result;
         }
         
-        private bool TryGetValue(BlackboardVariableType variableType, BehaviourTreeMachine machine, out T value)
+        private bool TryGetValue(BlackboardVariableType variableType, IGraphMachine machine, out T value)
         {
             value = m_defaultValue;
             switch (variableType)
@@ -71,7 +72,7 @@ namespace Platinio.BehaviourTree
             return false;
         }
 
-        private bool TryGetValueDynamic(BehaviourTreeMachine machine, out T value)
+        private bool TryGetValueDynamic(IGraphMachine machine, out T value)
         {
             value = m_defaultValue;
             var variableTypes = (BlackboardVariableType[])Enum.GetValues(typeof(BlackboardVariableType));
@@ -86,7 +87,7 @@ namespace Platinio.BehaviourTree
             return false;
         }
 
-        private bool TryGetValueFromObject(BehaviourTreeMachine machine, out T value)
+        private bool TryGetValueFromObject(IGraphMachine machine, out T value)
         {
             value = m_defaultValue;
             

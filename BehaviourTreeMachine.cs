@@ -20,15 +20,16 @@ namespace Platinio.BehaviourTree
                 nest.SwitchToEmbed(Instantiate(nest.macro).graph);
                 m_graph = nest.embed;
                 
-                m_graph.OnAwake();
-                
                 var nodes = m_graph.Nodes;
 
                 foreach (var node in nodes)
                 {
                     node.SetMachine(this);
-                    node.OnNodeAwake();
                 }
+                
+                m_graph.OnAwake();
+                
+                
             }
         }
 

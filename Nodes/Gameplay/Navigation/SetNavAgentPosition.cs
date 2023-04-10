@@ -1,0 +1,51 @@
+using Platinio.GraphCore;
+using Unity.VisualScripting;
+using UnityEngine.AI;
+
+namespace Platinio.BehaviourTree
+{
+    [GraphCreateMenu("Gameplay/Navigation/Generate Path")]
+    public class SetNavAgentPosition : GameplayNode
+    {
+        [Serialize] [Inspectable] private Vector3BlackboardVariable m_targetPosition= new Vector3BlackboardVariable();
+
+        public override string NodeName => "Set Nav Agent Position";
+
+        private NavMeshAgent m_navAgent = null;
+
+        public override void OnAwake()
+        {
+            m_navAgent = GetComponent<NavMeshAgent>();
+        }
+
+        public override void OnEnter()
+        {
+            //m_navAgent.updatePosition = false;
+            //m_navAgent.updateRotation = false;
+            
+            m_navAgent.ResetPath();
+            TryUpdateNavAgentPosition();
+        }
+
+        public override ExecutionStatus OnUpdate()
+        {
+            if (m_navAgent.pathPending) return ExecutionStatus.Running;
+            if (m_navAgent.pathStatus == NavMeshPathStatus.PathComplete) return ExecutionStatus.Success;
+
+            return ExecutionStatus.Failure;
+        }
+
+        public override void OnExit()
+        {
+            //m_navAgent.Warp(transform.position);
+            //m_navAgent.updatePosition = true;
+            //m_navAgent.updateRotation = true;
+        }
+
+        private void TryUpdateNavAgentPosition()
+        {
+            m_navAgent.SetDestination(m_targetPosition.GetValue(Machine));
+        }
+    }
+}
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -6,10 +6,10 @@ using ColorUtility = UnityEngine.ColorUtility;
 
 namespace Platinio.BehaviourTree
 {
-    [Inspector(typeof(BooleanBlackboardVariable))]
-    public class BooleanBlackboardVariableInspector : Inspector
+    [Inspector(typeof(Vector3BlackboardVariable))]
+    public class Vector3BlackboardVariableInspector : Inspector
     {
-        public BooleanBlackboardVariableInspector(Metadata metadata) : base(metadata)
+        public Vector3BlackboardVariableInspector(Metadata metadata) : base(metadata)
         {
            
         }
@@ -70,13 +70,14 @@ namespace Platinio.BehaviourTree
                 EditorGUI.LabelField(labelRect, "Name");
                 variableName = EditorGUI.TextField(valueRect, variableName);
             
-                var variableDefaultValue = Convert.ToBoolean(metadata["m_defaultValue"].value);
+                //fix default value
+                var variableDefaultValue = Vector3.zero;
             
                 CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
                 valueRect.size -= indentOffset;
                 valueRect.size += sizeOffset;
                 EditorGUI.LabelField(labelRect, "Default Value");
-                variableDefaultValue = EditorGUI.Toggle(valueRect, variableDefaultValue);
+                variableDefaultValue = EditorGUI.Vector3Field(valueRect, GUIContent.none, variableDefaultValue);
 
                 metadata.RecordUndo();
                 metadata["m_variableType"].value = selectedVariableType;

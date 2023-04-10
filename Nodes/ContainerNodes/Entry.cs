@@ -1,4 +1,5 @@
 ﻿using Platinio.GraphCore;
+using Unity.VisualScripting;
 
 namespace Platinio.BehaviourTree
 {
@@ -12,9 +13,12 @@ namespace Platinio.BehaviourTree
 
         public override bool CanDelete => false;
         public override int MaxChildren => 1;
+
+        private bool m_isComplete = false;
         
         public override void OnEnter()
         {
+            m_isComplete = false;
             foreach (var children in GetChildren())
             {
                 children.OnNodeEnter();
@@ -31,10 +35,18 @@ namespace Platinio.BehaviourTree
 
         public override ExecutionStatus OnUpdate()
         {
+            if (m_isComplete) return ExecutionStatus.Success;
+            
             if (CanExecute)
             {
-                if (GetChildren().Count == 0) return ExecutionStatus.Success;
-                return GetChildren()[0].OnUpdate();
+                if (GetChildren().Count == 0)
+                {
+                    m_isComplete = true;
+                    return ExecutionStatus.Success;
+                }
+                
+                var result =  GetChildren()[0].OnUpdate();
+                m_isComplete = result == ExecutionStatus.Success || result == ExecutionStatus.Failure;
             }
 
             return ExecutionStatus.Failure;
