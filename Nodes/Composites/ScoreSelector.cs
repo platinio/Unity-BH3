@@ -28,6 +28,7 @@ namespace Platinio.BehaviourTree
                 }
             }
             
+            GetChildren()[m_selectedChildIndex].OnNodeEnter();
             OnTraverseChildren(selectedVariableScoreIndex);
         }
 

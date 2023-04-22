@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Platinio.GraphCore;
-using Unity.VisualScripting;
 
 namespace Platinio.BehaviourTree
 {
@@ -32,7 +31,7 @@ namespace Platinio.BehaviourTree
             m_children = m_children.OrderBy(x => x.Position.x).ToList();
         }
 
-        protected List<BehaviourTreeNode> GetChildren()
+        public List<BehaviourTreeNode> GetChildren()
         {
             if (m_children == null) m_children = new List<BehaviourTreeNode>();
             return m_children;

@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviourTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Generate Path")]
+    [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
         [Serialize] [Inspectable] private Vector3BlackboardVariable m_targetPosition= new Vector3BlackboardVariable();
@@ -22,7 +22,8 @@ namespace Platinio.BehaviourTree
         {
             //m_navAgent.updatePosition = false;
             //m_navAgent.updateRotation = false;
-            
+
+            m_navAgent.isStopped = false;
             m_navAgent.ResetPath();
             TryUpdateNavAgentPosition();
         }
