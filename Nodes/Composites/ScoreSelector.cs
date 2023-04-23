@@ -1,4 +1,5 @@
-﻿using Platinio.GraphCore;
+﻿using Platinio.AI;
+using Platinio.GraphCore;
 
 namespace Platinio.BehaviourTree
 {
@@ -12,30 +13,28 @@ namespace Platinio.BehaviourTree
         
         public override void OnEnter()
         {
-            float maxScore = float.MinValue;
-            int selectedVariableScoreIndex = -1;
-            
+            DecisionScoreResult maxScoreResult = default;
+
             for (int n = 0; n < GetChildren().Count; n++)
             {
                 var child = GetChildren()[n];
-                float score = child.CalculateScore(out int bestVariableScoreIndex);
+                var scoreResult = child.CalculateScore();
 
-                if (score > maxScore)
+                if (scoreResult.Value > maxScoreResult.Value)
                 {
-                    selectedVariableScoreIndex = bestVariableScoreIndex;
+                    maxScoreResult = scoreResult;
                     m_selectedChildIndex = n;
-                    maxScore = score;
                 }
             }
             
             GetChildren()[m_selectedChildIndex].OnNodeEnter();
-            OnTraverseChildren(selectedVariableScoreIndex);
+            OnTraverseChildren(maxScoreResult);
         }
 
-        private void OnTraverseChildren(int bestScoreIndex)
+        private void OnTraverseChildren(DecisionScoreResult scoreResult)
         {
             if (GetChildren().Count == 0) return;
-            GetChildren()[m_selectedChildIndex].OnTraverse(bestScoreIndex);
+            GetChildren()[m_selectedChildIndex].OnTraverse(scoreResult);
         }
 
 

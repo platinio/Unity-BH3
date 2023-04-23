@@ -1,3 +1,4 @@
+using Platinio.AI;
 using Platinio.GraphCore;
 
 namespace Platinio.BehaviourTree
@@ -7,13 +8,12 @@ namespace Platinio.BehaviourTree
     /// </summary>
     public class BehaviourTreeNode : BaseGraphNode<BehaviourTreeGraph, BehaviourTreeNode, BehaviourTreeTransition>
     {
-        public virtual float CalculateScore(out int bestVariableScoreIndex)
+        public virtual DecisionScoreResult CalculateScore()
         {
-            bestVariableScoreIndex = 0;
-            return 0.0f;
+            return default;
         }
 
-        public virtual void OnTraverse(int bestScoreIndex) { }
+        public virtual void OnTraverse(DecisionScoreResult decisionScoreResult) { }
     }
 
 }

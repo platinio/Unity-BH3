@@ -5,10 +5,8 @@ namespace Platinio.BehaviourTree
 {
     public class Composite : ContainerNode
     {
-        [Serialize] [Inspectable] protected ConditionScorePackage m_scoredConditions;
+        [Serialize] [Inspectable] protected ScriptableDecision m_scriptableDecision;
 
-        private AIScoreEvaluator m_scoreEvaluator = new();
-        
         protected int m_currentExecutingChildIndex = 0;
        
         public override void OnAwake()
@@ -21,14 +19,14 @@ namespace Platinio.BehaviourTree
             
         }
         
-        public override float CalculateScore(out int bestVariableScoreIndex)
+        public override DecisionScoreResult CalculateScore()
         {
-            return m_scoreEvaluator.CalculateScore(Machine.VariableDeclarations, m_scoredConditions.ScoredConditions, out bestVariableScoreIndex);
+            return m_scriptableDecision.Evaluate(Machine.VariableDeclarations);
         }
 
-        public override void OnTraverse(int bestScoreIndex)
+        public override void OnTraverse(DecisionScoreResult scoreResult)
         {
-            m_scoredConditions.OnTraverse(Machine.VariableDeclarations, bestScoreIndex);
+            m_scriptableDecision.OnTakeDecision(Machine.VariableDeclarations, scoreResult);
         }
     }
 }
