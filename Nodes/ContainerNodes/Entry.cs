@@ -49,7 +49,7 @@ namespace Platinio.BehaviourTree
                 m_isComplete = result == ExecutionStatus.Success || result == ExecutionStatus.Failure;
             }
 
-            return ExecutionStatus.Failure;
+            return ExecutionStatus.Running;
         }
     }
 }
