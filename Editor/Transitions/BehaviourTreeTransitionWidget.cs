@@ -11,6 +11,8 @@ namespace Platinio.BehaviourTree
     {
         public BehaviourTreeTransitionWidget(BehaviourTreeCanvas canvas, BehaviourTreeTransition element) : base(canvas, element)
         {
+            if (element.PlaceHolderNodes != null && element.PlaceHolderNodes.Count > 0) return;
+            
             element.PlaceHolderNodes = new List<PlaceHolderNode>();
             
             for (int n = 0; n < TRANSITION_SECTION_COUNT; n++)
@@ -55,11 +57,24 @@ namespace Platinio.BehaviourTree
         {
             base.HandleInput();
 
+            bool placeHolderNodeIsSelected = false;
+            
             foreach (var placeHolderNode in element.PlaceHolderNodes)
             {
-                if (placeHolderNode.IsSelected && !isSelected)
+                if (placeHolderNode.IsSelected)
                 {
-                    selection.Add(element);
+                    placeHolderNodeIsSelected = true;
+                    break;
+                }
+            }
+
+            if (placeHolderNodeIsSelected)
+            {
+                if (!selection.Contains(element)) selection.Add(element);
+
+                foreach (var placeHolderNode in element.PlaceHolderNodes)
+                {
+                    if (!placeHolderNode.IsSelected) selection.Add(placeHolderNode);
                 }
             }
         }
@@ -179,7 +194,7 @@ namespace Platinio.BehaviourTree
                         assignedTransitionAxis = true;
                     }
 
-                    siblingStateTransitions.Add(graphTransition as BehaviourTreeTransition);
+                    siblingStateTransitions.Add(graphTransition);
                 }
             }
 

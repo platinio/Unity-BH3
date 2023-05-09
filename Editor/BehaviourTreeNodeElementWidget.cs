@@ -94,7 +94,7 @@ namespace Platinio.BehaviourTree
         public override void CachePosition()
         {
             base.CachePosition();
-           
+            
             if (!element.IsVisible) return;
 
             var edgeOrigin = element.Position.position;
