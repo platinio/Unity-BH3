@@ -24,23 +24,36 @@ namespace Platinio.BehaviourTree
 
         public override void OnEnter()
         {
-            Vector2 direction = new Vector2(Random.Range(-1, 1), Random.Range(-1, 1));
+           SetRandomPatrolPosition();
+        }
+
+        private void SetRandomPatrolPosition()
+        {
+            
+            Vector2 direction = Random.insideUnitCircle;
             direction.Normalize();
 
             float minPatrolDistance = VariableDeclarations.Get<float>(m_minPatrolDistanceKey);
             float maxPatrolDistance = VariableDeclarations.Get<float>(m_maxPatrolDistanceKey);
             float distance = Random.Range(minPatrolDistance, maxPatrolDistance);
             Vector3 patrolPosition = transform.position + (new Vector3(direction.x, 0.0f, direction.y) * distance);
-            
+
+            m_navMhesAgent.isStopped = false;
             m_navMhesAgent.SetDestination(patrolPosition);
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            if (m_navMhesAgent.pathPending || m_navMhesAgent.pathStatus != NavMeshPathStatus.PathComplete) return ExecutionStatus.Running;
+            if (m_navMhesAgent.pathPending) return ExecutionStatus.Running;
+            if (m_navMhesAgent.pathStatus != NavMeshPathStatus.PathComplete)
+            {
+                SetRandomPatrolPosition();
+                return ExecutionStatus.Running;
+            }
 
             bool isComplete = Vector3.Distance(m_navMhesAgent.destination, transform.position) < 0.25f;
             return isComplete ? ExecutionStatus.Success : ExecutionStatus.Running;
         }
+
     }
 }
