@@ -15,13 +15,17 @@ namespace Platinio.BehaviourTree
         [Serialize] [Inspectable] private int m_layer = 0;
         [Serialize] [Inspectable] private float m_normalizeTransitionDiration = 0.15f;
         [Serialize] [Inspectable] private float m_normalizeTimeOffset = 0.0f;
+        [Serialize] [Inspectable] private float m_rotationSpeed = 10.0f;
+        [Serialize] [Inspectable] private Vector3 m_rotOffset = Vector3.zero;
         
         public override string NodeName => "Physical Attack";
 
+        private bool m_physicalAttackStarted = false;
         private bool m_physicalAttackEnd = false;
 
         public override void OnEnter()
         {
+            m_physicalAttackStarted = false;
             m_physicalAttackEnd = false;
             
             PlayAnimation();
@@ -34,6 +38,7 @@ namespace Platinio.BehaviourTree
 
         private void OnPhysicalAttackStart(AnimationEvent animationEvent)
         {
+            m_physicalAttackStarted = true;
             var entity = VariableDeclarations.Get<IAIEntity>("Entity");
             var physicalWeapons = entity.Weapons;
 
@@ -83,8 +88,21 @@ namespace Platinio.BehaviourTree
 
         public override ExecutionStatus OnUpdate()
         {
+            if (!m_physicalAttackStarted) FaceAttackTarget();
             if (m_physicalAttackEnd) return ExecutionStatus.Success;
             return ExecutionStatus.Running;
+        }
+
+        private void FaceAttackTarget()
+        {
+            if (!VariableDeclarations.IsDefined("TargetAttackEntity")) return;
+
+            var targetAttackEntity = VariableDeclarations.Get<IAIEntity>("TargetAttackEntity");
+            Vector3 targetPosition = targetAttackEntity.transform.position;
+            targetPosition.y = transform.position.y;
+            Vector3 dir = (targetPosition - transform.position).normalized;
+            Quaternion desireRot = Quaternion.LookRotation(dir);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, desireRot * Quaternion.Euler(m_rotOffset), m_rotationSpeed * Time.deltaTime);
         }
 
         public override void OnExit()

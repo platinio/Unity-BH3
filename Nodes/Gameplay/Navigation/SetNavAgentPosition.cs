@@ -20,8 +20,8 @@ namespace Platinio.BehaviourTree
 
         public override void OnEnter()
         {
-            //m_navAgent.updatePosition = false;
-            //m_navAgent.updateRotation = false;
+            m_navAgent.updatePosition = true;
+            m_navAgent.updateRotation = true;
 
             m_navAgent.isStopped = false;
             m_navAgent.ResetPath();
