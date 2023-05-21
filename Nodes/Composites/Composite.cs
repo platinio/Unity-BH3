@@ -21,12 +21,7 @@ namespace Platinio.BehaviourTree
         
         public override DecisionScoreResult CalculateScore()
         {
-            return m_scriptableDecision.Evaluate(Machine.VariableDeclarations);
-        }
-
-        public override void OnTraverse(DecisionScoreResult scoreResult)
-        {
-            m_scriptableDecision.OnTakeDecision(Machine.VariableDeclarations, scoreResult);
+            return m_scriptableDecision.Evaluate(Machine.gameObject.GetComponent<IAIEntity>());
         }
     }
 }

@@ -107,6 +107,7 @@ namespace Platinio.BehaviourTree
 
         public override void OnExit()
         {
+            OnPhysicalAttackEnd(null);
             if (!VariableDeclarations.IsDefined("AnimationEventListener")) return;
             
             var animationEventListener = VariableDeclarations.Get<AnimationEventListener>("AnimationEventListener");
