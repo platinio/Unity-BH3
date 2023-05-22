@@ -27,6 +27,7 @@ namespace Platinio.BehaviourTree
                 }
             }
             
+            Machine.VariableDeclarations.Set("DecisionScoreResult", maxScoreResult);
             GetChildren()[m_selectedChildIndex].OnNodeEnter();
             OnTraverseChildren(maxScoreResult);
         }
