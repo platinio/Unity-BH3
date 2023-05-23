@@ -88,7 +88,7 @@ namespace Platinio.BehaviourTree
 
         public override ExecutionStatus OnUpdate()
         {
-            if (!m_physicalAttackStarted) FaceAttackTarget();
+            FaceAttackTarget();
             if (m_physicalAttackEnd) return ExecutionStatus.Success;
             return ExecutionStatus.Running;
         }
@@ -98,6 +98,8 @@ namespace Platinio.BehaviourTree
             if (!VariableDeclarations.IsDefined("TargetAttackEntity")) return;
 
             var targetAttackEntity = VariableDeclarations.Get<IAIEntity>("TargetAttackEntity");
+            if ((targetAttackEntity as Object) == null) return;
+            
             Vector3 targetPosition = targetAttackEntity.transform.position;
             targetPosition.y = transform.position.y;
             Vector3 dir = (targetPosition - transform.position).normalized;
