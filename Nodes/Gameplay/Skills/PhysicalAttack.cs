@@ -39,7 +39,7 @@ namespace Platinio.BehaviourTree
         private void OnPhysicalAttackStart(AnimationEvent animationEvent)
         {
             m_physicalAttackStarted = true;
-            var entity = VariableDeclarations.Get<IAIEntity>("Entity");
+            var entity = VariableDeclarations.Get<IActor>("Entity");
             var physicalWeapons = entity.Weapons;
 
             foreach (var physicalWeapon in physicalWeapons)
@@ -97,7 +97,7 @@ namespace Platinio.BehaviourTree
         {
             if (!VariableDeclarations.IsDefined("TargetAttackEntity")) return;
 
-            var targetAttackEntity = VariableDeclarations.Get<IAIEntity>("TargetAttackEntity");
+            var targetAttackEntity = VariableDeclarations.Get<IActor>("TargetAttackEntity");
             if ((targetAttackEntity as Object) == null) return;
             
             Vector3 targetPosition = targetAttackEntity.transform.position;
