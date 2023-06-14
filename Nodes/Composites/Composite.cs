@@ -21,7 +21,7 @@ namespace Platinio.BehaviourTree
         
         public override DecisionScoreResult CalculateScore()
         {
-            return m_scriptableDecision.Evaluate(Machine.gameObject.GetComponent<IActor>());
+            return m_scriptableDecision.Evaluate(Machine.gameObject.GetComponent<ICharacterEntity>());
         }
     }
 }
