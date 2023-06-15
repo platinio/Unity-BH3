@@ -1,4 +1,5 @@
 ﻿using Platinio.AI;
+using Platinio.Share;
 using Unity.VisualScripting;
 
 namespace Platinio.BehaviourTree
