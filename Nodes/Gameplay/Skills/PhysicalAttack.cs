@@ -55,13 +55,14 @@ namespace Platinio.BehaviourTree
             var damageable = raycastHit.collider.gameObject.GetComponent<Damageable>();
             if (damageable == null) return;
 
+            //TODO: FIX THE DAMAGE TYPE
             var damageConfig = new DamageConfig()
             {
-                Damage = m_damage,
-                DamageType = DamageType.Physical
+                //Damage = m_damage,
+                //DamageType = DamageType.Physical
             };
             
-            damageable.DoDamage(new DamageInfo(damageConfig, Machine.gameObject));
+            //damageable.DoDamage(new DamageInfo(damageConfig, Machine.gameObject));
         }
 
         private void OnPhysicalAttackEnd(AnimationEvent animationEvent)
