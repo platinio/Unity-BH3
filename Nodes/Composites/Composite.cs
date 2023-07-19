@@ -1,12 +1,14 @@
 ﻿using Platinio.AI;
 using Platinio.Share;
+using ScriptableObjectDatabase;
 using Unity.VisualScripting;
 
 namespace Platinio.BehaviourTree
 {
     public class Composite : ContainerNode
     {
-        [Serialize] [Inspectable] protected ScriptableDecision m_scriptableDecision;
+        [Serialize] [Inspectable] [ScriptableItemDatabaseSelector(typeof(ScriptableDecisionDatabase))]
+        protected ScriptableDecision m_scriptableDecision;
 
         protected int m_currentExecutingChildIndex = 0;
        
