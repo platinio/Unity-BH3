@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Decorator/Create Until Failure")]
     public class UntilFailure : Decorator

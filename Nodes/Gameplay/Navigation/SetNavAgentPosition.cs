@@ -2,7 +2,7 @@ using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine.AI;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode

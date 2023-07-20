@@ -1,11 +1,11 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [Widget(typeof(PlaceHolderNode))]
-    public class PlaceHolderNodeWidget : BehaviourTreeNodeElementWidget
+    public class PlaceHolderNodeWidget : BehaviorTreeNodeElementWidget
     {
-        public PlaceHolderNodeWidget(BehaviourTreeCanvas canvas, BehaviourTreeNode element) : base(canvas, element)
+        public PlaceHolderNodeWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
         }
 

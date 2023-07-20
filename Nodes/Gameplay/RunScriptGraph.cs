@@ -2,7 +2,7 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Run Script Graph")]
     public class RunScriptGraph : GameplayNode

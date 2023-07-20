@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine.SceneManagement;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     public class VariablesUtil
     {

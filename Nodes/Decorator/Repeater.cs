@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Decorator/Create Repeater")]
     public class Repeater : Decorator

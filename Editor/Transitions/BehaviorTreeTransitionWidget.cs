@@ -4,12 +4,12 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    [Widget(typeof(BehaviourTreeTransition))]
-    public class BehaviourTreeTransitionWidget : GraphElementWidget<BehaviourTreeCanvas, BehaviourTreeTransition>
+    [Widget(typeof(BehaviorTreeTransition))]
+    public class BehaviorTreeTransitionWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeTransition>
     {
-        public BehaviourTreeTransitionWidget(BehaviourTreeCanvas canvas, BehaviourTreeTransition element) : base(canvas, element)
+        public BehaviorTreeTransitionWidget(BehaviorTreeCanvas canvas, BehaviorTreeTransition element) : base(canvas, element)
         {
             if (element.PlaceHolderNodes != null && element.PlaceHolderNodes.Count > 0) return;
             
@@ -28,7 +28,7 @@ namespace Platinio.BehaviourTree
         private Edge sourceEdge;
         private Edge destinationEdge;
         private Rect sourcePosition;
-        private readonly List<BehaviourTreeTransition> siblingStateTransitions = new List<BehaviourTreeTransition>();
+        private readonly List<BehaviorTreeTransition> siblingStateTransitions = new List<BehaviorTreeTransition>();
 
         private Rect destinationPosition;
         private GUIContent label { get; } = new GUIContent();
@@ -187,7 +187,7 @@ namespace Platinio.BehaviourTree
                 {
                     if (!assignedTransitionAxis)
                     {
-                        var siblingStateTransitionDrawer = canvas.Widget<BehaviourTreeTransitionWidget>(graphTransition);
+                        var siblingStateTransitionDrawer = canvas.Widget<BehaviorTreeTransitionWidget>(graphTransition);
 
                         transitionAxis = siblingStateTransitionDrawer.sourceEdge.Normal();
 
@@ -231,7 +231,7 @@ namespace Platinio.BehaviourTree
 
             for (var i = 0; i <= siblingIndex; i++)
             {
-                var siblingSize = canvas.Widget<BehaviourTreeTransitionWidget>(siblingStateTransitions[i]).outerPosition.size;
+                var siblingSize = canvas.Widget<BehaviorTreeTransitionWidget>(siblingStateTransitions[i]).outerPosition.size;
                 var siblingSizeProjection = GraphGUI.SizeProjection(siblingSize, spreadOrigin, spreadAxis);
                 spreadOffset += previousSpreadSize / 2 + siblingSizeProjection / 2;
                 previousSpreadSize = siblingSizeProjection;
@@ -245,7 +245,7 @@ namespace Platinio.BehaviourTree
 
                 for (var i = 0; i < siblingStateTransitions.Count; i++)
                 {
-                    var siblingSize = canvas.Widget<BehaviourTreeTransitionWidget>(siblingStateTransitions[i]).outerPosition.size;
+                    var siblingSize = canvas.Widget<BehaviorTreeTransitionWidget>(siblingStateTransitions[i]).outerPosition.size;
                     var siblingSizeProjection = GraphGUI.SizeProjection(siblingSize, spreadOrigin, spreadAxis);
                     totalSpreadSize += siblingSizeProjection;
                 }
@@ -326,7 +326,7 @@ namespace Platinio.BehaviourTree
 
         public void DrawConnection(Vector2 offset)
         {
-            var transitionRects = BehaviourTreeGraphDrawer.DrawTransition(graph, this, Styles.background, new WidgetElementState(), offset);
+            var transitionRects = BehaviorTreeGraphDrawer.DrawTransition(graph, this, Styles.background, new WidgetElementState(), offset);
             UpdatePlaceHolderNodes(transitionRects);
             UpdateSelectionState();
         }

@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     /// <summary>
     /// selector task running all children at the same time

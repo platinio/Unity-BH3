@@ -2,17 +2,17 @@ using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Run Behaviour Tree Graph")]
-    public class RunBehaviourTreeGraphNode : GameplayNode
+    [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
+    public class RunBehaviorTreeGraphNode : GameplayNode
     {
         [Serialize] [Inspectable]
-        private BehaviourTreeGraphAsset m_behaviourTreeGraphAsset;
+        private BehaviorTreeGraphAsset m_behaviorTreeGraphAsset;
         
-        private BehaviourTreeGraph m_graph = null;
+        private BehaviorTreeGraph m_graph = null;
 
-        public override string NodeName => "Run Behaviour Tree Graph";
+        public override string NodeName => "Run Behavior Tree Graph";
 
         public override void OnAwake()
         {
@@ -29,11 +29,11 @@ namespace Platinio.BehaviourTree
             return GetGraph().OnUpdate();
         }
         
-        private BehaviourTreeGraph GetGraph()
+        private BehaviorTreeGraph GetGraph()
         {
             if (m_graph == null)
             {
-                m_graph = Object.Instantiate(m_behaviourTreeGraphAsset).graph;
+                m_graph = Object.Instantiate(m_behaviorTreeGraphAsset).graph;
             }
 
             return m_graph;

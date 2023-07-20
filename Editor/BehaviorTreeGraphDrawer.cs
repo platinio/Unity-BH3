@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    public static class BehaviourTreeGraphDrawer
+    public static class BehaviorTreeGraphDrawer
     {
-        public static List<Rect> DrawTransition(IGraph graph, BehaviourTreeTransitionWidget transitionWidget, GUIStyle style, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
+        public static List<Rect> DrawTransition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget, GUIStyle style, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
         {
             List<Rect> lineRects = new List<Rect>();
             Vector2 destinationCenter = transitionWidget.destinationEdgeCenter;
@@ -64,13 +63,13 @@ namespace Platinio.BehaviourTree
             return lineRects;
         }
 
-        private static Vector2 GetCloserVerticalNodePosition(IGraph graph, BehaviourTreeTransitionWidget transitionWidget)
+        private static Vector2 GetCloserVerticalNodePosition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget)
         {
             Vector2 closerDestinationPosition = transitionWidget.destinationEdgeCenter;
             
             foreach (var graphElement in graph.elements)
             {
-                if (graphElement is BehaviourTreeTransition transition)
+                if (graphElement is BehaviorTreeTransition transition)
                 {
                     if (transition.source == transitionWidget.element.source)
                     {

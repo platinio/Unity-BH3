@@ -1,7 +1,7 @@
 ﻿
 using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     public class Parallel : Composite
     {

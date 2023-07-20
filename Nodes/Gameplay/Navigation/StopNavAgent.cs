@@ -1,7 +1,7 @@
 using Platinio.GraphCore;
 using UnityEngine.AI;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Navigation/Stop NavAgent")]
     public class StopNavAgent : GameplayNode

@@ -2,12 +2,12 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [RequireComponent(typeof(Variables))]
-    public class BehaviourTreeMachine : BaseMachine<BehaviourTreeGraph, BehaviourTreeGraphAsset, BehaviourTreeNode, BehaviourTreeTransition>
+    public class BehaviorTreeMachine : BaseMachine<BehaviorTreeGraph, BehaviorTreeGraphAsset, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        private BehaviourTreeGraph m_graph;
+        private BehaviorTreeGraph m_graph;
 
         protected override void Awake()
         {
@@ -49,9 +49,9 @@ namespace Platinio.BehaviourTree
             }
         }
 
-        public override BehaviourTreeGraph DefaultGraph()
+        public override BehaviorTreeGraph DefaultGraph()
         {
-            return new BehaviourTreeGraph();
+            return new BehaviorTreeGraph();
         }
     }
 }

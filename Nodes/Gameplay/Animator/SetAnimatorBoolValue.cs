@@ -2,7 +2,7 @@ using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Animator/Set Animator Bool Value")]
     public class SetAnimatorBoolValue : GameplayNode

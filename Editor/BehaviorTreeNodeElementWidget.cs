@@ -2,12 +2,12 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    [Widget(typeof(BehaviourTreeNode))]
-    public class BehaviourTreeNodeElementWidget : GraphElementWidget<BehaviourTreeCanvas, BehaviourTreeNode>
+    [Widget(typeof(BehaviorTreeNode))]
+    public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>
     {
-        public BehaviourTreeNodeElementWidget(BehaviourTreeCanvas canvas, BehaviourTreeNode element) : base(canvas, element)
+        public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
         }
 
@@ -140,7 +140,7 @@ namespace Platinio.BehaviourTree
             else if (e.IsMouseUp(MouseButton.Left) && canvas.isCreatingTransition)
             {
                 var source = canvas.TransitionSource;
-                var destination = (canvas.hoveredWidget as BehaviourTreeNodeElementWidget).element;
+                var destination = (canvas.hoveredWidget as BehaviorTreeNodeElementWidget).element;
 
                 if (destination == null)
                 {

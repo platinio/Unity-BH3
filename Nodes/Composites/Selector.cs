@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Composite/Create Selector")]
     public class Selector : Composite

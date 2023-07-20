@@ -1,9 +1,9 @@
-﻿namespace Platinio.BehaviourTree
+﻿namespace Platinio.BehaviorTree
 {
     /// <summary>
-    /// Base action node for behaviour trees
+    /// Base action node for behavior trees
     /// </summary>
-    public class GameplayNode : BehaviourTreeNode
+    public class GameplayNode : BehaviorTreeNode
     {
        
     }

@@ -2,26 +2,26 @@
 using System.Linq;
 using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    public class ContainerNode : BehaviourTreeNode
+    public class ContainerNode : BehaviorTreeNode
     {
-        protected List<BehaviourTreeNode> m_children;
+        protected List<BehaviorTreeNode> m_children;
         
         public virtual int MaxChildren => MaxTransitionAmount;
         public virtual bool CanRunParallelChildren => false;
         public virtual int CurrentChildrenIndex => 0;
         public virtual bool CanExecute => true;
 
-        public void AddChild(BehaviourTreeNode child, int index)
+        public void AddChild(BehaviorTreeNode child, int index)
         {
-            if (m_children == null) m_children = new List<BehaviourTreeNode>();
+            if (m_children == null) m_children = new List<BehaviorTreeNode>();
             m_children.Insert(index, child);
         }
         
-        public void AddChild(BehaviourTreeNode child)
+        public void AddChild(BehaviorTreeNode child)
         {
-            if (m_children == null) m_children = new List<BehaviourTreeNode>();
+            if (m_children == null) m_children = new List<BehaviorTreeNode>();
             m_children.Add(child);
         }
 
@@ -31,9 +31,9 @@ namespace Platinio.BehaviourTree
             m_children = m_children.OrderBy(x => x.Position.x).ToList();
         }
 
-        public List<BehaviourTreeNode> GetChildren()
+        public List<BehaviorTreeNode> GetChildren()
         {
-            if (m_children == null) m_children = new List<BehaviourTreeNode>();
+            if (m_children == null) m_children = new List<BehaviorTreeNode>();
             return m_children;
         }
 

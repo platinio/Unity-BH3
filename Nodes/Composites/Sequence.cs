@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Composite/Create Sequence")]
     public class Sequence : Composite

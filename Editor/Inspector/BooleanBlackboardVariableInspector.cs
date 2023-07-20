@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using ColorUtility = UnityEngine.ColorUtility;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [Inspector(typeof(BooleanBlackboardVariable))]
     public class BooleanBlackboardVariableInspector : Inspector

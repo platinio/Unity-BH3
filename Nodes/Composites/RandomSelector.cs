@@ -2,7 +2,7 @@
 using Platinio.GraphCore;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Composite/Random Selector")]
     public class RandomSelector : Selector

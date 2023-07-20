@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     public enum BlackboardVariableType
     {
@@ -93,7 +93,7 @@ namespace Platinio.BehaviourTree
             
             if (machine == null)
             {
-                Debug.LogError("BehaviourTreeMachine is null");
+                Debug.LogError("BehaviorTreeMachine is null");
                 return false;
             }
 

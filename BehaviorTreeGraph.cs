@@ -3,17 +3,17 @@ using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [SerializationVersion("A")]
-    public class BehaviourTreeGraph : BaseGraph<BehaviourTreeGraph, BehaviourTreeNode, BehaviourTreeTransition>
+    public class BehaviorTreeGraph : BaseGraph<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
         [Serialize] 
         private Entry m_entryNode;
 
         public Entry EntryNode => m_entryNode;
         
-        public BehaviourTreeGraph()
+        public BehaviorTreeGraph()
         {
             m_entryNode = new Entry();
             m_entryNode.Position = new Rect(new Vector2(-100, -15), m_entryNode.StartingSize);
@@ -23,12 +23,12 @@ namespace Platinio.BehaviourTree
 
         public override IGraphData CreateData()
         {
-            return new BehaviourTreeGraphData(this);
+            return new BehaviorTreeGraphData(this);
         }
 
         public bool IsListening(GraphPointer pointer)
         {
-            return pointer.GetGraphData<BehaviourTreeGraphData>().isListening;
+            return pointer.GetGraphData<BehaviorTreeGraphData>().isListening;
         }
 
         #region Elements
@@ -36,9 +36,9 @@ namespace Platinio.BehaviourTree
         public GraphElementCollection<GraphGroup> Groups { get; internal set; }
         #endregion
 
-        public static BehaviourTreeGraph CreateEmpty()
+        public static BehaviorTreeGraph CreateEmpty()
         {
-            var stateGraph = new BehaviourTreeGraph();
+            var stateGraph = new BehaviorTreeGraph();
 
             var entryNode = new Entry();
             entryNode.Position = new Rect(new Vector2(-100, -15), entryNode.StartingSize);
@@ -68,7 +68,7 @@ namespace Platinio.BehaviourTree
             }
         }
 
-        public IEnumerable<T> GetTaskNodesOfType<T>() where T : BehaviourTreeNode
+        public IEnumerable<T> GetTaskNodesOfType<T>() where T : BehaviorTreeNode
         {
             List<T> nodes = new List<T>();
 

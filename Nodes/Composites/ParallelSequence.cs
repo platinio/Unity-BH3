@@ -1,6 +1,6 @@
 ﻿using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     /// <summary>
     /// The Parallel task acts in a similar way to the Sequence task. It has a set of child tasks,

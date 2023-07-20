@@ -3,7 +3,7 @@ using Platinio.Share;
 using ScriptableObjectDatabase;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     public class Composite : ContainerNode
     {

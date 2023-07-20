@@ -1,10 +1,9 @@
 ﻿using Platinio.GraphCore;
-using Unity.VisualScripting;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     /// <summary>
-    /// entry point for a behaviour tree graph
+    /// entry point for a behavior tree graph
     /// </summary>
     public class Entry : ContainerNode
     {

@@ -6,7 +6,7 @@ using RPGDamage;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Skills/Physical Attack")]
     public class PhysicalAttack : GameplayNode

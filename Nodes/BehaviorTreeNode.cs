@@ -1,12 +1,12 @@
 using Platinio.AI;
 using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     /// <summary>
-    /// Base class for all behaviour tree nodes
+    /// Base class for all behavior tree nodes
     /// </summary>
-    public class BehaviourTreeNode : BaseGraphNode<BehaviourTreeGraph, BehaviourTreeNode, BehaviourTreeTransition>
+    public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
         public virtual DecisionScoreResult CalculateScore()
         {

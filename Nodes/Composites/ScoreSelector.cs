@@ -1,7 +1,7 @@
 ﻿using Platinio.AI;
 using Platinio.GraphCore;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Composite/Create Score Selector")]
     public class ScoreSelector : Composite

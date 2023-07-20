@@ -1,12 +1,12 @@
 ﻿using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    [Editor(typeof(BehaviourTreeNode))]
-    public class BehaviourTreeNodeEditor : Inspector
+    [Editor(typeof(BehaviorTreeNode))]
+    public class BehaviorTreeNodeEditor : Inspector
     {
-        public BehaviourTreeNodeEditor(Metadata metadata) : base(metadata)
+        public BehaviorTreeNodeEditor(Metadata metadata) : base(metadata)
         {
         }
 

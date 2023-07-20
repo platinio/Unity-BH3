@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
-    [Canvas(typeof(BehaviourTreeGraph))]
-    public class BehaviourTreeCanvas : BaseCanvas<BehaviourTreeGraph, BehaviourTreeNode, BehaviourTreeTransition>
+    [Canvas(typeof(BehaviorTreeGraph))]
+    public class BehaviorTreeCanvas : BaseCanvas<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        public BehaviourTreeCanvas(BehaviourTreeGraph graph) : base(graph) { }
+        public BehaviorTreeCanvas(BehaviorTreeGraph graph) : base(graph) { }
 
         protected override IEnumerable<Type> GetValidNodes() => new List<Type>()
         {

@@ -1,14 +1,14 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     /// <summary>
     /// placeholder node use to create invisible nodes in the canvas, currently used to fake the selection of the node transition
     /// </summary>
-    public class PlaceHolderNode : BehaviourTreeNode
+    public class PlaceHolderNode : BehaviorTreeNode
     {
-        [Serialize] private BehaviourTreeTransition m_owner;
-        public BehaviourTreeTransition Owner => m_owner;
+        [Serialize] private BehaviorTreeTransition m_owner;
+        public BehaviorTreeTransition Owner => m_owner;
         
         public override bool CanSelect => true;
         public override bool CanDrag => false;
@@ -17,7 +17,7 @@ namespace Platinio.BehaviourTree
 
         public bool IsSelected = false;
         
-        public PlaceHolderNode(BehaviourTreeTransition owner)
+        public PlaceHolderNode(BehaviorTreeTransition owner)
         {
             m_owner = owner;
         }

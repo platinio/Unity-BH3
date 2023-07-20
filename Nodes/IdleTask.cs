@@ -1,7 +1,7 @@
 using Platinio.GraphCore;
 using UnityEngine;
 
-namespace Platinio.BehaviourTree
+namespace Platinio.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Create Idle")]
     public class IdleTask : GameplayNode
