@@ -8,7 +8,7 @@ namespace Platinio.BehaviorTree
     public class SetNavAgentPosition : GameplayNode
     {
         [Serialize] [Inspectable] private Vector3BlackboardVariable m_targetPosition= new Vector3BlackboardVariable();
-
+       
         public override string NodeName => "Set Nav Agent Position";
 
         private NavMeshAgent m_navAgent = null;

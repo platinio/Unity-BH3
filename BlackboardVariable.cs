@@ -97,10 +97,10 @@ namespace Platinio.BehaviorTree
                 return false;
             }
 
-            if (!machine.VariableDeclarations.IsDefined(m_variableName)) return false;
+            if (!machine.Variables.IsDefined(m_variableName)) return false;
 
 
-            value = machine.VariableDeclarations.Get<T>(m_variableName);
+            value = machine.Variables.Get<T>(m_variableName);
             return true;
         }
 

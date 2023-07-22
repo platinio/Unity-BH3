@@ -12,8 +12,7 @@ namespace Platinio.BehaviorTree
         protected override void Awake()
         {
             base.Awake();
-            
-            m_variables = GetComponent<Variables>();
+            Variables = GetComponent<IVariables>();
             
             if (hasGraph)
             {
@@ -31,6 +30,12 @@ namespace Platinio.BehaviorTree
                 
                 
             }
+        }
+
+        public void Switch(BehaviorTreeGraph behaviorTreeGraph)
+        {
+            m_graph = behaviorTreeGraph;
+            nest.SwitchToEmbed(behaviorTreeGraph);
         }
 
         private void Start()
