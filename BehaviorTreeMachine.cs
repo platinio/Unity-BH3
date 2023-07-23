@@ -1,4 +1,5 @@
-﻿using Platinio.GraphCore;
+﻿using GameDataEngine;
+using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -13,8 +14,9 @@ namespace Platinio.BehaviorTree
         {
             base.Awake();
             Variables = GetComponent<IVariables>();
+            GameDataEngineVariables = GetComponent<GameDataEngineVariables>();
             
-            if (hasGraph)
+            if (hasGraph && nest.macro != null)
             {
                 nest.SwitchToEmbed(Instantiate(nest.macro).graph);
                 m_graph = nest.embed;
@@ -27,8 +29,6 @@ namespace Platinio.BehaviorTree
                 }
                 
                 m_graph.OnAwake();
-                
-                
             }
         }
 
@@ -40,7 +40,7 @@ namespace Platinio.BehaviorTree
 
         private void Start()
         {
-            if (hasGraph)
+            if (hasGraph && m_graph != null)
             {
                 m_graph.OnEnter();
             }
@@ -48,7 +48,7 @@ namespace Platinio.BehaviorTree
 
         private void Update()
         {
-            if (hasGraph)
+            if (hasGraph && m_graph != null)
             {
                 m_graph.OnUpdate();
             }

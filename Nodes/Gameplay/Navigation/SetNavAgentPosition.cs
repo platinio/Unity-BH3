@@ -1,5 +1,6 @@
 using Platinio.GraphCore;
 using Unity.VisualScripting;
+using UnityEngine;
 using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
@@ -7,7 +8,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
-        [Serialize] [Inspectable] private Vector3BlackboardVariable m_targetPosition= new Vector3BlackboardVariable();
+        [Serialize] [Inspectable] private string NavPositionVariableName;
        
         public override string NodeName => "Set Nav Agent Position";
 
@@ -45,7 +46,7 @@ namespace Platinio.BehaviorTree
 
         private void TryUpdateNavAgentPosition()
         {
-            m_navAgent.SetDestination(m_targetPosition.GetValue(Machine));
+            m_navAgent.SetDestination(GameDataEngineVariables.Get<Vector3>(NavPositionVariableName));
         }
     }
 }
