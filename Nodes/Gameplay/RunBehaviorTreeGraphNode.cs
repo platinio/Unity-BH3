@@ -12,7 +12,14 @@ namespace Platinio.BehaviorTree
         
         private BehaviorTreeGraph m_graph = null;
 
-        public override string NodeName => "Run Behavior Tree Graph";
+        public override string NodeName
+        {
+            get
+            {
+                if (m_behaviorTreeGraphAsset == null) return "Missing Graph!";
+                return m_behaviorTreeGraphAsset.name;
+            }
+        }
 
         public override void OnAwake()
         {
