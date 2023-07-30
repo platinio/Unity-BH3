@@ -39,9 +39,7 @@ namespace Platinio.BehaviorTree
 
         public override void OnExit()
         {
-            //m_navAgent.Warp(transform.position);
-            //m_navAgent.updatePosition = true;
-            //m_navAgent.updateRotation = true;
+           
         }
 
         private void TryUpdateNavAgentPosition()

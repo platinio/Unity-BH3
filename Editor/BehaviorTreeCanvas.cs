@@ -15,7 +15,8 @@ namespace Platinio.BehaviorTree
             typeof(Composite),
             typeof(ContainerNode),
             typeof(Decorator),
-            typeof(GameplayNode)
+            typeof(GameplayNode),
+            typeof(Condition)
         };
     }
 }
