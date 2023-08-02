@@ -8,7 +8,8 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
-        [Serialize] [Inspectable] private string NavPositionVariableName;
+        [Serialize, Inspectable] private string NavPositionVariableName;
+        [Serialize, Inspectable] private bool ClearCurrentPath = false;
        
         public override string NodeName => "Set Nav Agent Position";
 
@@ -25,7 +26,7 @@ namespace Platinio.BehaviorTree
             m_navAgent.updateRotation = true;
 
             m_navAgent.isStopped = false;
-            m_navAgent.ResetPath();
+            if (ClearCurrentPath) m_navAgent.ResetPath();
             TryUpdateNavAgentPosition();
         }
 

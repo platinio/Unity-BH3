@@ -8,6 +8,14 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/Selector";
         public override string NodeName => "Selector";
 
+        public override void OnEnter()
+        {
+            m_currentExecutingChildIndex = 0;
+            
+            if (GetChildren().Count == 0) return;
+            GetChildren()[0].OnNodeEnter();
+        }
+        
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
@@ -27,6 +35,7 @@ namespace Platinio.BehaviorTree
                 m_currentExecutingChildIndex++;
                 if (GetChildren().Count <= m_currentExecutingChildIndex) return ExecutionStatus.Failure;
                 
+                GetChildren()[m_currentExecutingChildIndex].OnNodeEnter();
                 return ExecutionStatus.Running;
             }
 

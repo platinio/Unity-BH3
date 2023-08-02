@@ -21,12 +21,13 @@ namespace Platinio.BehaviorTree
 
         public override bool Evaluate()
         {
+            float d = Vector3.Distance(GetPosition(PositionKey), transform.position);
             switch (Operation)
             {
                 case ConditionOperation.Greater:
-                    return Vector3.Distance(GetPosition(PositionKey), transform.position) < DistanceValue;
+                    return d > DistanceValue;
                 case ConditionOperation.Less:
-                    return Vector3.Distance(GetPosition(PositionKey), transform.position) > DistanceValue;
+                    return d < DistanceValue;
             }
 
             return false;
