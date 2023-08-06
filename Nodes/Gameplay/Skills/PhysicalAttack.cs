@@ -39,6 +39,8 @@ namespace Platinio.BehaviorTree
 
         private void OnPhysicalAttackStart(AnimationEvent animationEvent)
         {
+            //TODO: FIX THE PHYSICAL WEAPONS
+            /*
             m_physicalAttackStarted = true;
             var entity = VariableDeclarations.Get<ICharacterEntity>("Entity");
             var physicalWeapons = entity.Weapons;
@@ -47,7 +49,7 @@ namespace Platinio.BehaviorTree
             {
                 physicalWeapon.UpdateState(WeaponState.Damage);
                 physicalWeapon.OnHit += OnWeaponHit;
-            }
+            }*/
         }
 
         private void OnWeaponHit(RaycastHit raycastHit)
