@@ -9,7 +9,10 @@ namespace Platinio.BehaviorTree
     public class BehaviorTreeMachine : BaseMachine<BehaviorTreeGraph, BehaviorTreeGraphAsset, BehaviorTreeNode, BehaviorTreeTransition>
     {
         private BehaviorTreeGraph m_graph;
+        private ExecutionStatus m_lastExecutionStatus = ExecutionStatus.Running;
 
+        public ExecutionStatus LastExecutionStatus => m_lastExecutionStatus;
+        
         protected override void Awake()
         {
             base.Awake();
@@ -34,6 +37,7 @@ namespace Platinio.BehaviorTree
 
         public void Switch(BehaviorTreeGraph behaviorTreeGraph)
         {
+            m_lastExecutionStatus = ExecutionStatus.Running;
             m_graph = behaviorTreeGraph;
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
@@ -50,7 +54,7 @@ namespace Platinio.BehaviorTree
         {
             if (hasGraph && m_graph != null)
             {
-                m_graph.OnUpdate();
+                m_lastExecutionStatus = m_graph.OnUpdate();
             }
         }
 

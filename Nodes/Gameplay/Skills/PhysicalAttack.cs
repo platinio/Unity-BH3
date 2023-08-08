@@ -39,7 +39,6 @@ namespace Platinio.BehaviorTree
 
         private void OnPhysicalAttackStart(AnimationEvent animationEvent)
         {
-            //TODO: FIX THE PHYSICAL WEAPONS
             /*
             m_physicalAttackStarted = true;
             var entity = VariableDeclarations.Get<ICharacterEntity>("Entity");
