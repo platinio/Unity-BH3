@@ -9,7 +9,7 @@ namespace Platinio.BehaviorTree
     public class BehaviorTreeMachine : BaseMachine<BehaviorTreeGraph, BehaviorTreeGraphAsset, BehaviorTreeNode, BehaviorTreeTransition>
     {
         private BehaviorTreeGraph m_graph;
-        private ExecutionStatus m_lastExecutionStatus = ExecutionStatus.Running;
+        private ExecutionStatus m_lastExecutionStatus = ExecutionStatus.Inactive;
 
         public ExecutionStatus LastExecutionStatus => m_lastExecutionStatus;
         
