@@ -6,7 +6,7 @@ namespace Platinio.BehaviorTree
 {
     public class ContainerNode : BehaviorTreeNode
     {
-        protected List<BehaviorTreeNode> m_children;
+        protected List<BehaviorTreeNode> children;
         
         public virtual int MaxChildren => MaxTransitionAmount;
         public virtual bool CanRunParallelChildren => false;
@@ -15,33 +15,33 @@ namespace Platinio.BehaviorTree
 
         public void AddChild(BehaviorTreeNode child, int index)
         {
-            if (m_children == null) m_children = new List<BehaviorTreeNode>();
-            m_children.Insert(index, child);
+            if (children == null) children = new List<BehaviorTreeNode>();
+            children.Insert(index, child);
         }
         
         public void AddChild(BehaviorTreeNode child)
         {
-            if (m_children == null) m_children = new List<BehaviorTreeNode>();
-            m_children.Add(child);
+            if (children == null) children = new List<BehaviorTreeNode>();
+            children.Add(child);
         }
 
         public virtual void SortChildren()
         {
-            if (m_children == null || m_children.Count == 0) return;
-            m_children = m_children.OrderBy(x => x.Position.x).ToList();
+            if (children == null || children.Count == 0) return;
+            children = children.OrderBy(x => x.Position.x).ToList();
         }
 
         public List<BehaviorTreeNode> GetChildren()
         {
-            if (m_children == null) m_children = new List<BehaviorTreeNode>();
-            return m_children;
+            if (children == null) children = new List<BehaviorTreeNode>();
+            return children;
         }
 
         public override ExecutionStatus OnUpdate()
         {
             if (CanExecute)
             {
-                foreach (var children in m_children)
+                foreach (var children in children)
                 {
                     children.OnUpdate();
                 }

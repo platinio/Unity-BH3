@@ -9,13 +9,13 @@ namespace Platinio.BehaviorTree
     {
         public override string NodeName => "Wait Nav Agent Position";
 
-        private NavMeshAgent m_navAgent = null;
+        private NavMeshAgent navAgent = null;
 
         public override void OnAwake()
         {
-            m_navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetComponent<NavMeshAgent>();
         }
 
-        public override ExecutionStatus OnUpdate() => m_navAgent.remainingDistance < Mathf.Epsilon ? ExecutionStatus.Success : ExecutionStatus.Running;
+        public override ExecutionStatus OnUpdate() => navAgent.remainingDistance < Mathf.Epsilon ? ExecutionStatus.Success : ExecutionStatus.Running;
     }
 }

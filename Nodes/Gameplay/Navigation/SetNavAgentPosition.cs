@@ -13,27 +13,27 @@ namespace Platinio.BehaviorTree
        
         public override string NodeName => "Set Nav Agent Position";
 
-        private NavMeshAgent m_navAgent = null;
+        private NavMeshAgent navAgent = null;
 
         public override void OnAwake()
         {
-            m_navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
         {
-            m_navAgent.updatePosition = true;
-            m_navAgent.updateRotation = true;
+            navAgent.updatePosition = true;
+            navAgent.updateRotation = true;
 
-            m_navAgent.isStopped = false;
-            if (ClearCurrentPath) m_navAgent.ResetPath();
+            navAgent.isStopped = false;
+            if (ClearCurrentPath) navAgent.ResetPath();
             TryUpdateNavAgentPosition();
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            if (m_navAgent.pathPending) return ExecutionStatus.Running;
-            if (m_navAgent.pathStatus == NavMeshPathStatus.PathComplete) return ExecutionStatus.Success;
+            if (navAgent.pathPending) return ExecutionStatus.Running;
+            if (navAgent.pathStatus == NavMeshPathStatus.PathComplete) return ExecutionStatus.Success;
 
             return ExecutionStatus.Failure;
         }
@@ -48,7 +48,7 @@ namespace Platinio.BehaviorTree
             if (!Machine.Variables.IsDefined(NavPositionVariableName)) return;
             
             Vector3 pos = Machine.Variables.Get<Vector3>(NavPositionVariableName);
-            m_navAgent.SetDestination(pos);
+            navAgent.SetDestination(pos);
         }
     }
 }

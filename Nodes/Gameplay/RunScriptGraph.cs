@@ -7,12 +7,12 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Run Script Graph")]
     public class RunScriptGraph : GameplayNode
     {
-        [Serialize] private ScriptGraphAsset m_scripGraphAsset;
+        [Serialize] private ScriptGraphAsset scripGraphAsset;
 
         public override void OnEnter()
         {
-            var graph = m_scripGraphAsset.graph;
-            var graphReference = m_scripGraphAsset.GetReference() as GraphReference;
+            var graph = scripGraphAsset.graph;
+            var graphReference = scripGraphAsset.GetReference() as GraphReference;
 
             var flow = Flow.New(graphReference);
             

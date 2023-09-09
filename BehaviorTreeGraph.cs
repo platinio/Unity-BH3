@@ -9,16 +9,16 @@ namespace Platinio.BehaviorTree
     public class BehaviorTreeGraph : BaseGraph<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
         [Serialize] 
-        private Entry m_entryNode;
+        private Entry entryNode;
 
-        public Entry EntryNode => m_entryNode;
+        public Entry EntryNode => entryNode;
         
         public BehaviorTreeGraph()
         {
-            m_entryNode = new Entry();
-            m_entryNode.Position = new Rect(new Vector2(-100, -15), m_entryNode.StartingSize);
+            entryNode = new Entry();
+            entryNode.Position = new Rect(new Vector2(-100, -15), entryNode.StartingSize);
 
-            Nodes.Add(m_entryNode);
+            Nodes.Add(entryNode);
         }
 
         public override IGraphData CreateData()

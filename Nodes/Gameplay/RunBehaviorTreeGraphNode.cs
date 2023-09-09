@@ -8,16 +8,16 @@ namespace Platinio.BehaviorTree
     public class RunBehaviorTreeGraphNode : GameplayNode
     {
         [Serialize] [Inspectable]
-        private BehaviorTreeGraphAsset m_behaviorTreeGraphAsset;
+        private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
         
-        private BehaviorTreeGraph m_graph = null;
+        private BehaviorTreeGraph behaviorTreeGraph = null;
 
         public override string NodeName
         {
             get
             {
-                if (m_behaviorTreeGraphAsset == null) return "Missing Graph!";
-                return m_behaviorTreeGraphAsset.name;
+                if (behaviorTreeGraphAsset == null) return "Missing Graph!";
+                return behaviorTreeGraphAsset.name;
             }
         }
 
@@ -38,12 +38,12 @@ namespace Platinio.BehaviorTree
         
         private BehaviorTreeGraph GetGraph()
         {
-            if (m_graph == null)
+            if (behaviorTreeGraph == null)
             {
-                m_graph = Object.Instantiate(m_behaviorTreeGraphAsset).graph;
+                behaviorTreeGraph = Object.Instantiate(behaviorTreeGraphAsset).graph;
             }
 
-            return m_graph;
+            return behaviorTreeGraph;
         }
         
         public override void SetMachine(IGraphMachine machine)

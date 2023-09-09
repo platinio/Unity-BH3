@@ -12,7 +12,7 @@ namespace Platinio.BehaviorTree
 
         public override void SortChildren()
         {
-            m_children = GetChildren().OrderBy(_ => Random.value).ToList();
+            children = GetChildren().OrderBy(_ => Random.value).ToList();
         }
     }
 }

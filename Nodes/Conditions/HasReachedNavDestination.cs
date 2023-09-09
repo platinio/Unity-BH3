@@ -10,18 +10,18 @@ namespace Platinio.BehaviorTree
     {
         [Serialize, Inspectable] private float StoppingDistanceOffset = 0.01f;
         
-        private NavMeshAgent m_navAgent = null;
+        private NavMeshAgent navAgent = null;
 
         public override string NodeName => "Has Reached Nav Destination";
 
         public override void OnAwake()
         {
-            m_navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetComponent<NavMeshAgent>();
         }
         
         public override bool Evaluate()
         {
-            return Vector3.Distance(transform.position, m_navAgent.destination) < m_navAgent.stoppingDistance + StoppingDistanceOffset;
+            return Vector3.Distance(transform.position, navAgent.destination) < navAgent.stoppingDistance + StoppingDistanceOffset;
         }
     }
 }

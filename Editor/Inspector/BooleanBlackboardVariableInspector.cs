@@ -16,7 +16,7 @@ namespace Platinio.BehaviorTree
 
         protected override float GetHeight(float width, GUIContent label)
         {
-            var foldout = Convert.ToBoolean(metadata["m_foldout"].value);
+            var foldout = Convert.ToBoolean(metadata["foldout"].value);
             if (foldout) return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 4;
             return EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
         }
@@ -37,7 +37,7 @@ namespace Platinio.BehaviorTree
             CalculateLabelAndValueRect(ref position, out var labelRect, out var valueRect);
             labelRect.position += indentOffset;
            
-            var foldout = Convert.ToBoolean(metadata["m_foldout"].value);
+            var foldout = Convert.ToBoolean(metadata["foldout"].value);
             bool oldFoldoutValue = foldout;
             foldout = EditorGUI.Foldout(labelRect, foldout, label);
 
@@ -47,7 +47,7 @@ namespace Platinio.BehaviorTree
             if (foldout)
             {
                 Vector2 sizeOffset = Vector2.left * 10.0f;
-                var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["m_variableType"].value);
+                var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["variableType"].value);
 
                 Vector2 boxSize = new Vector2(position.width, GetHeight(position.width, label) - EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing);
                 Rect boxRect = new Rect(boxPosition, boxSize);
@@ -62,7 +62,7 @@ namespace Platinio.BehaviorTree
                 selectedVariableType = (BlackboardVariableType)EditorGUI.EnumPopup(valueRect, selectedVariableType);
 
 
-                var variableName = Convert.ToString(metadata["m_variableName"].value);
+                var variableName = Convert.ToString(metadata["variableName"].value);
             
                 CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
                 valueRect.size -= indentOffset;
@@ -70,7 +70,7 @@ namespace Platinio.BehaviorTree
                 EditorGUI.LabelField(labelRect, "Name");
                 variableName = EditorGUI.TextField(valueRect, variableName);
             
-                var variableDefaultValue = Convert.ToBoolean(metadata["m_defaultValue"].value);
+                var variableDefaultValue = Convert.ToBoolean(metadata["defaultValue"].value);
             
                 CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
                 valueRect.size -= indentOffset;
@@ -79,13 +79,13 @@ namespace Platinio.BehaviorTree
                 variableDefaultValue = EditorGUI.Toggle(valueRect, variableDefaultValue);
 
                 metadata.RecordUndo();
-                metadata["m_variableType"].value = selectedVariableType;
-                metadata["m_variableName"].value = variableName;
-                metadata["m_defaultValue"].value = variableDefaultValue;   
+                metadata["variableType"].value = selectedVariableType;
+                metadata["variableName"].value = variableName;
+                metadata["defaultValue"].value = variableDefaultValue;   
                 
             }
             
-            metadata["m_foldout"].value = foldout;
+            metadata["foldout"].value = foldout;
 
             if (oldFoldoutValue != foldout)
             {

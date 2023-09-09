@@ -9,7 +9,7 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/Selector";
         public override string NodeName => "Score Selector";
 
-        private int m_selectedChildIndex = 0;
+        private int selectedChildIndex = 0;
         
         public override void OnEnter()
         {
@@ -23,19 +23,19 @@ namespace Platinio.BehaviorTree
                 if (scoreResult.Value > maxScoreResult.Value)
                 {
                     maxScoreResult = scoreResult;
-                    m_selectedChildIndex = n;
+                    selectedChildIndex = n;
                 }
             }
             
             Machine.Variables.Set("DecisionScoreResult", maxScoreResult);
-            GetChildren()[m_selectedChildIndex].OnNodeEnter();
+            GetChildren()[selectedChildIndex].OnNodeEnter();
             OnTraverseChildren(maxScoreResult);
         }
 
         private void OnTraverseChildren(DecisionScoreResult scoreResult)
         {
             if (GetChildren().Count == 0) return;
-            GetChildren()[m_selectedChildIndex].OnTraverse(scoreResult);
+            GetChildren()[selectedChildIndex].OnTraverse(scoreResult);
         }
 
 
@@ -43,7 +43,7 @@ namespace Platinio.BehaviorTree
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
-            var task = GetChildren()[m_selectedChildIndex];
+            var task = GetChildren()[selectedChildIndex];
             var result = task.OnUpdate();
 
             if (result != ExecutionStatus.Running)

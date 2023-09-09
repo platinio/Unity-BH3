@@ -10,7 +10,7 @@ namespace Platinio.BehaviorTree
 
         public override void OnEnter()
         {
-            m_currentExecutingChildIndex = 0;
+            currentExecutingChildIndex = 0;
             
             if (GetChildren().Count == 0) return;
             GetChildren()[0].OnNodeEnter();
@@ -20,22 +20,22 @@ namespace Platinio.BehaviorTree
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
-            var task = GetChildren()[m_currentExecutingChildIndex];
+            var task = GetChildren()[currentExecutingChildIndex];
             var result = task.OnUpdate();
 
             if (result == ExecutionStatus.Success)
             {
                 task.OnNodeExit();
-                m_currentExecutingChildIndex++;
-                if (GetChildren().Count <= m_currentExecutingChildIndex) return ExecutionStatus.Success;
+                currentExecutingChildIndex++;
+                if (GetChildren().Count <= currentExecutingChildIndex) return ExecutionStatus.Success;
                 
-                GetChildren()[m_currentExecutingChildIndex].OnNodeEnter();
+                GetChildren()[currentExecutingChildIndex].OnNodeEnter();
                 return ExecutionStatus.Running;
             }
             if (result == ExecutionStatus.Failure)
             {
                 task.OnNodeExit();
-                m_currentExecutingChildIndex = 0;
+                currentExecutingChildIndex = 0;
                 return ExecutionStatus.Failure;
             }
 
@@ -44,7 +44,7 @@ namespace Platinio.BehaviorTree
 
         public override void OnExit()
         {
-            m_currentExecutingChildIndex = 0;
+            currentExecutingChildIndex = 0;
         }
     }
 }

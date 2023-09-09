@@ -8,16 +8,16 @@ namespace Platinio.BehaviorTree
     {
         public override string NodeName => "Stop NavAgent";
 
-        private NavMeshAgent m_navAgent = null;
+        private NavMeshAgent navAgent = null;
 
         public override void OnAwake()
         {
-            m_navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
         {
-            m_navAgent.isStopped = true;
+            navAgent.isStopped = true;
         }
 
         public override ExecutionStatus OnUpdate()

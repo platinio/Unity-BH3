@@ -18,19 +18,19 @@ namespace Platinio.BehaviorTree
     public class BlackboardVariable<T>
     {
         [Serialize] [Inspectable]
-        private BlackboardVariableType m_variableType = BlackboardVariableType.Dynamic;
+        private BlackboardVariableType variableType = BlackboardVariableType.Dynamic;
         [Serialize] [Inspectable]
-        private string m_variableName;
+        private string variableName;
         [Serialize] [Inspectable] 
-        private T m_defaultValue;
+        private T defaultValue;
 
-        [Serialize] private bool m_foldout;
+        [Serialize] private bool foldout;
         
         public T GetValue(IGraphMachine machine)
         {
-            T result = m_defaultValue;
+            T result = defaultValue;
             
-            switch (m_variableType)
+            switch (variableType)
             {
                 case BlackboardVariableType.Dynamic:
                     TryGetValueDynamic(machine, out result);
@@ -54,7 +54,7 @@ namespace Platinio.BehaviorTree
         
         private bool TryGetValue(BlackboardVariableType variableType, IGraphMachine machine, out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
             switch (variableType)
             {
                 case BlackboardVariableType.Dynamic:
@@ -74,7 +74,7 @@ namespace Platinio.BehaviorTree
 
         private bool TryGetValueDynamic(IGraphMachine machine, out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
             var variableTypes = (BlackboardVariableType[])Enum.GetValues(typeof(BlackboardVariableType));
 
             foreach (var variableType in variableTypes)
@@ -89,7 +89,7 @@ namespace Platinio.BehaviorTree
 
         private bool TryGetValueFromObject(IGraphMachine machine, out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
             
             if (machine == null)
             {
@@ -97,42 +97,42 @@ namespace Platinio.BehaviorTree
                 return false;
             }
 
-            if (!machine.Variables.IsDefined(m_variableName)) return false;
+            if (!machine.Variables.IsDefined(variableName)) return false;
 
 
-            value = machine.Variables.Get<T>(m_variableName);
+            value = machine.Variables.Get<T>(variableName);
             return true;
         }
 
 
         private bool TryGetValueFromScene(out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
             
             var variables =  SceneVariables.Instance(SceneManager.GetActiveScene());
-            if (!variables.variables.declarations.IsDefined(m_variableName)) return false;
+            if (!variables.variables.declarations.IsDefined(variableName)) return false;
             
-            value = variables.variables.declarations.Get<T>(m_variableName);
+            value = variables.variables.declarations.Get<T>(variableName);
             return true;
         }
 
         private bool TryGetValueFromApp(out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
 
-            if (!ApplicationVariables.current.IsDefined(m_variableName)) return false;
+            if (!ApplicationVariables.current.IsDefined(variableName)) return false;
             
-            value = ApplicationVariables.current.Get<T>(m_variableName);
+            value = ApplicationVariables.current.Get<T>(variableName);
             return true;
         }
 
         private bool TryGetValueFromSave(out T value)
         {
-            value = m_defaultValue;
+            value = defaultValue;
 
-            if (!SavedVariables.current.IsDefined(m_variableName)) return false;
+            if (!SavedVariables.current.IsDefined(variableName)) return false;
             
-            value = SavedVariables.current.Get<T>(m_variableName);
+            value = SavedVariables.current.Get<T>(variableName);
             return true;
         }
     }

@@ -7,8 +7,8 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class PlaceHolderNode : BehaviorTreeNode
     {
-        [Serialize] private BehaviorTreeTransition m_owner;
-        public BehaviorTreeTransition Owner => m_owner;
+        [Serialize] private BehaviorTreeTransition owner;
+        public BehaviorTreeTransition Owner => owner;
         
         public override bool CanSelect => true;
         public override bool CanDrag => false;
@@ -19,7 +19,7 @@ namespace Platinio.BehaviorTree
         
         public PlaceHolderNode(BehaviorTreeTransition owner)
         {
-            m_owner = owner;
+            this.owner = owner;
         }
     }
 }

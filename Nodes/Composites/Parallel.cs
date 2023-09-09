@@ -5,22 +5,22 @@ namespace Platinio.BehaviorTree
 {
     public class Parallel : Composite
     {
-        protected ExecutionStatus[] m_childrenTaskStatus;
+        protected ExecutionStatus[] childrenTaskStatus;
 
         public override void OnEnter()
         {
-            if (m_childrenTaskStatus == null)
+            if (childrenTaskStatus == null)
             {
-                m_childrenTaskStatus = new ExecutionStatus[GetChildren().Count];
+                childrenTaskStatus = new ExecutionStatus[GetChildren().Count];
             }
             ResetChildrenTaskStatus();
         }
 
         private void ResetChildrenTaskStatus()
         {
-            for (int n = 0; n < m_childrenTaskStatus.Length; n++)
+            for (int n = 0; n < childrenTaskStatus.Length; n++)
             {
-                m_childrenTaskStatus[n] = ExecutionStatus.Inactive;
+                childrenTaskStatus[n] = ExecutionStatus.Inactive;
             }
         }
     }

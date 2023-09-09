@@ -2,11 +2,11 @@
 {
     public class Composite : ContainerNode
     {
-        protected int m_currentExecutingChildIndex = 0;
+        protected int currentExecutingChildIndex = 0;
        
         public override void OnAwake()
         {
-            m_currentExecutingChildIndex = 0;
+            currentExecutingChildIndex = 0;
         }
 
         protected void MoveCurrentExecutingChildIndex()

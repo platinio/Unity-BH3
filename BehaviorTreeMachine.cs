@@ -8,10 +8,10 @@ namespace Platinio.BehaviorTree
     [RequireComponent(typeof(Variables))]
     public class BehaviorTreeMachine : BaseMachine<BehaviorTreeGraph, BehaviorTreeGraphAsset, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        private BehaviorTreeGraph m_graph;
-        private ExecutionStatus m_lastExecutionStatus = ExecutionStatus.Inactive;
+        private BehaviorTreeGraph behaviorTreeGraph;
+        private ExecutionStatus lastExecutionStatus = ExecutionStatus.Inactive;
 
-        public ExecutionStatus LastExecutionStatus => m_lastExecutionStatus;
+        public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
         
         protected override void Awake()
         {
@@ -22,39 +22,39 @@ namespace Platinio.BehaviorTree
             if (hasGraph && nest.macro != null)
             {
                 nest.SwitchToEmbed(Instantiate(nest.macro).graph);
-                m_graph = nest.embed;
+                behaviorTreeGraph = nest.embed;
                 
-                var nodes = m_graph.Nodes;
+                var nodes = behaviorTreeGraph.Nodes;
 
                 foreach (var node in nodes)
                 {
                     node.SetMachine(this);
                 }
                 
-                m_graph.OnAwake();
+                behaviorTreeGraph.OnAwake();
             }
         }
 
         public void Switch(BehaviorTreeGraph behaviorTreeGraph)
         {
-            m_lastExecutionStatus = ExecutionStatus.Running;
-            m_graph = behaviorTreeGraph;
+            lastExecutionStatus = ExecutionStatus.Running;
+            this.behaviorTreeGraph = behaviorTreeGraph;
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
 
         private void Start()
         {
-            if (hasGraph && m_graph != null)
+            if (hasGraph && behaviorTreeGraph != null)
             {
-                m_graph.OnEnter();
+                behaviorTreeGraph.OnEnter();
             }
         }
 
         private void Update()
         {
-            if (hasGraph && m_graph != null)
+            if (hasGraph && behaviorTreeGraph != null)
             {
-                m_lastExecutionStatus = m_graph.OnUpdate();
+                lastExecutionStatus = behaviorTreeGraph.OnUpdate();
             }
         }
 

@@ -9,32 +9,32 @@ namespace Platinio.BehaviorTree
         public override string NodeName => "Repeater";
         public override bool CanExecute => true;
         
-        private int m_currentExecutingChildIndex = 0;
+        private int currentExecutingChildIndex = 0;
 
         public override void OnEnter()
         {
             base.OnEnter();
-            m_currentExecutingChildIndex = 0;
+            currentExecutingChildIndex = 0;
         }
 
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count <= 0) return ExecutionStatus.Success; 
             
-            var task = GetChildren()[m_currentExecutingChildIndex];
+            var task = GetChildren()[currentExecutingChildIndex];
             var result = task.OnUpdate();
 
             if (result == ExecutionStatus.Failure || result == ExecutionStatus.Success)
             {
                 task.OnNodeExit();
-                m_currentExecutingChildIndex++;
+                currentExecutingChildIndex++;
                 
-                if (GetChildren().Count <= m_currentExecutingChildIndex)
+                if (GetChildren().Count <= currentExecutingChildIndex)
                 {
-                    m_currentExecutingChildIndex = 0;
+                    currentExecutingChildIndex = 0;
                 }
 
-                GetChildren()[m_currentExecutingChildIndex].OnNodeEnter();
+                GetChildren()[currentExecutingChildIndex].OnNodeEnter();
             }
 
             return ExecutionStatus.Running;

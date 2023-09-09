@@ -10,16 +10,16 @@ namespace Platinio.BehaviorTree
     {
         public override string NodeName => "Patrol";
         protected override string NodeIconPath => "NodeIcons/Patrol";
-        private NavMeshAgent m_navMhesAgent;
+        private NavMeshAgent navMhesAgent;
         
-        [Serialize] [Inspectable] private string m_minPatrolDistanceKey = "MinPatrolDistance";
-        [Serialize] [Inspectable] private string m_maxPatrolDistanceKey = "MaxPatrolDistance";
-        [Serialize] [Inspectable] private string m_distanceToNavTarget = "DistanceToNavTarget";
+        [Serialize] [Inspectable] private string minPatrolDistanceKey = "MinPatrolDistance";
+        [Serialize] [Inspectable] private string maxPatrolDistanceKey = "MaxPatrolDistance";
+        [Serialize] [Inspectable] private string distanceToNavTarget = "DistanceToNavTarget";
 
 
         public override void OnAwake()
         {
-            m_navMhesAgent = GetComponent<NavMeshAgent>();
+            navMhesAgent = GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
@@ -33,25 +33,25 @@ namespace Platinio.BehaviorTree
             Vector2 direction = Random.insideUnitCircle;
             direction.Normalize();
 
-            float minPatrolDistance = VariableDeclarations.Get<float>(m_minPatrolDistanceKey);
-            float maxPatrolDistance = VariableDeclarations.Get<float>(m_maxPatrolDistanceKey);
+            float minPatrolDistance = VariableDeclarations.Get<float>(minPatrolDistanceKey);
+            float maxPatrolDistance = VariableDeclarations.Get<float>(maxPatrolDistanceKey);
             float distance = Random.Range(minPatrolDistance, maxPatrolDistance);
             Vector3 patrolPosition = transform.position + (new Vector3(direction.x, 0.0f, direction.y) * distance);
 
-            m_navMhesAgent.isStopped = false;
-            m_navMhesAgent.SetDestination(patrolPosition);
+            navMhesAgent.isStopped = false;
+            navMhesAgent.SetDestination(patrolPosition);
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            if (m_navMhesAgent.pathPending) return ExecutionStatus.Running;
-            if (m_navMhesAgent.pathStatus != NavMeshPathStatus.PathComplete)
+            if (navMhesAgent.pathPending) return ExecutionStatus.Running;
+            if (navMhesAgent.pathStatus != NavMeshPathStatus.PathComplete)
             {
                 SetRandomPatrolPosition();
                 return ExecutionStatus.Running;
             }
 
-            bool isComplete = Vector3.Distance(m_navMhesAgent.destination, transform.position) < 0.25f;
+            bool isComplete = Vector3.Distance(navMhesAgent.destination, transform.position) < 0.25f;
             return isComplete ? ExecutionStatus.Success : ExecutionStatus.Running;
         }
 
