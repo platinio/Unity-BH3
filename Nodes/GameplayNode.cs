@@ -1,8 +1,4 @@
-﻿using Platinio.AIPerception;
-using Platinio.Share;
-using UnityEngine;
-
-namespace Platinio.BehaviorTree
+﻿namespace Platinio.BehaviorTree
 {
     /// <summary>
     /// Base action node for behavior trees
