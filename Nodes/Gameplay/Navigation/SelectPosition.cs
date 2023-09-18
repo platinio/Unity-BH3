@@ -15,7 +15,7 @@ namespace Platinio.BehaviorTree
 
         public override void OnEnter()
         {
-            Machine.Variables.Set(DesirePositionKey, CalculateDesirePosition());
+            Machine.Variables.declarations.Set(DesirePositionKey, CalculateDesirePosition());
         }
 
         public override ExecutionStatus OnUpdate()

@@ -40,7 +40,7 @@ namespace Platinio.BehaviorTree
 
         private void SavePosition(Vector3 position)
         {
-            Machine.Variables.Set(GeneratePositionKey, position);
+            Machine.Variables.declarations.Set(GeneratePositionKey, position);
         }
 
     }

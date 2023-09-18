@@ -45,9 +45,9 @@ namespace Platinio.BehaviorTree
 
         private void TryUpdateNavAgentPosition()
         {
-            if (!Machine.Variables.IsDefined(NavPositionVariableName)) return;
+            if (!Machine.Variables.declarations.IsDefined(NavPositionVariableName)) return;
             
-            Vector3 pos = Machine.Variables.Get<Vector3>(NavPositionVariableName);
+            Vector3 pos = Machine.Variables.declarations.Get<Vector3>(NavPositionVariableName);
             navAgent.SetDestination(pos);
         }
     }

@@ -7,7 +7,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Navigation/Wait Until Reach Nav Target Position")]
     public class WaitUntilReachNavTargetPosition : GameplayNode
     {
-        public override string NodeName => "Wait Nav Agent Position";
+        public override string NodeName => "Wait Until Reach Nav Target Position";
 
         private NavMeshAgent navAgent = null;
 

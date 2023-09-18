@@ -16,7 +16,7 @@ namespace Platinio.BehaviorTree
         protected override void Awake()
         {
             base.Awake();
-            Variables = GetComponent<IVariables>();
+            Variables = GetComponent<Variables>();
             GameDataEngineVariables = GetComponent<GameDataEngineVariables>();
             
             if (hasGraph && nest.macro != null)
