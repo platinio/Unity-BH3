@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Platinio.AIPerception;
 using Platinio.Considerations;
 using Platinio.GraphCore;
@@ -33,6 +35,7 @@ namespace Platinio.BehaviorTree
             if (objectValue is GameObject go) return go.transform.position;
             if (objectValue is IGameEntity entity) return entity.transform.position;
             if (objectValue is TargetInfo targetInfo) return targetInfo.RealPosition;
+            if (objectValue is List<GameEntity> gameEntities) return gameEntities.FirstOrDefault().transform.position;
 
             return Vector3.zero;
         }

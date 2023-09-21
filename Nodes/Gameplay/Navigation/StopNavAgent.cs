@@ -1,4 +1,5 @@
 using Platinio.GraphCore;
+using UnityEngine;
 using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
@@ -18,6 +19,7 @@ namespace Platinio.BehaviorTree
         public override void OnEnter()
         {
             navAgent.isStopped = true;
+            navAgent.velocity = Vector3.zero;
         }
 
         public override ExecutionStatus OnUpdate()

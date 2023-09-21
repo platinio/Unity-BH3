@@ -10,6 +10,7 @@ namespace Platinio.BehaviorTree
     {
         [Serialize, Inspectable] private string NavPositionVariableName;
         [Serialize, Inspectable] private bool ClearCurrentPath = false;
+        [Serialize, Inspectable] private bool WaitForPathComplete = false;
        
         public override string NodeName => "Set Nav Agent Position";
 
@@ -22,18 +23,32 @@ namespace Platinio.BehaviorTree
 
         public override void OnEnter()
         {
-            navAgent.updatePosition = true;
-            navAgent.updateRotation = true;
+            if (!WaitForPathComplete)
+            {
+                navAgent.updatePosition = true;
+                navAgent.updateRotation = true;
+                navAgent.isStopped = false;
+            }
 
-            navAgent.isStopped = false;
             if (ClearCurrentPath) navAgent.ResetPath();
             TryUpdateNavAgentPosition();
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            if (!WaitForPathComplete) return ExecutionStatus.Success;
             if (navAgent.pathPending) return ExecutionStatus.Running;
-            if (navAgent.pathStatus == NavMeshPathStatus.PathComplete) return ExecutionStatus.Success;
+            if (navAgent.pathStatus == NavMeshPathStatus.PathComplete)
+            {
+                if (WaitForPathComplete)
+                {
+                    navAgent.updatePosition = true;
+                    navAgent.updateRotation = true;
+                    navAgent.isStopped = false;
+                }
+
+                return ExecutionStatus.Success;
+            }
 
             return ExecutionStatus.Failure;
         }
