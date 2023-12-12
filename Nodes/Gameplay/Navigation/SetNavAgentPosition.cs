@@ -8,7 +8,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
-        [Serialize, Inspectable] private string NavPositionVariableName;
+        [Serialize, Inspectable] protected string NavPositionVariableName;
         [Serialize, Inspectable] private bool ClearCurrentPath = false;
         [Serialize, Inspectable] private bool WaitForPathComplete = false;
        
@@ -58,7 +58,7 @@ namespace Platinio.BehaviorTree
            
         }
 
-        private void TryUpdateNavAgentPosition()
+        protected virtual void TryUpdateNavAgentPosition()
         {
             if (!Machine.Variables.declarations.IsDefined(NavPositionVariableName)) return;
             
