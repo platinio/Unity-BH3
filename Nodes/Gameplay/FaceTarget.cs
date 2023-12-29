@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Platinio.AIPerception;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -25,13 +24,13 @@ namespace Platinio.BehaviorTree
 
         private bool IsFacingTarget()
         {
-            if (!VariableDeclarations.IsDefined("SelectedTargetEntities")) return false;
+            if (!VariableDeclarations.IsDefined("SkillTargetInputVariables")) return false;
 
-            var selectedTarget = VariableDeclarations.Get<List<GameEntity>>("SelectedTargetEntities")[0];
+            var selectedTarget = VariableDeclarations.Get<List<SkillTargetInputVariable>>("SkillTargetInputVariables")[0];
             if (selectedTarget == null) return false;
             
             
-            Vector3 targetPosition = selectedTarget.transform.position;
+            Vector3 targetPosition = selectedTarget.GetTargetPosition();
             targetPosition.y = transform.position.y;
             Vector3 dir = (targetPosition - transform.position).normalized;
             Vector2 dir2D = new Vector2(dir.x, dir.z).normalized;
@@ -42,12 +41,12 @@ namespace Platinio.BehaviorTree
 
         private void FaceAttackTarget()
         {
-            if (!VariableDeclarations.IsDefined("SelectedTargetEntities")) return;
+            if (!VariableDeclarations.IsDefined("SkillTargetInputVariables")) return;
 
-            var selectedTarget = VariableDeclarations.Get<List<GameEntity>>("SelectedTargetEntities")[0];
+            var selectedTarget = VariableDeclarations.Get<List<SkillTargetInputVariable>>("SkillTargetInputVariables")[0];
             if (selectedTarget == null) return;
-            
-            Vector3 targetPosition = selectedTarget.transform.position;
+
+            Vector3 targetPosition = selectedTarget.GetTargetPosition();
             targetPosition.y = transform.position.y;
             Vector3 dir = (targetPosition - transform.position).normalized;
             Quaternion desireRot = Quaternion.LookRotation(dir);
