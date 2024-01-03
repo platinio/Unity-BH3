@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Platinio
 {
     [CreateAssetMenu(menuName = "Visual Scripting/Parameterized Behavior Tree Graph")]
-    public class ParametrizedBehaviorTree : ScriptableObject
+    public class ParameterizedBehaviorTree : ScriptableObject
     {
         [SerializeField] private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
         [SerializeReference, SubclassSelector] private List<BlockVariable> defaultParameters;
