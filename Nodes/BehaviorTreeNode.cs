@@ -13,13 +13,6 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        public virtual DecisionScoreResult CalculateScore()
-        {
-            return default;
-        }
-
-        public virtual void OnTraverse(DecisionScoreResult decisionScoreResult) { }
-        
         protected Vector3 GetPosition(string key)
         {
             if (!Machine.Variables.declarations.IsDefined(key))
