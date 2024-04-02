@@ -1,9 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-using Platinio.AIPerception;
-using Platinio.Considerations;
 using Platinio.GraphCore;
-using Platinio.Share;
 using UnityEngine;
 
 namespace Platinio.BehaviorTree
@@ -13,7 +8,7 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        protected Vector3 GetPosition(string key)
+        protected virtual Vector3 GetPosition(string key)
         {
             if (!Machine.Variables.declarations.IsDefined(key))
             {
@@ -26,11 +21,7 @@ namespace Platinio.BehaviorTree
             if (objectValue is Vector3 position) return position;
             if (objectValue is Transform t) return t.position;
             if (objectValue is GameObject go) return go.transform.position;
-            if (objectValue is IGameEntity entity) return entity.transform.position;
-            if (objectValue is TargetInfo targetInfo) return targetInfo.RealPosition;
-            if (objectValue is List<GameEntity> gameEntities) return gameEntities.FirstOrDefault().transform.position;
-            if (objectValue is List<SkillTargetInputVariable> skillTargetInputVariables) return skillTargetInputVariables.FirstOrDefault().GetTargetPosition();
-            
+           
             return Vector3.zero;
         }
     }
