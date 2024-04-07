@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Select Position")]
+    [GraphCreateMenu("Unity/Navigation/Select Position")]
     public class SelectPosition : GameplayNode
     {
         [Serialize] [Inspectable] private float DistanceFromTarget;

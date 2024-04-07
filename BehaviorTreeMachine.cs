@@ -9,7 +9,8 @@ namespace Platinio.BehaviorTree
     {
         private BehaviorTreeGraph behaviorTreeGraph;
         private ExecutionStatus lastExecutionStatus = ExecutionStatus.Inactive;
-
+        private BehaviorTreeGraphAsset graphInstance = null;
+        
         public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
         
         protected override void Awake()
@@ -19,7 +20,8 @@ namespace Platinio.BehaviorTree
 
             if (hasGraph && nest.macro != null)
             {
-                nest.SwitchToEmbed(Instantiate(nest.macro).graph);
+                graphInstance = Instantiate(nest.macro);
+                nest.SwitchToEmbed(graphInstance.graph);
                 behaviorTreeGraph = nest.embed;
                 
                 var nodes = behaviorTreeGraph.Nodes;
@@ -53,6 +55,14 @@ namespace Platinio.BehaviorTree
             if (hasGraph && behaviorTreeGraph != null)
             {
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            if (graphInstance)
+            {
+                Destroy(graphInstance);
             }
         }
 

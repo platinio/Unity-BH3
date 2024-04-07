@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Wait Until Reach Nav Target Position")]
+    [GraphCreateMenu("Unity/Navigation/Wait Until Reach Nav Target Position")]
     public class WaitUntilReachNavTargetPosition : GameplayNode
     {
         public override string NodeName => "Wait Until Reach Nav Target Position";

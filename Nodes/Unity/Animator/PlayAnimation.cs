@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Animator/Play Animation")]
+    [GraphCreateMenu("Unity/Animator/Play Animation")]
     public class PlayAnimation : GameplayNode
     {
         [Serialize] [Inspectable] private string stateName = "";

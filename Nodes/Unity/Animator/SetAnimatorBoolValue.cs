@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Animator/Set Animator Bool Value")]
+    [GraphCreateMenu("Unity/Animator/Set Animator Bool Value")]
     public class SetAnimatorBoolValue : GameplayNode
     {
         [Serialize] [Inspectable] private string varName = "";

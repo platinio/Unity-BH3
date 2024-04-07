@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Set NavAgent Position")]
+    [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
         [Serialize, Inspectable] protected string NavPositionVariableName;

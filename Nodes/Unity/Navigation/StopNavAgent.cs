@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Stop NavAgent")]
+    [GraphCreateMenu("Unity/Navigation/Stop NavAgent")]
     public class StopNavAgent : GameplayNode
     {
         public override string NodeName => "Stop NavAgent";

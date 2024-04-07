@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Navigation/Generate Random Navmesh Position")]
+    [GraphCreateMenu("Unity/Navigation/Generate Random Navmesh Position")]
     public class GenerateRandomNavMeshPosition : GameplayNode
     {
         [Header("Config")]
