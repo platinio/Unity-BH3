@@ -1,4 +1,5 @@
 ﻿using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 namespace Platinio.BehaviorTree
@@ -12,7 +13,7 @@ namespace Platinio.BehaviorTree
 
         protected override float GetHeight(float width, GUIContent label)
         {
-            return 200.0f;
+            return LudiqGUI.GetInspectorHeight(this, metadata, 250.0f) + EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
         }
 
         protected override void OnGUI(Rect position, GUIContent label)
