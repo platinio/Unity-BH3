@@ -26,6 +26,12 @@ namespace Platinio.BehaviorTree
            
             return Vector3.zero;
         }
+        
+        protected GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable)
+        {
+            var target = gameObjectVariable.GetValue(BehaviorTreeMachine);
+            return target == null ? gameObject : target;
+        }
     }
 
 }

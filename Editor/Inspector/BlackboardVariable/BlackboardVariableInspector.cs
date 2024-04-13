@@ -6,7 +6,7 @@ using ColorUtility = UnityEngine.ColorUtility;
 
 namespace Platinio.BehaviorTree
 {
-    public class BlackboardVariableInspector<T> : Inspector
+    public abstract class BlackboardVariableInspector<T> : Inspector
     {
         private Vector2 indentOffset = Vector2.right * 15.0f;
         private Vector2 sizeOffset = Vector2.left * 10.0f;
@@ -19,7 +19,7 @@ namespace Platinio.BehaviorTree
         protected override float GetHeight(float width, GUIContent label)
         {
             var foldout = Convert.ToBoolean(metadata["foldout"].value);
-            if (foldout) return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 4;
+            if (foldout) return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 3;
             return EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
         }
 
@@ -61,17 +61,8 @@ namespace Platinio.BehaviorTree
                 EditorGUI.LabelField(labelRect, "Type");
                 selectedVariableType = (BlackboardVariableType)EditorGUI.EnumPopup(valueRect, selectedVariableType);
                 
-                var variableName = DrawVariableName(ref position, ref labelRect, ref valueRect);
-            
-                //fix default value
-                var variableDefaultValue = Vector3.zero;
-            
-                CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
-                valueRect.size -= indentOffset;
-                valueRect.size += sizeOffset;
-                EditorGUI.LabelField(labelRect, "Default Value");
-                variableDefaultValue = EditorGUI.Vector3Field(valueRect, GUIContent.none, variableDefaultValue);
-                
+                var variableName = DrawVariableInspector(ref position, ref labelRect, ref valueRect);
+
                 CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
                 valueRect.size -= indentOffset;
                 valueRect.size += sizeOffset;
@@ -79,7 +70,6 @@ namespace Platinio.BehaviorTree
                 metadata.RecordUndo();
                 metadata["variableType"].value = selectedVariableType;
                 metadata["variableName"].value = variableName;
-                metadata["defaultValue"].value = variableDefaultValue;
             }
             
             metadata["foldout"].value = foldout;
@@ -91,7 +81,7 @@ namespace Platinio.BehaviorTree
 
         }
 
-        private string DrawVariableName(ref Rect position, ref Rect labelRect, ref Rect valueRect)
+        private string DrawVariableInspector(ref Rect position, ref Rect labelRect, ref Rect valueRect)
         {
             var variableName = Convert.ToString(metadata["variableName"].value);
             var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["variableType"].value);
@@ -101,7 +91,11 @@ namespace Platinio.BehaviorTree
             valueRect.size += sizeOffset;
             EditorGUI.LabelField(labelRect, "Name");
 
-            if (selectedVariableType == BlackboardVariableType.Graph)
+            if (selectedVariableType == BlackboardVariableType.Value)
+            {
+                metadata["value"].value = ValueField(valueRect, "value", (T) metadata["value"].value);
+            }
+            else if (selectedVariableType == BlackboardVariableType.Graph)
             {
                 if (!IsVariableNameValidOption())
                 {
@@ -116,8 +110,8 @@ namespace Platinio.BehaviorTree
                     while (variablesEnumerator.MoveNext())
                     {
                         var current = variablesEnumerator.Current;
-                        
-                        if (current.value.GetType() != typeof(Vector3)) continue;
+
+                        if (current.value.GetType() != typeof(T)) continue;
                         
                         menu.AddItem(new GUIContent(current.name), variableName == current.name, () =>
                         {
@@ -135,6 +129,9 @@ namespace Platinio.BehaviorTree
 
             return variableName;
         }
+
+        protected abstract T ValueField(Rect position, string name, T value);
+       
 
         private bool IsVariableNameValidOption()
         {

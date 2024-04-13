@@ -8,17 +8,19 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
+        [Serialize, Inspectable] private GameObjectBlackboardVariable Target = new();
+        [Serialize, Inspectable] private Vector3BlackboardVariable NavPosition = new ();
         [Serialize, Inspectable] private bool ClearCurrentPath = false;
         [Serialize, Inspectable] private bool WaitForPathComplete = false;
-        [Serialize, Inspectable] private Vector3BlackboardVariable NavPosition = new ();
 
         public override string NodeName => "Set Nav Agent Position";
 
         private NavMeshAgent navAgent = null;
+        private bool setPositionWasCompleted = false;
 
         public override void OnAwake()
         {
-            navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetTargetGameObject(Target).GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
@@ -31,12 +33,15 @@ namespace Platinio.BehaviorTree
             }
 
             if (ClearCurrentPath) navAgent.ResetPath();
-            TryUpdateNavAgentPosition();
+
+            setPositionWasCompleted = TryUpdateNavAgentPosition();
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            if (!WaitForPathComplete) return ExecutionStatus.Success;
+            if (!WaitForPathComplete) return setPositionWasCompleted? ExecutionStatus.Success : ExecutionStatus.Failure;
+            if (!setPositionWasCompleted) return ExecutionStatus.Failure;
+            
             if (navAgent.pathPending) return ExecutionStatus.Running;
             if (navAgent.pathStatus == NavMeshPathStatus.PathComplete)
             {
@@ -58,10 +63,10 @@ namespace Platinio.BehaviorTree
            
         }
 
-        protected virtual void TryUpdateNavAgentPosition()
+        protected virtual bool TryUpdateNavAgentPosition()
         {
             Vector3 pos = NavPosition.GetValue(BehaviorTreeMachine);
-            navAgent.SetDestination(pos);
+            return navAgent.SetDestination(pos);
         }
     }
 }
