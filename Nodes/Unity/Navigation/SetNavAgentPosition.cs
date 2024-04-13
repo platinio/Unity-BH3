@@ -10,8 +10,8 @@ namespace Platinio.BehaviorTree
     {
         [Serialize, Inspectable] private bool ClearCurrentPath = false;
         [Serialize, Inspectable] private bool WaitForPathComplete = false;
-        [Serialize, Inspectable] private Vector3BlackboardVariable NavPosition;
-      
+        [Serialize, Inspectable] private Vector3BlackboardVariable NavPosition = new Vector3BlackboardVariable();
+
         public override string NodeName => "Set Nav Agent Position";
 
         private NavMeshAgent navAgent = null;
