@@ -1,4 +1,5 @@
 ﻿using Platinio.GraphCore;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Platinio.BehaviorTree
@@ -6,6 +7,9 @@ namespace Platinio.BehaviorTree
     [CreateAssetMenu(menuName = "Visual Scripting/Behavior Tree", fileName = "New Behavior Tree Graph", order = 81)]
     public class BehaviorTreeGraphAsset : BaseGraphAsset<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
+        [Serialize, Inspectable]
+        public VariableDeclarations declarations { get; internal set; } = new() { Kind = VariableKind.Graph };
+        
         [ContextMenu("Show Data...")]
         protected override void ShowData()
         {

@@ -13,7 +13,7 @@ namespace Platinio.BehaviorTree
         protected override IEnumerable<ISidebarPanelContent> SidebarPanels()
         {
             yield return new GraphInspectorPanel(this);
-            yield return new VariablesPanel(this);
+            yield return new BehaviorTreeVariablesPanel(this);
         }
     }
 }
