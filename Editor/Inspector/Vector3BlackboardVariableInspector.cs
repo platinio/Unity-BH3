@@ -9,6 +9,9 @@ namespace Platinio.BehaviorTree
     [Inspector(typeof(Vector3BlackboardVariable))]
     public class Vector3BlackboardVariableInspector : Inspector
     {
+        private Vector2 indentOffset = Vector2.right * 15.0f;
+        private Vector2 sizeOffset = Vector2.left * 10.0f;
+        
         public Vector3BlackboardVariableInspector(Metadata metadata) : base(metadata)
         {
            
@@ -32,8 +35,7 @@ namespace Platinio.BehaviorTree
         protected override void OnGUI(Rect position, GUIContent label)
         {
             label.text = ConvertToInspectorName(label.text);
-            Vector2 indentOffset = Vector2.right * 15.0f;
-            
+
             CalculateLabelAndValueRect(ref position, out var labelRect, out var valueRect);
             labelRect.position += indentOffset;
            
@@ -46,7 +48,6 @@ namespace Platinio.BehaviorTree
             
             if (foldout)
             {
-                Vector2 sizeOffset = Vector2.left * 10.0f;
                 var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["variableType"].value);
 
                 Vector2 boxSize = new Vector2(position.width, GetHeight(position.width, label) - EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing);
@@ -60,15 +61,8 @@ namespace Platinio.BehaviorTree
                 valueRect.size += sizeOffset;
                 EditorGUI.LabelField(labelRect, "Type");
                 selectedVariableType = (BlackboardVariableType)EditorGUI.EnumPopup(valueRect, selectedVariableType);
-
-
-                var variableName = Convert.ToString(metadata["variableName"].value);
-            
-                CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
-                valueRect.size -= indentOffset;
-                valueRect.size += sizeOffset;
-                EditorGUI.LabelField(labelRect, "Name");
-                variableName = EditorGUI.TextField(valueRect, variableName);
+                
+                var variableName = DrawVariableName(ref position, ref labelRect, ref valueRect);
             
                 //fix default value
                 var variableDefaultValue = Vector3.zero;
@@ -78,12 +72,15 @@ namespace Platinio.BehaviorTree
                 valueRect.size += sizeOffset;
                 EditorGUI.LabelField(labelRect, "Default Value");
                 variableDefaultValue = EditorGUI.Vector3Field(valueRect, GUIContent.none, variableDefaultValue);
-
+                
+                CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
+                valueRect.size -= indentOffset;
+                valueRect.size += sizeOffset;
+                
                 metadata.RecordUndo();
                 metadata["variableType"].value = selectedVariableType;
                 metadata["variableName"].value = variableName;
-                metadata["defaultValue"].value = variableDefaultValue;   
-                
+                metadata["defaultValue"].value = variableDefaultValue;
             }
             
             metadata["foldout"].value = foldout;
@@ -94,7 +91,70 @@ namespace Platinio.BehaviorTree
             }
 
         }
-        
+
+        private string DrawVariableName(ref Rect position, ref Rect labelRect, ref Rect valueRect)
+        {
+            var variableName = Convert.ToString(metadata["variableName"].value);
+            var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["variableType"].value);
+            
+            CalculateLabelAndValueRect(ref position, out labelRect, out valueRect);
+            valueRect.size -= indentOffset;
+            valueRect.size += sizeOffset;
+            EditorGUI.LabelField(labelRect, "Name");
+
+            if (selectedVariableType == BlackboardVariableType.Graph)
+            {
+                if (!IsVariableNameValidOption())
+                {
+                    metadata["variableName"].value = string.Empty;
+                }
+
+                if (EditorGUI.DropdownButton(valueRect, new GUIContent(variableName), FocusType.Passive))
+                {
+                    var menu = new GenericMenu();
+                    var variablesEnumerator = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations.GetEnumerator();
+                    
+                    while (variablesEnumerator.MoveNext())
+                    {
+                        var current = variablesEnumerator.Current;
+                        
+                        if (current.value.GetType() != typeof(Vector3)) continue;
+                        
+                        menu.AddItem(new GUIContent(current.name), variableName == current.name, () =>
+                        {
+                            metadata["variableName"].value = current.name;
+                        });
+                    }
+
+                    menu.DropDown(valueRect);
+                }
+            }
+            else
+            {
+                variableName = EditorGUI.TextField(valueRect, variableName);
+            }
+
+            return variableName;
+        }
+
+        private bool IsVariableNameValidOption()
+        {
+            var variablesEnumerator = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations.GetEnumerator();
+            string variableName = metadata["variableName"].value as string;
+            
+            while (variablesEnumerator.MoveNext())
+            {
+                var current = variablesEnumerator.Current;
+                        
+                if (current.value.GetType() != typeof(Vector3)) continue;
+                        
+                if (variableName == current.name) return true;
+            }
+
+            return false;
+        }
+
+
         private string ConvertToInspectorName(string varName)
         {
             string inspectorName = varName.Replace("m_", string.Empty).Replace("M_", string.Empty).Replace("_", string.Empty);

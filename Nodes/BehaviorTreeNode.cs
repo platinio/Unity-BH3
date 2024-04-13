@@ -8,6 +8,8 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
+        protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
+        
         protected virtual Vector3 GetPosition(string key)
         {
             if (!Machine.Variables.declarations.IsDefined(key))

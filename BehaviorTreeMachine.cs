@@ -12,6 +12,8 @@ namespace Platinio.BehaviorTree
         private BehaviorTreeGraphAsset graphInstance = null;
         
         public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
+
+        public BehaviorTreeGraphAsset GraphInstance => graphInstance;
         
         protected override void Awake()
         {

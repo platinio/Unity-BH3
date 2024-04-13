@@ -10,6 +10,9 @@ namespace Platinio.BehaviorTree
     {
         public BehaviorTreeCanvas(BehaviorTreeGraph graph) : base(graph) { }
 
+        public static BehaviorTreeCanvas OpenBehaviorTreeCanvas;
+        public static BehaviorTreeGraphAsset OpenBehaviorTreeGraphAsset;
+        
         protected override IEnumerable<Type> GetValidNodes() => new List<Type>()
         {
             typeof(Composite),
@@ -18,5 +21,17 @@ namespace Platinio.BehaviorTree
             typeof(GameplayNode),
             typeof(Condition)
         };
+
+        public override void Open()
+        {
+            base.Open();
+            
+            OpenBehaviorTreeCanvas = this;
+        }
+
+        public static BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
+        {
+            return OpenBehaviorTreeCanvas.context.reference.scriptableObject as BehaviorTreeGraphAsset;
+        }
     }
 }

@@ -9,31 +9,31 @@ namespace Platinio.BehaviorTree
     public enum BlackboardVariableType
     {
         Dynamic,
+        Graph,
         Object,
         Scene,
         App,
         Saved
     }
-
-    public class BlackboardVariable<T>
+    
+    public abstract class BlackboardVariable<T>
     {
-        [Serialize] [Inspectable]
-        private BlackboardVariableType variableType = BlackboardVariableType.Dynamic;
-        [Serialize] [Inspectable]
-        private string variableName;
-        [Serialize] [Inspectable] 
-        private T defaultValue;
+        protected abstract BlackboardVariableType VariableType { get; }
+        protected abstract string VariableName { get; }
+        protected abstract Vector3 DefaultValue { get; }
 
-        [Serialize] private bool foldout;
-        
-        public T GetValue(IGraphMachine machine)
+
+        public Vector3 GetValue(BehaviorTreeMachine machine)
         {
-            T result = defaultValue;
+            Vector3 result = DefaultValue;
             
-            switch (variableType)
+            switch (VariableType)
             {
                 case BlackboardVariableType.Dynamic:
                     TryGetValueDynamic(machine, out result);
+                    break;
+                case BlackboardVariableType.Graph:
+                    TryGetValueFromGraph(machine, out result);
                     break;
                 case BlackboardVariableType.Object:
                     TryGetValueFromObject(machine, out result);
@@ -52,13 +52,17 @@ namespace Platinio.BehaviorTree
             return result;
         }
         
-        private bool TryGetValue(BlackboardVariableType variableType, IGraphMachine machine, out T value)
+        private bool TryGetValue(BlackboardVariableType variableType, BehaviorTreeMachine machine, out Vector3 value)
         {
-            value = defaultValue;
+            
+            value = DefaultValue;
+            
             switch (variableType)
             {
                 case BlackboardVariableType.Dynamic:
                     break;
+                case BlackboardVariableType.Graph:
+                    return TryGetValueFromGraph(machine, out value);
                 case BlackboardVariableType.Object:
                     return TryGetValueFromObject(machine, out value);
                 case BlackboardVariableType.Scene:
@@ -72,9 +76,9 @@ namespace Platinio.BehaviorTree
             return false;
         }
 
-        private bool TryGetValueDynamic(IGraphMachine machine, out T value)
+        private bool TryGetValueDynamic(BehaviorTreeMachine machine, out Vector3 value)
         {
-            value = defaultValue;
+            value = DefaultValue;
             var variableTypes = (BlackboardVariableType[])Enum.GetValues(typeof(BlackboardVariableType));
 
             foreach (var variableType in variableTypes)
@@ -87,9 +91,20 @@ namespace Platinio.BehaviorTree
             return false;
         }
 
-        private bool TryGetValueFromObject(IGraphMachine machine, out T value)
+        private bool TryGetValueFromGraph(BehaviorTreeMachine machine, out Vector3 value)
         {
-            value = defaultValue;
+            value = DefaultValue;
+            var declarations = machine.GraphInstance.declarations;
+
+            if (!declarations.IsDefined(VariableName)) return false;
+            
+            value = declarations.Get<Vector3>(VariableName);
+            return true;
+        }
+        
+        private bool TryGetValueFromObject(IGraphMachine machine, out Vector3 value)
+        {
+            value = DefaultValue;
             
             if (machine == null)
             {
@@ -97,42 +112,42 @@ namespace Platinio.BehaviorTree
                 return false;
             }
 
-            if (!machine.Variables.declarations.IsDefined(variableName)) return false;
+            if (!machine.Variables.declarations.IsDefined(VariableName)) return false;
 
 
-            value = machine.Variables.declarations.Get<T>(variableName);
+            value = machine.Variables.declarations.Get<Vector3>(VariableName);
             return true;
         }
 
 
-        private bool TryGetValueFromScene(out T value)
+        private bool TryGetValueFromScene(out Vector3 value)
         {
-            value = defaultValue;
+            value = DefaultValue;
             
             var variables =  SceneVariables.Instance(SceneManager.GetActiveScene());
-            if (!variables.variables.declarations.IsDefined(variableName)) return false;
+            if (!variables.variables.declarations.IsDefined(VariableName)) return false;
             
-            value = variables.variables.declarations.Get<T>(variableName);
+            value = variables.variables.declarations.Get<Vector3>(VariableName);
             return true;
         }
 
-        private bool TryGetValueFromApp(out T value)
+        private bool TryGetValueFromApp(out Vector3 value)
         {
-            value = defaultValue;
+            value = DefaultValue;
 
-            if (!ApplicationVariables.current.IsDefined(variableName)) return false;
+            if (!ApplicationVariables.current.IsDefined(VariableName)) return false;
             
-            value = ApplicationVariables.current.Get<T>(variableName);
+            value = ApplicationVariables.current.Get<Vector3>(VariableName);
             return true;
         }
 
-        private bool TryGetValueFromSave(out T value)
+        private bool TryGetValueFromSave(out Vector3 value)
         {
-            value = defaultValue;
+            value = DefaultValue;
 
-            if (!SavedVariables.current.IsDefined(variableName)) return false;
+            if (!SavedVariables.current.IsDefined(VariableName)) return false;
             
-            value = SavedVariables.current.Get<T>(variableName);
+            value = SavedVariables.current.Get<Vector3>(VariableName);
             return true;
         }
     }
