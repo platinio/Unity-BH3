@@ -97,12 +97,8 @@ namespace Platinio.BehaviorTree
             }
             else if (selectedVariableType == BlackboardVariableType.Graph)
             {
-                if (!IsVariableNameValidOption())
-                {
-                    metadata["variableName"].value = string.Empty;
-                }
 
-                if (EditorGUI.DropdownButton(valueRect, new GUIContent(variableName), FocusType.Passive))
+                if (EditorGUI.DropdownButton(valueRect, new GUIContent(GetLabelVariableName()), FocusType.Passive))
                 {
                     var menu = new GenericMenu();
                     var variablesEnumerator = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations.GetEnumerator();
@@ -131,7 +127,14 @@ namespace Platinio.BehaviorTree
         }
 
         protected abstract T ValueField(Rect position, string name, T value);
-       
+
+        private string GetLabelVariableName()
+        {
+            string variableName = metadata["variableName"].value as string;
+
+            if (!IsVariableNameValidOption()) return $"{variableName}(MISSING!)";
+            return variableName;
+        }
 
         private bool IsVariableNameValidOption()
         {
