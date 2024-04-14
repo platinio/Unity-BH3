@@ -43,7 +43,7 @@ namespace Platinio.BehaviorTree
             {
                 foreach (var children in children)
                 {
-                    children.OnUpdate();
+                    children.OnUpdateInternal();
                 }
             }
 

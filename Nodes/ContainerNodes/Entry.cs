@@ -44,7 +44,7 @@ namespace Platinio.BehaviorTree
                     return ExecutionStatus.Success;
                 }
                 
-                var result =  GetChildren()[0].OnUpdate();
+                var result =  GetChildren()[0].OnUpdateInternal();
                 isComplete = result == ExecutionStatus.Success || result == ExecutionStatus.Failure;
             }
 

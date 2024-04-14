@@ -8,6 +8,7 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
+        private BehaviorTreeMachineDebug machineDebug;
         protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
         
         protected virtual Vector3 GetPosition(string key)
@@ -32,7 +33,40 @@ namespace Platinio.BehaviorTree
             var target = gameObjectVariable.GetValue(BehaviorTreeMachine);
             return target == null ? gameObject : target;
         }
-    }
 
+        protected BehaviorTreeMachineDebug GetMachineDebug()
+        {
+            if (machineDebug == null)
+            {
+                machineDebug = gameObject.GetComponent<BehaviorTreeMachineDebug>();
+            }
+
+            return machineDebug;
+        }
+
+        public override void OnNodeEnter()
+        {
+            base.OnNodeEnter();
+
+#if UNITY_EDITOR
+            var debugComponent = GetMachineDebug();
+            if (debugComponent == null) return;
+            
+            debugComponent.PushNodeToCallStack(this);
+#endif
+        }
+
+        public override void OnNodeExit()
+        {
+            base.OnNodeExit();
+            
+#if UNITY_EDITOR
+            var debugComponent = GetMachineDebug();
+            if (debugComponent == null) return;
+            
+            debugComponent.PopCallStack();
+#endif
+        }
+    }
 }
 

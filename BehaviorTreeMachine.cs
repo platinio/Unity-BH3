@@ -56,6 +56,14 @@ namespace Platinio.BehaviorTree
         {
             if (hasGraph && behaviorTreeGraph != null)
             {
+
+#if UNITY_EDITOR
+                foreach (var node in behaviorTreeGraph.Nodes)
+                {
+                    node.CanvasUpdate();
+                }
+#endif
+                
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
             }
         }

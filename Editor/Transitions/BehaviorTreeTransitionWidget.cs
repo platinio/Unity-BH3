@@ -42,8 +42,7 @@ namespace Platinio.BehaviorTree
         protected override bool snapToGrid => false;
         public override bool canDelete => true;
         public override bool canSelect => true;
-
-
+       
         public override Rect position
         {
             get => element.Position;
@@ -79,6 +78,12 @@ namespace Platinio.BehaviorTree
             }
         }
 
+        public override void DrawOverlay()
+        {
+            if (!element.destination.IsRunning) return;
+            BehaviorTreeGraphDrawer.DrawTransition(graph, this, new WidgetElementState(), Vector2.zero);
+        }
+
         public override void DrawBackground()
         {
             DrawConnection(Vector2.zero);
@@ -87,7 +92,6 @@ namespace Platinio.BehaviorTree
         public override void CachePositionFirstPass()
         {
             // Calculate the size immediately, because other transitions will rely on it for positioning
-
             targetInnerWidth = Styles.eventIcon.fixedWidth;
 
             var labelHeight = EditorGUIUtility.singleLineHeight;
@@ -326,7 +330,8 @@ namespace Platinio.BehaviorTree
 
         public void DrawConnection(Vector2 offset)
         {
-            var transitionRects = BehaviorTreeGraphDrawer.DrawTransition(graph, this, Styles.background, new WidgetElementState(), offset);
+            var transitionRects = BehaviorTreeGraphDrawer.DrawTransition(graph, this, new WidgetElementState(), offset);
+
             UpdatePlaceHolderNodes(transitionRects);
             UpdateSelectionState();
         }
@@ -392,9 +397,26 @@ namespace Platinio.BehaviorTree
         {
             static Styles()
             {
-                background = new GUIStyle();
-                background.normal.background = Texture2D.whiteTexture;
-                background.onNormal.background = background.normal.background;
+                
+                normalBackground = new GUIStyle();
+                normalBackground.normal.background = Texture2D.whiteTexture;
+                normalBackground.onNormal.background = normalBackground.normal.background;
+
+                runningBackground = new GUIStyle();
+                var text = new Texture2D(100, 100);
+
+                for (int y = 0; y < text.height; y++)
+                {
+                    for (int x = 0; x < text.width; x++)
+                    {
+                        text.SetPixel(x, y, Color.green);
+                    }
+                }
+
+                text.Apply();
+                
+                runningBackground.normal.background = text;
+                runningBackground.onNormal.background = runningBackground.normal.background;
                 
                 label = new GUIStyle(BoltCore.Styles.nodeLabel);
                 label.alignment = TextAnchor.MiddleCenter;
@@ -409,7 +431,8 @@ namespace Platinio.BehaviorTree
                 eventIcon.fixedWidth = 16;
             }
 
-            public static readonly GUIStyle background;
+            public static readonly GUIStyle normalBackground;
+            public static readonly GUIStyle runningBackground;
             public static readonly GUIStyle label;
 
             public static readonly GUIStyle labelInverted;

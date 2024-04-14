@@ -100,7 +100,7 @@ namespace Platinio.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            var result = EntryNode.OnUpdate();
+            var result = EntryNode.OnUpdateInternal();
             if (result == ExecutionStatus.Failure || result == ExecutionStatus.Success)
             {
                 EntryNode.OnNodeExit();

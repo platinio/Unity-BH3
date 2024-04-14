@@ -6,8 +6,13 @@ namespace Platinio.BehaviorTree
 {
     public static class BehaviorTreeGraphDrawer
     {
-        public static List<Rect> DrawTransition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget, GUIStyle style, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
+        public static List<Rect> DrawTransition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
         {
+            var oldColor = GUI.color;
+            if (transitionWidget.element.destination.IsRunning) GUI.color = Color.green;
+            else GUI.color = Color.white;
+           
+            
             List<Rect> lineRects = new List<Rect>();
             Vector2 destinationCenter = transitionWidget.destinationEdgeCenter;
             Vector2 sourceCenter = transitionWidget.sourceEdgeCenter;
@@ -20,7 +25,8 @@ namespace Platinio.BehaviorTree
             Rect firstSectionRect = new Rect(sourceCenter, transitionFirstSectionSize);
 
             firstSectionRect.position += offset;
-            style.Draw(firstSectionRect, widgetElementState.IsHover, widgetElementState.IsActive, widgetElementState.On, widgetElementState.HasKeyboardFocus);
+         
+            GUI.DrawTexture(firstSectionRect, Texture2D.whiteTexture);
             lineRects.Add(firstSectionRect);
             
             //draw transition second section
@@ -32,7 +38,8 @@ namespace Platinio.BehaviorTree
             Rect secondSectionRect = new Rect(secondSectionPosition, secondSectionSize);
             
             secondSectionRect.position += offset;
-            style.Draw( secondSectionRect,widgetElementState.IsHover, widgetElementState.IsActive, widgetElementState.On, widgetElementState.HasKeyboardFocus);
+           
+            GUI.DrawTexture(secondSectionRect, Texture2D.whiteTexture);
             lineRects.Add(secondSectionRect);
             
             //draw transition third section
@@ -57,9 +64,11 @@ namespace Platinio.BehaviorTree
             Rect thirdSectionRect = new Rect(thirdSectionPosition, new Vector2(lineWidth, lastSectionHeight));
             
             thirdSectionRect.position += offset;
-            style.Draw(thirdSectionRect, widgetElementState.IsHover, widgetElementState.IsActive, widgetElementState.On, widgetElementState.HasKeyboardFocus);
+           
+            GUI.DrawTexture(thirdSectionRect, Texture2D.whiteTexture);
             lineRects.Add(thirdSectionRect);
 
+            GUI.color = oldColor;
             return lineRects;
         }
 
