@@ -95,28 +95,9 @@ namespace Platinio.BehaviorTree
             {
                 metadata["value"].value = ValueField(valueRect, "value", (T) metadata["value"].value);
             }
-            else if (selectedVariableType == BlackboardVariableType.Graph)
+            else if (selectedVariableType == BlackboardVariableType.Graph || selectedVariableType == BlackboardVariableType.Saved || selectedVariableType == BlackboardVariableType.App)
             {
-
-                if (EditorGUI.DropdownButton(valueRect, new GUIContent(GetLabelVariableName()), FocusType.Passive))
-                {
-                    var menu = new GenericMenu();
-                    var variablesEnumerator = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations.GetEnumerator();
-                    
-                    while (variablesEnumerator.MoveNext())
-                    {
-                        var current = variablesEnumerator.Current;
-
-                        if (current.value.GetType() != typeof(T)) continue;
-                        
-                        menu.AddItem(new GUIContent(current.name), variableName == current.name, () =>
-                        {
-                            metadata["variableName"].value = current.name;
-                        });
-                    }
-
-                    menu.DropDown(valueRect);
-                }
+                DrawDropdownVariableOptions(valueRect);
             }
             else
             {
@@ -126,26 +107,66 @@ namespace Platinio.BehaviorTree
             return variableName;
         }
 
+        private void DrawDropdownVariableOptions(Rect position)
+        {
+            var variableName = Convert.ToString(metadata["variableName"].value);
+            
+            if (EditorGUI.DropdownButton(position, new GUIContent(GetLabelVariableName()), FocusType.Passive))
+            {
+                var menu = new GenericMenu();
+                var variablesEnumerator = GetVariableDeclarations().GetEnumerator();
+                    
+                while (variablesEnumerator.MoveNext())
+                {
+                    var current = variablesEnumerator.Current;
+                    if (current.typeHandle.Resolve() != typeof(T)) continue;
+                        
+                    menu.AddItem(new GUIContent(current.name), variableName == current.name, () =>
+                    {
+                        metadata["variableName"].value = current.name;
+                    });
+                }
+
+                menu.DropDown(position);
+            }
+        }
+
+        private VariableDeclarations GetVariableDeclarations()
+        {
+            var selectedVariableType = (BlackboardVariableType)Convert.ToInt32(metadata["variableType"].value);
+
+            switch (selectedVariableType)
+            {
+                case BlackboardVariableType.Graph:
+                    return BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations;
+                case BlackboardVariableType.App:
+                    return Variables.Application;
+                case BlackboardVariableType.Saved:
+                    return Variables.Saved;
+            }
+
+            return null;
+        }
+
         protected abstract T ValueField(Rect position, string name, T value);
 
         private string GetLabelVariableName()
         {
             string variableName = metadata["variableName"].value as string;
 
-            if (!IsVariableNameValidOption()) return $"{variableName}(MISSING!)";
+            if (!IsVariableNameValidOption()) return $"{variableName} (MISSING!)";
             return variableName;
         }
 
         private bool IsVariableNameValidOption()
         {
-            var variablesEnumerator = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations.GetEnumerator();
+            var variablesEnumerator = GetVariableDeclarations().GetEnumerator();
             string variableName = metadata["variableName"].value as string;
             
             while (variablesEnumerator.MoveNext())
             {
                 var current = variablesEnumerator.Current;
-                        
-                if (current.value.GetType() != typeof(T)) continue;
+                if (current.typeHandle.Resolve() != typeof(T)) continue;
                         
                 if (variableName == current.name) return true;
             }
