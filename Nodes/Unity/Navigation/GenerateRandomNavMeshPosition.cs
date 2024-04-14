@@ -17,7 +17,7 @@ namespace Platinio.BehaviorTree
         [Header("Keys")] [Serialize, Inspectable]
         private string GeneratePositionKey;
 
-        public override string NodeName => "Generate Random Nav Mesh Position";
+        public override string NodeName => "Set Random Nav Position";
 
         public override ExecutionStatus OnUpdate()
         {

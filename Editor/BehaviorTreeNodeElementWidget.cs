@@ -183,7 +183,7 @@ namespace Platinio.BehaviorTree
                 title = new GUIStyle(BoltCore.Styles.nodeLabel);
                 title.normal.textColor = new Color(1, 1, 1, 0.75f);
                 title.alignment = TextAnchor.MiddleCenter;
-                title.fontSize = 12;
+                title.fontSize = 11;
                 title.wordWrap = true;
             }
 
