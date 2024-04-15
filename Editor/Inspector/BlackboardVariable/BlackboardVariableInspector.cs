@@ -138,7 +138,14 @@ namespace Platinio.BehaviorTree
             switch (selectedVariableType)
             {
                 case BlackboardVariableType.Graph:
-                    return BehaviorTreeCanvas.GetBehaviorTreeGraphAsset().declarations;
+                    var graphAsset = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
+                    if (graphAsset == null)
+                    {
+                        Debug.LogError("Graph asset is null!");
+                        return null;
+                    }
+                    
+                    return graphAsset.declarations;
                 case BlackboardVariableType.App:
                     return Variables.Application;
                 case BlackboardVariableType.Saved:

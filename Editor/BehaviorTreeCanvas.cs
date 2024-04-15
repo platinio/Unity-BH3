@@ -31,6 +31,12 @@ namespace Platinio.BehaviorTree
 
         public static BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
         {
+            var gameObject = OpenBehaviorTreeCanvas.context.reference.gameObject;
+            if (gameObject != null)
+            {
+                return gameObject.GetComponent<BehaviorTreeMachine>().GraphAsset;
+            }
+
             return OpenBehaviorTreeCanvas.context.reference.scriptableObject as BehaviorTreeGraphAsset;
         }
     }

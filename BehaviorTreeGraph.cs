@@ -109,5 +109,23 @@ namespace Platinio.BehaviorTree
 
             return ExecutionStatus.Running;
         }
+
+        public Vector2 GetEntryNodeOffset()
+        {
+            Vector2 entryOffset = new Vector2();
+
+            foreach (var node in Nodes)
+            {
+                if (node is Entry entryNode)
+                {
+                    Vector2 sizeOffset = new Vector2(entryNode.Position.size.x * 0.5f, entryNode.Position.size.y * 0.5f);
+                    sizeOffset += new Vector2(0, -50.0f);
+                    entryOffset = (entryNode.Position.position + sizeOffset) * -1;
+                }
+            }
+
+            return entryOffset;
+        }
+        
     }
 }

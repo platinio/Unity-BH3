@@ -30,53 +30,45 @@ namespace Platinio.BehaviorTree
                 return;
             }
 
-            position = CalculateBox();
-            var box = CalculateBox();
-            //GraphDrawer.DrawSelectionBox(box, 2, element.Color);
+            position = CalculateSubBehaviorTreeBox();
+            var box = CalculateSubBehaviorTreeBox();
 
-            BehaviorTreeGraph behaviorTreeGraph = null;
+            BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
+            Vector2 entryOffset = behaviorTreeGraph.GetEntryNodeOffset() + offset;
 
-            if (runBehaviorTreeGraphNode.BehaviorTreeGraphInstance != null)
-            {
-                behaviorTreeGraph = runBehaviorTreeGraphNode.BehaviorTreeGraphInstance;
-            }
-            else
-            {
-                behaviorTreeGraph = runBehaviorTreeGraphNode.BehaviorTreeGraphAsset.graph;
-            }
-            
-            Vector2 entryOffset = new Vector2();
-
-            foreach (var node in behaviorTreeGraph.Nodes)
-            {
-                if (node is Entry entryNode)
-                {
-                    Vector2 sizeOffset = new Vector2(entryNode.Position.size.x * 0.5f, entryNode.Position.size.y * 0.5f);
-                    sizeOffset += new Vector2(0, -50.0f);
-                    entryOffset = (entryNode.Position.position + sizeOffset) * -1;
-                }
-            }
-
-            entryOffset += offset;
+            Vector2 subBehaviorTreeOffset = position.position + (new Vector2(box.size.x / 2.0f, 0.0f)) + entryOffset;
             
             foreach (var graphElement in behaviorTreeGraph.elements)
             {
                 if (graphElement is RunBehaviorTreeGraphNode runNode)
                 {
                     RunBehaviorTreeNodeElementWidget w = behaviorTreeGraph.Canvas().Widget(runNode) as RunBehaviorTreeNodeElementWidget;
-                    w.DrawForeground(position.position + (new Vector2(box.size.x / 2.0f, 0.0f)) + entryOffset, true, false);
+                    w.DrawForeground(subBehaviorTreeOffset, true, false);
                 }
                 else if (graphElement is BehaviorTreeNode node)
                 {
                     var w = behaviorTreeGraph.Canvas().Widget(node) as BehaviorTreeNodeElementWidget;
-                    w.DrawForeground(position.position + (new Vector2(box.size.x / 2.0f, 0.0f)) + entryOffset, true, false);
+                    w.DrawForeground(subBehaviorTreeOffset, true, false);
                 }
                 else if (graphElement is BehaviorTreeTransition transition)
                 {
                     var w = behaviorTreeGraph.Canvas().Widget(transition) as BehaviorTreeTransitionWidget;
-                    w.DrawConnection(position.position + (new Vector2(box.size.x / 2.0f, 0.0f)) + entryOffset);
+                    w.DrawConnection(subBehaviorTreeOffset);
                 }
             }
+        }
+        
+        private BehaviorTreeGraph GetBehaviorTreeGraph()
+        {
+            var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
+            BehaviorTreeGraph behaviorTreeGraph = null;
+
+            if (runBehaviorTreeGraphNode.BehaviorTreeGraphInstance != null)
+            {
+                return runBehaviorTreeGraphNode.BehaviorTreeGraphInstance;
+            }
+            
+            return runBehaviorTreeGraphNode.BehaviorTreeGraphAsset.graph;
         }
 
         /// <summary>
@@ -95,7 +87,7 @@ namespace Platinio.BehaviorTree
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
-        private Rect CalculateBox()
+        private Rect CalculateSubBehaviorTreeBox()
         {
             Vector2 margin = new Vector2(300, 300);
             
@@ -159,16 +151,7 @@ namespace Platinio.BehaviorTree
                 return;
             }
 
-            BehaviorTreeGraph behaviorTreeGraph = null;
-
-            if (runBehaviorTreeGraphNode.BehaviorTreeGraphInstance != null)
-            {
-                behaviorTreeGraph = runBehaviorTreeGraphNode.BehaviorTreeGraphInstance;
-            }
-            else
-            {
-                behaviorTreeGraph = runBehaviorTreeGraphNode.BehaviorTreeGraphAsset.graph;
-            }
+            BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
 
             foreach (var graphElement in behaviorTreeGraph.elements)
             {
