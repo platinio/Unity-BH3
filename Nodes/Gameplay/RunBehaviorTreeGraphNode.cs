@@ -10,7 +10,22 @@ namespace Platinio.BehaviorTree
         [Serialize] [Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
         
-        private BehaviorTreeGraph behaviorTreeGraph = null;
+        private BehaviorTreeGraph behaviorTreeGraphInstance = null;
+
+        public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
+
+        public BehaviorTreeGraph BehaviorTreeGraphInstance
+        {
+            get
+            {
+                if (behaviorTreeGraphInstance == null)
+                {
+                    behaviorTreeGraphInstance = Object.Instantiate(behaviorTreeGraphAsset).graph;
+                }
+
+                return behaviorTreeGraphInstance;
+            }
+        }
 
         public override string NodeName
         {
@@ -23,36 +38,36 @@ namespace Platinio.BehaviorTree
 
         public override void OnAwake()
         {
-            GetGraph().OnAwake();
+            BehaviorTreeGraphInstance.OnAwake();
         }
 
         public override void OnEnter()
         {
-            GetGraph().OnEnter();
+            BehaviorTreeGraphInstance.OnEnter();
         }
         
         public override ExecutionStatus OnUpdate()
         {
-            return GetGraph().OnUpdate();
+            return BehaviorTreeGraphInstance.OnUpdate();
         }
-        
-        private BehaviorTreeGraph GetGraph()
-        {
-            if (behaviorTreeGraph == null)
-            {
-                behaviorTreeGraph = Object.Instantiate(behaviorTreeGraphAsset).graph;
-            }
 
-            return behaviorTreeGraph;
-        }
-        
         public override void SetMachine(IGraphMachine machine)
         {
             base.SetMachine(machine);
-            var nodes = GetGraph().Nodes;
+            var nodes = BehaviorTreeGraphInstance.Nodes;
             foreach (var node in nodes)
             {
                 node.SetMachine(machine);
+            }
+        }
+
+        public override void CanvasUpdate()
+        {
+            base.CanvasUpdate();
+
+            foreach (var node in BehaviorTreeGraphInstance.Nodes)
+            {
+               node.CanvasUpdate(); 
             }
         }
     }

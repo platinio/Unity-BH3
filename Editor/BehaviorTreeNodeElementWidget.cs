@@ -11,6 +11,7 @@ namespace Platinio.BehaviorTree
         {
         }
 
+        public Rect LastExecutionStateIconRect { get; private set; }
         public Rect IconRect { get; private set; }
         public Rect TittleRect { get; private set; }
 
@@ -29,6 +30,7 @@ namespace Platinio.BehaviorTree
         private readonly Vector2 ICON_POSITION_OFFSET = new Vector2(28.0f, 0.0f);
         private readonly Vector2 ICON_SIZE = new Vector2(65.0f, 65.0f);
         private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -35.0f);
+        private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
 
         private readonly float TITLE_HEIGHT = 20.0f;
         
@@ -38,7 +40,7 @@ namespace Platinio.BehaviorTree
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
-        public void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
+        public virtual void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
             if (!element.IsVisible) return;
 
@@ -59,7 +61,21 @@ namespace Platinio.BehaviorTree
 
                 DrawIcon(offset);
                 DrawTitle(offset);
+                DrawLastExecutionIcon(offset);
             }
+        }
+
+        private void DrawLastExecutionIcon(Vector2 offset)
+        {
+            if (element.LastExecutionStatus == ExecutionStatus.None) return;
+            
+            GUIStyle style = new GUIStyle();
+            style.normal.background = Resources.Load<Texture2D>($"ExecutionStatus/{element.LastExecutionStatus.ToString()}");
+
+            Rect p = LastExecutionStateIconRect;
+            p.position += offset + new Vector2(-10, 20);
+            
+            style.Draw(p, false, IsSelected, false, false);
         }
 
         private int GetBorderThickness()
@@ -103,11 +119,13 @@ namespace Platinio.BehaviorTree
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
             Vector2 titleSize = new Vector2(element.Width, TITLE_HEIGHT);
+            Vector2 lastExecutionIconPosition = innerOrigin + LAST_EXECUTION_STATE_ICON_OFFSET;
             
             using (LudiqGUIUtility.iconSize.Override(IconSize.Small))
             {
                 IconRect = new Rect(iconPosition, ICON_SIZE);
                 TittleRect = new Rect(titlePosition, titleSize);
+                LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
             }
         }
 
