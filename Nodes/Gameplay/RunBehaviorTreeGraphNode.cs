@@ -9,21 +9,22 @@ namespace Platinio.BehaviorTree
     {
         [Serialize] [Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
-        
-        private BehaviorTreeGraph behaviorTreeGraphInstance = null;
+
+        private BehaviorTreeGraphAsset behaviorTreeGraphAssetInstance = null;
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
+        public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
 
-        public BehaviorTreeGraph BehaviorTreeGraphInstance
+        public BehaviorTreeGraphAsset BehaviorTreeGraphAssetInstance
         {
             get
             {
-                if (behaviorTreeGraphInstance == null)
+                if (behaviorTreeGraphAssetInstance == null)
                 {
-                    behaviorTreeGraphInstance = Object.Instantiate(behaviorTreeGraphAsset).graph;
+                    behaviorTreeGraphAssetInstance = Object.Instantiate(behaviorTreeGraphAsset);
                 }
 
-                return behaviorTreeGraphInstance;
+                return behaviorTreeGraphAssetInstance;
             }
         }
 

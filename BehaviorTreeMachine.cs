@@ -14,6 +14,7 @@ namespace Platinio.BehaviorTree
         public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
 
         public BehaviorTreeGraphAsset GraphInstance => graphInstance;
+        public BehaviorTreeGraphAsset GraphAsset => nest.macro;
         
         protected override void Awake()
         {
@@ -33,7 +34,29 @@ namespace Platinio.BehaviorTree
                     node.SetMachine(this);
                 }
                 
+                OverrideGraphAndSubGraphVariables(graphInstance);
                 behaviorTreeGraph.OnAwake();
+            }
+        }
+
+        private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset)
+        {
+            OverrideGraphVariables(graphAsset);
+
+            foreach (var behaviorTreeNode in graphAsset.graph.Nodes)
+            {
+                if (behaviorTreeNode is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
+                {
+                    OverrideGraphAndSubGraphVariables(runBehaviorTreeGraphNode.BehaviorTreeGraphAssetInstance);
+                }
+            }
+        }
+
+        private void OverrideGraphVariables(BehaviorTreeGraphAsset graphAsset)
+        {
+            foreach (var variableDeclaration in Variables.declarations)
+            {
+                graphAsset.declarations.Set(variableDeclaration.name, variableDeclaration.value);
             }
         }
 
