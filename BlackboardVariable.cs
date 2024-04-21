@@ -62,9 +62,40 @@ namespace Platinio.BehaviorTree
             return result;
         }
         
+        public bool TryGetValue(BehaviorTreeMachine machine, out T result)
+        {
+            result = defaultValue;
+            
+            switch (variableType)
+            {
+                case BlackboardVariableType.Dynamic:
+                    TryGetValueDynamic(machine, out result);
+                    break;
+                case BlackboardVariableType.Value:
+                    result = value;
+                    return true;
+                case BlackboardVariableType.Graph:
+                    return TryGetValueFromGraph(machine, out result);
+                    break;
+                case BlackboardVariableType.Object:
+                    return TryGetValueFromObject(machine, out result);
+                    break;
+                case BlackboardVariableType.Scene:
+                    return TryGetValueFromScene(out result);
+                    break;
+                case BlackboardVariableType.App:
+                    return TryGetValueFromApp(out result);
+                    break;
+                case BlackboardVariableType.Saved:
+                    return TryGetValueFromSave(out result);
+                    break;
+            }
+
+            return false;
+        }
+        
         private bool TryGetValue(BlackboardVariableType variableType, BehaviorTreeMachine machine, out T value)
         {
-            
             value = defaultValue;
             
             switch (variableType)

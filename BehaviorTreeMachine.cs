@@ -60,10 +60,21 @@ namespace Platinio.BehaviorTree
             }
         }
 
-        public void Switch(BehaviorTreeGraph behaviorTreeGraph)
+        public void Switch(BehaviorTreeGraphAsset behaviorTreeGraphAsset)
         {
+            graphInstance = behaviorTreeGraphAsset;
             lastExecutionStatus = ExecutionStatus.Running;
-            this.behaviorTreeGraph = behaviorTreeGraph;
+            behaviorTreeGraph = behaviorTreeGraphAsset.graph;
+            
+            var nodes = behaviorTreeGraph.Nodes;
+
+            foreach (var node in nodes)
+            {
+                node.SetMachine(this);
+            }
+            
+            behaviorTreeGraph.OnAwake();
+            OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset);
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
 
