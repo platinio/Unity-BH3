@@ -2,7 +2,7 @@
 {
     public class Decorator : ContainerNode
     {
-        public override int MaxChildren => 1;
+        public override int MaxChildrenLimit => 1;
         
         public override void OnEnter()
         {

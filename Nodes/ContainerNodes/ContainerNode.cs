@@ -7,11 +7,11 @@ namespace Platinio.BehaviorTree
     public class ContainerNode : BehaviorTreeNode
     {
         protected List<BehaviorTreeNode> children;
-        
-        public virtual int MaxChildren => MaxTransitionAmount;
+
         public virtual bool CanRunParallelChildren => false;
         public virtual int CurrentChildrenIndex => 0;
         public virtual bool CanExecute => true;
+        public override int MaxChildrenLimit => MaxTransitionAmount;
 
         public void AddChild(BehaviorTreeNode child, int index)
         {

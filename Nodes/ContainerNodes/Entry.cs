@@ -7,11 +7,11 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class Entry : ContainerNode
     {
-        protected override string NodeIconPath => "NodeIcons/Entry";
         public override string NodeName => "Entry";
-
         public override bool CanDelete => false;
-        public override int MaxChildren => 1;
+        public override int MaxChildrenLimit => 1;
+        
+        protected override string NodeIconPath => "NodeIcons/Entry";
 
         private bool isComplete = false;
         

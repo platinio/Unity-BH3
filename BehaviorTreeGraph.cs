@@ -50,13 +50,40 @@ namespace Platinio.BehaviorTree
 
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
-            foreach (var nodeTransitions in Transitions)
+            foreach (var nodeTransition in Transitions)
             {
-                if (nodeTransitions.source is ContainerNode containerNode)
+                if (nodeTransition.source is ContainerNode containerNode)
                 {
-                    containerNode.AddChild(nodeTransitions.destination);
+                    containerNode.AddChild(nodeTransition.destination);
                 }
             }
+        }
+
+        public int CountTransitionsFromNode(BehaviorTreeNode node)
+        {
+            int transitionCount = 0;
+            foreach (var nodeTransition in Transitions)
+            {
+                if (nodeTransition.source == node)
+                {
+                    transitionCount++;
+                }
+            }
+
+            return transitionCount;
+        }
+
+        public bool TransitionExist(BehaviorTreeNode from, BehaviorTreeNode to)
+        {
+            foreach (var nodeTransition in Transitions)
+            {
+                if (from == nodeTransition.source && to == nodeTransition.destination)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void SortContainerNodesChildren()

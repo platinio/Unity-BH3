@@ -34,7 +34,7 @@ namespace Platinio.BehaviorTree
 
         private readonly float TITLE_HEIGHT = 20.0f;
         
-
+        
         public override void DrawForeground()
         {
             DrawForeground(Vector2.zero, e.IsRepaint);
@@ -136,6 +136,11 @@ namespace Platinio.BehaviorTree
             return titlePosition;
         }
 
+        private bool CanCreateTransition()
+        {
+            return canvas.graph.CountTransitionsFromNode(element) < element.MaxChildrenLimit;
+        }
+
         public override void HandleInput()
         {
             if (element is PlaceHolderNode placeHolderNode)
@@ -145,10 +150,10 @@ namespace Platinio.BehaviorTree
 
             if (e.IsMouseDrag(MouseButton.Left) &&
                 e.ctrlOrCmd &&
-                !canvas.isCreatingTransition)
+                !canvas.isCreatingTransition &&
+                CanCreateTransition())
             {
                 canvas.StartTransition(element);
-
                 e.Use();
             }
             else if (e.IsMouseDrag(MouseButton.Left) && canvas.isCreatingTransition)
@@ -165,8 +170,7 @@ namespace Platinio.BehaviorTree
                 {
                     canvas.CompleteTransitionToNewState();
                 }
-                
-                else if (destination == source)
+                else if (destination == source || canvas.graph.TransitionExist(source, destination))
                 {
                     canvas.CancelTransition();
                 }

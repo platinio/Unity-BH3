@@ -10,7 +10,9 @@ namespace Platinio.BehaviorTree
     {
         private BehaviorTreeMachineDebug machineDebug;
         protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
-        
+
+        public virtual int MaxChildrenLimit => 0;
+
         protected virtual Vector3 GetPosition(string key)
         {
             if (!Machine.Variables.declarations.IsDefined(key))
