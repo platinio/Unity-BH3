@@ -13,7 +13,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Conditions/Distance")]
     public class Distance : Condition
     {
-        [Serialize, Inspectable] private string PositionKey;
+        [Serialize, Inspectable] private Vector3BlackboardVariable position = new();
         [Serialize, Inspectable] private ConditionOperation Operation;
         [Serialize, Inspectable] private float DistanceValue;
 
@@ -21,7 +21,7 @@ namespace Platinio.BehaviorTree
 
         public override bool Evaluate()
         {
-            float d = Vector3.Distance(GetPosition(PositionKey), transform.position);
+            float d = Vector3.Distance(position.GetValue(BehaviorTreeMachine), transform.position);
             switch (Operation)
             {
                 case ConditionOperation.Greater:

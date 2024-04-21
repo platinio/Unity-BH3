@@ -9,7 +9,7 @@ namespace Platinio.BehaviorTree
     public class SetNavAgentPosition : GameplayNode
     {
         [Serialize, Inspectable] private GameObjectBlackboardVariable Target = new();
-        [Serialize, Inspectable] private Vector3BlackboardVariable NavPosition = new ();
+        [Serialize, Inspectable] protected Vector3BlackboardVariable NavPosition = new ();
         [Serialize, Inspectable] private bool ClearCurrentPath = false;
         [Serialize, Inspectable] private bool WaitForPathComplete = false;
 
