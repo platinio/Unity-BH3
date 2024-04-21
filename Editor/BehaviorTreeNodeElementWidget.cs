@@ -158,7 +158,8 @@ namespace Platinio.BehaviorTree
             else if (e.IsMouseUp(MouseButton.Left) && canvas.isCreatingTransition)
             {
                 var source = canvas.TransitionSource;
-                var destination = (canvas.hoveredWidget as BehaviorTreeNodeElementWidget).element;
+                var hoveredWidget = canvas.hoveredWidget as BehaviorTreeNodeElementWidget;
+                var destination = hoveredWidget == null? null : hoveredWidget.element;
 
                 if (destination == null)
                 {
@@ -169,7 +170,7 @@ namespace Platinio.BehaviorTree
                 {
                     canvas.CancelTransition();
                 }
-                else if (true)
+                else
                 {
                     canvas.EndTransition(destination);
                 }
