@@ -8,6 +8,8 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/UntilFailure";
         public override string NodeName => "Until Failure";
         
+        public override int MaxChildrenLimit => 1;
+        
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success; 

@@ -8,6 +8,8 @@ namespace Platinio.BehaviorTree
         public override string NodeName => "Return Failure";
         protected override string NodeIconPath => "NodeIcons/ReturnFailure";
 
+        public override int MaxChildrenLimit => 1;
+
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Failure; 
