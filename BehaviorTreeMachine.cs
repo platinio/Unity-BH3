@@ -72,8 +72,7 @@ namespace Platinio.BehaviorTree
             {
                 node.SetMachine(this);
             }
-            
-            behaviorTreeGraph.OnAwake();
+
             OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset);
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
@@ -97,7 +96,7 @@ namespace Platinio.BehaviorTree
                     node.CanvasUpdate();
                 }
 #endif
-                
+                if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
             }
         }

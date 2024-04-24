@@ -34,21 +34,13 @@ namespace Platinio.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            if (isComplete) return ExecutionStatus.Success;
-            
-            if (CanExecute)
+            if (GetChildren().Count == 0)
             {
-                if (GetChildren().Count == 0)
-                {
-                    isComplete = true;
-                    return ExecutionStatus.Success;
-                }
-                
-                var result =  GetChildren()[0].OnUpdateInternal();
-                isComplete = result == ExecutionStatus.Success || result == ExecutionStatus.Failure;
+                isComplete = true;
+                return ExecutionStatus.Success;
             }
-
-            return ExecutionStatus.Running;
+                
+            return GetChildren()[0].OnUpdateInternal();
         }
     }
 }

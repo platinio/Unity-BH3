@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Platinio.GraphCore;
+using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
     public class ContainerNode : BehaviorTreeNode
     {
-        protected List<BehaviorTreeNode> children;
+        [DoNotSerialize] protected List<BehaviorTreeNode> children;
 
         public virtual bool CanRunParallelChildren => false;
         public virtual int CurrentChildrenIndex => 0;

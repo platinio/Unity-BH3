@@ -55,6 +55,7 @@ namespace Platinio.BehaviorTree
         public override void SetMachine(IGraphMachine machine)
         {
             base.SetMachine(machine);
+
             var nodes = BehaviorTreeGraphInstance.Nodes;
             foreach (var node in nodes)
             {
