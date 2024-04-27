@@ -1,5 +1,8 @@
-﻿namespace Platinio.BehaviorTree
+﻿using System;
+
+namespace Platinio.BehaviorTree
 {
+    [Serializable]
     public class IntBlackboardVariable : BlackboardVariable<int>
     {
         public IntBlackboardVariable() { }

@@ -20,6 +20,8 @@ namespace Platinio.BehaviorTree
     [Serializable]
     public abstract class BlackboardVariable<T>
     {
+        
+        
         [SerializeField]
         private BlackboardVariableType variableType = BlackboardVariableType.Dynamic;
         [SerializeField]
@@ -76,19 +78,14 @@ namespace Platinio.BehaviorTree
                     return true;
                 case BlackboardVariableType.Graph:
                     return TryGetValueFromGraph(machine, out result);
-                    break;
                 case BlackboardVariableType.Object:
                     return TryGetValueFromObject(machine, out result);
-                    break;
                 case BlackboardVariableType.Scene:
                     return TryGetValueFromScene(out result);
-                    break;
                 case BlackboardVariableType.App:
                     return TryGetValueFromApp(out result);
-                    break;
                 case BlackboardVariableType.Saved:
                     return TryGetValueFromSave(out result);
-                    break;
             }
 
             return false;
