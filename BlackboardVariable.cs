@@ -9,7 +9,7 @@ namespace Platinio.BehaviorTree
     [Serializable]
     public abstract class BlackboardVariable<T>
     {
-        [SerializeField] private bool inlineValue;
+        [SerializeField] private bool inlineValue = true;
         [SerializeField] private string variableName;
         [SerializeField] protected T value;
 

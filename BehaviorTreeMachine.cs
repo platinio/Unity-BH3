@@ -109,24 +109,9 @@ namespace Platinio.BehaviorTree
                     node.CanvasUpdate();
                 }
 #endif
-                #if UNITY_EDITOR
-                try
-                {
-                    if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
-                    lastExecutionStatus = behaviorTreeGraph.OnUpdate();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"BehaviorTree = {nest.macro.name} Method = OnUpdate() Exception = {e}", gameObject);
-                    throw;
-                }
-               
-                #else
                 if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
-                #endif
-                
-                
+
             }
         }
 
