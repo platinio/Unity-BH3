@@ -1,9 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
-using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Platinio.BehaviorTree
 {
@@ -26,7 +22,7 @@ namespace Platinio.BehaviorTree
             {
                 var menu = new GenericMenu();
 
-                foreach (var variableDeclaration in GetVariableDeclarations())
+                foreach (var variableDeclaration in BehaviorTreePropertyDrawerUtil.GetVariableDeclarations())
                 {                   
                     menu.AddItem(new GUIContent(variableDeclaration.name), variableName == variableDeclaration.name, () =>
                     {
@@ -49,54 +45,14 @@ namespace Platinio.BehaviorTree
         
         private bool IsVariableNameValidOption(string variableName)
         {
-            foreach (var variableDeclaration in GetVariableDeclarations())
+            foreach (var variableDeclaration in BehaviorTreePropertyDrawerUtil.GetVariableDeclarations())
             {
                 if (variableName == variableDeclaration.name) return true;
             }
 
             return false;
         }
-        
-        private List<VariableDeclaration> GetVariableDeclarations()
-        {
-            List<VariableDeclaration> variableDeclarations = new();
 
-            var selectedMachine = BehaviorTreeCanvas.GetSelectedBehaviorTreeMachine();
-            if (selectedMachine != null)
-            {
-                AddVariableDeclarations(variableDeclarations, selectedMachine.Variables.declarations);
-            }
-            
-            var graphAsset = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
-            if (graphAsset != null)
-            {
-                AddVariableDeclarations(variableDeclarations, graphAsset.declarations);
-            }
-
-            AddVariableDeclarations(variableDeclarations, Variables.Scene(SceneManager.GetActiveScene()));
-            AddVariableDeclarations(variableDeclarations, Variables.Application);
-            AddVariableDeclarations(variableDeclarations, Variables.Saved);
-
-            return variableDeclarations;
-        }
-        
-        private void AddVariableDeclarations(List<VariableDeclaration> variableDeclarationList, VariableDeclarations variableDeclarations)
-        {
-            if (variableDeclarations == null) return;
-            
-            var variablesEnumerator = variableDeclarations.GetEnumerator();
-
-            while (variablesEnumerator.MoveNext())
-            {
-                var current = variablesEnumerator.Current;
-                if (current == null) continue;
-                
-                if (variableDeclarationList.Where(x => x.name == current.name).FirstOrDefault() != null) continue;
-                
-                variableDeclarationList.Add(current);
-            }
-        }
-        
     }
 }
 
