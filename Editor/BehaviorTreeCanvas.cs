@@ -31,6 +31,8 @@ namespace Platinio.BehaviorTree
 
         public static BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
         {
+            if (OpenBehaviorTreeCanvas == null || OpenBehaviorTreeCanvas.context == null) return null;
+        
             var gameObject = OpenBehaviorTreeCanvas.context.reference.gameObject;
             if (gameObject != null)
             {
@@ -38,6 +40,19 @@ namespace Platinio.BehaviorTree
             }
 
             return OpenBehaviorTreeCanvas.context.reference.scriptableObject as BehaviorTreeGraphAsset;
+        }
+
+        public static BehaviorTreeMachine GetSelectedBehaviorTreeMachine()
+        {
+            if (OpenBehaviorTreeCanvas == null || OpenBehaviorTreeCanvas.context == null) return null;
+            
+            var gameObject = OpenBehaviorTreeCanvas.context.reference.gameObject;
+            if (gameObject != null)
+            {
+                return gameObject.GetComponent<BehaviorTreeMachine>();
+            }
+
+            return null;
         }
     }
 }

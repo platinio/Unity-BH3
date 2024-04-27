@@ -8,14 +8,14 @@ namespace Platinio.BehaviorTree
     public class SelectPosition : GameplayNode
     {
         [Serialize] [Inspectable] private FloatBlackboardVariable DistanceFromTarget = new();
-        [Serialize] [Inspectable] private Vector3BlackboardVariable TargetPosition;
-        [Serialize] [Inspectable] private string DesirePositionKey;
+        [Serialize] [Inspectable] private Vector3BlackboardVariable TargetPosition = new();
+        [Serialize] [Inspectable] private BlackboardKey DesirePositionKey = new();
 
         public override string NodeName => "Select Position";
 
         public override void OnEnter()
         {
-            Machine.Variables.declarations.Set(DesirePositionKey, CalculateDesirePosition());
+            Machine.Variables.declarations.Set(DesirePositionKey.BlackboardKeyName, CalculateDesirePosition());
         }
 
         public override ExecutionStatus OnUpdate()

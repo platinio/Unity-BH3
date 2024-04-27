@@ -6,135 +6,50 @@ using UnityEngine.SceneManagement;
 
 namespace Platinio.BehaviorTree
 {
-    public enum BlackboardVariableType
-    {
-        Value,
-        Dynamic,
-        Graph,
-        Object,
-        Scene,
-        App,
-        Saved
-    }
-    
     [Serializable]
     public abstract class BlackboardVariable<T>
     {
-        
-        
-        [SerializeField]
-        private BlackboardVariableType variableType = BlackboardVariableType.Dynamic;
-        [SerializeField]
-        private string variableName;
-        [SerializeField]
-        private T defaultValue;
-
+        [SerializeField] private bool inlineValue;
+        [SerializeField] private string variableName;
         [SerializeField] protected T value;
 
-        [SerializeField] private bool foldout;
-        
         public T GetValue(BehaviorTreeMachine machine)
         {
-            T result = defaultValue;
+            if (inlineValue) return value;
             
-            switch (variableType)
-            {
-                case BlackboardVariableType.Dynamic:
-                    TryGetValueDynamic(machine, out result);
-                    break;
-                case BlackboardVariableType.Value:
-                    return value;
-                case BlackboardVariableType.Graph:
-                    TryGetValueFromGraph(machine, out result);
-                    break;
-                case BlackboardVariableType.Object:
-                    TryGetValueFromObject(machine, out result);
-                    break;
-                case BlackboardVariableType.Scene:
-                    TryGetValueFromScene(out result);
-                    break;
-                case BlackboardVariableType.App:
-                    TryGetValueFromApp(out result);
-                    break;
-                case BlackboardVariableType.Saved:
-                    TryGetValueFromSave(out result);
-                    break;
-            }
+            T result;            
 
-            return result;
+            if (TryGetValueFromObject(machine, out result)) return result;
+            if (TryGetValueFromGraph(machine, out result)) return result;
+            if (TryGetValueFromScene(out result)) return result;
+            if (TryGetValueFromApp(out result)) return result;
+            if (TryGetValueFromSave(out result)) return result;
+
+            return default;
         }
         
         public bool TryGetValue(BehaviorTreeMachine machine, out T result)
         {
-            result = defaultValue;
+            if (inlineValue)
+            {
+                result = value;
+                return true;
+            }
+
+            result = default;
             
-            switch (variableType)
-            {
-                case BlackboardVariableType.Dynamic:
-                    TryGetValueDynamic(machine, out result);
-                    break;
-                case BlackboardVariableType.Value:
-                    result = value;
-                    return true;
-                case BlackboardVariableType.Graph:
-                    return TryGetValueFromGraph(machine, out result);
-                case BlackboardVariableType.Object:
-                    return TryGetValueFromObject(machine, out result);
-                case BlackboardVariableType.Scene:
-                    return TryGetValueFromScene(out result);
-                case BlackboardVariableType.App:
-                    return TryGetValueFromApp(out result);
-                case BlackboardVariableType.Saved:
-                    return TryGetValueFromSave(out result);
-            }
-
-            return false;
-        }
-        
-        private bool TryGetValue(BlackboardVariableType variableType, BehaviorTreeMachine machine, out T value)
-        {
-            value = defaultValue;
-            
-            switch (variableType)
-            {
-                case BlackboardVariableType.Dynamic:
-                    break;
-                case BlackboardVariableType.Value:
-                    value = this.value;
-                    return true;
-                case BlackboardVariableType.Graph:
-                    return TryGetValueFromGraph(machine, out value);
-                case BlackboardVariableType.Object:
-                    return TryGetValueFromObject(machine, out value);
-                case BlackboardVariableType.Scene:
-                    return TryGetValueFromScene(out value);
-                case BlackboardVariableType.App:
-                    return TryGetValueFromApp(out value);
-                case BlackboardVariableType.Saved:
-                    return TryGetValueFromSave(out value);
-            }
-
-            return false;
-        }
-
-        private bool TryGetValueDynamic(BehaviorTreeMachine machine, out T value)
-        {
-            value = defaultValue;
-            var variableTypes = (BlackboardVariableType[])Enum.GetValues(typeof(BlackboardVariableType));
-
-            foreach (var variableType in variableTypes)
-            {
-                if (variableType == BlackboardVariableType.Dynamic) continue;
-
-                if (TryGetValue(variableType, machine, out value)) return true;
-            }
+            if (TryGetValueFromObject(machine, out result)) return true;
+            if (TryGetValueFromGraph(machine, out result)) return true;
+            if (TryGetValueFromScene(out result)) return true;
+            if (TryGetValueFromApp(out result)) return true;
+            if (TryGetValueFromSave(out result)) return true;
 
             return false;
         }
 
         private bool TryGetValueFromGraph(BehaviorTreeMachine machine, out T value)
         {
-            value = defaultValue;
+            value = default;
             var declarations = machine.GraphInstance.declarations;
 
             if (!declarations.IsDefined(variableName)) return false;
@@ -145,7 +60,7 @@ namespace Platinio.BehaviorTree
         
         private bool TryGetValueFromObject(IGraphMachine machine, out T value)
         {
-            value = defaultValue;
+            value = default;
             
             if (machine == null)
             {
@@ -163,7 +78,7 @@ namespace Platinio.BehaviorTree
 
         private bool TryGetValueFromScene(out T value)
         {
-            value = defaultValue;
+            value = default;
             
             var variables =  SceneVariables.Instance(SceneManager.GetActiveScene());
             if (!variables.variables.declarations.IsDefined(variableName)) return false;
@@ -174,7 +89,7 @@ namespace Platinio.BehaviorTree
 
         private bool TryGetValueFromApp(out T value)
         {
-            value = defaultValue;
+            value = default;
 
             if (!ApplicationVariables.current.IsDefined(variableName)) return false;
             
@@ -184,7 +99,7 @@ namespace Platinio.BehaviorTree
 
         private bool TryGetValueFromSave(out T value)
         {
-            value = defaultValue;
+            value = default;
 
             if (!SavedVariables.current.IsDefined(variableName)) return false;
             
