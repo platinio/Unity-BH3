@@ -13,7 +13,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Conditions/Distance")]
     public class Distance : Condition
     {
-        [Serialize, Inspectable] private Vector3BlackboardVariable TargetPosition;
+        [Serialize, Inspectable] private Vector3BlackboardVariable TargetPosition = new();
         [Serialize, Inspectable] private ConditionOperation Operation;
         [Serialize, Inspectable] private float DistanceValue;
 

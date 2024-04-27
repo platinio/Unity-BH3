@@ -1,4 +1,5 @@
 using Platinio.GraphCore;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -7,13 +8,15 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Stop NavAgent")]
     public class StopNavAgent : GameplayNode
     {
+        [Serialize, Inspectable] private GameObjectBlackboardVariable target;
+        
         public override string NodeName => "Stop NavAgent";
 
         private NavMeshAgent navAgent = null;
 
         public override void OnAwake()
         {
-            navAgent = GetComponent<NavMeshAgent>();
+            navAgent = GetTargetGameObject(target).GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
