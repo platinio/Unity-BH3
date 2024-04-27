@@ -15,7 +15,7 @@ namespace Platinio.BehaviorTree
     {
         [Serialize, Inspectable] private Vector3BlackboardVariable TargetPosition = new();
         [Serialize, Inspectable] private ConditionOperation Operation;
-        [Serialize, Inspectable] private float DistanceValue;
+        [Serialize, Inspectable] private FloatBlackboardVariable DistanceValue;
 
         public override string NodeName => "Distance Condition";
 
@@ -26,9 +26,9 @@ namespace Platinio.BehaviorTree
             switch (Operation)
             {
                 case ConditionOperation.Greater:
-                    return d > DistanceValue;
+                    return d > DistanceValue.GetValue(BehaviorTreeMachine);
                 case ConditionOperation.Less:
-                    return d < DistanceValue;
+                    return d < DistanceValue.GetValue(BehaviorTreeMachine);
             }
 
             return false;

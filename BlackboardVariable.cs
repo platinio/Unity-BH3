@@ -16,6 +16,7 @@ namespace Platinio.BehaviorTree
         public T GetValue(BehaviorTreeMachine machine)
         {
             if (inlineValue) return value;
+            if (string.IsNullOrEmpty(variableName)) return default;
             
             T result;            
 
@@ -37,6 +38,7 @@ namespace Platinio.BehaviorTree
             }
 
             result = default;
+            if (string.IsNullOrEmpty(variableName)) return false;
             
             if (TryGetValueFromObject(machine, out result)) return true;
             if (TryGetValueFromGraph(machine, out result)) return true;

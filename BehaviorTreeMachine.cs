@@ -1,4 +1,5 @@
-﻿using Platinio.GraphCore;
+﻿using System;
+using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -33,9 +34,21 @@ namespace Platinio.BehaviorTree
                 {
                     node.SetMachine(this);
                 }
-                
+                #if UNITY_EDITOR
+                try
+                {
+                    OverrideGraphAndSubGraphVariables(graphInstance);
+                    behaviorTreeGraph.OnAwake();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"BehaviorTree = {nest.macro.name} Method = OnAwake() Exception = {e}", gameObject);
+                    throw;
+                }
+                #else
                 OverrideGraphAndSubGraphVariables(graphInstance);
                 behaviorTreeGraph.OnAwake();
+                #endif
             }
         }
 
@@ -96,8 +109,24 @@ namespace Platinio.BehaviorTree
                     node.CanvasUpdate();
                 }
 #endif
+                #if UNITY_EDITOR
+                try
+                {
+                    if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
+                    lastExecutionStatus = behaviorTreeGraph.OnUpdate();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"BehaviorTree = {nest.macro.name} Method = OnUpdate() Exception = {e}", gameObject);
+                    throw;
+                }
+               
+                #else
                 if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
+                #endif
+                
+                
             }
         }
 
