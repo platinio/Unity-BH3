@@ -8,7 +8,7 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Stop NavAgent")]
     public class StopNavAgent : GameplayNode
     {
-        [Serialize, Inspectable] private GameObjectBlackboardVariable target;
+        [Serialize, Inspectable] private GameObjectBlackboardVariable target = new();
         
         public override string NodeName => "Stop NavAgent";
 

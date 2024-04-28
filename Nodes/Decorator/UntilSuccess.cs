@@ -19,6 +19,13 @@ namespace Platinio.BehaviorTree
 
             if (result != ExecutionStatus.Success)
             {
+                if (result == ExecutionStatus.Failure)
+                {
+                    //lets enter and exit the node to prepare to run again
+                    task.OnNodeExit();
+                    task.OnNodeEnter();
+                }
+
                 return ExecutionStatus.Running;
             }
 
