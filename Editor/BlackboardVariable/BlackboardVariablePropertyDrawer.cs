@@ -24,8 +24,6 @@ namespace Platinio.BehaviorTree
                 DrawToggleButton(position, property, buttonRectPercent);
                 
                 position.width = position.width * (1.0f - buttonRectPercent);
-                
-                
                 PlatinioPropertyDrawer.PropertyField(position, property.FindPropertyRelative("value"), label.text, ref yPosition);
             }
             else
