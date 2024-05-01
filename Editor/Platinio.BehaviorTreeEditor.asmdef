@@ -1,0 +1,22 @@
+{
+    "name": "Platinio.BehaviorTreeEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:9fabc768deb89264aadbbe41663b09f3",
+        "GUID:2866d813a6f8ec14aa6fefceb4fac761",
+        "GUID:6819c0f7a588f344290913b7e5d94204",
+        "GUID:315d634a9ac6d460a9515f5a56be6311",
+        "GUID:21b0c8d1703a94250bfac916590cea4f",
+        "GUID:54cb1906aeb4e4264bc1d2aa3818a43f",
+        "GUID:5fcafddd3ca064f4a9c8782cdbe5ec32"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
