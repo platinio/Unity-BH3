@@ -40,7 +40,9 @@ namespace Platinio.BehaviorTree
             while (variablesEnumerator.MoveNext())
             {
                 var current = variablesEnumerator.Current;
-                if (current == null || (validType != null && current.typeHandle.Resolve() != validType)) continue;
+                string typeHandleIdetification = current.typeHandle.Identification;
+                
+                if (current == null || (validType != null && validType.AssemblyQualifiedName != typeHandleIdetification)) continue;
                 
                 if (variableDeclarationList.Where(x => x.name == current.name).FirstOrDefault() != null) continue;
                 
