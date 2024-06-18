@@ -42,8 +42,6 @@ namespace Platinio.BehaviorTree
         {
             BehaviorTreeMachine.GraphInstance.declarations.Set(GeneratePositionKey, position);
         }
-
     }
-
 }
 
