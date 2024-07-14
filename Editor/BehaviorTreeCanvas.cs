@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
+using UnityEditor;
+using UnityEditor.Callbacks;
+using UnityObject = UnityEngine.Object;
 
 namespace Platinio.BehaviorTree
 {
@@ -12,6 +15,26 @@ namespace Platinio.BehaviorTree
 
         public static BehaviorTreeCanvas OpenBehaviorTreeCanvas;
         public static BehaviorTreeGraphAsset OpenBehaviorTreeGraphAsset;
+        
+        
+        [OnOpenAsset(int.MinValue)]
+        public static bool OnOpenAsset(int instanceID, int line)
+        {
+            UnityObject obj = EditorUtility.InstanceIDToObject(instanceID);
+            if (!(obj is BehaviorTreeGraphAsset)) return false;
+            
+            GraphReference reference = null;
+            if (obj is IMacro macro)
+                reference = GraphReference.New(macro, true);
+            else if (obj is IGraphRoot root)
+                reference = GraphReference.New(root, false);
+            if (obj is IGraphNesterElement nesterElement)
+                reference = LudiqGraphsEditorUtility.editedContext.value.reference.ChildReference(nesterElement, false);
+            if (reference == null)
+                return false;
+            GraphCore.GraphWindow.OpenActive(reference);
+            return true;
+        }
         
         protected override IEnumerable<Type> GetValidNodes() => new List<Type>()
         {
