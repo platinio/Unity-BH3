@@ -1,8 +1,8 @@
-using Platinio.BehaviorTree;
+using Unity.VisualScripting;
 
-namespace Unity.VisualScripting
+namespace Platinio.BehaviorTree
 {
-    public class BehaviorTreeVariablesPanel : VariablesPanel
+    public class BehaviorTreeVariablesPanel : Platinio.GraphCore.VariablesPanel
     {
         public BehaviorTreeVariablesPanel(IGraphContext context) : base(context)
         {
