@@ -8,10 +8,10 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
-        [Serialize, Inspectable] private GameObjectBlackboardVariable Target = new();
+        [Serialize, Inspectable] protected GameObjectBlackboardVariable Target = new();
         [Serialize, Inspectable] protected Vector3BlackboardVariable NavPosition = new ();
-        [Serialize, Inspectable] private bool ClearCurrentPath = false;
-        [Serialize, Inspectable] private bool WaitForPathComplete = false;
+        [Serialize, Inspectable] protected bool ClearCurrentPath = false;
+        [Serialize, Inspectable] protected bool WaitForPathComplete = false;
 
         public override string NodeName => "Set Nav Agent Position";
 
