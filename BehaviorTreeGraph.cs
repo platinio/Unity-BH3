@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -8,17 +9,81 @@ namespace Platinio.BehaviorTree
     [SerializationVersion("A")]
     public class BehaviorTreeGraph : BaseGraph<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
+        
+         private const string DefinitionRemoveWarningTitle = "Remove Port Definition";
+
+        private const string DefinitionRemoveWarningMessage = "Removing this definition will break any existing connection to this port. Are you sure you want to continue?";
+
+        
+        [DoNotSerialize]
+        public GraphConnectionCollection<BehaviorTreeControlConnection, BehaviorTreeControlOutput, BehaviorTreeControlInput> controlConnections { get; private set; }
+
+        [DoNotSerialize]
+        public GraphConnectionCollection<BehaviorTreeValueConnection, BehaviorTreeValueOutput, BehaviorTreeValueInput> valueConnections { get; private set; }
+
+        [DoNotSerialize]
+        public GraphConnectionCollection<BehaviorTreeInvalidConnection, IBehaviorTreeOutputPort, IBehaviorTreeInputPort> invalidConnections { get; private set; }
+
+        [Serialize]
+        [InspectorLabel("Trigger Inputs")]
+        [InspectorWide(true)]
+        [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
+        public BehaviorTreePortDefinitionCollection<BehaviorTreeControlInputDefinition> controlInputDefinitions { get; private set; }
+
+        [Serialize]
+        [InspectorLabel("Trigger Outputs")]
+        [InspectorWide(true)]
+        [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
+        public BehaviorTreePortDefinitionCollection<BehaviorTreeControlOutputDefinition> controlOutputDefinitions { get; private set; }
+
+        [Serialize]
+        [InspectorLabel("Data Inputs")]
+        [InspectorWide(true)]
+        [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
+        public BehaviorTreePortDefinitionCollection<BehaviorTreeValueInputDefinition> valueInputDefinitions { get; private set; }
+
+        [Serialize]
+        [InspectorLabel("Data Outputs")]
+        [InspectorWide(true)]
+        [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
+        public BehaviorTreePortDefinitionCollection<BehaviorTreeValueOutputDefinition> valueOutputDefinitions { get; private set; }
+
+        public IEnumerable<IBehaviorTreePortDefinition> validPortDefinitions =>
+            LinqUtility.Concat<IBehaviorTreePortDefinition>(controlInputDefinitions,
+                    controlOutputDefinitions,
+                    valueInputDefinitions,
+                    valueOutputDefinitions)
+                .Where(upd => upd.isValid)
+                .DistinctBy(upd => upd.key);
+        
+        
         [Serialize] 
         private Entry entryNode;
 
         public Entry EntryNode => entryNode;
         
-        public BehaviorTreeGraph()
+        public BehaviorTreeGraph() : base()
         {
             entryNode = new Entry();
             entryNode.Position = new Rect(new Vector2(-100, -15), entryNode.StartingSize);
 
             Nodes.Add(entryNode);
+            
+            controlConnections = new GraphConnectionCollection<BehaviorTreeControlConnection, BehaviorTreeControlOutput, BehaviorTreeControlInput>(this);
+            valueConnections = new GraphConnectionCollection<BehaviorTreeValueConnection, BehaviorTreeValueOutput, BehaviorTreeValueInput>(this);
+            invalidConnections = new GraphConnectionCollection<BehaviorTreeInvalidConnection, IBehaviorTreeOutputPort, IBehaviorTreeInputPort>(this);
+         
+            //elements.Include(units);
+            elements.Include(controlConnections);
+            elements.Include(valueConnections);
+            elements.Include(invalidConnections);
+            //elements.Include(groups);
+            //elements.Include(sticky);
+
+            controlInputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeControlInputDefinition>();
+            controlOutputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeControlOutputDefinition>();
+            valueInputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeValueInputDefinition>();
+            valueOutputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeValueOutputDefinition>();
         }
 
         public override IGraphData CreateData()

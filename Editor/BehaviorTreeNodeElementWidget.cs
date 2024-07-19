@@ -1,15 +1,136 @@
-﻿using Platinio.GraphCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Platinio.GraphCore;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
+    
+    
     [Widget(typeof(BehaviorTreeNode))]
-    public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>
+    public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>, IBehaviorTreeWidget
     {
+        protected BehaviorTreeNode unit => element;
+        
+        private UnitDescription description;
+        public Rect portsBackgroundPosition { get; private set; }
+
+        protected NodeShape shape => NodeShape.Hex;
+        
         public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
+            unit.onPortsChanged += CacheDefinition;
+            unit.onPortsChanged += SubWidgetsChanged;
         }
+        
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            unit.onPortsChanged -= CacheDefinition;
+            unit.onPortsChanged -= SubWidgetsChanged;
+        }
+        
+        protected readonly List<IBehaviorTreePortWidget> ports = new List<IBehaviorTreePortWidget>();
+
+        protected readonly List<IBehaviorTreePortWidget> inputs = new List<IBehaviorTreePortWidget>();
+
+        protected readonly List<IBehaviorTreePortWidget> outputs = new List<IBehaviorTreePortWidget>();
+
+        private readonly List<string> settingNames = new List<string>();
+        private float currentInnerWidth;
+        
+        protected override void CacheItemFirstTime()
+        {
+            base.CacheItemFirstTime();
+            CacheDefinition();
+        }
+        
+        protected virtual void CacheDefinition()
+        {
+            inputs.Clear();
+            outputs.Clear();
+            ports.Clear();
+            inputs.AddRange(unit.inputs.Select(port => canvas.Widget<IBehaviorTreePortWidget>(port)));
+            outputs.AddRange(unit.outputs.Select(port => canvas.Widget<IBehaviorTreePortWidget>(port)));
+            ports.AddRange(inputs);
+            ports.AddRange(outputs);
+
+            Reposition();
+        }
+        
+        protected override void CacheDescription()
+        {
+            //description = unit.Description<UnitDescription>();
+            
+            Reposition();
+        }
+        
+        public virtual Inspector GetPortInspector(IUnitPort port, Metadata metadata)
+        {
+            return metadata.Inspector();
+        }
+        
+        public Rect edgePosition
+        {
+            get
+            {
+                return position;
+            }
+            set
+            {
+                position = value;
+            }
+        }
+        
+        public Rect innerPosition
+        {
+            get
+            {
+                return EdgeToInnerPosition(edgePosition);
+            }
+            set
+            {
+                edgePosition = InnerToEdgePosition(value);
+            }
+        }
+        
+        public override void ExpandDragGroup(HashSet<IGraphElement> dragGroup)
+        {
+            if (BoltCore.Configuration.carryChildren)
+            {
+                foreach (var output in unit.outputs)
+                {
+                    foreach (var connection in output.connections)
+                    {
+                        if (dragGroup.Contains(connection.destination.behaviorTreeNode))
+                        {
+                            continue;
+                        }
+
+                        dragGroup.Add(connection.destination.behaviorTreeNode);
+
+                        canvas.Widget(connection.destination.behaviorTreeNode).ExpandDragGroup(dragGroup);
+                    }
+                }
+            }
+        }
+        
+        public override IEnumerable<IWidget> positionDependers => ports.Cast<IWidget>();
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        public override IEnumerable<IWidget> subWidgets => element.ports.Select(port => canvas.Widget(port));
 
         public Rect LastExecutionStateIconRect { get; private set; }
         public Rect IconRect { get; private set; }
@@ -33,13 +154,67 @@ namespace Platinio.BehaviorTree
         private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
 
         private readonly float TITLE_HEIGHT = 20.0f;
-        
+
+        private bool showPorts = true;
         
         public override void DrawForeground()
         {
+            if (showPorts)
+            {
+                DrawPortsBackground();
+            }
+            
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
+        protected void DrawPortsBackground()
+        {
+            return;
+            
+            //if (canvas.showRelations)
+            {
+                foreach (var relation in unit.relations)
+                {
+                    var start = ports.Single(pw => pw.port == relation.source).handlePosition.center;
+                    var end = ports.Single(pw => pw.port == relation.destination).handlePosition.center;
+
+                    var startTangent = start;
+                    var endTangent = end;
+
+                    if (relation.source is IUnitInputPort &&
+                        relation.destination is IUnitInputPort)
+                    {
+                        //startTangent -= new Vector2(20, 0);
+                        endTangent -= new Vector2(32, 0);
+                    }
+                    else
+                    {
+                        startTangent += new Vector2(innerPosition.width / 2, 0);
+                        endTangent += new Vector2(-innerPosition.width / 2, 0);
+                    }
+
+                    Handles.DrawBezier
+                    (
+                        start,
+                        end,
+                        startTangent,
+                        endTangent,
+                        new Color(0.136f, 0.136f, 0.136f, 1.0f),
+                        null,
+                        3
+                    );
+                }
+            }
+            /*
+            else
+            {
+                if (e.IsRepaint)
+                {
+                    Styles.portsBackground.Draw(portsBackgroundPosition, false, false, false, false);
+                }
+            }*/
+        }
+        
         public virtual void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
             if (!element.IsVisible) return;
@@ -109,12 +284,115 @@ namespace Platinio.BehaviorTree
 
         public override void CachePosition()
         {
+            var headerHeight = 0f;
+            
+            var edgeOrigin = element.Position.position;
+            var innerOrigin = EdgeToInnerPosition(new Rect(edgeOrigin, Vector2.zero)).position;
+            
+            var edgeX = edgeOrigin.x;
+            var edgeY = edgeOrigin.y;
+            
+            var innerY = innerOrigin.y;
+            var y = innerY;
+            
+            var innerWidth = currentInnerWidth;
+            var edgeWidth = InnerToEdgePosition(new Rect(0, 0, innerWidth, 0)).width;
+            
+            
+            //ports code
+           
+            
+            y = innerY + headerHeight;
+
+            var innerHeight = 0f;
+
+            innerHeight += headerHeight;
+            
+            //if (showPorts)
+            {
+                innerHeight += Styles.spaceBeforePorts;
+                y += Styles.spaceBeforePorts;
+
+                var portsBackgroundY = y;
+                var portsBackgroundHeight = 0f;
+
+                portsBackgroundHeight += Styles.portsBackground.padding.top;
+                innerHeight += Styles.portsBackground.padding.top;
+                y += Styles.portsBackground.padding.top;
+
+                var portStartY = y;
+
+                var inputsHeight = 0f;
+                var outputsHeight = 0f;
+
+                foreach (var input in inputs)
+                {
+                    input.y = y;
+
+                    var inputHeight = input.GetHeight();
+
+                    inputsHeight += inputHeight;
+                    y += inputHeight;
+
+                    inputsHeight += Styles.spaceBetweenPorts;
+                    y += Styles.spaceBetweenPorts;
+                }
+
+                if (inputs.Count > 0)
+                {
+                    inputsHeight -= Styles.spaceBetweenPorts;
+                    y -= Styles.spaceBetweenPorts;
+                }
+
+                y = portStartY;
+
+                foreach (var output in outputs)
+                {
+                    output.y = y;
+
+                    var outputHeight = output.GetHeight();
+
+                    outputsHeight += outputHeight;
+                    y += outputHeight;
+
+                    outputsHeight += Styles.spaceBetweenPorts;
+                    y += Styles.spaceBetweenPorts;
+                }
+
+                if (outputs.Count > 0)
+                {
+                    outputsHeight -= Styles.spaceBetweenPorts;
+                    y -= Styles.spaceBetweenPorts;
+                }
+
+                var portsHeight = Math.Max(inputsHeight, outputsHeight);
+
+                portsBackgroundHeight += portsHeight;
+                innerHeight += portsHeight;
+                y = portStartY + portsHeight;
+
+                portsBackgroundHeight += Styles.portsBackground.padding.bottom;
+                innerHeight += Styles.portsBackground.padding.bottom;
+                y += Styles.portsBackground.padding.bottom;
+
+                portsBackgroundPosition = new Rect
+                    (
+                    edgeX,
+                    portsBackgroundY,
+                    edgeWidth,
+                    portsBackgroundHeight
+                    );
+            }
+            
+            
+            
+            
             base.CachePosition();
             
             if (!element.IsVisible) return;
 
-            var edgeOrigin = element.Position.position;
-            var innerOrigin = EdgeToInnerPosition(new Rect(edgeOrigin, Vector2.zero)).position;
+           
+           
 
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
@@ -128,6 +406,13 @@ namespace Platinio.BehaviorTree
                 LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
             }
         }
+        
+        protected Rect InnerToEdgePosition(Rect position)
+        {
+            return GraphGUI.GetNodeInnerToEdgePosition(position, shape);
+        }
+        
+        
 
         private Vector2 GetTitlePosition(Vector2 innerOrigin)
         {
@@ -143,6 +428,36 @@ namespace Platinio.BehaviorTree
 
         public override void HandleInput()
         {
+            
+            if (canvas.isCreatingConnection)
+            {
+                if (e.IsMouseDown(MouseButton.Left))
+                {
+                    var source = canvas.connectionSource;
+                    var destination = source.CompatiblePort(unit);
+
+                    if (destination != null)
+                    {
+                        UndoUtility.RecordEditedObject("Connect Nodes");
+                        source.ValidlyConnectTo(destination);
+                        canvas.connectionSource = null;
+                        canvas.Widget(source.behaviorTreeNode).Reposition();
+                        canvas.Widget(destination.behaviorTreeNode).Reposition();
+                        GUI.changed = true;
+                    }
+
+                    e.Use();
+                }
+                else if (e.IsMouseDown(MouseButton.Right))
+                {
+                    canvas.CancelConnection();
+                    e.Use();
+                }
+            }
+            
+            
+            
+            
             if (element is PlaceHolderNode placeHolderNode)
             {
                 placeHolderNode.IsSelected = isSelected;
@@ -199,6 +514,40 @@ namespace Platinio.BehaviorTree
         
         public static class Styles
         {
+            public static readonly float spaceAroundLineIcon = 5;
+
+            public static readonly float spaceBeforePorts = 5;
+
+            public static readonly float spaceBetweenInputsAndOutputs = 8;
+
+            public static readonly float spaceBeforeSettings = 2;
+
+            public static readonly float spaceBetweenSettings = 3;
+
+            public static readonly float spaceBetweenPorts = 3;
+
+            public static readonly float spaceAfterSettings = 0;
+
+            public static readonly float maxSettingsWidth = 150;
+
+            public static readonly GUIStyle portsBackground;
+
+            public static readonly float iconSize = IconSize.Medium;
+
+            public static readonly float iconsSize = IconSize.Small;
+
+            public static readonly float iconsSpacing = 3;
+
+            public static readonly int iconsPerColumn = 2;
+
+            public static readonly float spaceAfterIcon = 6;
+
+            public static readonly float spaceAfterSurtitle = 2;
+
+            public static readonly float spaceBeforeSubtitle = 0;
+
+            public static readonly float invokeFadeDuration = 0.5f;
+            
             static Styles()
             {
                 background = new GUIStyle();
@@ -208,10 +557,38 @@ namespace Platinio.BehaviorTree
                 title.alignment = TextAnchor.MiddleCenter;
                 title.fontSize = 11;
                 title.wordWrap = true;
+                
+                
+                if (EditorGUIUtility.isProSkin)
+                {
+                    portsBackground = new GUIStyle("In BigTitle")
+                    {
+                        padding = new RectOffset(0, 0, 6, 5)
+                    };
+                }
+                else
+                {
+                    TextureResolution[] textureResolution = { 2 };
+                    var createTextureOptions = CreateTextureOptions.Scalable;
+                    EditorTexture normalTexture = BoltCore.Resources.LoadTexture($"NodePortsBackground.png", textureResolution, createTextureOptions);
+
+                    portsBackground = new GUIStyle
+                    {
+                        normal = { background = normalTexture.Single() },
+                        padding = new RectOffset(0, 0, 6, 5)
+                    };
+                }
+                
             }
 
             public static readonly GUIStyle background;
             public static readonly GUIStyle title;
+        }
+
+        public IBehaviorTreeNode behaviorTreeNode { get; }
+        public Inspector GetPortInspector(IBehaviorTreePort port, Metadata metadata)
+        {
+            return null;
         }
     }
 }
