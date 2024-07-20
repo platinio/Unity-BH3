@@ -118,7 +118,7 @@ namespace Platinio.BehaviorTree
             return port;
         }
 
-        protected ValueOutput ValueOutput(Type type, string key, Func<Flow, object> getValue)
+        protected ValueOutput ValueOutput(Type type, string key, GetPortValue getValue)
         {
             //EnsureUniqueOutput(key);
             var port = new ValueOutput(key, type, getValue);
@@ -131,9 +131,9 @@ namespace Platinio.BehaviorTree
             return ValueOutput(typeof(T), key);
         }
 
-        protected ValueOutput ValueOutput<T>(string key, Func<Flow, T> getValue)
+        protected ValueOutput ValueOutput<T>(string key, GetPortValue getValue)
         {
-            return ValueOutput(typeof(T), key, (recursion) => getValue(recursion));
+            return ValueOutput(typeof(T), key, getValue);
         }
         
         protected BehaviorTreeNode() : base()

@@ -5,33 +5,30 @@ using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
+    public delegate object GetPortValue();
+    
     public sealed class ValueOutput : Port<ValueInput, IInputPort, PortValueConnection>, IValuePort, IOutputPort
     {
-        public ValueOutput(string key, Type type, Func<Flow, object> getValue) : base(key)
+        public ValueOutput(string key, Type type, GetPortValue getPortValue) : base(key)
         {
             Ensure.That(nameof(type)).IsNotNull(type);
-            Ensure.That(nameof(getValue)).IsNotNull(getValue);
+            Ensure.That(nameof(getPortValue)).IsNotNull(getPortValue);
 
-            this.type = type;
-            this.getValue = getValue;
+            this.Type = type;
+            GetPortValue = getPortValue;
         }
 
         public ValueOutput(string key, Type type) : base(key)
         {
             Ensure.That(nameof(type)).IsNotNull(type);
-
-            this.type = type;
+            this.Type = type;
         }
 
-        public readonly Func<Flow, object> getValue;
+        public readonly GetPortValue GetPortValue;
+      
+        public bool supportsFetch => GetPortValue != null;
 
-        internal Func<Flow, bool> canPredictValue;
-
-        public bool supportsPrediction => canPredictValue != null;
-
-        public bool supportsFetch => getValue != null;
-
-        public Type type { get; }
+        public Type Type { get; }
 
         public override IEnumerable<PortValueConnection> validConnections => behaviorTreeNode?.graph?.valueConnections.WithSource(this) ?? Enumerable.Empty<PortValueConnection>();
 
@@ -46,7 +43,7 @@ namespace Platinio.BehaviorTree
             var source = this;
             var destination = port;
 
-            return source.type.IsConvertibleTo(destination.type, false);
+            return source.Type.IsConvertibleTo(destination.Type, false);
         }
 
         public override void ConnectToValid(ValueInput port)
@@ -79,27 +76,10 @@ namespace Platinio.BehaviorTree
             DisconnectInvalid(this, port);
         }
 
-        public ValueOutput PredictableIf(Func<Flow, bool> condition)
+        public override IPort CompatiblePort(IBehaviorTreeNode node)
         {
-            Ensure.That(nameof(condition)).IsNotNull(condition);
-
-            canPredictValue = condition;
-
-            return this;
-        }
-
-        public ValueOutput Predictable()
-        {
-            canPredictValue = (flow) => true;
-
-            return this;
-        }
-
-        public override IPort CompatiblePort(IBehaviorTreeNode unit)
-        {
-            if (unit == this.behaviorTreeNode) return null;
-
-            return unit.CompatibleValueInput(type);
+            if (node == behaviorTreeNode) return null;
+            return node.CompatibleValueInput(Type);
         }
     }
 }

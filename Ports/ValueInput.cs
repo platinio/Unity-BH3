@@ -13,10 +13,10 @@ namespace Platinio.BehaviorTree
         {
             Ensure.That(nameof(type)).IsNotNull(type);
 
-            this.type = type;
+            this.Type = type;
         }
 
-        public Type type { get; }
+        public Type Type { get; }
 
         public bool hasDefaultValue => false;//behaviorTreeNode.defaultValues.ContainsKey(key);
 
@@ -52,9 +52,9 @@ namespace Platinio.BehaviorTree
 
         public void SetDefaultValue(object value)
         {
-            Ensure.That(nameof(value)).IsOfType(value, type);
+            Ensure.That(nameof(value)).IsOfType(value, Type);
 
-            if (!SupportsDefaultValue(type))
+            if (!SupportsDefaultValue(Type))
             {
                 return;
             }
@@ -74,7 +74,7 @@ namespace Platinio.BehaviorTree
             var source = port;
             var destination = this;
 
-            return source.type.IsConvertibleTo(destination.type, false);
+            return source.Type.IsConvertibleTo(destination.Type, false);
         }
 
         public override void ConnectToValid(ValueOutput port)
@@ -109,7 +109,7 @@ namespace Platinio.BehaviorTree
 
         public ValueInput NullMeansSelf()
         {
-            if (ComponentHolderProtocol.IsComponentHolderType(type))
+            if (ComponentHolderProtocol.IsComponentHolderType(Type))
             {
                 nullMeansSelf = true;
             }
@@ -119,7 +119,7 @@ namespace Platinio.BehaviorTree
 
         public ValueInput AllowsNull()
         {
-            if (type.IsNullable())
+            if (Type.IsNullable())
             {
                 allowsNull = true;
             }
@@ -156,7 +156,23 @@ namespace Platinio.BehaviorTree
         {
             if (unit == this.behaviorTreeNode) return null;
 
-            return unit.CompatibleValueOutput(type);
+            return unit.CompatibleValueOutput(Type);
         }
+        
+        public object GetValue()
+        {
+            if (connection != null)
+            {
+                var output = connection.source;
+                var value = output.GetPortValue();
+                
+                return value;
+            }
+            else
+            {
+                throw new MissingValuePortInputException(key);
+            }
+        }
+        
     }
 }

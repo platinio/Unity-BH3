@@ -24,9 +24,9 @@ namespace Platinio.BehaviorTree
                 throw new InvalidConnectionException("Value input ports do not support multiple connections.");
             }
 
-            if (!source.type.IsConvertibleTo(destination.type, false))
+            if (!source.Type.IsConvertibleTo(destination.Type, false))
             {
-                throw new InvalidConnectionException($"Cannot convert from '{source.type}' to '{destination.type}'.");
+                throw new InvalidConnectionException($"Cannot convert from '{source.Type}' to '{destination.Type}'.");
             }
         }
 

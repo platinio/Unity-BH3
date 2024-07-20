@@ -96,10 +96,10 @@ namespace Platinio.BehaviorTree
             Ensure.That(nameof(outputType)).IsNotNull(outputType);
 
             return unit.valueInputs
-                .Where(valueInput => ConversionUtility.CanConvert(outputType, valueInput.type, false))
+                .Where(valueInput => ConversionUtility.CanConvert(outputType, valueInput.Type, false))
                 .OrderBy((valueInput) =>
                 {
-                    var exactType = outputType == valueInput.type;
+                    var exactType = outputType == valueInput.Type;
                     var free = !valueInput.hasValidConnection;
 
                     if (free && exactType)
@@ -126,10 +126,10 @@ namespace Platinio.BehaviorTree
             Ensure.That(nameof(inputType)).IsNotNull(inputType);
 
             return unit.valueOutputs
-                .Where(valueOutput => ConversionUtility.CanConvert(valueOutput.type, inputType, false))
+                .Where(valueOutput => ConversionUtility.CanConvert(valueOutput.Type, inputType, false))
                 .OrderBy((valueOutput) =>
                 {
-                    var exactType = inputType == valueOutput.type;
+                    var exactType = inputType == valueOutput.Type;
                     var free = !valueOutput.hasValidConnection;
 
                     if (free && exactType)

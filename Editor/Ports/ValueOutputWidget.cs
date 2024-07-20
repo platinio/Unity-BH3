@@ -8,7 +8,7 @@ namespace Platinio.BehaviorTree
     {
         public ValueOutputWidget(BehaviorTreeCanvas canvas, ValueOutput port) : base(canvas, port)
         {
-            color = ValueConnectionWidget.DetermineColor(port.type);
+            color = ValueConnectionWidget.DetermineColor(port.Type);
         }
 
         protected override bool colorIfActive => !BoltFlow.Configuration.animateControlConnections || !BoltFlow.Configuration.animateValueConnections;

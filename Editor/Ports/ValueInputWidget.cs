@@ -8,7 +8,7 @@ namespace Platinio.BehaviorTree
     {
         public ValueInputWidget(BehaviorTreeCanvas canvas, ValueInput port) : base(canvas, port)
         {
-            color = ValueConnectionWidget.DetermineColor(port.type);
+            color = ValueConnectionWidget.DetermineColor(port.Type);
         }
 
         protected override bool showInspector => port.hasDefaultValue && !port.hasValidConnection;
@@ -25,7 +25,7 @@ namespace Platinio.BehaviorTree
         {
             if (port.hasDefaultValue)
             {
-                return metadata["_defaultValue"].Cast(port.type);
+                return metadata["_defaultValue"].Cast(port.Type);
             }
             else
             {

@@ -15,7 +15,7 @@ namespace Platinio.BehaviorTree
 
         #region Drawing
 
-        public override Color color => DetermineColor(connection.source.type, connection.destination.type);
+        public override Color color => DetermineColor(connection.source.Type, connection.destination.Type);
 
         protected override bool colorIfActive => !BoltFlow.Configuration.animateControlConnections || !BoltFlow.Configuration.animateValueConnections;
 

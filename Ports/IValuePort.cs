@@ -4,6 +4,6 @@ namespace Platinio.BehaviorTree
 {
     public interface IValuePort : IPort
     {
-        Type type { get; }
+        Type Type { get; }
     }
 }
