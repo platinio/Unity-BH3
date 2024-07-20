@@ -209,114 +209,20 @@ namespace Platinio.BehaviorTree
         public override void CachePosition()
         {
             var headerHeight = 0f;
-            
             var edgeOrigin = element.Position.position;
             var innerOrigin = EdgeToInnerPosition(new Rect(edgeOrigin, Vector2.zero)).position;
-            
             var edgeX = edgeOrigin.x;
-            var edgeY = edgeOrigin.y;
-            
             var innerY = innerOrigin.y;
             var y = innerY;
-            
             var innerWidth = currentInnerWidth;
             var edgeWidth = InnerToEdgePosition(new Rect(0, 0, innerWidth, 0)).width;
-            
-            
-            //ports code
-           
-            
             y = innerY + headerHeight;
-
-            var innerHeight = 0f;
-
-            innerHeight += headerHeight;
             
-            //if (showPorts)
-            {
-                innerHeight += Styles.spaceBeforePorts;
-                y += Styles.spaceBeforePorts;
+            CachePortPosition(y, edgeX, edgeWidth);
 
-                var portsBackgroundY = y;
-                var portsBackgroundHeight = 0f;
-
-                portsBackgroundHeight += Styles.portsBackground.padding.top;
-                innerHeight += Styles.portsBackground.padding.top;
-                y += Styles.portsBackground.padding.top;
-
-                var portStartY = y;
-
-                var inputsHeight = 0f;
-                var outputsHeight = 0f;
-
-                foreach (var input in inputs)
-                {
-                    input.y = y;
-
-                    var inputHeight = input.GetHeight();
-
-                    inputsHeight += inputHeight;
-                    y += inputHeight;
-
-                    inputsHeight += Styles.spaceBetweenPorts;
-                    y += Styles.spaceBetweenPorts;
-                }
-
-                if (inputs.Count > 0)
-                {
-                    inputsHeight -= Styles.spaceBetweenPorts;
-                    y -= Styles.spaceBetweenPorts;
-                }
-
-                y = portStartY;
-
-                foreach (var output in outputs)
-                {
-                    output.y = y;
-
-                    var outputHeight = output.GetHeight();
-
-                    outputsHeight += outputHeight;
-                    y += outputHeight;
-
-                    outputsHeight += Styles.spaceBetweenPorts;
-                    y += Styles.spaceBetweenPorts;
-                }
-
-                if (outputs.Count > 0)
-                {
-                    outputsHeight -= Styles.spaceBetweenPorts;
-                    y -= Styles.spaceBetweenPorts;
-                }
-
-                var portsHeight = Math.Max(inputsHeight, outputsHeight);
-
-                portsBackgroundHeight += portsHeight;
-                innerHeight += portsHeight;
-                y = portStartY + portsHeight;
-
-                portsBackgroundHeight += Styles.portsBackground.padding.bottom;
-                innerHeight += Styles.portsBackground.padding.bottom;
-                y += Styles.portsBackground.padding.bottom;
-
-                portsBackgroundPosition = new Rect
-                    (
-                    edgeX,
-                    portsBackgroundY,
-                    edgeWidth,
-                    portsBackgroundHeight
-                    );
-            }
-            
-            
-            
-            
             base.CachePosition();
             
             if (!element.IsVisible) return;
-
-           
-           
 
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
@@ -330,7 +236,80 @@ namespace Platinio.BehaviorTree
                 LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
             }
         }
-        
+
+        private void CachePortPosition(float y, float edgeX, float edgeWidth)
+        {
+            y += Styles.spaceBeforePorts;
+
+            var portsBackgroundY = y;
+            var portsBackgroundHeight = 0f;
+
+            portsBackgroundHeight += Styles.portsBackground.padding.top;
+            y += Styles.portsBackground.padding.top;
+
+            var portStartY = y;
+
+            var inputsHeight = 0f;
+            var outputsHeight = 0f;
+
+            foreach (var input in inputs)
+            {
+                input.y = y;
+
+                var inputHeight = input.GetHeight();
+
+                inputsHeight += inputHeight;
+                y += inputHeight;
+
+                inputsHeight += Styles.spaceBetweenPorts;
+                y += Styles.spaceBetweenPorts;
+            }
+
+            if (inputs.Count > 0)
+            {
+                inputsHeight -= Styles.spaceBetweenPorts;
+                y -= Styles.spaceBetweenPorts;
+            }
+
+            y = portStartY;
+
+            foreach (var output in outputs)
+            {
+                output.y = y;
+
+                var outputHeight = output.GetHeight();
+
+                outputsHeight += outputHeight;
+                y += outputHeight;
+
+                outputsHeight += Styles.spaceBetweenPorts;
+                y += Styles.spaceBetweenPorts;
+            }
+
+            if (outputs.Count > 0)
+            {
+                outputsHeight -= Styles.spaceBetweenPorts;
+                y -= Styles.spaceBetweenPorts;
+            }
+
+            var portsHeight = Math.Max(inputsHeight, outputsHeight);
+
+            portsBackgroundHeight += portsHeight;
+            y = portStartY + portsHeight;
+
+            portsBackgroundHeight += Styles.portsBackground.padding.bottom;
+            y += Styles.portsBackground.padding.bottom;
+
+            portsBackgroundPosition = new Rect
+            (
+                edgeX,
+                portsBackgroundY,
+                edgeWidth,
+                portsBackgroundHeight
+            );
+        }
+
+
         protected Rect InnerToEdgePosition(Rect position)
         {
             return GraphGUI.GetNodeInnerToEdgePosition(position, shape);
