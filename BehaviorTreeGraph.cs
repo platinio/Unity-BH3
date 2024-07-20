@@ -16,40 +16,40 @@ namespace Platinio.BehaviorTree
 
         
         [DoNotSerialize]
-        public GraphConnectionCollection<BehaviorTreeControlConnection, BehaviorTreeControlOutput, BehaviorTreeControlInput> controlConnections { get; private set; }
+        public GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput> controlConnections { get; private set; }
 
         [DoNotSerialize]
-        public GraphConnectionCollection<BehaviorTreeValueConnection, BehaviorTreeValueOutput, BehaviorTreeValueInput> valueConnections { get; private set; }
+        public GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput> valueConnections { get; private set; }
 
         [DoNotSerialize]
-        public GraphConnectionCollection<BehaviorTreeInvalidConnection, IBehaviorTreeOutputPort, IBehaviorTreeInputPort> invalidConnections { get; private set; }
+        public GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort> invalidConnections { get; private set; }
 
         [Serialize]
         [InspectorLabel("Trigger Inputs")]
         [InspectorWide(true)]
         [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
-        public BehaviorTreePortDefinitionCollection<BehaviorTreeControlInputDefinition> controlInputDefinitions { get; private set; }
+        public PortDefinitionCollection<InputPortDefinition> controlInputDefinitions { get; private set; }
 
         [Serialize]
         [InspectorLabel("Trigger Outputs")]
         [InspectorWide(true)]
         [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
-        public BehaviorTreePortDefinitionCollection<BehaviorTreeControlOutputDefinition> controlOutputDefinitions { get; private set; }
+        public PortDefinitionCollection<PortControlOutputDefinition> controlOutputDefinitions { get; private set; }
 
         [Serialize]
         [InspectorLabel("Data Inputs")]
         [InspectorWide(true)]
         [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
-        public BehaviorTreePortDefinitionCollection<BehaviorTreeValueInputDefinition> valueInputDefinitions { get; private set; }
+        public PortDefinitionCollection<ValueInputDefinition> valueInputDefinitions { get; private set; }
 
         [Serialize]
         [InspectorLabel("Data Outputs")]
         [InspectorWide(true)]
         [WarnBeforeRemoving(DefinitionRemoveWarningTitle, DefinitionRemoveWarningMessage)]
-        public BehaviorTreePortDefinitionCollection<BehaviorTreeValueOutputDefinition> valueOutputDefinitions { get; private set; }
+        public PortDefinitionCollection<ValueOutputDefinition> valueOutputDefinitions { get; private set; }
 
-        public IEnumerable<IBehaviorTreePortDefinition> validPortDefinitions =>
-            LinqUtility.Concat<IBehaviorTreePortDefinition>(controlInputDefinitions,
+        public IEnumerable<IPortDefinition> validPortDefinitions =>
+            LinqUtility.Concat<IPortDefinition>(controlInputDefinitions,
                     controlOutputDefinitions,
                     valueInputDefinitions,
                     valueOutputDefinitions)
@@ -69,9 +69,9 @@ namespace Platinio.BehaviorTree
 
             Nodes.Add(entryNode);
             
-            controlConnections = new GraphConnectionCollection<BehaviorTreeControlConnection, BehaviorTreeControlOutput, BehaviorTreeControlInput>(this);
-            valueConnections = new GraphConnectionCollection<BehaviorTreeValueConnection, BehaviorTreeValueOutput, BehaviorTreeValueInput>(this);
-            invalidConnections = new GraphConnectionCollection<BehaviorTreeInvalidConnection, IBehaviorTreeOutputPort, IBehaviorTreeInputPort>(this);
+            controlConnections = new GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput>(this);
+            valueConnections = new GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput>(this);
+            invalidConnections = new GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort>(this);
          
             //elements.Include(units);
             elements.Include(controlConnections);
@@ -80,10 +80,10 @@ namespace Platinio.BehaviorTree
             //elements.Include(groups);
             //elements.Include(sticky);
 
-            controlInputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeControlInputDefinition>();
-            controlOutputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeControlOutputDefinition>();
-            valueInputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeValueInputDefinition>();
-            valueOutputDefinitions = new BehaviorTreePortDefinitionCollection<BehaviorTreeValueOutputDefinition>();
+            controlInputDefinitions = new PortDefinitionCollection<InputPortDefinition>();
+            controlOutputDefinitions = new PortDefinitionCollection<PortControlOutputDefinition>();
+            valueInputDefinitions = new PortDefinitionCollection<ValueInputDefinition>();
+            valueOutputDefinitions = new PortDefinitionCollection<ValueOutputDefinition>();
         }
 
         public override IGraphData CreateData()

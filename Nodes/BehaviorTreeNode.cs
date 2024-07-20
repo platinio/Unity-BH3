@@ -13,47 +13,47 @@ namespace Platinio.BehaviorTree
     {
         
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeControlInput> controlInputs { get; }
+        public IPortCollection<ControlInput> controlInputs { get; }
 
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeControlOutput> controlOutputs { get; }
+        public IPortCollection<ControlOutput> controlOutputs { get; }
 
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeValueInput> valueInputs { get; }
+        public IPortCollection<ValueInput> valueInputs { get; }
 
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeValueOutput> valueOutputs { get; }
+        public IPortCollection<ValueOutput> valueOutputs { get; }
 
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeInvalidInput> invalidInputs { get; }
+        public IPortCollection<InvalidInput> invalidInputs { get; }
 
         [DoNotSerialize]
-        public IBehaviorTreePortCollection<BehaviorTreeInvalidOutput> invalidOutputs { get; }
+        public IPortCollection<InvalidOutput> invalidOutputs { get; }
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreeInputPort> inputs => LinqUtility.Concat<IBehaviorTreeInputPort>(controlInputs, valueInputs, invalidInputs);
+        public IEnumerable<IInputPort> inputs => LinqUtility.Concat<IInputPort>(controlInputs, valueInputs, invalidInputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreeOutputPort> outputs => LinqUtility.Concat<IBehaviorTreeOutputPort>(controlOutputs, valueOutputs, invalidOutputs);
+        public IEnumerable<IOutputPort> outputs => LinqUtility.Concat<IOutputPort>(controlOutputs, valueOutputs, invalidOutputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreeInputPort> validInputs => LinqUtility.Concat<IBehaviorTreeInputPort>(controlInputs, valueInputs);
+        public IEnumerable<IInputPort> validInputs => LinqUtility.Concat<IInputPort>(controlInputs, valueInputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreeOutputPort> validOutputs => LinqUtility.Concat<IBehaviorTreeOutputPort>(controlOutputs, valueOutputs);
+        public IEnumerable<IOutputPort> validOutputs => LinqUtility.Concat<IOutputPort>(controlOutputs, valueOutputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreePort> ports => LinqUtility.Concat<IBehaviorTreePort>(inputs, outputs);
+        public IEnumerable<IPort> ports => LinqUtility.Concat<IPort>(inputs, outputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreePort> invalidPorts => LinqUtility.Concat<IBehaviorTreePort>(invalidInputs, invalidOutputs);
+        public IEnumerable<IPort> invalidPorts => LinqUtility.Concat<IPort>(invalidInputs, invalidOutputs);
 
         [DoNotSerialize]
-        public IEnumerable<IBehaviorTreePort> validPorts => LinqUtility.Concat<IBehaviorTreePort>(validInputs, validOutputs);
+        public IEnumerable<IPort> validPorts => LinqUtility.Concat<IPort>(validInputs, validOutputs);
 
         public event Action onPortsChanged;
-        public IConnectionCollection<IBehaviorTreeRelation, IBehaviorTreePort, IBehaviorTreePort> relations { get; private set; }
-        public IEnumerable<IBehaviorTreeConnection> connections { get; }
+        public IConnectionCollection<IPortRelation, IPort, IPort> relations { get; private set; }
+        public IEnumerable<IPortConnection> connections { get; }
         public bool isControlRoot { get; }
         public Vector2 position { get; set; }
 
@@ -97,53 +97,53 @@ namespace Platinio.BehaviorTree
 
         public Dictionary<string, object> defaultValues { get; }
 
-        protected BehaviorTreeValueInput ValueInput<T>(string key)
+        protected ValueInput ValueInput<T>(string key)
         {
             return ValueInput(typeof(T), key);
         }
         
-        protected BehaviorTreeValueInput ValueInput(Type type, string key)
+        protected ValueInput ValueInput(Type type, string key)
         {
             //EnsureUniqueInput(key);
-            var port = new BehaviorTreeValueInput(key, type);
+            var port = new ValueInput(key, type);
             valueInputs.Add(port);
             return port;
         }
         
-        protected BehaviorTreeValueOutput ValueOutput(Type type, string key)
+        protected ValueOutput ValueOutput(Type type, string key)
         {
             //EnsureUniqueOutput(key);
-            var port = new BehaviorTreeValueOutput(key, type);
+            var port = new ValueOutput(key, type);
             valueOutputs.Add(port);
             return port;
         }
 
-        protected BehaviorTreeValueOutput ValueOutput(Type type, string key, Func<Flow, object> getValue)
+        protected ValueOutput ValueOutput(Type type, string key, Func<Flow, object> getValue)
         {
             //EnsureUniqueOutput(key);
-            var port = new BehaviorTreeValueOutput(key, type, getValue);
+            var port = new ValueOutput(key, type, getValue);
             valueOutputs.Add(port);
             return port;
         }
 
-        protected BehaviorTreeValueOutput ValueOutput<T>(string key)
+        protected ValueOutput ValueOutput<T>(string key)
         {
             return ValueOutput(typeof(T), key);
         }
 
-        protected BehaviorTreeValueOutput ValueOutput<T>(string key, Func<Flow, T> getValue)
+        protected ValueOutput ValueOutput<T>(string key, Func<Flow, T> getValue)
         {
             return ValueOutput(typeof(T), key, (recursion) => getValue(recursion));
         }
         
         protected BehaviorTreeNode() : base()
         {
-            controlInputs = new BehaviorTreePortCollection<BehaviorTreeControlInput>(this);
-            controlOutputs = new BehaviorTreePortCollection<BehaviorTreeControlOutput>(this);
-            valueInputs = new BehaviorTreePortCollection<BehaviorTreeValueInput>(this);
-            valueOutputs = new BehaviorTreePortCollection<BehaviorTreeValueOutput>(this);
-            invalidInputs = new BehaviorTreePortCollection<BehaviorTreeInvalidInput>(this);
-            invalidOutputs = new BehaviorTreePortCollection<BehaviorTreeInvalidOutput>(this);
+            controlInputs = new PortCollection<ControlInput>(this);
+            controlOutputs = new PortCollection<ControlOutput>(this);
+            valueInputs = new PortCollection<ValueInput>(this);
+            valueOutputs = new PortCollection<ValueOutput>(this);
+            invalidInputs = new PortCollection<InvalidInput>(this);
+            invalidOutputs = new PortCollection<InvalidOutput>(this);
             
             //relations = new ConnectionCollection<IBehaviorTreeNodeRelation, IUnitPort, IUnitPort>();
 

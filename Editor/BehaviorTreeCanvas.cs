@@ -21,7 +21,7 @@ namespace Platinio.BehaviorTree
         public Vector2 connectionEnd { get; set; }
         public bool isCreatingConnection => connectionSource != null &&
                                             connectionSource.behaviorTreeNode != null;        
-        public IBehaviorTreePort connectionSource { get; set; }
+        public IPort connectionSource { get; set; }
         
         
         protected override void HandleHighPriorityInput()
@@ -54,31 +54,31 @@ namespace Platinio.BehaviorTree
             var filter = UnitOptionFilter.Any;
             filter.GraphHashCode = graph.GetHashCode();
 
-            if (connectionSource is BehaviorTreeValueInput)
+            if (connectionSource is ValueInput)
             {
-                var valueInput = (BehaviorTreeValueInput)connectionSource;
+                var valueInput = (ValueInput)connectionSource;
                 filter.CompatibleOutputType = valueInput.type;
                 filter.Expose = false;
                 filter.NoConnection = false;
                 NewUnit(mousePosition, GetNewUnitOptions(filter), (unit) => CompleteContextualConnection(valueInput, unit.CompatibleValueOutput(valueInput.type)));
             }
-            else if (connectionSource is BehaviorTreeValueOutput)
+            else if (connectionSource is ValueOutput)
             {
-                var valueOutput = (BehaviorTreeValueOutput)connectionSource;
+                var valueOutput = (ValueOutput)connectionSource;
                 filter.CompatibleInputType = valueOutput.type;
                 filter.NoConnection = false;
                 NewUnit(mousePosition, GetNewUnitOptions(filter), (unit) => CompleteContextualConnection(valueOutput, unit.CompatibleValueInput(valueOutput.type)));
             }
-            else if (connectionSource is BehaviorTreeControlInput)
+            else if (connectionSource is ControlInput)
             {
-                var controlInput = (BehaviorTreeControlInput)connectionSource;
+                var controlInput = (ControlInput)connectionSource;
                 filter.NoControlOutput = false;
                 filter.NoConnection = false;
                 NewUnit(mousePosition, GetNewUnitOptions(filter), (unit) => CompleteContextualConnection(controlInput, unit.controlOutputs.First()));
             }
-            else if (connectionSource is BehaviorTreeControlOutput)
+            else if (connectionSource is ControlOutput)
             {
-                var controlOutput = (BehaviorTreeControlOutput)connectionSource;
+                var controlOutput = (ControlOutput)connectionSource;
                 filter.NoControlInput = false;
                 filter.NoConnection = false;
                 NewUnit(mousePosition, GetNewUnitOptions(filter), (unit) => CompleteContextualConnection(controlOutput, unit.controlInputs.First()));
@@ -149,12 +149,12 @@ namespace Platinio.BehaviorTree
             GUI.changed = true;
         }
         
-        private void CompleteContextualConnection(IBehaviorTreePort source, IBehaviorTreePort destination)
+        private void CompleteContextualConnection(IPort source, IPort destination)
         {
             source.ValidlyConnectTo(destination);
             Cache();
             var unitPosition = this.Widget<IBehaviorTreeWidget>(destination.behaviorTreeNode).position.position;
-            var portPosition = this.Widget<IBehaviorTreePortWidget>(destination).handlePosition.center.PixelPerfect();
+            var portPosition = this.Widget<IPortWidget>(destination).handlePosition.center.PixelPerfect();
             var offset = portPosition - unitPosition;
             destination.behaviorTreeNode.position -= offset;
             this.Widget(destination.behaviorTreeNode).Reposition();

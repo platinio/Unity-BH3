@@ -8,8 +8,6 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    
-    
     [Widget(typeof(BehaviorTreeNode))]
     public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>, IBehaviorTreeWidget
     {
@@ -34,11 +32,11 @@ namespace Platinio.BehaviorTree
             unit.onPortsChanged -= SubWidgetsChanged;
         }
         
-        protected readonly List<IBehaviorTreePortWidget> ports = new List<IBehaviorTreePortWidget>();
+        protected readonly List<IPortWidget> ports = new List<IPortWidget>();
 
-        protected readonly List<IBehaviorTreePortWidget> inputs = new List<IBehaviorTreePortWidget>();
+        protected readonly List<IPortWidget> inputs = new List<IPortWidget>();
 
-        protected readonly List<IBehaviorTreePortWidget> outputs = new List<IBehaviorTreePortWidget>();
+        protected readonly List<IPortWidget> outputs = new List<IPortWidget>();
 
         private readonly List<string> settingNames = new List<string>();
         private float currentInnerWidth;
@@ -54,8 +52,8 @@ namespace Platinio.BehaviorTree
             inputs.Clear();
             outputs.Clear();
             ports.Clear();
-            inputs.AddRange(unit.inputs.Select(port => canvas.Widget<IBehaviorTreePortWidget>(port)));
-            outputs.AddRange(unit.outputs.Select(port => canvas.Widget<IBehaviorTreePortWidget>(port)));
+            inputs.AddRange(unit.inputs.Select(port => canvas.Widget<IPortWidget>(port)));
+            outputs.AddRange(unit.outputs.Select(port => canvas.Widget<IPortWidget>(port)));
             ports.AddRange(inputs);
             ports.AddRange(outputs);
 
@@ -586,7 +584,7 @@ namespace Platinio.BehaviorTree
         }
 
         public IBehaviorTreeNode behaviorTreeNode { get; }
-        public Inspector GetPortInspector(IBehaviorTreePort port, Metadata metadata)
+        public Inspector GetPortInspector(IPort port, Metadata metadata)
         {
             return null;
         }
