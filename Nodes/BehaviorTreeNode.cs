@@ -54,10 +54,18 @@ namespace Platinio.BehaviorTree
 
         public event Action onPortsChanged;
         public IConnectionCollection<IPortRelation, IPort, IPort> relations { get; private set; }
-        public IEnumerable<IPortConnection> connections { get; }
-        public bool isControlRoot { get; }
+        
+        [DoNotSerialize]
+        public IEnumerable<IPortConnection> connections => ports.SelectMany(p => p.connections);
+        
+        [DoNotSerialize]
+        public virtual bool isControlRoot { get; protected set; } = false;
+        
+        [Serialize]
         public Vector2 position { get; set; }
 
+        public virtual bool ShowIcon => false;
+        
         public void PortsChanged()
         {
             onPortsChanged?.Invoke();

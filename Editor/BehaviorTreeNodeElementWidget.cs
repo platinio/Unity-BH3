@@ -159,7 +159,11 @@ namespace Platinio.BehaviorTree
 
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
-                //DrawIcon(offset);
+                if (node.ShowIcon)
+                {
+                    DrawIcon(offset);
+                }
+                
                 DrawTitle(offset);
                 DrawLastExecutionIcon(offset);
             }
@@ -218,11 +222,13 @@ namespace Platinio.BehaviorTree
             var innerWidth = currentInnerWidth;
             var edgeWidth = InnerToEdgePosition(new Rect(0, 0, innerWidth, 0)).width;
             y = innerY + headerHeight;
-            
-            Rect newPosition = position;
-            //newPosition.height = 60 + (element.ports.Count() * 20f);
-            newPosition.height = 60 + (GetPortSectionHeight());
-            position = newPosition;
+
+            if (!node.ShowIcon)
+            {
+                Rect newPosition = position;
+                newPosition.height = 60 + (GetPortSectionHeight());
+                position = newPosition;
+            }
             
             CachePortPosition(y, edgeX, edgeWidth);
 
@@ -483,7 +489,7 @@ namespace Platinio.BehaviorTree
                 title = new GUIStyle(BoltCore.Styles.nodeLabel);
                 title.normal.textColor = new Color(1, 1, 1, 0.75f);
                 title.alignment = TextAnchor.MiddleCenter;
-                title.fontSize = 11;
+                title.fontSize = 12;
                 title.wordWrap = true;
                 
                 

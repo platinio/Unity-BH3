@@ -10,14 +10,10 @@ namespace Platinio.BehaviorTree
         public override string NodeName => "Entry";
         public override bool CanDelete => false;
         public override int MaxChildrenLimit => 1;
-        
         protected override string NodeIconPath => "NodeIcons/Entry";
-
-        private bool isComplete = false;
         
         public override void OnEnter()
         {
-            isComplete = false;
             foreach (var children in GetChildren())
             {
                 children.OnNodeEnter();
@@ -36,7 +32,6 @@ namespace Platinio.BehaviorTree
         {
             if (GetChildren().Count == 0)
             {
-                isComplete = true;
                 return ExecutionStatus.Success;
             }
                 

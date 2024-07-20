@@ -13,6 +13,7 @@ namespace Platinio.BehaviorTree
         public virtual int CurrentChildrenIndex => 0;
         public virtual bool CanExecute => true;
         public override int MaxChildrenLimit => MaxTransitionAmount;
+        public override bool ShowIcon => true;
 
         public void AddChild(BehaviorTreeNode child, int index)
         {
