@@ -5,6 +5,7 @@ using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using MouseButton = Unity.VisualScripting.MouseButton;
 
 namespace Platinio.BehaviorTree
 {
@@ -158,7 +159,7 @@ namespace Platinio.BehaviorTree
 
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
-                DrawIcon(offset);
+                //DrawIcon(offset);
                 DrawTitle(offset);
                 DrawLastExecutionIcon(offset);
             }
@@ -218,12 +219,17 @@ namespace Platinio.BehaviorTree
             var edgeWidth = InnerToEdgePosition(new Rect(0, 0, innerWidth, 0)).width;
             y = innerY + headerHeight;
             
+            Rect newPosition = position;
+            //newPosition.height = 60 + (element.ports.Count() * 20f);
+            newPosition.height = 60 + (GetPortSectionHeight());
+            position = newPosition;
+            
             CachePortPosition(y, edgeX, edgeWidth);
 
             base.CachePosition();
             
             if (!element.IsVisible) return;
-
+            
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
             Vector2 titleSize = new Vector2(element.Width, TITLE_HEIGHT);
@@ -309,6 +315,30 @@ namespace Platinio.BehaviorTree
             );
         }
 
+        private float GetPortsHeight(IEnumerable<IPortWidget> portWidgets)
+        {
+            float height = 0;
+            
+            foreach (var input in portWidgets)
+            {
+                height += input.GetHeight();
+            }
+
+            if (inputs.Count > 0)
+            {
+                height -= Styles.spaceBetweenPorts;
+            }
+
+            return height;
+        }
+
+        private float GetPortSectionHeight()
+        {
+            float inputHeight = GetPortsHeight(inputs);
+            float ouputHeight = GetPortsHeight(outputs);
+
+            return inputHeight > ouputHeight ? inputHeight : ouputHeight;
+        }
 
         protected Rect InnerToEdgePosition(Rect position)
         {
