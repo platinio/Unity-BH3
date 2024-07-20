@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Platinio.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -72,17 +73,77 @@ namespace Platinio.BehaviorTree
 
         public IGraphElementDebugData CreateDebugData()
         {
-            throw new NotImplementedException();
+            return default;
         }
 
-        public bool canDefine { get; }
-        public bool isDefined { get; }
+        [DoNotSerialize]
+        public virtual bool canDefine => true;
+        [DoNotSerialize]
+        public bool isDefined { get; private set; }
         public bool failedToDefine { get; }
         public Exception definitionException { get; }
 
-        public virtual void Define()
+        public void Define()
         {
-           
+            var preservation = NodePreservation.Preserve(this);
+
+            // A node needs to undefine even if it wasn't defined,
+            // because there might be invalid ports and connections
+            // that we need to clear to avoid duplicates on definition.
+            Undefine();
+
+            if (canDefine)
+            {
+                try
+                {
+                    Definition();
+                    isDefined = true;
+                    //definitionException = null;
+                    AfterDefine();
+                }
+                catch (Exception ex)
+                {
+                    Undefine();
+                    //definitionException = ex;
+                    Debug.LogWarning($"Failed to define {this}:\n{ex}");
+                }
+            }
+
+            preservation.RestoreTo(this);
+        }
+
+        protected virtual void Definition() { }
+        
+        protected virtual void AfterDefine() { }
+
+        private void Undefine()
+        {
+            // Because a node is always undefined on definition,
+            // even if it wasn't defined before, we make sure the user
+            // code for undefinition can safely presume it was defined.
+            if (isDefined)
+            {
+                BeforeUndefine();
+            }
+
+            Disconnect();
+            defaultValues.Clear();
+            controlInputs.Clear();
+            controlOutputs.Clear();
+            valueInputs.Clear();
+            valueOutputs.Clear();
+            invalidInputs.Clear();
+            invalidOutputs.Clear();
+            relations.Clear();
+            isDefined = false;
+        }
+        
+        protected virtual void BeforeUndefine() { }
+        
+        public override void BeforeRemove()
+        {
+            base.BeforeRemove();
+            Disconnect();
         }
 
         public void EnsureDefined()
@@ -93,6 +154,15 @@ namespace Platinio.BehaviorTree
         public void RemoveUnconnectedInvalidPorts()
         {
             
+        }
+        
+        public void Disconnect()
+        {
+            // Can't use a foreach because invalid ports may get removed as they disconnect
+            while (ports.Any(p => p.hasAnyConnection))
+            {
+                ports.First(p => p.hasAnyConnection).Disconnect();
+            }
         }
 
         public Dictionary<string, object> defaultValues { get; }
@@ -144,9 +214,7 @@ namespace Platinio.BehaviorTree
             valueOutputs = new PortCollection<ValueOutput>(this);
             invalidInputs = new PortCollection<InvalidInput>(this);
             invalidOutputs = new PortCollection<InvalidOutput>(this);
-            
-            //relations = new ConnectionCollection<IBehaviorTreeNodeRelation, IUnitPort, IUnitPort>();
-
+            relations = new ConnectionCollection<IPortRelation, IPort, IPort>();
             defaultValues = new Dictionary<string, object>();
         }
 
