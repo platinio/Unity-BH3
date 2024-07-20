@@ -93,7 +93,7 @@ namespace Platinio.BehaviorTree
 
         public override void HandleInput()
         {
-            if (!canvas.isCreatingConnection)
+            if (!canvas.IsCreatingConnection)
             {
                 if (e.IsMouseDown(MouseButton.Left))
                 {
@@ -123,7 +123,7 @@ namespace Platinio.BehaviorTree
             }
             else
             {
-                var source = canvas.connectionSource;
+                var source = canvas.ConnectionSource;
                 var isSource = source == port;
 
                 if (!isSource && e.IsMouseDown(MouseButton.Left))
@@ -158,7 +158,7 @@ namespace Platinio.BehaviorTree
                     {
                         if (canvas.isMouseOverBackground)
                         {
-                            canvas.NewUnitContextual();
+                            //canvas.NewUnitContextual();
                         }
                         else if (!canvas.isMouseOver)
                         {
@@ -182,7 +182,7 @@ namespace Platinio.BehaviorTree
 
         private void StartConnection()
         {
-            canvas.connectionSource = port;
+            canvas.ConnectionSource = port;
             window.Focus();
         }
 
@@ -210,7 +210,7 @@ namespace Platinio.BehaviorTree
             {
                 UndoUtility.RecordEditedObject("Connect Nodes");
                 source.ValidlyConnectTo(destination);
-                canvas.connectionSource = null;
+                canvas.ConnectionSource = null;
                 canvas.Widget(source.behaviorTreeNode).Reposition();
                 canvas.Widget(destination.behaviorTreeNode).Reposition();
                 GUI.changed = true;
@@ -270,9 +270,9 @@ namespace Platinio.BehaviorTree
         {
             get
             {
-                if (canvas.isCreatingConnection)
+                if (canvas.IsCreatingConnection)
                 {
-                    if (canvas.connectionSource == port || canvas.connectionSource.CanValidlyConnectTo(port))
+                    if (canvas.ConnectionSource == port || canvas.ConnectionSource.CanValidlyConnectTo(port))
                     {
                         return Styles.easierGrabOffset.Add(identifierPosition);
                     }
@@ -503,7 +503,7 @@ namespace Platinio.BehaviorTree
 
         #region Drawing
 
-        public override bool canClip => base.canClip && canvas.connectionSource != port;
+        public override bool canClip => base.canClip && canvas.ConnectionSource != port;
 
         protected virtual bool showInspector => false;
 
@@ -530,9 +530,9 @@ namespace Platinio.BehaviorTree
                     dim = false;
                 }
 
-                if (BoltCore.Configuration.dimIncompatibleNodes && canvas.isCreatingConnection)
+                if (BoltCore.Configuration.dimIncompatibleNodes && canvas.IsCreatingConnection)
                 {
-                    dim = canvas.connectionSource != port && !canvas.connectionSource.CanValidlyConnectTo(port);
+                    dim = canvas.ConnectionSource != port && !canvas.ConnectionSource.CanValidlyConnectTo(port);
                 }
 
                 return dim;
@@ -574,20 +574,20 @@ namespace Platinio.BehaviorTree
         {
             base.DrawOverlay();
             
-            var surroundFromPort = canvas.isCreatingConnection &&
+            var surroundFromPort = canvas.IsCreatingConnection &&
                 isMouseOver &&
-                canvas.connectionSource.CanValidlyConnectTo(port);
+                canvas.ConnectionSource.CanValidlyConnectTo(port);
 
-            var surroundFromUnit = canvas.isCreatingConnection &&
+            var surroundFromUnit = canvas.IsCreatingConnection &&
                 unitWidget.isMouseOver &&
-                canvas.connectionSource.CompatiblePort(unit) == port;
+                canvas.ConnectionSource.CompatiblePort(unit) == port;
 
             if (surroundFromPort || surroundFromUnit)
             {
                 DrawSurround();
             }
 
-            if (canvas.connectionSource == port)
+            if (canvas.ConnectionSource == port)
             {
                 DrawConnectionSource();
             }
@@ -725,7 +725,7 @@ namespace Platinio.BehaviorTree
             {
                 color = UnitConnectionStyles.invalidColor;
             }
-            else if (canvas.isCreatingConnection && (canvas.connectionSource == port || canvas.connectionSource.CanValidlyConnectTo(port)))
+            else if (canvas.IsCreatingConnection && (canvas.ConnectionSource == port || canvas.ConnectionSource.CanValidlyConnectTo(port)))
             {
                 color = this.color;
             }
@@ -788,8 +788,8 @@ namespace Platinio.BehaviorTree
 
             if (highlight ||
                 isConnected ||
-                canvas.connectionSource == port ||
-                canvas.isCreatingConnection && canvas.connectionSource.CanValidlyConnectTo(port))
+                canvas.ConnectionSource == port ||
+                canvas.IsCreatingConnection && canvas.ConnectionSource.CanValidlyConnectTo(port))
             {
                 using (LudiqGUI.color.Override(color.WithAlphaMultiplied(LudiqGUI.color.value.a * 0.85f))) // Full color is a bit hard on the eyes
                 {
@@ -845,14 +845,14 @@ namespace Platinio.BehaviorTree
 
             if (window.IsFocused())
             {
-                canvas.connectionEnd = mousePosition;
+                canvas.ConnectionEnd = mousePosition;
             }
 
             GraphGUI.DrawConnection
                 (
                     color,
                     start,
-                    canvas.connectionEnd,
+                    canvas.ConnectionEnd,
                     edge,
                     null,
                     handleTextureConnected,

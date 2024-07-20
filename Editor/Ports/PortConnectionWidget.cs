@@ -142,7 +142,7 @@ namespace Platinio.BehaviorTree
             var sourceWidget = canvas.Widget<IPortWidget>(connection.source);
             var destinationWidget = canvas.Widget<IPortWidget>(connection.destination);
 
-            var highlight = !canvas.isCreatingConnection && (sourceWidget.isMouseOver || destinationWidget.isMouseOver);
+            var highlight = !canvas.IsCreatingConnection && (sourceWidget.isMouseOver || destinationWidget.isMouseOver);
 
             var willDisconnect = sourceWidget.willDisconnect || destinationWidget.willDisconnect;
 

@@ -427,18 +427,18 @@ namespace Platinio.BehaviorTree
         public override void HandleInput()
         {
             
-            if (canvas.isCreatingConnection)
+            if (canvas.IsCreatingConnection)
             {
                 if (e.IsMouseDown(MouseButton.Left))
                 {
-                    var source = canvas.connectionSource;
+                    var source = canvas.ConnectionSource;
                     var destination = source.CompatiblePort(unit);
 
                     if (destination != null)
                     {
                         UndoUtility.RecordEditedObject("Connect Nodes");
                         source.ValidlyConnectTo(destination);
-                        canvas.connectionSource = null;
+                        canvas.ConnectionSource = null;
                         canvas.Widget(source.behaviorTreeNode).Reposition();
                         canvas.Widget(destination.behaviorTreeNode).Reposition();
                         GUI.changed = true;
