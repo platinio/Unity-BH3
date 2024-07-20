@@ -9,9 +9,7 @@ namespace Platinio.BehaviorTree
     [SerializationVersion("A")]
     public class BehaviorTreeGraph : BaseGraph<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        
-         private const string DefinitionRemoveWarningTitle = "Remove Port Definition";
-
+        private const string DefinitionRemoveWarningTitle = "Remove Port Definition";
         private const string DefinitionRemoveWarningMessage = "Removing this definition will break any existing connection to this port. Are you sure you want to continue?";
 
         
@@ -73,13 +71,10 @@ namespace Platinio.BehaviorTree
             valueConnections = new GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput>(this);
             invalidConnections = new GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort>(this);
          
-            //elements.Include(units);
             elements.Include(controlConnections);
             elements.Include(valueConnections);
             elements.Include(invalidConnections);
-            //elements.Include(groups);
-            //elements.Include(sticky);
-
+           
             controlInputDefinitions = new PortDefinitionCollection<InputPortDefinition>();
             controlOutputDefinitions = new PortDefinitionCollection<PortControlOutputDefinition>();
             valueInputDefinitions = new PortDefinitionCollection<ValueInputDefinition>();
