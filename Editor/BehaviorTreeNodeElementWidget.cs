@@ -356,9 +356,6 @@ namespace Platinio.BehaviorTree
                 }
             }
             
-            
-            
-            
             if (element is PlaceHolderNode placeHolderNode)
             {
                 placeHolderNode.IsSelected = isSelected;
