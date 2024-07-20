@@ -11,26 +11,15 @@ namespace Platinio.BehaviorTree
     [Widget(typeof(BehaviorTreeNode))]
     public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>, IBehaviorTreeWidget
     {
-        protected BehaviorTreeNode unit => element;
+        public IBehaviorTreeNode behaviorTreeNode => node;
+        protected BehaviorTreeNode node => element;
         
         private UnitDescription description;
         public Rect portsBackgroundPosition { get; private set; }
 
         protected NodeShape shape => NodeShape.Hex;
         
-        public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
-        {
-            unit.onPortsChanged += CacheDefinition;
-            unit.onPortsChanged += SubWidgetsChanged;
-        }
-        
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            unit.onPortsChanged -= CacheDefinition;
-            unit.onPortsChanged -= SubWidgetsChanged;
-        }
+        public override IEnumerable<IWidget> positionDependers => ports.Cast<IWidget>();
         
         protected readonly List<IPortWidget> ports = new List<IPortWidget>();
 
@@ -40,88 +29,6 @@ namespace Platinio.BehaviorTree
 
         private readonly List<string> settingNames = new List<string>();
         private float currentInnerWidth;
-        
-        protected override void CacheItemFirstTime()
-        {
-            base.CacheItemFirstTime();
-            CacheDefinition();
-        }
-        
-        protected virtual void CacheDefinition()
-        {
-            inputs.Clear();
-            outputs.Clear();
-            ports.Clear();
-            inputs.AddRange(unit.inputs.Select(port => canvas.Widget<IPortWidget>(port)));
-            outputs.AddRange(unit.outputs.Select(port => canvas.Widget<IPortWidget>(port)));
-            ports.AddRange(inputs);
-            ports.AddRange(outputs);
-
-            Reposition();
-        }
-        
-        protected override void CacheDescription()
-        {
-            //description = unit.Description<UnitDescription>();
-            
-            Reposition();
-        }
-        
-        public virtual Inspector GetPortInspector(IUnitPort port, Metadata metadata)
-        {
-            return metadata.Inspector();
-        }
-        
-        public Rect edgePosition
-        {
-            get
-            {
-                return position;
-            }
-            set
-            {
-                position = value;
-            }
-        }
-        
-        public Rect innerPosition
-        {
-            get
-            {
-                return EdgeToInnerPosition(edgePosition);
-            }
-            set
-            {
-                edgePosition = InnerToEdgePosition(value);
-            }
-        }
-        
-        public override void ExpandDragGroup(HashSet<IGraphElement> dragGroup)
-        {
-            if (BoltCore.Configuration.carryChildren)
-            {
-                foreach (var output in unit.outputs)
-                {
-                    foreach (var connection in output.connections)
-                    {
-                        if (dragGroup.Contains(connection.destination.behaviorTreeNode))
-                        {
-                            continue;
-                        }
-
-                        dragGroup.Add(connection.destination.behaviorTreeNode);
-
-                        canvas.Widget(connection.destination.behaviorTreeNode).ExpandDragGroup(dragGroup);
-                    }
-                }
-            }
-        }
-        
-        public override IEnumerable<IWidget> positionDependers => ports.Cast<IWidget>();
-        
-        
-        
-        
         
         public override IEnumerable<IWidget> subWidgets => element.ports.Select(port => canvas.Widget(port));
 
@@ -150,60 +57,86 @@ namespace Platinio.BehaviorTree
 
         private bool showPorts = true;
         
+        public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
+        {
+            node.onPortsChanged += CacheDefinition;
+            node.onPortsChanged += SubWidgetsChanged;
+        }
+        
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            node.onPortsChanged -= CacheDefinition;
+            node.onPortsChanged -= SubWidgetsChanged;
+        }
+        
+        protected override void CacheItemFirstTime()
+        {
+            base.CacheItemFirstTime();
+            CacheDefinition();
+        }
+        
+        protected virtual void CacheDefinition()
+        {
+            inputs.Clear();
+            outputs.Clear();
+            ports.Clear();
+            inputs.AddRange(node.inputs.Select(port => canvas.Widget<IPortWidget>(port)));
+            outputs.AddRange(node.outputs.Select(port => canvas.Widget<IPortWidget>(port)));
+            ports.AddRange(inputs);
+            ports.AddRange(outputs);
+
+            Reposition();
+        }
+        
+        protected override void CacheDescription()
+        {
+            //description = unit.Description<UnitDescription>();
+            Reposition();
+        }
+        
+        public virtual Inspector GetPortInspector(IUnitPort port, Metadata metadata)
+        {
+            return metadata.Inspector();
+        }
+        
+        public Rect edgePosition
+        {
+            get => position;
+            set => position = value;
+        }
+        
+        public Rect innerPosition
+        {
+            get => EdgeToInnerPosition(edgePosition);
+            set => edgePosition = InnerToEdgePosition(value);
+        }
+        
+        public override void ExpandDragGroup(HashSet<IGraphElement> dragGroup)
+        {
+            if (BoltCore.Configuration.carryChildren)
+            {
+                foreach (var output in node.outputs)
+                {
+                    foreach (var connection in output.connections)
+                    {
+                        if (dragGroup.Contains(connection.destination.behaviorTreeNode))
+                        {
+                            continue;
+                        }
+
+                        dragGroup.Add(connection.destination.behaviorTreeNode);
+
+                        canvas.Widget(connection.destination.behaviorTreeNode).ExpandDragGroup(dragGroup);
+                    }
+                }
+            }
+        }
+        
         public override void DrawForeground()
         {
-            if (showPorts)
-            {
-                DrawPortsBackground();
-            }
-            
             DrawForeground(Vector2.zero, e.IsRepaint);
-        }
-
-        protected void DrawPortsBackground()
-        {
-            if (canvas.ShowRelations)
-            {
-                foreach (var relation in unit.relations)
-                {
-                    var start = ports.Single(pw => pw.port == relation.source).handlePosition.center;
-                    var end = ports.Single(pw => pw.port == relation.destination).handlePosition.center;
-
-                    var startTangent = start;
-                    var endTangent = end;
-
-                    if (relation.source is IUnitInputPort &&
-                        relation.destination is IUnitInputPort)
-                    {
-                        //startTangent -= new Vector2(20, 0);
-                        endTangent -= new Vector2(32, 0);
-                    }
-                    else
-                    {
-                        startTangent += new Vector2(innerPosition.width / 2, 0);
-                        endTangent += new Vector2(-innerPosition.width / 2, 0);
-                    }
-
-                    Handles.DrawBezier
-                    (
-                        start,
-                        end,
-                        startTangent,
-                        endTangent,
-                        new Color(0.136f, 0.136f, 0.136f, 1.0f),
-                        null,
-                        3
-                    );
-                }
-            }
-            
-            else
-            {
-                if (e.IsRepaint)
-                {
-                    Styles.portsBackground.Draw(portsBackgroundPosition, false, false, false, false);
-                }
-            }
         }
         
         public virtual void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
@@ -402,8 +335,6 @@ namespace Platinio.BehaviorTree
         {
             return GraphGUI.GetNodeInnerToEdgePosition(position, shape);
         }
-        
-        
 
         private Vector2 GetTitlePosition(Vector2 innerOrigin)
         {
@@ -425,7 +356,7 @@ namespace Platinio.BehaviorTree
                 if (e.IsMouseDown(MouseButton.Left))
                 {
                     var source = canvas.ConnectionSource;
-                    var destination = source.CompatiblePort(unit);
+                    var destination = source.CompatiblePort(node);
 
                     if (destination != null)
                     {
@@ -575,8 +506,7 @@ namespace Platinio.BehaviorTree
             public static readonly GUIStyle background;
             public static readonly GUIStyle title;
         }
-
-        public IBehaviorTreeNode behaviorTreeNode { get; }
+       
         public Inspector GetPortInspector(IPort port, Metadata metadata)
         {
             return null;
