@@ -22,6 +22,8 @@ namespace Platinio.BehaviorTree
                                             ConnectionSource.behaviorTreeNode != null;        
         public IPort ConnectionSource { get; set; }
         
+        public bool ShowRelations { get; set; }
+        
         public void CancelConnection()
         {
             ConnectionSource = null;

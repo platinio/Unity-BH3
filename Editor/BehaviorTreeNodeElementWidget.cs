@@ -123,11 +123,6 @@ namespace Platinio.BehaviorTree
         
         
         
-        
-        
-        
-        
-        
         public override IEnumerable<IWidget> subWidgets => element.ports.Select(port => canvas.Widget(port));
 
         public Rect LastExecutionStateIconRect { get; private set; }
@@ -167,9 +162,7 @@ namespace Platinio.BehaviorTree
 
         protected void DrawPortsBackground()
         {
-            return;
-            
-            //if (canvas.showRelations)
+            if (canvas.ShowRelations)
             {
                 foreach (var relation in unit.relations)
                 {
@@ -203,14 +196,14 @@ namespace Platinio.BehaviorTree
                     );
                 }
             }
-            /*
+            
             else
             {
                 if (e.IsRepaint)
                 {
                     Styles.portsBackground.Draw(portsBackgroundPosition, false, false, false, false);
                 }
-            }*/
+            }
         }
         
         public virtual void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)

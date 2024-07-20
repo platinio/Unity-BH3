@@ -87,12 +87,12 @@ namespace Platinio.BehaviorTree
 
         public void EnsureDefined()
         {
-            throw new NotImplementedException();
+            
         }
 
         public void RemoveUnconnectedInvalidPorts()
         {
-            throw new NotImplementedException();
+            
         }
 
         public Dictionary<string, object> defaultValues { get; }
