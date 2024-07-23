@@ -48,7 +48,7 @@ namespace Platinio.BehaviorTree
         {
             if (GUI.Button(sourcePosition, "Edit Graph"))
             {
-                GraphCore.GraphWindow.OpenActive(GraphReference.New((IMacro)metadata.value, true));
+                GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(GraphReference.New((IMacro)metadata.value, true));
             }
         }
     }

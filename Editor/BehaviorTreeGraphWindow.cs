@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using GraphWindow = Platinio.GraphCore.GraphWindow;
 
 namespace Platinio.BehaviorTree
@@ -7,6 +8,19 @@ namespace Platinio.BehaviorTree
         protected override void ToggleVariablesPanel(bool enabled)
         {
             ToggleInspector<BehaviorTreeVariablesPanel>(enabled);
+        }
+
+        protected override void OnGUI()
+        {
+            //if we try to open a flow graph with a behavior tree it will cause some probles
+            //the solution for now open the correct window and close this
+            if (reference.graph is FlowGraph)
+            {
+                Unity.VisualScripting.GraphWindow.OpenTab(reference);
+                Close();
+            }
+            
+            base.OnGUI();
         }
     }
 }

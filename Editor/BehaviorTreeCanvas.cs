@@ -44,7 +44,7 @@ namespace Platinio.BehaviorTree
                 reference = LudiqGraphsEditorUtility.editedContext.value.reference.ChildReference(nesterElement, false);
             if (reference == null)
                 return false;
-            GraphCore.GraphWindow.OpenActive(reference);
+            GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(reference);
             return true;
         }
         
