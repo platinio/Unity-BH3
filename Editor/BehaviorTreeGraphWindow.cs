@@ -14,7 +14,7 @@ namespace Platinio.BehaviorTree
         {
             //if we try to open a flow graph with a behavior tree it will cause some probles
             //the solution for now open the correct window and close this
-            if (reference.graph is FlowGraph)
+            if (reference != null && reference.graph is FlowGraph)
             {
                 Unity.VisualScripting.GraphWindow.OpenTab(reference);
                 Close();
