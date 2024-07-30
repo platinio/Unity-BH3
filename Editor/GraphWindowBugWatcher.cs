@@ -28,7 +28,7 @@ namespace Platinio.BehaviorTree
 
         private static void OnWindowActiveContextChange(IGraphContext context)
         {
-            if (context.reference.graph is BehaviorTreeGraph)
+            if (context?.reference != null && context.reference.graph is BehaviorTreeGraph)
             {
                 GraphWindow.active.Close();
                 GraphCore.GraphWindow.OpenTab<BehaviorTreeGraphWindow>(context.reference);
