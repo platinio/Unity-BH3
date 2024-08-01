@@ -51,13 +51,12 @@ namespace Platinio.BehaviorTree
 
         private readonly Vector2 ICON_POSITION_OFFSET = new Vector2(28.0f, 0.0f);
         private readonly Vector2 ICON_SIZE = new Vector2(65.0f, 65.0f);
-        private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -35.0f);
+        private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -40.0f);
         private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
 
-        private readonly float TITLE_HEIGHT = 20.0f;
+        private readonly float TITLE_HEIGHT = 25.0f;
 
-        private bool showPorts = true;
-        
+     
         public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
             node.onPortsChanged += CacheDefinition;
