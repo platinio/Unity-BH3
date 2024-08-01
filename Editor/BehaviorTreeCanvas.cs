@@ -88,5 +88,26 @@ namespace Platinio.BehaviorTree
 
             return null;
         }
+        
+        protected override void HandleHighPriorityInput()
+        {
+            if (IsCreatingConnection)
+            {
+                if (e.IsFree(EventType.KeyDown) && e.keyCode == KeyCode.Escape)
+                {
+                    CancelConnection();
+                    e.Use();
+                }
+            }
+
+            base.HandleHighPriorityInput();
+        }
+        
+        public override void Close()
+        {
+            base.Close();
+
+            CancelConnection();
+        }
     }
 }
