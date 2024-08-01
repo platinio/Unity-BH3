@@ -98,33 +98,42 @@ namespace Platinio.BehaviorTree
         {
             var preservation = GenericPool<NodePreservation>.New(() => new NodePreservation());
 
-            foreach (var defaultValue in unit.defaultValues)
+            if (unit.defaultValues != null)
             {
-                preservation.defaultValues.Add(defaultValue.Key, defaultValue.Value);
+                foreach (var defaultValue in unit.defaultValues)
+                {
+                    preservation.defaultValues.Add(defaultValue.Key, defaultValue.Value);
+                }
             }
 
-            foreach (var input in unit.inputs)
+            if (unit.inputs != null)
             {
-                if (input.hasAnyConnection)
+                foreach (var input in unit.inputs)
                 {
-                    preservation.inputConnections.Add(input.key, ListPool<PortPreservation>.New());
-
-                    foreach (var connectedPort in input.connectedPorts)
+                    if (input.hasAnyConnection)
                     {
-                        preservation.inputConnections[input.key].Add(new PortPreservation(connectedPort));
+                        preservation.inputConnections.Add(input.key, ListPool<PortPreservation>.New());
+
+                        foreach (var connectedPort in input.connectedPorts)
+                        {
+                            preservation.inputConnections[input.key].Add(new PortPreservation(connectedPort));
+                        }
                     }
                 }
             }
 
-            foreach (var output in unit.outputs)
+            if (unit.outputs != null)
             {
-                if (output.hasAnyConnection)
+                foreach (var output in unit.outputs)
                 {
-                    preservation.outputConnections.Add(output.key, ListPool<PortPreservation>.New());
-
-                    foreach (var connectedPort in output.connectedPorts)
+                    if (output.hasAnyConnection)
                     {
-                        preservation.outputConnections[output.key].Add(new PortPreservation(connectedPort));
+                        preservation.outputConnections.Add(output.key, ListPool<PortPreservation>.New());
+
+                        foreach (var connectedPort in output.connectedPorts)
+                        {
+                            preservation.outputConnections[output.key].Add(new PortPreservation(connectedPort));
+                        }
                     }
                 }
             }
