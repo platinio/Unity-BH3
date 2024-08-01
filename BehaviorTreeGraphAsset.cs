@@ -10,7 +10,7 @@ namespace Platinio.BehaviorTree
         [Serialize, Inspectable]
         public VariableDeclarations declarations { get; internal set; } = new() { Kind = VariableKind.Graph };
         
-        [ContextMenu("Show Data...")]
+        //[ContextMenu("Show Data...")]
         protected override void ShowData()
         {
             base.ShowData();

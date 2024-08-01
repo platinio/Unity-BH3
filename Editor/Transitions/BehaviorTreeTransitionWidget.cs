@@ -36,8 +36,7 @@ namespace Platinio.BehaviorTree
         private Vector2 middle;
         private float targetInnerWidth;
         private float currentInnerWidth;
-        private bool revealInitialized;
-        
+       
         public override bool canDrag => false;
         protected override bool snapToGrid => false;
         public override bool canDelete => true;
@@ -97,8 +96,6 @@ namespace Platinio.BehaviorTree
             var labelHeight = EditorGUIUtility.singleLineHeight;
 
             currentInnerWidth = targetInnerWidth;
-            revealInitialized = true;
-
             currentInnerWidth = Mathf.Lerp(currentInnerWidth, targetInnerWidth, canvas.repaintDeltaTime * Styles.revealSpeed);
 
             if (Mathf.Abs(targetInnerWidth - currentInnerWidth) < 1)

@@ -734,8 +734,8 @@ namespace Platinio.BehaviorTree
                 Color? resolvedColor = null;
 
                 foreach (var connection in connections)
-                {/*
-                    var connectionColor = canvas.Widget<IConnectionWidget>(connection).color;
+                {
+                    var connectionColor = canvas.Widget<IPortConnectionWidget>(connection).color;
 
                     if (resolvedColor == null)
                     {
@@ -746,10 +746,10 @@ namespace Platinio.BehaviorTree
                         resolvedColor = this.color;
 
                         break;
-                    }*/
+                    }
                 }
 
-                color = Color.green; //resolvedColor.Value;
+                if (resolvedColor != null) color = resolvedColor.Value;
             }
 
             if (colorIfActive)

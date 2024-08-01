@@ -25,8 +25,9 @@ namespace Platinio.BehaviorTree
 
             if (BoltFlow.Configuration.showConnectionValues)
             {
-                var showLastValue = false;//EditorApplication.isPlaying && ConnectionDebugData.assignedLastValue;
-                var showPredictedvalue = false;//BoltFlow.Configuration.predictConnectionValues && !EditorApplication.isPlaying && Flow.CanPredict(connection.source, reference);
+                /*
+                var showLastValue = EditorApplication.isPlaying && ConnectionDebugData.assignedLastValue;
+                var showPredictedvalue = BoltFlow.Configuration.predictConnectionValues && !EditorApplication.isPlaying && Flow.CanPredict(connection.source, reference);
 
                 if (showLastValue || showPredictedvalue)
                 {
@@ -55,7 +56,7 @@ namespace Platinio.BehaviorTree
                     EndDim();
 
                     EditorGUIUtility.SetIconSize(previousIconSize);
-                }
+                }*/
             }
         }
 

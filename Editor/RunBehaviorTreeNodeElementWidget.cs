@@ -60,7 +60,6 @@ namespace Platinio.BehaviorTree
         private BehaviorTreeGraph GetBehaviorTreeGraph()
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
-            BehaviorTreeGraph behaviorTreeGraph = null;
 
             if (runBehaviorTreeGraphNode.BehaviorTreeGraphInstance != null)
             {
