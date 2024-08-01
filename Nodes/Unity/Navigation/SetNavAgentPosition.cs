@@ -8,8 +8,12 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
-        [Serialize, Inspectable] protected GameObjectBlackboardVariable Target = new();
-        [Serialize, Inspectable] protected Vector3BlackboardVariable NavPosition = new ();
+        [DoNotSerialize]
+        public ValueInput Target { get; private set; }
+        
+        [DoNotSerialize]
+        public ValueInput NavPosition { get; private set; }
+       
         [Serialize, Inspectable] protected bool ClearCurrentPath = false;
         [Serialize, Inspectable] protected bool WaitForPathComplete = false;
 
@@ -18,6 +22,14 @@ namespace Platinio.BehaviorTree
         private NavMeshAgent navAgent = null;
         private bool setPositionWasCompleted = false;
 
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Target = ValueInput<GameObject>(nameof(Target));
+            NavPosition = ValueInput<Vector3>(nameof(NavPosition));
+        }
+        
         public override void OnAwake()
         {
             navAgent = GetTargetGameObject(Target).GetComponent<NavMeshAgent>();
@@ -65,7 +77,7 @@ namespace Platinio.BehaviorTree
 
         protected virtual bool TryUpdateNavAgentPosition()
         {
-            Vector3 pos = NavPosition.GetValue(BehaviorTreeMachine);
+            Vector3 pos = (Vector3)NavPosition.GetValue();
             return navAgent.SetDestination(pos);
         }
     }

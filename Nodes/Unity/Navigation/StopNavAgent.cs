@@ -8,21 +8,28 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Stop NavAgent")]
     public class StopNavAgent : GameplayNode
     {
-        [Serialize, Inspectable] private GameObjectBlackboardVariable target = new();
+        [DoNotSerialize]
+        public ValueInput Target { get; private set; }
         
         public override string NodeName => "Stop NavAgent";
 
         private NavMeshAgent navAgent = null;
-
+        
         public override void OnAwake()
         {
-            navAgent = GetTargetGameObject(target).GetComponent<NavMeshAgent>();
+            navAgent = GetTargetGameObject(Target).GetComponent<NavMeshAgent>();
         }
 
         public override void OnEnter()
         {
             navAgent.isStopped = true;
             navAgent.velocity = Vector3.zero;
+        }
+        
+        protected override void Definition()
+        {
+            base.Definition();
+            Target = ValueInput<GameObject>(nameof(Target));
         }
 
         public override ExecutionStatus OnUpdate()
