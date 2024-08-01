@@ -135,14 +135,14 @@ namespace Platinio.BehaviorTree
             }
 
             Disconnect();
-            defaultValues.Clear();
-            controlInputs.Clear();
-            controlOutputs.Clear();
-            valueInputs.Clear();
-            valueOutputs.Clear();
-            invalidInputs.Clear();
-            invalidOutputs.Clear();
-            relations.Clear();
+            defaultValues?.Clear();
+            controlInputs?.Clear();
+            controlOutputs?.Clear();
+            valueInputs?.Clear();
+            valueOutputs?.Clear();
+            invalidInputs?.Clear();
+            invalidOutputs?.Clear();
+            relations?.Clear();
             isDefined = false;
         }
         
@@ -235,6 +235,12 @@ namespace Platinio.BehaviorTree
         protected GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable)
         {
             var target = gameObjectVariable.GetValue(BehaviorTreeMachine);
+            return target == null ? gameObject : target;
+        }
+        
+        protected GameObject GetTargetGameObject(ValueInput valueInput)
+        {
+            var target = valueInput.GetValue() as GameObject;
             return target == null ? gameObject : target;
         }
 
