@@ -49,10 +49,10 @@ namespace Platinio.BehaviorTree
         public override bool destinationExists => destinationUnit.valueInputs.Contains(destinationKey);
 
         #endregion
-
+        /*
         public IGraphElementDebugData CreateDebugData()
         {
             return default;
-        }
+        }*/
     }
 }

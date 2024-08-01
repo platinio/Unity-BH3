@@ -39,7 +39,7 @@ namespace Platinio.BehaviorTree
         [Obsolete(Serialization.ConstructorWarning)]
         protected PortConnection() { }
 
-        public BehaviorTreeGraph graph { get; }
+        //public BehaviorTreeGraph graph { get; }
         
         protected PortConnection(TSourcePort source, TDestinationPort destination)
         {

@@ -84,7 +84,7 @@ namespace Platinio.BehaviorTree
 
         #region Widget
 
-        Vector2 position { get; set; }
+        //Vector2 position { get; set; }
 
         #endregion
     }

@@ -36,9 +36,10 @@ namespace Platinio.BehaviorTree
 
         #endregion
 
+        /*
         public IGraphElementDebugData CreateDebugData()
         {
             return default;
-        }
+        }*/
     }
 }
