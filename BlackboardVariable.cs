@@ -13,6 +13,8 @@ namespace Platinio.BehaviorTree
         [SerializeField] private string variableName;
         [SerializeField] protected T value;
 
+        public string VariableName => variableName;
+        
         public T GetValue(BehaviorTreeMachine machine)
         {
             if (inlineValue) return value;
