@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using Unity.VisualScripting.FullSerializer;
 using UnityEditor;
 using UnityEngine;
 
@@ -111,9 +108,6 @@ namespace Platinio.BehaviorTree
                                                                  "                }");
                     
                     File.WriteAllText(scriptPath, script);
-                   
-                    
-                    Debug.Log("Visual scripting patched!");
                 }
             }
         }

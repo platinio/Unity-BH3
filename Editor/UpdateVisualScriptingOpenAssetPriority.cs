@@ -5,16 +5,10 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-   /*
-    * There is a problem in the visual scripting package trying to open a behavior tree with their version of GraphWindow
-    * Because of this I have to decrease their OnOpenAsset from Int32.MinValue to Int32.MinValue + 1 so Behavior Trees have a chance
-    * to open their own editor windows, this code goes to the package cache and modify the script directly
-    */
-    
     [InitializeOnLoad]
-    public class PatchVisualScripting
+    public class UpdateVisualScriptingOpenAssetPriority
     {
-        static PatchVisualScripting()
+        static UpdateVisualScriptingOpenAssetPriority()
         {
             StartVisualScriptingPatchLoop();
         }
@@ -23,7 +17,7 @@ namespace Platinio.BehaviorTree
         {
             try
             {
-                UpdateVisualScriptingOnOpenAssetOrder();
+                PatchVisualScripting();
             }
             catch (Exception e)
             {
@@ -34,8 +28,8 @@ namespace Platinio.BehaviorTree
             AssemblyReloadEvents.afterAssemblyReload -= StartVisualScriptingPatchLoop;
             AssemblyReloadEvents.afterAssemblyReload += StartVisualScriptingPatchLoop;
         }
-
-        private static void UpdateVisualScriptingOnOpenAssetOrder()
+        
+        private static void PatchVisualScripting()
         {
             string partialName = "com.unity.visualscripting@";
             string packageCachePath = Application.dataPath + "/../Library/PackageCache";
@@ -55,8 +49,6 @@ namespace Platinio.BehaviorTree
                     
                     script = script.Replace("[OnOpenAsset(Int32.MinValue)]", "[OnOpenAsset(Int32.MinValue + 1)]");
                     File.WriteAllText(scriptPath, script);
-                    
-                    Debug.Log("Visual scripting patched!");
                 }
             }
         }
