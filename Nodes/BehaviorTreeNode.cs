@@ -61,8 +61,8 @@ namespace Platinio.BehaviorTree
         [DoNotSerialize]
         public virtual bool isControlRoot { get; protected set; } = false;
         
-        //[Serialize]
-        //public Vector2 position { get; set; }
+        [Serialize]
+        public Vector2 position { get; set; }
 
         public virtual bool ShowIcon => false;
         
@@ -173,7 +173,8 @@ namespace Platinio.BehaviorTree
             }
         }
 
-        public Dictionary<string, object> defaultValues { get; }
+        [Serialize]
+        public Dictionary<string, object> defaultValues { get; private set; }
 
         protected ValueInput ValueInput<T>(string key)
         {
