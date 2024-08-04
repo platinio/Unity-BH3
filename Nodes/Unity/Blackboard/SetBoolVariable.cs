@@ -3,8 +3,8 @@ using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Blackboard/Set Bool Blackboard Variable")]
-    public class SetBoolBlackboardVariable : GameplayNode
+    [GraphCreateMenu("Unity/Variables/Set/Bool Variable")]
+    public class SetBoolVariable : GameplayNode
     {
         [Serialize] [Inspectable] private BlackboardKey blackboardKey = new();
         [Serialize] [Inspectable] private bool value;

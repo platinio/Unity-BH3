@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Value Output/This")]
+    [GraphCreateMenu("Unity/Variables/Get/This")]
     public class GetThisGameObject : GameplayNode
     {
         public override string NodeName => "This";

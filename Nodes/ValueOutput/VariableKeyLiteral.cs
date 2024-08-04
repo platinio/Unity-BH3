@@ -1,0 +1,24 @@
+﻿using Platinio.GraphCore;
+using Unity.VisualScripting;
+
+namespace Platinio.BehaviorTree
+{
+    [GraphCreateMenu("Unity/Literal/Variable Key")]
+    public class VariableKeyLiteral : GameplayNode
+    {
+        [Serialize, Inspectable] private BlackboardKey Key = new();
+        
+        [DoNotSerialize]
+        public ValueOutput Value { get; private set; }
+
+        public override string NodeName => "Variable Key Literal";
+        
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Value = ValueOutput<string>(nameof(Value), () => Key.BlackboardKeyName);
+        }
+        
+    }
+}
