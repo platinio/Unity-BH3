@@ -16,7 +16,7 @@ namespace Platinio.BehaviorTree
         {
             get
             {
-                if (string.IsNullOrEmpty(variable.VariableName)) return "Get Variable";
+                if (string.IsNullOrEmpty(variable?.VariableName)) return "Get Variable";
                 return $"Get {variable.VariableName}";
             }
         }
