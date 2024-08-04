@@ -7,20 +7,28 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Gameplay/Wait")]
     public class WaitTime : GameplayNode
     {
-        [Serialize] [Inspectable] private FloatBlackboardVariable waitTime = new();
+        [DoNotSerialize]
+        public ValueInput Time { get; private set; }
        
         private float timer = 0.0f;
 
-        public override string NodeName => $"Wait";
+        public override string NodeName => "Wait";
 
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Time = ValueInput<float>(nameof(Time));
+        }
+        
         public override void OnEnter()
         {
-            timer = waitTime.GetValue(BehaviorTreeMachine);
+            timer = (float) Time.GetValue();
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            timer -= Time.deltaTime;
+            timer -= UnityEngine.Time.deltaTime;
             return timer > 0 ? ExecutionStatus.Running : ExecutionStatus.Success;
         }
     }

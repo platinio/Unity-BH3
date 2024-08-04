@@ -8,12 +8,20 @@ namespace Platinio.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Wait Until Reach Nav Target Position")]
     public class WaitUntilReachNavTargetPosition : GameplayNode
     {
-        [Serialize, Inspectable] private GameObjectBlackboardVariable Target = new();
+        [DoNotSerialize]
+        public ValueInput Target { get; private set; }
         
         public override string NodeName => "Wait Until Reach Nav Target Position";
 
         private NavMeshAgent navAgent = null;
 
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Target = ValueInput<GameObject>(nameof(Target));
+        }
+        
         public override void OnAwake()
         {
             navAgent = GetTargetGameObject(Target).GetComponent<NavMeshAgent>();

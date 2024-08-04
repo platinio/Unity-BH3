@@ -21,7 +21,7 @@ namespace Platinio.BehaviorTree
             base.Definition();
 
             Key = ValueInput<string>(nameof(Key));
-            Value = ValueOutput<float>(nameof(Value), () => GetValue((string)Key.GetValue(), BehaviorTreeMachine));
+            Value = ValueOutput<object>(nameof(Value), () => GetValue((string)Key.GetValue(), BehaviorTreeMachine));
         }
         
         public object GetValue(string key, BehaviorTreeMachine machine)
