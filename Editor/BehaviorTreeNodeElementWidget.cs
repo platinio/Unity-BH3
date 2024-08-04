@@ -56,7 +56,8 @@ namespace Platinio.BehaviorTree
 
         private readonly float TITLE_HEIGHT = 25.0f;
 
-     
+        protected override bool snapToGrid => true;
+
         public BehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
             node.onPortsChanged += CacheDefinition;
