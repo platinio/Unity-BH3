@@ -24,7 +24,7 @@ namespace Platinio.BehaviorTree
         
         public override void OnAwake()
         {
-            navAgent = GetTargetGameObject(Target).GetComponent<NavMeshAgent>();
+            navAgent = GetTarget(Target).GetComponent<NavMeshAgent>();
         }
 
         public override ExecutionStatus OnUpdate() => navAgent.remainingDistance < Mathf.Epsilon ? ExecutionStatus.Success : ExecutionStatus.Running;

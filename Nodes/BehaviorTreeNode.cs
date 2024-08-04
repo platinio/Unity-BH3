@@ -239,10 +239,10 @@ namespace Platinio.BehaviorTree
             return target == null ? gameObject : target;
         }
         
-        protected GameObject GetTargetGameObject(ValueInput valueInput)
+        protected GameObject GetTarget(ValueInput valueInput)
         {
-            var target = valueInput.GetValue() as GameObject;
-            return target == null ? gameObject : target;
+            if (valueInput.connection == null) return gameObject;
+            return valueInput.GetValue() as GameObject;
         }
 
         protected BehaviorTreeMachineDebug GetMachineDebug()
