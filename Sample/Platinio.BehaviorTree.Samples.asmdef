@@ -2,7 +2,8 @@
     "name": "Platinio.BehaviorTree.Samples",
     "rootNamespace": "",
     "references": [
-        "GUID:8c4dd21966739024fbd72155091d199e"
+        "GUID:8c4dd21966739024fbd72155091d199e",
+        "GUID:0d03f07ac701bf34cb1c308b88bc25d6"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
