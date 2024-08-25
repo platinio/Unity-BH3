@@ -35,7 +35,7 @@ namespace Platinio.BehaviorTree
 
         public Rect LastExecutionStateIconRect { get; private set; }
         public Rect IconRect { get; private set; }
-        public Rect TittleRect { get; private set; }
+        public Rect TittleRect { get; protected set; }
 
         public override Rect position
         {
@@ -153,6 +153,8 @@ namespace Platinio.BehaviorTree
                 
                 using (LudiqGUI.color.Override(element.Color))
                 {
+                    DrawOutsideBox(p);
+                    
                     Styles.background.normal.background = element.NodeBackground;
                     Styles.background.Draw(p, false, IsSelected, false, false);
                 }
@@ -169,7 +171,42 @@ namespace Platinio.BehaviorTree
             }
         }
 
-        private void DrawLastExecutionIcon(Vector2 offset)
+        public static Texture2D outsideTexture;
+        
+        protected virtual void DrawOutsideBox(Rect p)
+        {
+            float borderSize = 20;
+                    
+            Rect outsideBox = p;
+            outsideBox.position += new Vector2(-borderSize / 2.0f, -borderSize / 2.0f);
+            outsideBox.width += borderSize;
+            outsideBox.height += borderSize;
+                    
+            if (node is GameplayNode gameplayNode)
+            {
+                int conditionalExecutionCount = gameplayNode.ConditionalExecutions.Count;
+                float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
+
+                outsideBox.height += conditionalExecutionHeight;
+                outsideBox.position -= new Vector2(0, conditionalExecutionHeight);
+            }
+
+            outsideTexture = null;
+            if (outsideTexture == null)
+            {
+                outsideTexture = new Texture2D(1, 1);
+                outsideTexture.wrapMode = TextureWrapMode.Repeat;
+                outsideTexture.SetPixel(0, 0, new Color(0, 0, 0, 0.125f));
+                outsideTexture.Apply();
+            }
+
+            GUI.DrawTexture(outsideBox, outsideTexture);
+            
+            //Styles.background.normal.background = element.NodeBackground;
+            //Styles.background.Draw(outsideBox, false, false, false, false);
+        }
+
+        protected void DrawLastExecutionIcon(Vector2 offset)
         {
             if (element.LastExecutionStatus == ExecutionStatus.None) return;
             
@@ -182,7 +219,7 @@ namespace Platinio.BehaviorTree
             style.Draw(p, false, IsSelected, false, false);
         }
 
-        private int GetBorderThickness()
+        protected int GetBorderThickness()
         {
             int borderThickness = 0;
            
@@ -192,7 +229,7 @@ namespace Platinio.BehaviorTree
             return borderThickness;
         }
 
-        private void DrawIcon(Vector2 offset)
+        protected void DrawIcon(Vector2 offset)
         {
             GUIStyle style = new GUIStyle();
             style.normal.background = element.NodeIcon;
@@ -203,7 +240,7 @@ namespace Platinio.BehaviorTree
             style.Draw(p, false, IsSelected, false, false);
         }
 
-        private void DrawTitle(Vector2 offset)
+        protected void DrawTitle(Vector2 offset)
         {
             Rect p = TittleRect;
             p.position += offset;
@@ -445,6 +482,40 @@ namespace Platinio.BehaviorTree
             Reposition();
         }
         
+        protected override IEnumerable<DropdownOption> contextOptions
+        {
+            get
+            {
+                foreach (var dropdownOption in base.contextOptions)
+                {
+                    yield return dropdownOption;
+                }
+
+                if (selection.Count == 1)
+                {
+                    if (selection.First() is GameplayNode)
+                    {
+                        yield return new DropdownOption((Action)( () =>
+                        {
+                        
+                            GameplayNode selectedNode = selection.First() as GameplayNode;
+
+                            var conditionalExecution = new ConditionalExecution(selectedNode);
+
+                            conditionalExecution.Position = new Rect(element.position, conditionalExecution.StartingSize);
+
+                            graph.elements.Add(conditionalExecution);
+                            selection.Select(conditionalExecution);
+                            GUI.changed = true;
+
+                            var containerNode = node as GameplayNode;
+                            containerNode.AddConditionalExecution(conditionalExecution);
+
+                        }), "Add Conditional Execution");
+                    }
+                }
+            }
+        }
         
         public static class Styles
         {

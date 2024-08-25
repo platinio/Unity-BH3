@@ -136,6 +136,16 @@ namespace Platinio.BehaviorTree
             {
                 sourcePosition = canvas.Widget(element.source).position;
                 destinationPosition = canvas.Widget(element.destination).position;
+
+                if (element.destination is GameplayNode gameplayNode)
+                {
+                    int conditionalExecutionCount = gameplayNode.ConditionalExecutions.Count;
+                    float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
+
+                    destinationPosition.height += conditionalExecutionHeight;
+                    destinationPosition.position -= new Vector2(0, conditionalExecutionHeight);
+                }
+
             }
             catch 
             {

@@ -11,7 +11,8 @@ namespace Platinio.BehaviorTree
         public override bool CanDelete => false;
         public override int MaxChildrenLimit => 1;
         protected override string NodeIconPath => "NodeIcons/Entry";
-        
+        public override bool CanUseConditionalExecutions => false;
+
         public override void OnEnter()
         {
             foreach (var children in GetChildren())

@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
-    public class ContainerNode : BehaviorTreeNode
+    public class ContainerNode : GameplayNode
     {
         [DoNotSerialize] protected List<BehaviorTreeNode> children;
 

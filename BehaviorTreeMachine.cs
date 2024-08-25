@@ -21,11 +21,17 @@ namespace Platinio.BehaviorTree
         {
             base.Awake();
             Variables = GetComponent<Variables>();
-
-            if (hasGraph && nest.macro != null)
+            
+            if (hasGraph)
             {
-                graphInstance = Instantiate(nest.macro);
-                nest.SwitchToEmbed(graphInstance.graph);
+                graphInstance = null;
+
+                if (nest.macro != null)
+                {
+                    graphInstance = Instantiate(nest.macro);
+                    nest.SwitchToEmbed(graphInstance.graph);
+                }
+                
                 behaviorTreeGraph = nest.embed;
                 
                 var nodes = behaviorTreeGraph.Nodes;
