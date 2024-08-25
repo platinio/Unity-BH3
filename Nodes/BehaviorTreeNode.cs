@@ -52,6 +52,9 @@ namespace Platinio.BehaviorTree
         [DoNotSerialize]
         public IEnumerable<IPort> validPorts => LinqUtility.Concat<IPort>(validInputs, validOutputs);
 
+        [Serialize] private List<ConditionalExecution> conditionalExecutions = new();
+
+        public virtual bool CanUseConditionalExecutions => true;
         public event Action onPortsChanged;
         public IConnectionCollection<IPortRelation, IPort, IPort> relations { get; private set; }
         
@@ -254,7 +257,19 @@ namespace Platinio.BehaviorTree
 
             return machineDebug;
         }
+        
+        public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => conditionalExecutions;
+        
+        public void AddConditionalExecution(ConditionalExecution conditionalExecution)
+        {
+            conditionalExecutions.Add(conditionalExecution);
+        }
 
+        public int GetConditionalIndex(ConditionalExecution conditionalExecution)
+        {
+            return conditionalExecutions.IndexOf(conditionalExecution);
+        }
+        
         public override void OnNodeEnter()
         {
             base.OnNodeEnter();

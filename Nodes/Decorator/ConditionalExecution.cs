@@ -1,17 +1,16 @@
-using Platinio.GraphCore;
 using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
     public class ConditionalExecution : GameplayNode
     {
-        [Serialize] private GameplayNode owner;
+        [Serialize] private BehaviorTreeNode owner;
 
         public override string NodeName => "Conditional Execution";
 
-        public GameplayNode Owner => owner;
+        public BehaviorTreeNode Owner => owner;
         
-        public ConditionalExecution(GameplayNode owner)
+        public ConditionalExecution(BehaviorTreeNode owner)
         {
             this.owner = owner;
         }

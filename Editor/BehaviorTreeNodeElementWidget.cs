@@ -182,14 +182,11 @@ namespace Platinio.BehaviorTree
             outsideBox.width += borderSize;
             outsideBox.height += borderSize;
                     
-            if (node is GameplayNode gameplayNode)
-            {
-                int conditionalExecutionCount = gameplayNode.ConditionalExecutions.Count;
-                float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
+            int conditionalExecutionCount = node.ConditionalExecutions.Count;
+            float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
 
-                outsideBox.height += conditionalExecutionHeight;
-                outsideBox.position -= new Vector2(0, conditionalExecutionHeight);
-            }
+            outsideBox.height += conditionalExecutionHeight;
+            outsideBox.position -= new Vector2(0, conditionalExecutionHeight);
 
             outsideTexture = null;
             if (outsideTexture == null)
@@ -201,9 +198,6 @@ namespace Platinio.BehaviorTree
             }
 
             GUI.DrawTexture(outsideBox, outsideTexture);
-            
-            //Styles.background.normal.background = element.NodeBackground;
-            //Styles.background.Draw(outsideBox, false, false, false, false);
         }
 
         protected void DrawLastExecutionIcon(Vector2 offset)
@@ -493,23 +487,23 @@ namespace Platinio.BehaviorTree
 
                 if (selection.Count == 1)
                 {
-                    if (selection.First() is GameplayNode)
+                    var bNode = selection.First() as BehaviorTreeNode;
+                    
+                    if (bNode != null && bNode.CanUseConditionalExecutions)
                     {
                         yield return new DropdownOption((Action)( () =>
                         {
                         
-                            GameplayNode selectedNode = selection.First() as GameplayNode;
+                            BehaviorTreeNode selectedNode = selection.First() as BehaviorTreeNode;
 
                             var conditionalExecution = new ConditionalExecution(selectedNode);
-
                             conditionalExecution.Position = new Rect(element.position, conditionalExecution.StartingSize);
 
                             graph.elements.Add(conditionalExecution);
                             selection.Select(conditionalExecution);
                             GUI.changed = true;
-
-                            var containerNode = node as GameplayNode;
-                            containerNode.AddConditionalExecution(conditionalExecution);
+                           
+                            node.AddConditionalExecution(conditionalExecution);
 
                         }), "Add Conditional Execution");
                     }
