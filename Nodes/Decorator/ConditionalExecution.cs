@@ -1,12 +1,13 @@
+using Platinio.GraphCore;
 using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
-    public class ConditionalExecution : GameplayNode
+    public abstract class ConditionalExecution : GameplayNode
     {
         [Serialize] private BehaviorTreeNode owner;
 
-        public override string NodeName => "Conditional Execution";
+        public override string NodeName => "Test Conditional Execution";
 
         public BehaviorTreeNode Owner => owner;
         
@@ -14,6 +15,16 @@ namespace Platinio.BehaviorTree
         {
             this.owner = owner;
         }
+
+        public bool EvaluateInternal()
+        {
+            bool result = Evaluate();
+            LastExecutionStatus = result ? ExecutionStatus.Success : ExecutionStatus.Failure;
+
+            return result;
+        }
+
+        public abstract bool Evaluate();
     }
 }
 

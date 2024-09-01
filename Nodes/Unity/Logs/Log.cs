@@ -11,12 +11,11 @@ namespace Platinio.BehaviorTree
 
         public override string NodeName => "Log";
 
-        public override void OnEnter()
+        public override ExecutionStatus OnUpdate()
         {
             Debug.Log(logText);
+            return ExecutionStatus.Success;
         }
-
-        public override ExecutionStatus OnUpdate() => ExecutionStatus.Success;
 
     }
 }

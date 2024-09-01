@@ -493,10 +493,9 @@ namespace Platinio.BehaviorTree
                     {
                         yield return new DropdownOption((Action)( () =>
                         {
-                        
                             BehaviorTreeNode selectedNode = selection.First() as BehaviorTreeNode;
 
-                            var conditionalExecution = new ConditionalExecution(selectedNode);
+                            var conditionalExecution = new TestConditionalExecution(selectedNode);
                             conditionalExecution.Position = new Rect(element.position, conditionalExecution.StartingSize);
 
                             graph.elements.Add(conditionalExecution);

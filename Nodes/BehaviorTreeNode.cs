@@ -293,6 +293,21 @@ namespace Platinio.BehaviorTree
             debugComponent.PopCallStack();
 #endif
         }
+        
+        public override ExecutionStatus OnUpdateInternal()
+        {
+            foreach (var conditionalExecution in conditionalExecutions)
+            {
+                if (!conditionalExecution.EvaluateInternal())
+                {
+                    LastExecutionStatus = ExecutionStatus.Failure;
+                    return ExecutionStatus.Failure;
+                }
+            }
+            
+            return base.OnUpdateInternal();
+        }
+        
     }
 }
 

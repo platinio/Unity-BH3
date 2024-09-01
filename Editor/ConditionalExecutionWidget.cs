@@ -47,7 +47,7 @@ namespace Platinio.BehaviorTree
             float height = 40.0f;
             float separation = 5.0f;
             
-            var owner = (node as ConditionalExecution).Owner;
+            var owner = (node as ConditionalExecution)?.Owner;
             int index = owner.GetConditionalIndex(node as ConditionalExecution) + 1;
 
             var widget = canvas.Widget(owner);
