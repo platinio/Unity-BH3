@@ -294,7 +294,7 @@ namespace Platinio.BehaviorTree
 #endif
         }
         
-        public override ExecutionStatus OnUpdateInternal()
+        public sealed override ExecutionStatus OnUpdateInternal()
         {
             foreach (var conditionalExecution in conditionalExecutions)
             {

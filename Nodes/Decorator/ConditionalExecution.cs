@@ -23,7 +23,7 @@ namespace Platinio.BehaviorTree
 
             return result;
         }
-
+        
         public abstract bool Evaluate();
     }
 }
