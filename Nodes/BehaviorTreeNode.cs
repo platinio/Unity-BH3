@@ -155,6 +155,11 @@ namespace Platinio.BehaviorTree
         {
             base.BeforeRemove();
             Disconnect();
+            
+            for (int i = conditionalExecutions.Count - 1; i >= 0; i--)
+            {
+                graph.elements.Remove(conditionalExecutions[i]);
+            }
         }
 
         public void EnsureDefined()
@@ -307,7 +312,11 @@ namespace Platinio.BehaviorTree
             
             return base.OnUpdateInternal();
         }
-        
+
+        public void OnRemoveConditionalExecution(ConditionalExecution conditionalExecution)
+        {
+            conditionalExecutions.Remove(conditionalExecution);
+        }
     }
 }
 
