@@ -6,12 +6,10 @@ namespace Platinio.BehaviorTree
     public abstract class ConditionalExecution : GameplayNode
     {
         [Serialize] private BehaviorTreeNode owner;
-
-        public override string NodeName => "Test Conditional Execution";
-
+       
         public BehaviorTreeNode Owner => owner;
-        
-        public ConditionalExecution(BehaviorTreeNode owner)
+
+        public void UpdateOwner(BehaviorTreeNode owner)
         {
             this.owner = owner;
         }

@@ -491,23 +491,44 @@ namespace Platinio.BehaviorTree
                     
                     if (bNode != null && bNode.CanUseConditionalExecutions)
                     {
-                        yield return new DropdownOption((Action)( () =>
+                        var typeEnumerable = GetEnumerableOfType(typeof(ConditionalExecution));
+                        foreach (var nodeType in typeEnumerable)
                         {
-                            BehaviorTreeNode selectedNode = selection.First() as BehaviorTreeNode;
+                            yield return new DropdownOption((Action)( () =>
+                            {
+                                BehaviorTreeNode selectedNode = selection.First() as BehaviorTreeNode;
 
-                            var conditionalExecution = new TestConditionalExecution(selectedNode);
-                            conditionalExecution.Position = new Rect(element.position, conditionalExecution.StartingSize);
+                                var conditionalExecution = Activator.CreateInstance(nodeType) as ConditionalExecution;
+                                conditionalExecution.UpdateOwner(selectedNode);
+                                conditionalExecution.Position = new Rect(element.position, conditionalExecution.StartingSize);
 
-                            graph.elements.Add(conditionalExecution);
-                            selection.Select(conditionalExecution);
-                            GUI.changed = true;
+                                graph.elements.Add(conditionalExecution);
+                                selection.Select(conditionalExecution);
+                                GUI.changed = true;
                            
-                            node.AddConditionalExecution(conditionalExecution);
-
-                        }), "Add Conditional Execution");
+                                node.AddConditionalExecution(conditionalExecution);
+                                
+                            }), NodeUtil.GetNodeGraphCreateMenu(nodeType));
+                        }
                     }
                 }
             }
+        }
+
+        public IEnumerable<Type> GetEnumerableOfType(Type t)
+        {
+            List<Type> types = new List<Type>();
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (var assembly in assemblies)
+            {
+                foreach (var type in assembly.GetTypes().Where(myType => myType.IsClass && !myType.IsAbstract && t.IsAssignableFrom(myType)))
+                {
+                    types.Add(type);
+                }
+            }
+
+            return types;
         }
         
         public static class Styles

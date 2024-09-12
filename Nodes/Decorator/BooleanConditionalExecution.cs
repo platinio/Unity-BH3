@@ -1,15 +1,15 @@
-﻿using Unity.VisualScripting;
+﻿using Platinio.GraphCore;
+using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
+    [GraphCreateMenu("Boolean Conditional")]
     public class BooleanConditionalExecution : ConditionalExecution
     {
         [DoNotSerialize]
         public ValueInput Value { get; private set; }
-        
-        public BooleanConditionalExecution(BehaviorTreeNode owner) : base(owner)
-        {
-        }
+
+        public override string NodeName => "Boolean Conditional Execution";
 
         protected override void Definition()
         {
