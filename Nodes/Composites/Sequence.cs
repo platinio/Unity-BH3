@@ -8,12 +8,12 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/Sequence";
         public override string NodeName => "Sequence";
 
+        private bool callOnEnter = false;
+        
         public override void OnEnter()
         {
             currentExecutingChildIndex = 0;
-            
-            if (GetChildren().Count == 0) return;
-            GetChildren()[0].OnNodeEnter();
+            callOnEnter = true;
         }
 
         public override ExecutionStatus OnUpdate()
@@ -21,8 +21,15 @@ namespace Platinio.BehaviorTree
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
             var task = GetChildren()[currentExecutingChildIndex];
+            
+            if (callOnEnter)
+            {
+                callOnEnter = false;
+                task.OnEnter();
+            }
+            
             var result = task.OnUpdateInternal();
-
+            
             if (result == ExecutionStatus.Success)
             {
                 task.OnNodeExit();
