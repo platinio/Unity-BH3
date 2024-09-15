@@ -15,7 +15,13 @@ namespace Platinio.BehaviorTree
             var selectedMachine = BehaviorTreeCanvas.GetSelectedBehaviorTreeMachine();
             if (selectedMachine != null)
             {
-                AddVariableDeclarations(variableDeclarations, selectedMachine.Variables.declarations);
+                Variables variables = selectedMachine.Variables;
+                if (variables == null)
+                {
+                    variables = selectedMachine.gameObject.GetComponent<Variables>();
+                }
+
+                AddVariableDeclarations(variableDeclarations, variables.declarations);
             }
             
             var graphAsset = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
