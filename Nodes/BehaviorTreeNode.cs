@@ -68,6 +68,10 @@ namespace Platinio.BehaviorTree
         public Vector2 position { get; set; }
 
         public virtual bool ShowIcon => false;
+
+        public virtual bool CanCopy => true;
+        public virtual bool CanDuplicate => true;
+        public virtual bool CanCut => true;
         
         public void PortsChanged()
         {

@@ -13,6 +13,10 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/Entry";
         public override bool CanUseConditionalExecutions => false;
 
+        public override bool CanCopy => false;
+        public override bool CanDuplicate => false;
+        public override bool CanCut => false;
+
         public override void OnEnter()
         {
             foreach (var children in GetChildren())

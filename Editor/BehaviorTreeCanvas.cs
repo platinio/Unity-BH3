@@ -25,6 +25,8 @@ namespace Platinio.BehaviorTree
         
         public bool ShowRelations { get; set; }
         
+        private DateTime lastPasteTime;
+        
         public void CancelConnection()
         {
             ConnectionSource = null;
@@ -111,6 +113,87 @@ namespace Platinio.BehaviorTree
             CancelConnection();
         }
 
-        
+        protected override void HandleClipboard()
+        {
+            if (e.IsValidateCommand("Copy"))
+            {
+                if (GraphClipboard.canCopySelection)
+                {
+                    e.ValidateCommand();
+                }
+            }
+            else if (e.IsExecuteCommand("Copy"))
+            {
+                selection.RemoveWhere(x =>
+                {
+                    if (x is BehaviorTreeNode node)
+                    {
+                        return !node.CanCopy;
+                    }
+
+                    return false;
+                });
+                
+                if (selection.Count > 0) GraphClipboard.CopySelection();
+            }
+
+            if (e.IsValidateCommand("Cut"))
+            {
+                if (GraphClipboard.canCopySelection)
+                {
+                    e.ValidateCommand();
+                }
+            }
+            else if (e.IsExecuteCommand("Cut"))
+            {
+                selection.RemoveWhere(x =>
+                {
+                    if (x is BehaviorTreeNode node)
+                    {
+                        return !node.CanCut;
+                    }
+
+                    return false;
+                });
+                
+                if (selection.Count > 0) GraphClipboard.CutSelection();
+            }
+
+            if (e.IsValidateCommand("Paste"))
+            {
+                if (GraphClipboard.canPaste && (DateTime.Now - lastPasteTime).TotalSeconds >= 0.25)
+                {
+                    e.ValidateCommand();
+                }
+            }
+            else if (e.IsExecuteCommand("Paste"))
+            {
+                GraphClipboard.Paste();
+                lastPasteTime = DateTime.Now;
+            }
+
+            if (e.IsValidateCommand("Duplicate"))
+            {
+                if (GraphClipboard.canDuplicateSelection && (DateTime.Now - lastPasteTime).TotalSeconds >= 0.25)
+                {
+                    e.Use();
+                }
+            }
+            else if (e.IsExecuteCommand("Duplicate"))
+            {
+                selection.RemoveWhere(x =>
+                {
+                    if (x is BehaviorTreeNode node)
+                    {
+                        return !node.CanDuplicate;
+                    }
+
+                    return false;
+                });
+                
+                if (selection.Count > 0) GraphClipboard.DuplicateSelection();
+                lastPasteTime = DateTime.Now;
+            }
+        }
     }
 }
