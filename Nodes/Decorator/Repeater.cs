@@ -8,7 +8,8 @@ namespace Platinio.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/Cycle";
         public override string NodeName => "Repeater";
         public override bool CanExecute => true;
-        
+        public override int MaxChildrenLimit => 1;
+
         private int currentExecutingChildIndex = 0;
 
         public override void OnEnter()
