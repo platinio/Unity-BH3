@@ -1,10 +1,11 @@
 using Platinio.AI;
 using Platinio.AIPerception;
+using Platinio.BehaviorTree.Sample;
 using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    public class AISensor : Sensor<AIEntity>
+    public class AISensor : Sensor<GameTargetInfo, AIEntity>
     {
         [SerializeField] private float maxRange;
         [SerializeField] private float visionConeAngle;
