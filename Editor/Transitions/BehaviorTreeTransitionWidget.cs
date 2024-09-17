@@ -41,7 +41,9 @@ namespace Platinio.BehaviorTree
         protected override bool snapToGrid => false;
         public override bool canDelete => true;
         public override bool canSelect => true;
-       
+
+        public override bool canClip => false;
+
         public override Rect position
         {
             get => element.Position;
