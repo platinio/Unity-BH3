@@ -14,13 +14,26 @@ namespace Platinio.BehaviorTree
                 childrenTaskStatus = new ExecutionStatus[GetChildren().Count];
             }
             ResetChildrenTaskStatus();
+            
+            for (int n = 0; n < children.Count; n++)
+            {
+                children[n].OnEnter();
+            }
+        }
+
+        public override void OnExit()
+        {
+            for (int n = 0; n < children.Count; n++)
+            {
+                children[n].OnExit();
+            }
         }
 
         private void ResetChildrenTaskStatus()
         {
             for (int n = 0; n < childrenTaskStatus.Length; n++)
             {
-                childrenTaskStatus[n] = ExecutionStatus.Inactive;
+                childrenTaskStatus[n] = ExecutionStatus.Running;
             }
         }
     }

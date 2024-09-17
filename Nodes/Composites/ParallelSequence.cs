@@ -17,7 +17,9 @@ namespace Platinio.BehaviorTree
         {
             for (int n = 0; n < GetChildren().Count; n++)
             {
-                if (childrenTaskStatus[n] != ExecutionStatus.Success) continue;
+                if (childrenTaskStatus[n] == ExecutionStatus.Success) continue;
+                if (childrenTaskStatus[n] == ExecutionStatus.Failure) return ExecutionStatus.Failure;
+                
                 childrenTaskStatus[n] = GetChildren()[n].OnUpdateInternal();
             }
 
