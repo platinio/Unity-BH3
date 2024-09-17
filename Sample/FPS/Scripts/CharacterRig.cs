@@ -77,9 +77,11 @@ namespace Platinio
                 
                 currentTime += Time.deltaTime;
                 lerp = currentTime / t;
-
+              
                 yield return null;
             }
+            
+            SetRigWeightNow(key, to);
         }
 
         public void DisableRig(string key, float t = 0.25f)
