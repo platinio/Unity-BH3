@@ -48,7 +48,8 @@ namespace Platinio.BehaviorTree
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"BehaviorTree = {nest.macro.name} Method = OnAwake() Exception = {e}", gameObject);
+                    string macroName = nest?.macro?.name;
+                    Debug.LogError($"BehaviorTree = {macroName} Method = OnAwake() Exception = {e}", gameObject);
                     throw;
                 }
                 #else
