@@ -12,7 +12,6 @@ namespace Platinio.BehaviorTree
     /// </summary>
     public class BehaviorTreeNode : BaseGraphNode<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>, IBehaviorTreeNode
     {
-        
         [DoNotSerialize]
         public IPortCollection<ControlInput> controlInputs { get; }
 
@@ -88,7 +87,7 @@ namespace Platinio.BehaviorTree
 
         public IGraphElementDebugData CreateDebugData()
         {
-            return default;
+            return new Unit.DebugData();
         }
 
         [DoNotSerialize]
@@ -277,30 +276,6 @@ namespace Platinio.BehaviorTree
         public int GetConditionalIndex(ConditionalExecution conditionalExecution)
         {
             return conditionalExecutions.IndexOf(conditionalExecution);
-        }
-        
-        public override void OnNodeEnter()
-        {
-            base.OnNodeEnter();
-            
-#if UNITY_EDITOR
-            var debugComponent = GetMachineDebug();
-            if (debugComponent == null) return;
-            
-            debugComponent.PushNodeToCallStack(this);
-#endif
-        }
-
-        public override void OnNodeExit()
-        {
-            base.OnNodeExit();
-            
-#if UNITY_EDITOR
-            var debugComponent = GetMachineDebug();
-            if (debugComponent == null) return;
-            
-            debugComponent.PopCallStack();
-#endif
         }
         
         public sealed override ExecutionStatus OnUpdateInternal()
