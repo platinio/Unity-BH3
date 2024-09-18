@@ -2,7 +2,7 @@ using System;
 using RPGDamage;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     //basic class for all projectiles, arrow, bullets etc
     public class Projectile : MonoBehaviour

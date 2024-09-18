@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(PlaceHolderNode))]
     public class PlaceHolderNodeWidget : BehaviorTreeNodeElementWidget

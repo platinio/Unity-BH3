@@ -1,9 +1,9 @@
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
     public class SetNavAgentPosition : GameplayNode

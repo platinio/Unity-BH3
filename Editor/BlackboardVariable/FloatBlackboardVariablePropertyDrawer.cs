@@ -1,6 +1,6 @@
 ﻿using UnityEditor;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [CustomPropertyDrawer(typeof(FloatBlackboardVariable))]
     public class FloatBlackboardVariablePropertyDrawer : BlackboardVariablePropertyDrawer<float>

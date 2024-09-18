@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class CoverSystem : MonoBehaviour
     {

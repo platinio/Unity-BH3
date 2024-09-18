@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// Base class for all behavior tree nodes

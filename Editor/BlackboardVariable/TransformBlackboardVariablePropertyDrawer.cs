@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [CustomPropertyDrawer(typeof(TransformBlackboardVariable))]
     public class TransformBlackboardVariablePropertyDrawer : BlackboardVariablePropertyDrawer<Transform>

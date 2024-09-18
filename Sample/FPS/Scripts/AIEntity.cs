@@ -3,7 +3,7 @@ using Platinio.Share;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Platinio.AI
+namespace ArcaneOnyx.Share
 {
     public class AIEntity : GameEntity
     {

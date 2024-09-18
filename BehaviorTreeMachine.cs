@@ -1,9 +1,9 @@
 ﻿using System;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [RequireComponent(typeof(Variables))]
     public class BehaviorTreeMachine : BaseMachine<BehaviorTreeGraph, BehaviorTreeGraphAsset, BehaviorTreeNode, BehaviorTreeTransition>

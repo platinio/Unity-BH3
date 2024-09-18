@@ -1,6 +1,6 @@
-﻿using Platinio.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Decorator/Create Return Failure")]
     public class ReturnFailure : Decorator

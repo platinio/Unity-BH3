@@ -1,7 +1,8 @@
+using Platinio;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [CustomPropertyDrawer(typeof(BlackboardKey))]
     public class BlackboardKeyPropertyDrawer : PropertyDrawer

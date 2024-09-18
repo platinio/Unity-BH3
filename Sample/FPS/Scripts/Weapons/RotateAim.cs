@@ -6,7 +6,7 @@ using System.Diagnostics;
  * Rotates the spine of the agent such that the gun points in the direction of the target.
  * */
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class RotateToAimGunScript : MonoBehaviour
     {

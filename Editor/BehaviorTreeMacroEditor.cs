@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Editor(typeof(BehaviorTreeGraphAsset))]
     public class BehaviorTreeMacroEditor : Inspector

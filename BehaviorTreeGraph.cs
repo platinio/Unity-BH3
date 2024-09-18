@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [SerializationVersion("A")]
     public class BehaviorTreeGraph : BaseGraph<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>

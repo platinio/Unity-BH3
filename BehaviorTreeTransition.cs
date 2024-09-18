@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class BehaviorTreeTransition : BaseGraphTransition<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {

@@ -1,4 +1,4 @@
-﻿namespace Platinio.BehaviorTree
+﻿namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class PortControlOutputDefinition : ControlPortDefinition, IOutputPortDefinition { }
 }

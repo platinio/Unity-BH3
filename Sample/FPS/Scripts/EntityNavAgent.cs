@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Platinio
+namespace ArcaneOnyx.Share
 {
     public class EntityNavAgent : MonoBehaviour
     {

@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class BehaviorTreeGraphData : GraphData<BehaviorTreeGraph>, IGraphEventListenerData
     {

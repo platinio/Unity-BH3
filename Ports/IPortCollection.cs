@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public interface IPortCollection<TPort> : IKeyedCollection<string, TPort> where TPort : IPort
     {

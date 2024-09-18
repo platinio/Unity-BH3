@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Platinio.BehaviorTree;
+using ArcaneOnyx.BehaviorTree;
 using UnityEditor;
 using UnityEngine;
 using UnityObject = UnityEngine.Object;
@@ -376,7 +376,7 @@ namespace Unity.VisualScripting
 
             if (GUI.Button(position, "Edit Graph", Styles.editButton))
             {
-                Platinio.GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(reference);
+                ArcaneOnyx.GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(reference);
             }
 
             EditorGUI.EndDisabledGroup();

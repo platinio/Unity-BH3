@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+﻿using ArcaneOnyx.Share;
+using UnityEngine;
 
-namespace RPGDamage
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     /// <summary>
     /// abstraction for every single unique attack

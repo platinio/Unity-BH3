@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
 using UnityObject = UnityEngine.Object;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Canvas(typeof(BehaviorTreeGraph))]
     public class BehaviorTreeCanvas : BaseCanvas<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
@@ -111,7 +111,7 @@ namespace Platinio.BehaviorTree
 
             CancelConnection();
         }
-
+        
         protected override void HandleClipboard()
         {
             if (e.IsValidateCommand("Copy"))

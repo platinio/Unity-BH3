@@ -1,8 +1,7 @@
-using Platinio.BehaviorTree;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
-namespace Platinio
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Remove Key From Blackboard")]
     public class RemoveKeyFromBlackboard : GameplayNode

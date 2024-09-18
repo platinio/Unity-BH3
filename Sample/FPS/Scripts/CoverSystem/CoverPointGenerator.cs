@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class CoverPointGenerator : MonoBehaviour
     {

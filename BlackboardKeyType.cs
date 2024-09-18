@@ -1,7 +1,7 @@
 using System;
 
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class BlackboardKeyType : Attribute
     {

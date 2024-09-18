@@ -1,10 +1,7 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Platinio
+namespace ArcaneOnyx.Share
 {
     public class AIEntityAnimator : MonoBehaviour
     {

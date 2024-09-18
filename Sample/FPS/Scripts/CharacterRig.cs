@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
-namespace Platinio
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class CharacterRig : MonoBehaviour
     {

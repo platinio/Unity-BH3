@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public abstract class OutputPortWidget<TPort> : PortWidget<TPort> where TPort : class, IOutputPort
     {

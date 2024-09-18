@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine.SceneManagement;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class VariablesUtil
     {

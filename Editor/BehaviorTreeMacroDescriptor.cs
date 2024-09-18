@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Descriptor(typeof(BehaviorTreeGraphAsset))]
     public sealed class BehaviorTreeMacroDescriptor : MacroDescriptor<BehaviorTreeGraphAsset, MacroDescription>

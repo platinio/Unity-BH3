@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(IPort))]
     public abstract class PortWidget<TPort> : Widget<BehaviorTreeCanvas, TPort>, IPortWidget where TPort : class, IPort

@@ -2,7 +2,7 @@
 using System.Linq;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class PortInvalidConnection : PortConnection<IOutputPort, IInputPort>, IPortConnection
     {

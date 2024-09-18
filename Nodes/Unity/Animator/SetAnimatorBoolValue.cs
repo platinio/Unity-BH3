@@ -1,8 +1,8 @@
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Animator/Set Animator Bool Value")]
     public class SetAnimatorBoolValue : GameplayNode

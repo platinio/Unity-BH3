@@ -1,7 +1,7 @@
 ﻿using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(ValueOutput))]
     public class ValueOutputWidget : OutputPortWidget<ValueOutput>

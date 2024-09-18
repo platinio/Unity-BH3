@@ -1,7 +1,7 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(RunBehaviorTreeGraphNode))]
     public class RunBehaviorTreeNodeElementWidget : BehaviorTreeNodeElementWidget

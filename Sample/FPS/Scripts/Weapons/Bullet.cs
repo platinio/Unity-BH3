@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class Bullet : Projectile
     {

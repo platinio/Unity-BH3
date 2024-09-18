@@ -1,4 +1,4 @@
-﻿using Platinio.BehaviorTree;
+﻿using ArcaneOnyx.BehaviorTree;
 
 namespace Unity.VisualScripting
 {

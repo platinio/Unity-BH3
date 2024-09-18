@@ -1,8 +1,9 @@
 using System;
+using ArcaneOnyx.Share;
 using RPGDamage;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public struct ShootInfo : ICloneable
     {

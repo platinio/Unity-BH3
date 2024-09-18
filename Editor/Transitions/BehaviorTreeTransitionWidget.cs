@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(BehaviorTreeTransition))]
     public class BehaviorTreeTransitionWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeTransition>

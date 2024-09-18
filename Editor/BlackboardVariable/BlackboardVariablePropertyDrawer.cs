@@ -1,7 +1,8 @@
-﻿using UnityEditor;
+﻿using Platinio;
+using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public abstract class BlackboardVariablePropertyDrawer<T> : PropertyDrawer
     {

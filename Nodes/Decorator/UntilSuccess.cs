@@ -1,6 +1,6 @@
-﻿using Platinio.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Decorator/Create Until Success")]
     public class UntilSuccess : Decorator

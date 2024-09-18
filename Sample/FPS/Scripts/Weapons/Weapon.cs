@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using ArcaneOnyx.Share;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class Weapon : MonoBehaviour
     {

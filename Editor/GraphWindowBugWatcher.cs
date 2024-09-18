@@ -1,7 +1,7 @@
 ﻿using Unity.VisualScripting;
 using UnityEditor;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
    /*
     * When changing tabs there may be moments when an incorrect window type, tries to open the incorrect graph type

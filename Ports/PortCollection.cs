@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class PortCollection<TPort> : KeyedCollection<string, TPort>, IPortCollection<TPort>
         where TPort : IPort

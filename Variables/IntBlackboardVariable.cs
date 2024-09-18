@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Serializable]
     public class IntBlackboardVariable : BlackboardVariable<int>

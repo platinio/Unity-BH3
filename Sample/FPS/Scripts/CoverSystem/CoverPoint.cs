@@ -1,7 +1,7 @@
-using Platinio.AI;
+using ArcaneOnyx.Share;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class CoverPoint : MonoBehaviour
     {

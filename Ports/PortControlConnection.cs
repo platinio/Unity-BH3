@@ -1,7 +1,7 @@
 ﻿using System;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class PortControlConnection : PortConnection<ControlOutput, ControlInput>, IPortConnection
     {

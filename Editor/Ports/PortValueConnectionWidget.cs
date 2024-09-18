@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(PortValueConnection))]
     public sealed class PortValueConnectionWidget : PortConnectionWidget<PortValueConnection>

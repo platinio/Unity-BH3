@@ -1,7 +1,7 @@
-﻿using Platinio.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Add Conditional Execution/Boolean Conditional")]
     public class BooleanConditionalExecution : ConditionalExecution

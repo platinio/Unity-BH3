@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityObject = UnityEngine.Object;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class ValueInput : Port<ValueOutput, IOutputPort, PortValueConnection>, IValuePort, IInputPort
     {

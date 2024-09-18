@@ -1,9 +1,8 @@
-using Platinio.AI;
+using ArcaneOnyx.Share;
 using Platinio.AIPerception;
-using Platinio.BehaviorTree.Sample;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class AISensor : Sensor<GameTargetInfo, AIEntity>
     {

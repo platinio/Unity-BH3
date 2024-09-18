@@ -1,8 +1,8 @@
 ﻿using System.Linq;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Composite/Random Selector")]
     public class RandomSelector : Selector

@@ -1,8 +1,8 @@
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
     public class RunBehaviorTreeGraphNode : GameplayNode

@@ -1,7 +1,7 @@
 using Unity.VisualScripting;
-using GraphWindow = Platinio.GraphCore.GraphWindow;
+using GraphWindow = ArcaneOnyx.GraphCore.GraphWindow;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class BehaviorTreeGraphWindow : GraphWindow
     {

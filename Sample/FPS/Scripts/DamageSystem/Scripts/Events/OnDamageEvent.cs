@@ -1,6 +1,6 @@
 ﻿using UnityEngine.Events;
 
-namespace RPGDamage
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     /// <summary>
     /// Event that gets called when a objects get some damage

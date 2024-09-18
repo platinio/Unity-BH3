@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class InvalidInput : Port<IOutputPort, IOutputPort, PortInvalidConnection>, IInvalidPort, IInputPort
     {

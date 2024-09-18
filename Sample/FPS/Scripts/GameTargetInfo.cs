@@ -1,7 +1,7 @@
-﻿using Platinio.AI;
+﻿using ArcaneOnyx.Share;
 using Platinio.AIPerception;
 
-namespace Platinio.BehaviorTree.Sample
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class GameTargetInfo : TargetInfo<AIEntity>
     {

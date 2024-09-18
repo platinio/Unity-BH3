@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Platinio.GraphCore;
+using ArcaneOnyx.GraphCore;
 using UnityEngine;
 
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public class BehaviorTreeMachineDebug : MonoBehaviour
     {

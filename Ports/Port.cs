@@ -2,7 +2,7 @@
 using System.Linq;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public abstract class Port<TValidOther, TInvalidOther, TExternalConnection> : IPort
         where TValidOther : IPort

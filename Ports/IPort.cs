@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public interface IPort : IGraphItem
     {

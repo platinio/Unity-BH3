@@ -1,7 +1,7 @@
-﻿using Platinio;
+﻿using ArcaneOnyx.Share;
 using UnityEngine;
 
-namespace RPGDamage
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class Hitbox : Damageable
     {

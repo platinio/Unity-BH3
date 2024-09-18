@@ -1,4 +1,4 @@
-﻿namespace Platinio.BehaviorTree
+﻿namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// Base action node for behavior trees

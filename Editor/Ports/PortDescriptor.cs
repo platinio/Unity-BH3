@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Descriptor(typeof(IPort))]
     public sealed class PortDescriptor : IDescriptor

@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// placeholder node use to create invisible nodes in the canvas, currently used to fake the selection of the node transition

@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public abstract class PortConnectionWidget<TConnection> : GraphElementWidget<BehaviorTreeCanvas, TConnection>, IPortConnectionWidget
         where TConnection : class, IPortConnection

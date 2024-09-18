@@ -1,8 +1,7 @@
-﻿using Platinio;
-using Platinio.Share;
+﻿using ArcaneOnyx.Share;
 using UnityEngine;
 
-namespace RPGDamage
+namespace ArcaneOnyx.BehaviorTree.Sample
 {
     /// <summary>
     /// Basic class for all damageable stuff

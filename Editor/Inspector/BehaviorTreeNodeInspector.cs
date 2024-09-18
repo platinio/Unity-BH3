@@ -1,6 +1,6 @@
 ﻿using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [Inspector(typeof(BehaviorTreeNode))]
     public class BehaviorTreeNodeInspector : ReflectedInspector

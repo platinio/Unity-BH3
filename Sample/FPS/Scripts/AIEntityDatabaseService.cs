@@ -1,6 +1,7 @@
-﻿using Platinio.AI;
+﻿using ArcaneOnyx.Share;
+using Platinio;
 
-namespace Platinio.AIPerception
+namespace ArcaneOnyx.AIPerception
 {
     public class AIEntityDatabaseService : DatabaseService<AIEntity> { }
 }

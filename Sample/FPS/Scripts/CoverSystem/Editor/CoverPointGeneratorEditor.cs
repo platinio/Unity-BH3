@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Platinio.BehaviorTree.Editor
+namespace ArcaneOnyx.BehaviorTree.Editor
 {
     [CustomEditor(typeof(CoverPointGenerator))]
     public class CoverPointGeneratorEditor : UnityEditor.Editor

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     public sealed class ControlInput : Port<ControlOutput, IOutputPort, PortControlConnection>
         , IControlPort, IInputPort

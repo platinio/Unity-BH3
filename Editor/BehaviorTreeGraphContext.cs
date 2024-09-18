@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
     [GraphContext(typeof(BehaviorTreeGraph))]
     public class BehaviorTreeGraphContext : GraphContext<BehaviorTreeGraph, BehaviorTreeCanvas>

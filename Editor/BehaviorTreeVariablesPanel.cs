@@ -1,8 +1,8 @@
 using Unity.VisualScripting;
 
-namespace Platinio.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree
 {
-    public class BehaviorTreeVariablesPanel : Platinio.GraphCore.VariablesPanel
+    public class BehaviorTreeVariablesPanel : ArcaneOnyx.GraphCore.VariablesPanel
     {
         public BehaviorTreeVariablesPanel(IGraphContext context) : base(context)
         {
