@@ -4,10 +4,19 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Run Script Graph")]
+    [GraphCreateMenu("Unity/Visual Scripting/Run Script Graph")]
     public class RunScriptGraph : GameplayNode
     {
-        [Serialize] private ScriptGraphAsset scripGraphAsset;
+        [Serialize, Inspectable] private ScriptGraphAsset scripGraphAsset;
+
+        public override string NodeName 
+        {
+            get
+            {
+                if (scripGraphAsset == null) return "Missing ScriptGraph";
+                return $"Run {scripGraphAsset.name}";
+            }
+        }
 
         public override void OnEnter()
         {
