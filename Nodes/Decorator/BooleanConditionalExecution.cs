@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Boolean Conditional")]
+    [GraphCreateMenu("Add Conditional Execution/Boolean Conditional")]
     public class BooleanConditionalExecution : ConditionalExecution
     {
         [DoNotSerialize]

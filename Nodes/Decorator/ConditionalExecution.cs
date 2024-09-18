@@ -3,6 +3,7 @@ using Unity.VisualScripting;
 
 namespace Platinio.BehaviorTree
 {
+    [SpecialNode]
     public abstract class ConditionalExecution : GameplayNode
     {
         [Serialize] private BehaviorTreeNode owner;
