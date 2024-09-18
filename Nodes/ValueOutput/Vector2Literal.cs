@@ -1,0 +1,24 @@
+﻿using Platinio.GraphCore;
+using Unity.VisualScripting;
+using UnityEngine;
+
+namespace Platinio.BehaviorTree
+{
+    [GraphCreateMenu("Unity/Literal/Vector2")]
+    public class Vector2Literal : GameplayNode
+    {
+        [Serialize, Inspectable] private Vector3 value;
+        
+        [DoNotSerialize]
+        public ValueOutput Value { get; private set; }
+
+        public override string NodeName => "Vector2 Literal";
+        
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Value = ValueOutput<Vector2>(nameof(Value), () => value);
+        }
+    }
+}
