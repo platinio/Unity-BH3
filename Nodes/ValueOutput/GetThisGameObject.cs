@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace Platinio.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Variables/Get/This")]
+    [GraphCreateMenu("Unity/Literal/This/GameObject")]
     public class GetThisGameObject : GameplayNode
     {
-        public override string NodeName => "This";
+        public override string NodeName => "GameObject";
 
         [DoNotSerialize]
         public ValueOutput thisValueOutput { get; private set; }
