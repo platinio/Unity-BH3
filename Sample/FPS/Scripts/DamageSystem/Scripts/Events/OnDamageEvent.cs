@@ -1,0 +1,13 @@
+﻿using UnityEngine.Events;
+
+namespace RPGDamage
+{
+    /// <summary>
+    /// Event that gets called when a objects get some damage
+    /// </summary>
+    [System.Serializable]
+    public class OnDamageEvent : UnityEvent<DamageInfo , Hitbox> { }
+
+}
+
+
