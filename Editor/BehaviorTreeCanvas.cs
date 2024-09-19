@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -112,16 +113,15 @@ namespace ArcaneOnyx.BehaviorTree
             CancelConnection();
         }
         
-        protected override void HandleClipboard()
+        protected override void HandleLowPriorityInput()
         {
-            if (e.IsValidateCommand("Copy"))
-            {
-                if (GraphClipboard.canCopySelection)
-                {
-                    e.ValidateCommand();
-                }
-            }
-            else if (e.IsExecuteCommand("Copy"))
+            HandleClipboard();
+            base.HandleLowPriorityInput();
+        }
+        
+        private void HandleClipboard()
+        {
+            if (e.IsExecuteCommand("Copy"))
             {
                 selection.RemoveWhere(x =>
                 {
@@ -132,18 +132,9 @@ namespace ArcaneOnyx.BehaviorTree
 
                     return false;
                 });
-                
-                if (selection.Count > 0) GraphClipboard.CopySelection();
             }
 
-            if (e.IsValidateCommand("Cut"))
-            {
-                if (GraphClipboard.canCopySelection)
-                {
-                    e.ValidateCommand();
-                }
-            }
-            else if (e.IsExecuteCommand("Cut"))
+           if (e.IsExecuteCommand("Cut"))
             {
                 selection.RemoveWhere(x =>
                 {
@@ -154,31 +145,9 @@ namespace ArcaneOnyx.BehaviorTree
 
                     return false;
                 });
-                
-                if (selection.Count > 0) GraphClipboard.CutSelection();
             }
 
-            if (e.IsValidateCommand("Paste"))
-            {
-                if (GraphClipboard.canPaste && (DateTime.Now - lastPasteTime).TotalSeconds >= 0.25)
-                {
-                    e.ValidateCommand();
-                }
-            }
-            else if (e.IsExecuteCommand("Paste"))
-            {
-                GraphClipboard.Paste();
-                lastPasteTime = DateTime.Now;
-            }
-
-            if (e.IsValidateCommand("Duplicate"))
-            {
-                if (GraphClipboard.canDuplicateSelection && (DateTime.Now - lastPasteTime).TotalSeconds >= 0.25)
-                {
-                    e.Use();
-                }
-            }
-            else if (e.IsExecuteCommand("Duplicate"))
+            if (e.IsExecuteCommand("Duplicate"))
             {
                 selection.RemoveWhere(x =>
                 {
@@ -189,10 +158,11 @@ namespace ArcaneOnyx.BehaviorTree
 
                     return false;
                 });
-                
-                if (selection.Count > 0) GraphClipboard.DuplicateSelection();
-                lastPasteTime = DateTime.Now;
             }
         }
+        
+        
+        
+        
     }
 }
