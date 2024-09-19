@@ -1,4 +1,4 @@
-﻿using Unity.AI.Navigation;
+﻿using ArcaneOnyx.BehaviorTree.Sample;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
