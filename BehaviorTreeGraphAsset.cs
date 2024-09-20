@@ -24,6 +24,7 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void OnBeforeDeserialize()
         {
             string newJson = _data.json;
+            bool updateData = false;
             
             foreach (var startIndex in _data.json.AllIndexesOf("\"$type\":\""))
             {
@@ -45,6 +46,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (!RuntimeCodebase.TryDeserializeType(typeStr, out var type))
                 {
+                    updateData = true;
                     Debug.Log($"type {typeStr} is missing updating it");
                     typeStr = $"\"$type\":\"{typeStr}\"";
                     string replaceStr = $"\"$type\":\"ArcaneOnyx.BehaviorTree.MissingType\"";
@@ -52,8 +54,11 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
 
-            SerializationData newData = new SerializationData(newJson, _data.objectReferences);
-            _data = newData;
+            if (updateData)
+            {
+                SerializationData newData = new SerializationData(newJson, _data.objectReferences);
+                _data = newData;
+            }
             
             base.OnBeforeDeserialize();
         }
