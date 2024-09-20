@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -160,9 +159,5 @@ namespace ArcaneOnyx.BehaviorTree
                 });
             }
         }
-        
-        
-        
-        
     }
 }
