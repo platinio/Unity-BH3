@@ -33,6 +33,7 @@ namespace ArcaneOnyx.BehaviorTree
                 }
                 
                 behaviorTreeGraph = nest.embed;
+                var graph = graphInstance == null ? nest.embed : graphInstance.graph;
                 
                 var nodes = behaviorTreeGraph.Nodes;
 
@@ -43,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree
                 #if UNITY_EDITOR
                 try
                 {
-                    OverrideGraphAndSubGraphVariables(graphInstance);
+                    OverrideGraphAndSubGraphVariables(graphInstance, graph);
                     behaviorTreeGraph.OnAwake();
                 }
                 catch (Exception e)
@@ -59,21 +60,25 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset)
+        private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
         {
             OverrideGraphVariables(graphAsset);
 
-            foreach (var behaviorTreeNode in graphAsset.graph.Nodes)
+            if (graph == null) return;
+            foreach (var behaviorTreeNode in graph.Nodes)
             {
                 if (behaviorTreeNode is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
                 {
-                    OverrideGraphAndSubGraphVariables(runBehaviorTreeGraphNode.BehaviorTreeGraphAssetInstance);
+                    var internalGraphAsset = runBehaviorTreeGraphNode.BehaviorTreeGraphAssetInstance;
+                    OverrideGraphAndSubGraphVariables(internalGraphAsset, internalGraphAsset.graph);
                 }
             }
         }
 
         private void OverrideGraphVariables(BehaviorTreeGraphAsset graphAsset)
         {
+            if (graphAsset == null || graphAsset.declarations == null) return;
+            
             foreach (var variableDeclaration in Variables.declarations)
             {
                 graphAsset.declarations.Set(variableDeclaration.name, variableDeclaration.value);
@@ -82,6 +87,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void Switch(BehaviorTreeGraphAsset behaviorTreeGraphAsset)
         {
+            if (behaviorTreeGraphAsset == null) return;
+            
             graphInstance = behaviorTreeGraphAsset;
             lastExecutionStatus = ExecutionStatus.Running;
             behaviorTreeGraph = behaviorTreeGraphAsset.graph;
@@ -93,7 +100,7 @@ namespace ArcaneOnyx.BehaviorTree
                 node.SetMachine(this);
             }
 
-            OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset);
+            OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset, behaviorTreeGraphAsset.graph);
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
 
