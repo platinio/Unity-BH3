@@ -10,6 +10,8 @@ namespace ArcaneOnyx.BehaviorTree
         
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
+        
+        public override bool CanBeUseAsTransitionDestination => false;
 
         public override string NodeName => "Boolean Literal";
         

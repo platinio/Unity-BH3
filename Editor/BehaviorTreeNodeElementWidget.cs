@@ -151,14 +151,39 @@ namespace ArcaneOnyx.BehaviorTree
                 Rect p = position;
                 p.position += offset;
                 
-                using (LudiqGUI.color.Override(element.Color))
+                DrawOutsideBox(p);
+                
+                using (LudiqGUI.color.Override(new Color(0.2f, 0.2f, 0.2f, 1)))
                 {
-                    DrawOutsideBox(p);
                     
                     Styles.background.normal.background = element.NodeBackground;
                     Styles.background.Draw(p, false, IsSelected, false, false);
-                }
 
+                    float connectorSize = 12;
+                    float horizontalOffset = 3.0f;
+                    
+                    if (element.MaxChildrenLimit > 0)
+                    {
+                        var bottomConnection = new Rect();
+                        bottomConnection.x = p.x + (p.width / 2.0f) - (connectorSize / 2.0f);
+                        bottomConnection.y = p.y + (p.height) - horizontalOffset;
+                        bottomConnection.width = connectorSize;
+                        bottomConnection.height = connectorSize;
+                        Styles.background.Draw(bottomConnection, false, IsSelected, false, false);
+                    }
+
+                    if (element.CanBeUseAsTransitionDestination)
+                    {
+                        var topConnection = new Rect();
+                        topConnection.x = p.x + (p.width / 2.0f) - (connectorSize / 2.0f);
+                        topConnection.y = p.y - connectorSize + horizontalOffset;
+                        topConnection.width = connectorSize;
+                        topConnection.height = connectorSize;
+                    
+                        Styles.background.Draw(topConnection, false, IsSelected, false, false);
+                    }
+                }
+               
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
                 if (node.ShowIcon)
@@ -175,7 +200,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         protected virtual void DrawOutsideBox(Rect p)
         {
-            float borderSize = 20;
+            float borderSize = 10;
                     
             Rect outsideBox = p;
             outsideBox.position += new Vector2(-borderSize / 2.0f, -borderSize / 2.0f);
@@ -193,11 +218,14 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 outsideTexture = new Texture2D(1, 1);
                 outsideTexture.wrapMode = TextureWrapMode.Repeat;
-                outsideTexture.SetPixel(0, 0, new Color(0, 0, 0, 0.125f));
+                outsideTexture.SetPixel(0, 0, new Color(0.1f, 0.1f, 0.1f, 1));
                 outsideTexture.Apply();
             }
 
-            GUI.DrawTexture(outsideBox, outsideTexture);
+            using (LudiqGUI.color.Override(new Color(0.1f, 0.1f, 0.1f, 1)))
+            {
+                Styles.background.Draw(outsideBox, false, IsSelected, false, false);
+            }
         }
 
         protected void DrawLastExecutionIcon(Vector2 offset)
@@ -454,7 +482,7 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     canvas.CancelTransition();
                 }
-                else
+                else if (destination.CanBeUseAsTransitionDestination)
                 {
                     canvas.EndTransition(destination);
                 }

@@ -16,6 +16,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override bool CanCopy => false;
         public override bool CanDuplicate => false;
         public override bool CanCut => false;
+        public override bool CanBeUseAsTransitionDestination => false;
 
         public override void OnEnter()
         {

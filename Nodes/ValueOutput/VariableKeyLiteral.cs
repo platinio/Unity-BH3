@@ -12,6 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueOutput Value { get; private set; }
 
         public override string NodeName => "Variable Key Literal";
+        public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()
         {
