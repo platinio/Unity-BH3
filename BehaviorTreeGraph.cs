@@ -63,7 +63,7 @@ namespace ArcaneOnyx.BehaviorTree
         public BehaviorTreeGraph() : base()
         {
             entryNode = new Entry();
-            entryNode.Position = new Rect(new Vector2(-100, -15), entryNode.StartingSize);
+            entryNode.Position = new Rect(new Vector2(-96, -15), entryNode.StartingSize);
 
             Nodes.Add(entryNode);
             
@@ -101,7 +101,7 @@ namespace ArcaneOnyx.BehaviorTree
             var stateGraph = new BehaviorTreeGraph();
 
             var entryNode = new Entry();
-            entryNode.Position = new Rect(new Vector2(-100, -15), entryNode.StartingSize);
+            entryNode.Position = new Rect(new Vector2(-96, -15), entryNode.StartingSize);
 
             stateGraph.Nodes.Add(entryNode);
             stateGraph.elements.Add(entryNode);
