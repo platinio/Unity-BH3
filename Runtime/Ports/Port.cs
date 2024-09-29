@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public string key { get; }
 
-        public IGraph graph => behaviorTreeNode?.graph;
+        public GraphCore.IGraph graph => behaviorTreeNode?.graph;
 
         public IEnumerable<IPortRelation> relations =>
             LinqUtility.Concat<IPortRelation>(behaviorTreeNode.relations.WithSource(this),
@@ -124,8 +124,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected void ConnectInvalid(IOutputPort source, IInputPort destination)
         {
-            //TODO: FIX THIS
-            /*
             var connection = behaviorTreeNode.graph.invalidConnections.SingleOrDefault(c => c.source == source && c.destination == destination);
 
             if (connection != null)
@@ -133,13 +131,11 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            behaviorTreeNode.graph.invalidConnections.Add(new InvalidConnection(source, destination));*/
+            behaviorTreeNode.graph.invalidConnections.Add(new PortInvalidConnection(source, destination));
         }
 
         protected void DisconnectInvalid(IOutputPort source, IInputPort destination)
         {
-            //TODO: FIX THIS
-            /*
             var connection = behaviorTreeNode.graph.invalidConnections.SingleOrDefault(c => c.source == source && c.destination == destination);
 
             if (connection == null)
@@ -147,7 +143,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            behaviorTreeNode.graph.invalidConnections.Remove(connection);*/
+            behaviorTreeNode.graph.invalidConnections.Remove(connection);
         }
     }
 }

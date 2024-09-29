@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    public interface IPort : IGraphItem
+    public interface IPort : GraphCore.IGraphItem
     {
         IBehaviorTreeNode behaviorTreeNode { get; set; }
         string key { get; }

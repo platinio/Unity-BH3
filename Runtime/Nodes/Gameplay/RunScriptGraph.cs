@@ -1,6 +1,7 @@
 ﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
+using GraphReference = Unity.VisualScripting.GraphReference;
 
 namespace ArcaneOnyx.BehaviorTree
 {

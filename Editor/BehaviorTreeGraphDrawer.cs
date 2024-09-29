@@ -6,7 +6,7 @@ namespace ArcaneOnyx.BehaviorTree
 {
     public static class BehaviorTreeGraphDrawer
     {
-        public static List<Rect> DrawTransition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
+        public static List<Rect> DrawTransition(GraphCore.IGraph graph, BehaviorTreeTransitionWidget transitionWidget, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
         {
             var oldColor = GUI.color;
             if (transitionWidget.element.destination.IsRunning) GUI.color = Color.green;
@@ -72,7 +72,7 @@ namespace ArcaneOnyx.BehaviorTree
             return lineRects;
         }
 
-        private static Vector2 GetCloserVerticalNodePosition(IGraph graph, BehaviorTreeTransitionWidget transitionWidget)
+        private static Vector2 GetCloserVerticalNodePosition(GraphCore.IGraph graph, BehaviorTreeTransitionWidget transitionWidget)
         {
             Vector2 closerDestinationPosition = transitionWidget.destinationEdgeCenter;
             

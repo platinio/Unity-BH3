@@ -1,4 +1,5 @@
 ﻿using Unity.VisualScripting;
+using IGraphElementWidget = ArcaneOnyx.GraphCore.IGraphElementWidget;
 
 namespace ArcaneOnyx.BehaviorTree
 {

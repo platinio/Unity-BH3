@@ -3,6 +3,7 @@ using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
+using GraphPointer = ArcaneOnyx.GraphCore.GraphPointer;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -14,13 +15,13 @@ namespace ArcaneOnyx.BehaviorTree
 
         
         [DoNotSerialize]
-        public GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput> controlConnections { get; private set; }
+        public GraphCore.GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput> controlConnections { get; private set; }
 
         [DoNotSerialize]
-        public GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput> valueConnections { get; private set; }
+        public GraphCore.GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput> valueConnections { get; private set; }
 
         [DoNotSerialize]
-        public GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort> invalidConnections { get; private set; }
+        public GraphCore.GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort> invalidConnections { get; private set; }
 
         [Serialize]
         [InspectorLabel("Trigger Inputs")]
@@ -67,9 +68,9 @@ namespace ArcaneOnyx.BehaviorTree
 
             Nodes.Add(entryNode);
             
-            controlConnections = new GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput>(this);
-            valueConnections = new GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput>(this);
-            invalidConnections = new GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort>(this);
+            controlConnections = new GraphCore.GraphConnectionCollection<PortControlConnection, ControlOutput, ControlInput>(this);
+            valueConnections = new GraphCore.GraphConnectionCollection<PortValueConnection, ValueOutput, ValueInput>(this);
+            invalidConnections = new GraphCore.GraphConnectionCollection<PortInvalidConnection, IOutputPort, IInputPort>(this);
          
             elements.Include(controlConnections);
             elements.Include(valueConnections);
@@ -81,7 +82,7 @@ namespace ArcaneOnyx.BehaviorTree
             valueOutputDefinitions = new PortDefinitionCollection<ValueOutputDefinition>();
         }
 
-        public override IGraphData CreateData()
+        public override GraphCore.IGraphData CreateData()
         {
             return new BehaviorTreeGraphData(this);
         }
@@ -93,7 +94,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Elements
         [DoNotSerialize]
-        public GraphElementCollection<GraphGroup> Groups { get; internal set; }
+        public GraphCore.GraphElementCollection<GraphCore.GraphGroup> Groups { get; internal set; }
         #endregion
 
         public static BehaviorTreeGraph CreateEmpty()

@@ -3,11 +3,12 @@ using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using GraphGUI = ArcaneOnyx.GraphCore.GraphGUI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(BehaviorTreeTransition))]
-    public class BehaviorTreeTransitionWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeTransition>
+    public class BehaviorTreeTransitionWidget : GraphCore.GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeTransition>
     {
         public BehaviorTreeTransitionWidget(BehaviorTreeCanvas canvas, BehaviorTreeTransition element) : base(canvas, element)
         {

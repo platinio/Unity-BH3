@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
      * provided.
      */
 
-    public abstract class PortConnection<TSourcePort, TDestinationPort> : GraphElement<BehaviorTreeGraph>, IConnection<TSourcePort, TDestinationPort>
+    public abstract class PortConnection<TSourcePort, TDestinationPort> : GraphCore.GraphElement<BehaviorTreeGraph>, IConnection<TSourcePort, TDestinationPort>
         where TSourcePort : class, IOutputPort
         where TDestinationPort : class, IInputPort
     {

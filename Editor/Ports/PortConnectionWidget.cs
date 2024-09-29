@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    public abstract class PortConnectionWidget<TConnection> : GraphElementWidget<BehaviorTreeCanvas, TConnection>, IPortConnectionWidget
+    public abstract class PortConnectionWidget<TConnection> : GraphCore.GraphElementWidget<BehaviorTreeCanvas, TConnection>, IPortConnectionWidget
         where TConnection : class, IPortConnection
     {
         protected PortConnectionWidget(BehaviorTreeCanvas canvas, TConnection connection) : base(canvas, connection) { }
@@ -37,12 +37,13 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Positioning
 
-        public override IEnumerable<IWidget> positionDependencies
+        public override IEnumerable<GraphCore.IWidget> positionDependencies
         {
             get
             {
-                yield return canvas.Widget(connection.source);
-                yield return canvas.Widget(connection.destination);
+                //GraphCore.XCanvasProvider.Widget(canvas, connection.source);
+                yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
+                yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
             }
         }
 
@@ -73,9 +74,9 @@ namespace ArcaneOnyx.BehaviorTree
         public override void CachePosition()
         {
             base.CachePosition();
-
-            sourceHandlePosition = canvas.Widget<IPortWidget>(connection.source).handlePosition;
-            destinationHandlePosition = canvas.Widget<IPortWidget>(connection.destination).handlePosition;
+            
+            sourceHandlePosition = GraphCore.XCanvasProvider.Widget<IPortWidget>(canvas, connection.source).handlePosition;
+            destinationHandlePosition = GraphCore.XCanvasProvider.Widget<IPortWidget>(canvas, connection.destination).handlePosition;
 
             sourceHandleEdgeCenter = sourceHandlePosition.GetEdgeCenter(Edge.Right);
             destinationHandleEdgeCenter = destinationHandlePosition.GetEdgeCenter(Edge.Left);
@@ -138,9 +139,9 @@ namespace ArcaneOnyx.BehaviorTree
         protected virtual void DrawConnection()
         {
             var color = this.color;
-
-            var sourceWidget = canvas.Widget<IPortWidget>(connection.source);
-            var destinationWidget = canvas.Widget<IPortWidget>(connection.destination);
+          
+            var sourceWidget = GraphCore.XCanvasProvider.Widget<IPortWidget>(canvas, connection.source);
+            var destinationWidget = GraphCore.XCanvasProvider.Widget<IPortWidget>(canvas, connection.destination);
 
             var highlight = !canvas.IsCreatingConnection && (sourceWidget.isMouseOver || destinationWidget.isMouseOver);
 

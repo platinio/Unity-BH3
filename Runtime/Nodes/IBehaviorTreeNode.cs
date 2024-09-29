@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
-using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    public interface IBehaviorTreeNode : IGraphElementWithDebugData
+    public interface IBehaviorTreeNode : GraphCore.IGraphElementWithDebugData
     {
         new BehaviorTreeGraph graph { get; }
 

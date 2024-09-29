@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (GUI.Button(sourcePosition, "Edit Graph"))
             {
-                GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(GraphReference.New((IMacro)metadata.value, true));
+                GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(GraphCore.GraphReference.New((GraphCore.IMacro)metadata.value, true));
             }
         }
     }

@@ -5,12 +5,13 @@ using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using GraphGUI = ArcaneOnyx.GraphCore.GraphGUI;
 using MouseButton = Unity.VisualScripting.MouseButton;
 
 namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(BehaviorTreeNode))]
-    public class BehaviorTreeNodeElementWidget : GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>, IBehaviorTreeWidget
+    public class BehaviorTreeNodeElementWidget : GraphCore.GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeNode>, IBehaviorTreeWidget
     {
         public IBehaviorTreeNode behaviorTreeNode => node;
         protected BehaviorTreeNode node => element;
@@ -20,7 +21,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected NodeShape shape => NodeShape.Hex;
         
-        public override IEnumerable<IWidget> positionDependers => ports.Cast<IWidget>();
+        public override IEnumerable<GraphCore.IWidget> positionDependers => ports.Cast<GraphCore.IWidget>();
         
         protected readonly List<IPortWidget> ports = new List<IPortWidget>();
 
@@ -31,7 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
         private readonly List<string> settingNames = new List<string>();
         private float currentInnerWidth;
         
-        public override IEnumerable<IWidget> subWidgets => element.ports.Select(port => canvas.Widget(port));
+        public override IEnumerable<GraphCore.IWidget> subWidgets => element.ports.Select(port => canvas.Widget(port));
 
         public Rect LastExecutionStateIconRect { get; private set; }
         public Rect IconRect { get; private set; }
@@ -114,7 +115,7 @@ namespace ArcaneOnyx.BehaviorTree
             set => edgePosition = InnerToEdgePosition(value);
         }
         
-        public override void ExpandDragGroup(HashSet<IGraphElement> dragGroup)
+        public override void ExpandDragGroup(HashSet<GraphCore.IGraphElement> dragGroup)
         {
             if (BoltCore.Configuration.carryChildren)
             {

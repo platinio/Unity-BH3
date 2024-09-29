@@ -5,6 +5,11 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
+using GraphReference = ArcaneOnyx.GraphCore.GraphReference;
+using IGraphNesterElement = ArcaneOnyx.GraphCore.IGraphNesterElement;
+using IGraphRoot = ArcaneOnyx.GraphCore.IGraphRoot;
+using IMacro = ArcaneOnyx.GraphCore.IMacro;
+using LudiqGraphsEditorUtility = ArcaneOnyx.GraphCore.LudiqGraphsEditorUtility;
 using UnityObject = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -120,7 +125,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         private void HandleClipboard()
         {
-            if (e.IsExecuteCommand("Copy"))
+            if (e.IsExecuteCommand("Copy") || e.IsValidateCommand("Paste"))
             {
                 selection.RemoveWhere(x =>
                 {

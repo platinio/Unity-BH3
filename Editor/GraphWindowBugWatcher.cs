@@ -17,22 +17,43 @@ namespace ArcaneOnyx.BehaviorTree
             WatchActiveContextChangedBug();
         }
 
+        private static bool windowWasOpen;
+        private static bool needsToClearSelection;
+        private static bool behaviorTreeIsOpen = false;
+        
         private static void WatchActiveContextChangedBug()
         {
-            GraphWindow.activeContextChanged -= OnWindowActiveContextChange;
-            GraphWindow.activeContextChanged += OnWindowActiveContextChange;
+            //EditorApplication.update -= Update;
+            //EditorApplication.update += Update;
             
-            AssemblyReloadEvents.afterAssemblyReload -= WatchActiveContextChangedBug;
-            AssemblyReloadEvents.afterAssemblyReload += WatchActiveContextChangedBug;
+            //GraphWindow.activeContextChanged -= OnWindowActiveContextChange;
+            //GraphWindow.activeContextChanged += OnWindowActiveContextChange;
+            
+            //AssemblyReloadEvents.afterAssemblyReload -= WatchActiveContextChangedBug;
+            //AssemblyReloadEvents.afterAssemblyReload += WatchActiveContextChangedBug;
         }
 
-        private static void OnWindowActiveContextChange(IGraphContext context)
+        private static void Update()
         {
-            if (context?.reference != null && context.reference.graph is BehaviorTreeGraph)
+            if ((GraphWindow.active as object) != null && !GraphWindow.active.hasFocus && behaviorTreeIsOpen)
             {
-                GraphWindow.active.Close();
-                GraphCore.GraphWindow.OpenTab<BehaviorTreeGraphWindow>(context.reference);
+                windowWasOpen = false;
+                behaviorTreeIsOpen = false;
+                GraphWindow.active.context.selection.Clear();
+                GraphClipboard.groupClipboard.Clear();
             }
+            
+            if (!windowWasOpen) windowWasOpen = (GraphWindow.active as object) != null && GraphWindow.active.hasFocus;
+            if (!behaviorTreeIsOpen) behaviorTreeIsOpen = (GraphCore.GraphWindow.active as object) != null && GraphCore.GraphWindow.active.hasFocus;
+
+            /*
+            if (windowWasOpen)
+            {
+                GraphWindow.active.context.selection.Clear();
+                GraphClipboard.groupClipboard.Clear();
+            }
+
+            windowWasOpen = (GraphWindow.active as object) != null && GraphWindow.active.hasFocus;*/
         }
     }
 }

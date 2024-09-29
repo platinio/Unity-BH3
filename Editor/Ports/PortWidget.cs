@@ -1,13 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using GraphGUI = ArcaneOnyx.GraphCore.GraphGUI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [Widget(typeof(IPort))]
-    public abstract class PortWidget<TPort> : Widget<BehaviorTreeCanvas, TPort>, IPortWidget where TPort : class, IPort
+    [Unity.VisualScripting.Widget(typeof(IPort))]
+    public abstract class PortWidget<TPort> : GraphCore.Widget<BehaviorTreeCanvas, TPort>, IPortWidget where TPort : class, IPort
     {
         protected PortWidget(BehaviorTreeCanvas canvas, TPort port) : base(canvas, port) { }
 
@@ -38,17 +40,17 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected PortDescription description { get; private set; }
 
-        public Metadata inspectorMetadata { get; private set; }
+        public Unity.VisualScripting.Metadata inspectorMetadata { get; private set; }
 
-        protected Inspector inspector { get; private set; }
+        protected Unity.VisualScripting.Inspector inspector { get; private set; }
 
-        public override Metadata FetchMetadata()
+        public override Unity.VisualScripting.Metadata FetchMetadata()
         {
             //return description.getMetadata(unitWidget.metadata);
             return null;
         }
 
-        public virtual Metadata FetchInspectorMetadata()
+        public virtual Unity.VisualScripting.Metadata FetchInspectorMetadata()
         {
             return null;
         }
@@ -238,9 +240,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Positioning
 
-        public override IEnumerable<IWidget> positionDependencies => ((IWidget)unitWidget).Yield();
-
-        public override IEnumerable<IWidget> positionDependers => port.connections.Select(connection => (IWidget) canvas.Widget(connection));
+        public override IEnumerable<GraphCore.IWidget> positionDependencies => ((GraphCore.IWidget)unitWidget).Yield();
+       
+        public override IEnumerable<GraphCore.IWidget> positionDependers => port.connections.Select(connection => (GraphCore.IWidget) canvas.Widget(connection));
 
         protected abstract Edge edge { get; }
 

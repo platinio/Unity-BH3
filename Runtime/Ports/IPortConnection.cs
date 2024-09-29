@@ -19,7 +19,7 @@ namespace ArcaneOnyx.BehaviorTree
      * if the implementations point both members to the same actual object.
      */
 
-    public interface IPortConnection : IConnection<IOutputPort, IInputPort>, IGraphElementWithDebugData
+    public interface IPortConnection : IConnection<IOutputPort, IInputPort>, GraphCore.IGraphElementWithDebugData
     {
         new BehaviorTreeGraph graph { get; }
     }

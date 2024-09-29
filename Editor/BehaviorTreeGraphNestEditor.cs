@@ -1,13 +1,23 @@
 ﻿using System;
 using System.Linq;
-using ArcaneOnyx.BehaviorTree;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using GraphReference = ArcaneOnyx.GraphCore.GraphReference;
+using GraphWindow = ArcaneOnyx.GraphCore.GraphWindow;
+using IGraph = ArcaneOnyx.GraphCore.IGraph;
+using IGraphNest = ArcaneOnyx.GraphCore.IGraphNest;
+using IGraphNester = ArcaneOnyx.GraphCore.IGraphNester;
+using IGraphNesterElement = ArcaneOnyx.GraphCore.IGraphNesterElement;
+using IGraphRoot = ArcaneOnyx.GraphCore.IGraphRoot;
+using IMacro = ArcaneOnyx.GraphCore.IMacro;
+using LudiqGraphsEditorUtility = ArcaneOnyx.GraphCore.LudiqGraphsEditorUtility;
+using Serialization = ArcaneOnyx.GraphCore.Serialization;
 using UnityObject = UnityEngine.Object;
 
-namespace Unity.VisualScripting
+namespace ArcaneOnyx.BehaviorTree
 {
-    [Editor(typeof(GraphNest<BehaviorTreeGraph, BehaviorTreeGraphAsset>))]
+    [Editor(typeof(GraphCore.GraphNest<BehaviorTreeGraph, BehaviorTreeGraphAsset>))]
     public class BehaviorTreeGraphNestEditor : Inspector
     {
         public BehaviorTreeGraphNestEditor(Metadata metadata) : base(metadata) { }
@@ -387,7 +397,7 @@ namespace Unity.VisualScripting
             if (GUI.Button(position, "Convert", Styles.convertButton))
             {
                 var embedGraph = (IGraph)embedGraphMetadata.value;
-                var hasSceneReferences = embedGraph.Serialize().objectReferences.Any(uo => uo.IsSceneBound());
+                var hasSceneReferences = Serialization.Serialize(embedGraph).objectReferences.Any(uo => uo.IsSceneBound());
 
                 if (hasSceneReferences && !EditorUtility.DisplayDialog("Scene References Detected", "This graph contains references to objects in the scene that will be lost when converting to a macro. Are you sure you want to continue?", "Convert", "Cancel"))
                 {

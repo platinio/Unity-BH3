@@ -1,9 +1,9 @@
-using Unity.VisualScripting;
+using ArcaneOnyx.GraphCore;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [Widget(typeof(RunBehaviorTreeGraphNode))]
+    [Unity.VisualScripting.Widget(typeof(RunBehaviorTreeGraphNode))]
     public class RunBehaviorTreeNodeElementWidget : BehaviorTreeNodeElementWidget
     {
         public RunBehaviorTreeNodeElementWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)

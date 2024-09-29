@@ -4,12 +4,12 @@ namespace ArcaneOnyx.BehaviorTree
 {
     public class BehaviorTreeVariablesPanel : ArcaneOnyx.GraphCore.VariablesPanel
     {
-        public BehaviorTreeVariablesPanel(IGraphContext context) : base(context)
+        public BehaviorTreeVariablesPanel(GraphCore.IGraphContext context) : base(context)
         {
             EditTab(context.reference, tabs[0]);
         }
         
-        private void EditTab(GraphReference reference, Tab tab)
+        private void EditTab(GraphCore.GraphReference reference, Tab tab)
         {
 
             if (reference.scriptableObject is BehaviorTreeGraphAsset behaviorTreeGraphAsset)
