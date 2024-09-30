@@ -54,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree
                     throw;
                 }
                 #else
-                OverrideGraphAndSubGraphVariables(graphInstance);
+                OverrideGraphAndSubGraphVariables(graphInstance, graph);
                 behaviorTreeGraph.OnAwake();
                 #endif
             }
