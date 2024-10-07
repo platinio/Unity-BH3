@@ -525,6 +525,7 @@ namespace ArcaneOnyx.BehaviorTree
                         {
                             yield return new DropdownOption((Action)( () =>
                             {
+                                UndoUtility.RecordEditedObject("Create Node");
                                 BehaviorTreeNode selectedNode = selection.First() as BehaviorTreeNode;
 
                                 var conditionalExecution = Activator.CreateInstance(nodeType) as ConditionalExecution;
@@ -536,7 +537,6 @@ namespace ArcaneOnyx.BehaviorTree
                                 GUI.changed = true;
                            
                                 node.AddConditionalExecution(conditionalExecution);
-                                
                             }), NodeUtil.GetNodeGraphCreateMenu(nodeType));
                         }
                     }
