@@ -207,12 +207,6 @@ namespace ArcaneOnyx.BehaviorTree
             outsideBox.position += new Vector2(-borderSize / 2.0f, -borderSize / 2.0f);
             outsideBox.width += borderSize;
             outsideBox.height += borderSize;
-                    
-            int conditionalExecutionCount = node.ConditionalExecutions.Count;
-            float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
-
-            outsideBox.height += conditionalExecutionHeight;
-            outsideBox.position -= new Vector2(0, conditionalExecutionHeight);
 
             outsideTexture = null;
             if (outsideTexture == null)
@@ -536,7 +530,6 @@ namespace ArcaneOnyx.BehaviorTree
                                 selection.Select(conditionalExecution);
                                 GUI.changed = true;
                            
-                                node.AddConditionalExecution(conditionalExecution);
                             }), NodeUtil.GetNodeGraphCreateMenu(nodeType));
                         }
                     }

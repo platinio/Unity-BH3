@@ -139,16 +139,6 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 sourcePosition = canvas.Widget(element.source).position;
                 destinationPosition = canvas.Widget(element.destination).position;
-
-                if (element.destination is GameplayNode gameplayNode)
-                {
-                    int conditionalExecutionCount = gameplayNode.ConditionalExecutions.Count;
-                    float conditionalExecutionHeight = 45.0f * conditionalExecutionCount;
-
-                    destinationPosition.height += conditionalExecutionHeight;
-                    destinationPosition.position -= new Vector2(0, conditionalExecutionHeight);
-                }
-
             }
             catch 
             {
@@ -157,11 +147,8 @@ namespace ArcaneOnyx.BehaviorTree
                 graph.elements.Remove(element);
                 return;
             }
-            
-
-            Vector2 sourceClosestPoint;
-            Vector2 destinationClosestPoint;
-            LudiqGUIUtility.ClosestPoints(sourcePosition, destinationPosition, out sourceClosestPoint, out destinationClosestPoint);
+           
+            LudiqGUIUtility.ClosestPoints(sourcePosition, destinationPosition, out var sourceClosestPoint, out var destinationClosestPoint);
 
 
             sourceEdge = Edge.Bottom;

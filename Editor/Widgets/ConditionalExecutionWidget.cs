@@ -68,6 +68,8 @@ namespace ArcaneOnyx.BehaviorTree
             
             if (IsRepaint)
             {
+                DrawOutsideBox(position);
+                
                 using (LudiqGUI.color.Override(element.Color))
                 {
                     Styles.background.normal.background = element.NodeBackground;

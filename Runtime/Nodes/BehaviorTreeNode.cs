@@ -51,7 +51,11 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public IEnumerable<IPort> validPorts => LinqUtility.Concat<IPort>(validInputs, validOutputs);
 
-        [Serialize] private List<ConditionalExecution> conditionalExecutions = new();
+        [DoNotSerialize]
+        private List<ConditionalExecution> conditionalExecutions = new();
+
+        [DoNotSerialize] 
+        private Dictionary<Guid, int> conditionalExecutionIndexCache = new();
 
         public virtual bool CanUseConditionalExecutions => true;
         public event Action onPortsChanged;
@@ -96,6 +100,24 @@ namespace ArcaneOnyx.BehaviorTree
         public bool isDefined { get; private set; }
         public bool failedToDefine { get; }
         public Exception definitionException { get; }
+
+        public override void OnAwake()
+        {
+            base.OnAwake();
+
+            conditionalExecutions = new();
+            
+            foreach (var graphElement in graph.elements)
+            {
+                if (graphElement is ConditionalExecution conditionalExecutionNode)
+                {
+                    if (conditionalExecutionNode.Owner == this)
+                    {
+                        conditionalExecutions.Add(conditionalExecutionNode);
+                    }
+                }
+            }
+        }
 
         public void Define()
         {
@@ -158,10 +180,18 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.BeforeRemove();
             Disconnect();
-            
-            for (int i = conditionalExecutions.Count - 1; i >= 0; i--)
+
+            for (int i = graph.elements.Count - 1; i >= 0; i--)
             {
-                graph.elements.Remove(conditionalExecutions[i]);
+                var graphElement = graph.elements.ElementAt(i);
+                
+                if (graphElement is ConditionalExecution conditionalExecutionNode)
+                {
+                    if (conditionalExecutionNode.Owner == this)
+                    {
+                        graph.elements.Remove(graphElement);
+                    }
+                }
             }
         }
 
@@ -192,10 +222,24 @@ namespace ArcaneOnyx.BehaviorTree
             return ValueInput(typeof(T), key);
         }
         
+        protected ValueInput ValueInput<T>(string key, object defaultValue)
+        {
+            return ValueInput(typeof(T), key, defaultValue);
+        }
+        
         protected ValueInput ValueInput(Type type, string key)
         {
             //EnsureUniqueInput(key);
             var port = new ValueInput(key, type);
+            valueInputs.Add(port);
+            return port;
+        }
+        
+        protected ValueInput ValueInput(Type type, string key, object defaultValue)
+        {
+            //EnsureUniqueInput(key);
+            var port = new ValueInput(key, type);
+            port.SetDefaultValue(defaultValue);
             valueInputs.Add(port);
             return port;
         }
@@ -268,16 +312,31 @@ namespace ArcaneOnyx.BehaviorTree
         
         public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => conditionalExecutions;
         
-        public void AddConditionalExecution(ConditionalExecution conditionalExecution)
-        {
-            conditionalExecutions.Add(conditionalExecution);
-        }
-
         public int GetConditionalIndex(ConditionalExecution conditionalExecution)
         {
-            return conditionalExecutions.IndexOf(conditionalExecution);
+            if (conditionalExecutionIndexCache.TryGetValue(conditionalExecution.guid, out int index))
+            {
+                return index;
+            }
+
+            index = 0;
+            
+            foreach (var graphElement in graph.elements)
+            {
+                if (graphElement is ConditionalExecution conditionalExecutionNode)
+                {
+                    if (conditionalExecutionNode.Owner == this)
+                    {
+                        if (conditionalExecutionNode == conditionalExecution) break;
+                        index++;
+                    }
+                }
+            }
+
+            conditionalExecutionIndexCache[conditionalExecution.guid] = index;
+            return index;
         }
-        
+
         public sealed override ExecutionStatus OnUpdateInternal()
         {
             foreach (var conditionalExecution in conditionalExecutions)
@@ -290,11 +349,6 @@ namespace ArcaneOnyx.BehaviorTree
             }
             
             return base.OnUpdateInternal();
-        }
-
-        public void OnRemoveConditionalExecution(ConditionalExecution conditionalExecution)
-        {
-            conditionalExecutions.Remove(conditionalExecution);
         }
     }
 }

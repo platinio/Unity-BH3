@@ -24,16 +24,6 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         public abstract bool Evaluate();
-
-        public override void BeforeRemove()
-        {
-            base.BeforeRemove();
-
-            foreach (var node in graph.Nodes)
-            {
-                node.OnRemoveConditionalExecution(this);
-            }
-        }
     }
 }
 
