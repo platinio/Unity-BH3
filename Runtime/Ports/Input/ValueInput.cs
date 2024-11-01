@@ -170,8 +170,8 @@ namespace ArcaneOnyx.BehaviorTree
             }
             else
             {
+                if (behaviorTreeNode.defaultValues.TryGetValue(key, out var value)) return value;
                 throw new MissingValuePortInputException(key);
-                return default;
             }
         }
         
