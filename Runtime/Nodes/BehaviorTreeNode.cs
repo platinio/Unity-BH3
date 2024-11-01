@@ -180,19 +180,6 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.BeforeRemove();
             Disconnect();
-
-            for (int i = graph.elements.Count - 1; i >= 0; i--)
-            {
-                var graphElement = graph.elements.ElementAt(i);
-                
-                if (graphElement is ConditionalExecution conditionalExecutionNode)
-                {
-                    if (conditionalExecutionNode.Owner == this)
-                    {
-                        graph.elements.Remove(graphElement);
-                    }
-                }
-            }
         }
 
         public void EnsureDefined()
@@ -239,8 +226,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             //EnsureUniqueInput(key);
             var port = new ValueInput(key, type);
-            port.SetDefaultValue(defaultValue);
             valueInputs.Add(port);
+            port.SetDefaultValue(defaultValue);
             return port;
         }
         
@@ -335,6 +322,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             conditionalExecutionIndexCache[conditionalExecution.guid] = index;
             return index;
+        }
+
+        public void ClearConditionalExecutionInexCache()
+        {
+            conditionalExecutionIndexCache.Clear();
         }
 
         public sealed override ExecutionStatus OnUpdateInternal()

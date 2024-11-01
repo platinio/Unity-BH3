@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -63,6 +64,53 @@ namespace ArcaneOnyx.BehaviorTree
             typeof(GameplayNode),
             typeof(Condition)
         };
+
+        public override void OnGUI()
+        {
+            base.OnGUI();
+            
+            if (HasInvalidConditionals())
+            {
+                RemoveInvalidConditionals();
+            }
+        }
+
+        private void RemoveInvalidConditionals()
+        {
+            UndoUtility.RecordEditedObject("Delete Graph Element");
+                
+            for (int i = graph.elements.Count - 1; i >= 0; i--)
+            {
+                var graphElement = graph.elements.ElementAt(i);
+                var conditionalExecution = graphElement as ConditionalExecution;
+                var owner = conditionalExecution?.Owner;
+                
+                if (conditionalExecution != null)
+                {
+                    if (owner == null || !graph.elements.Contains(owner))
+                    {
+                        graph.elements.Remove(graphElement);
+                    }
+                }
+            }
+        }
+
+        private bool HasInvalidConditionals()
+        {
+            for (int i = graph.elements.Count - 1; i >= 0; i--)
+            {
+                var graphElement = graph.elements.ElementAt(i);
+                if (IsInvalidConditional(graphElement as ConditionalExecution)) return true;
+            }
+
+            return false;
+        }
+
+        private bool IsInvalidConditional(ConditionalExecution conditionalExecution)
+        {
+            if (conditionalExecution == null) return false;
+            return conditionalExecution.Owner == null || !graph.elements.Contains(conditionalExecution.Owner);
+        }
 
         public override void Open()
         {

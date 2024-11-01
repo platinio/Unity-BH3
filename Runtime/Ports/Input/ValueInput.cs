@@ -171,6 +171,7 @@ namespace ArcaneOnyx.BehaviorTree
             else
             {
                 throw new MissingValuePortInputException(key);
+                return default;
             }
         }
         

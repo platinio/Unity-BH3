@@ -19,9 +19,14 @@ namespace ArcaneOnyx.BehaviorTree
         public override float zIndex {
             get
             {
-                if (node is ConditionalExecution conditionalExecution)
+                var conditionalExecution = node as ConditionalExecution;
+                var owner = conditionalExecution?.Owner;
+                
+                if (conditionalExecution != null && owner != null && conditionalExecution.graph.elements.Contains(owner))
                 {
-                    var w = canvas.Widget(conditionalExecution.Owner);
+                    var w = canvas.Widget(owner);
+                    if (w == null) return 0;
+                    
                     return w.zIndex + 0.5f;
                 }
 
@@ -48,6 +53,8 @@ namespace ArcaneOnyx.BehaviorTree
             float separation = 5.0f;
             
             var owner = (node as ConditionalExecution)?.Owner;
+            if (owner == null || !node.graph.elements.Contains(owner)) return;
+            
             int index = owner.GetConditionalIndex(node as ConditionalExecution) + 1;
 
             var widget = canvas.Widget(owner);

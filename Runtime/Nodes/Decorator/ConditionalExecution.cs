@@ -24,6 +24,19 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         public abstract bool Evaluate();
+
+        public override void BeforeRemove()
+        {
+            base.BeforeRemove();
+
+            foreach (var graphElement in graph.elements)
+            {
+                if (graphElement is ConditionalExecution conditionalExecution)
+                {
+                    if (conditionalExecution.owner == owner) owner.ClearConditionalExecutionInexCache();
+                }
+            }
+        }
     }
 }
 
