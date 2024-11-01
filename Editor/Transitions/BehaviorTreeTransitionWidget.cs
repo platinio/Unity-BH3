@@ -139,6 +139,20 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 sourcePosition = canvas.Widget(element.source).position;
                 destinationPosition = canvas.Widget(element.destination).position;
+
+                int conditionalCount = 0;
+
+                foreach (var graphElement in element.graph.elements)
+                {
+                    if (graphElement is ConditionalExecution conditionalExecution)
+                    {
+                        if (conditionalExecution.Owner == element.destination) conditionalCount++;
+                    }
+                }
+
+                destinationPosition.height += conditionalCount * 45.0f;
+                destinationPosition.position -= new Vector2(0, conditionalCount * 45.0f);
+
             }
             catch 
             {
