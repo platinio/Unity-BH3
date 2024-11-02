@@ -101,22 +101,10 @@ namespace ArcaneOnyx.BehaviorTree
         public bool failedToDefine { get; }
         public Exception definitionException { get; }
 
-        public override void OnAwake()
+       
+        public void AddConditionalExecution(ConditionalExecution conditionalExecution)
         {
-            base.OnAwake();
-
-            conditionalExecutions = new();
-            
-            foreach (var graphElement in graph.elements)
-            {
-                if (graphElement is ConditionalExecution conditionalExecutionNode)
-                {
-                    if (conditionalExecutionNode.Owner == this)
-                    {
-                        conditionalExecutions.Add(conditionalExecutionNode);
-                    }
-                }
-            }
+            conditionalExecutions.Add(conditionalExecution);
         }
 
         public void Define()
