@@ -172,12 +172,37 @@ namespace ArcaneOnyx.BehaviorTree
         {
             ConvertTransitionNodesIntoTaskNodeChild();
             SortContainerNodesChildren();
+            AddConditionalExecutionNodes();
             
             var nodes = Nodes;
-
+            
             foreach (var node in nodes)
             {
                 node.OnAwake();
+            }
+        }
+
+        private void AddConditionalExecutionNodes()
+        {
+            List<ConditionalExecution> conditionalExecutions = new();
+
+            foreach (var node in Nodes)
+            {
+                if (node is ConditionalExecution conditionalExecution)
+                {
+                    conditionalExecutions.Add(conditionalExecution);
+                }
+            }
+
+            foreach (var conditionalExecution in conditionalExecutions)
+            {
+                foreach (var node in Nodes)
+                {
+                    if (conditionalExecution.Owner == node)
+                    {
+                        node.AddConditionalExecution(conditionalExecution);
+                    }
+                }   
             }
         }
 
