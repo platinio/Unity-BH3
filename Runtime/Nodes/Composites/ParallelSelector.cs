@@ -11,6 +11,8 @@ namespace ArcaneOnyx.BehaviorTree
         public override string NodeName => "Parallel Selector";
         protected override string NodeIconPath => "NodeIcons/ParallelSelector";
 
+        public override string Description => "Executes child nodes at the same time.\nExecution ends when any child node returns SUCCESS.";
+
         public override ExecutionStatus OnUpdate()
         {
             for (int n = 0; n < GetChildren().Count; n++)

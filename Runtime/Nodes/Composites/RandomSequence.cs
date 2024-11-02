@@ -9,6 +9,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public override string NodeName => "Random Sequence";
         protected override string NodeIconPath => "NodeIcons/RandomSequence";
+        public override string Description => "Executes child nodes in random order.\nExecution ends when any child node returns SUCCESS.";
 
         public override void SortChildren()
         {

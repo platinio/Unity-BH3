@@ -7,6 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public override string NodeName => "Return Success";
         protected override string NodeIconPath => "NodeIcons/ReturnSuccess";
+        public override string Description => "Overrides child return value with SUCCESS";
         
         public override int MaxChildrenLimit => 1;
         

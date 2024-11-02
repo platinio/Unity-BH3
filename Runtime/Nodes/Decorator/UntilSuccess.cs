@@ -6,6 +6,7 @@ namespace ArcaneOnyx.BehaviorTree
     public class UntilSuccess : Decorator
     {
         protected override string NodeIconPath => "NodeIcons/UntilSuccess";
+        public override string Description => "Runs child until return SUCCESS";
         public override string NodeName => "Until Success";
         
         public override int MaxChildrenLimit => 1;
