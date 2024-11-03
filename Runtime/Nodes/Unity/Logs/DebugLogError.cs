@@ -21,7 +21,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            Debug.LogError(LogText);
+            Debug.LogError(LogText.GetValue());
             return ExecutionStatus.Success;
         }
 
