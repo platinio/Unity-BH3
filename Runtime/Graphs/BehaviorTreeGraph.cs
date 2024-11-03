@@ -1,9 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using GraphPointer = ArcaneOnyx.GraphCore.GraphPointer;
+using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -59,6 +62,9 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize] 
         private Entry entryNode;
 
+        [SerializeAs(nameof(scriptGraphAssets))]
+        private List<ScriptGraphAsset> scriptGraphAssets = new();
+
         public Entry EntryNode => entryNode;
         
         public BehaviorTreeGraph() : base()
@@ -81,6 +87,37 @@ namespace ArcaneOnyx.BehaviorTree
             valueInputDefinitions = new PortDefinitionCollection<ValueInputDefinition>();
             valueOutputDefinitions = new PortDefinitionCollection<ValueOutputDefinition>();
         }
+
+        public void DestroyUnusedScriptGraphAssets()
+        {
+            List<ScriptGraphAsset> unusedScriptGraphAssets = ScriptGraphAssetsRepository.Instance.GetScriptGraphAssets(entryNode.guid.ToString());
+            if (unusedScriptGraphAssets == null) return;
+            
+            foreach (var graphElement in elements)
+            {
+                if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
+
+                foreach (var scriptGraphAsset in graphElement.scriptGraphAssets)
+                {
+                    unusedScriptGraphAssets.Remove(scriptGraphAsset);
+                }
+            }
+
+            for (int i = unusedScriptGraphAssets.Count - 1; i >= 0; i--)
+            {
+                ScriptGraphAssetsRepository.Instance.RemoveScriptGraphAsset(entryNode.guid.ToString(), unusedScriptGraphAssets[i]);
+                Object.DestroyImmediate(unusedScriptGraphAssets[i], true);
+            }
+        }
+
+        public void AddScriptGraphAssets(IEnumerable<ScriptGraphAsset> newScriptGraphAssets)
+        {
+            foreach (var scriptGraphAsset in newScriptGraphAssets)
+            {
+                ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(entryNode.guid.ToString(), scriptGraphAsset);
+            }
+        }
+       
 
         public override GraphCore.IGraphData CreateData()
         {

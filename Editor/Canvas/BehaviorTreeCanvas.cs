@@ -73,6 +73,17 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 RemoveInvalidConditionals();
             }
+
+            ScriptGraphAssetsRepository.Instance.RemoveInvalid();
+            
+            //read new script graph assets
+            foreach (var graphElement in graph.elements)
+            {
+                if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
+                graph.AddScriptGraphAssets(graphElement.scriptGraphAssets);
+            }
+            
+            graph.DestroyUnusedScriptGraphAssets();
         }
 
         private void RemoveInvalidConditionals()
