@@ -8,6 +8,9 @@ namespace ArcaneOnyx.Share
     public class AIEntity : GameEntity
     {
         [SerializeField] private NavMeshAgent navMeshAgent;
+        [SerializeField] private Transform aimTarget;
+
+        public Transform AimTarget => aimTarget;
         
         protected virtual void Start()
         {

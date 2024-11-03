@@ -1,14 +1,8 @@
 using UnityEngine;
-using System.Collections;
-using System.Diagnostics;
-
-/*
- * Rotates the spine of the agent such that the gun points in the direction of the target.
- * */
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
-    public class RotateToAimGunScript : MonoBehaviour
+    public class RotateAim : MonoBehaviour
     {
         public Vector3 rotationOffset;
         public Transform spineBone;
@@ -53,6 +47,11 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             {
                 //minDistToAim = 10f;
             }
+        }
+
+        public void UpdateTarget(Transform target)
+        {
+            targetTransform = target;
         }
 
         void LateUpdate()
