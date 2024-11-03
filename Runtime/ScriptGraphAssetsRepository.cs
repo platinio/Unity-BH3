@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
 using Unity.VisualScripting;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -15,6 +17,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             get
             {
+                #if UNITY_EDITOR
                 if (instance == null)
                 {
                     instance = AssetDatabase.LoadAssetAtPath<ScriptGraphAssetsRepository>(AssetsPath);
@@ -28,6 +31,9 @@ namespace ArcaneOnyx.BehaviorTree
                 }
 
                 return instance;
+                #else
+                return null;
+                #endif
             }
         }
 
@@ -71,7 +77,9 @@ namespace ArcaneOnyx.BehaviorTree
             uniqueAssets.Add(scriptGraphAsset);
             repository.Add(new ScriptGraphAssetKeyValuePair(key, scriptGraphAsset));
             
+            #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+            #endif
         }
 
         public void RemoveScriptGraphAsset(string key, ScriptGraphAsset scriptGraphAsset)
@@ -84,7 +92,9 @@ namespace ArcaneOnyx.BehaviorTree
                 if (scriptGraphAssetKeyValuePair.Value == scriptGraphAsset)
                 {
                     repository.RemoveAt(i);
+                    #if UNITY_EDITOR
                     EditorUtility.SetDirty(this);
+                    #endif
                     return;
                 }
             }
