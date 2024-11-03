@@ -18,6 +18,7 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable] protected bool WaitForPathComplete = false;
 
         public override string NodeName => "Set Nav Agent Position";
+        public override string Description => "Updates the nav agent destination";
 
         private NavMeshAgent navAgent = null;
         private bool setPositionWasCompleted = false;

@@ -8,27 +8,43 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Generate Random Navmesh Position")]
     public class GenerateRandomNavMeshPosition : GameplayNode
     {
-        [Header("Config")]
-        [Serialize, Inspectable] private FloatBlackboardVariable MinDistance = new(0.0f);
-        [Serialize, Inspectable] private FloatBlackboardVariable MaxDistance = new(0.0f);
-        [Serialize, Inspectable] private IntBlackboardVariable MaxTries = new(10);
-        [Serialize, Inspectable] private FloatBlackboardVariable SampleDistance = new(5.0f);
+        [DoNotSerialize]
+        public ValueInput MinDistance { get; private set; }
+        [DoNotSerialize]
+        public ValueInput MaxDistance { get; private set; }
+        [DoNotSerialize]
+        public ValueInput MaxTries { get; private set; }
+        [DoNotSerialize]
+        public ValueInput SampleDistance { get; private set; }
 
-        [Header("Keys")] [Serialize, Inspectable]
-        private string GeneratePositionKey;
+        [Serialize, Inspectable] private VariableKind VariableKind;
+        [DoNotSerialize]
+        public ValueInput PositionKey { get; private set; }
 
         public override string NodeName => "Generate Random Nav Position";
+        public override string Description => "Generates a random nav mesh position, returns SUCCESS/FAILURE indicating if it was possible to generate";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            MinDistance = ValueInput<float>(nameof(MinDistance), 0.0f);
+            MaxDistance = ValueInput<float>(nameof(MaxDistance), 0.0f);
+            MaxTries = ValueInput<int>(nameof(MaxTries), 3);
+            SampleDistance = ValueInput<float>(nameof(SampleDistance), 0.0f);
+            PositionKey = ValueInput<string>(nameof(PositionKey), string.Empty);
+        }
 
         public override ExecutionStatus OnUpdate()
         {
-            for (int i = 0; i < MaxTries.GetValue(BehaviorTreeMachine); i++)
+            for (int i = 0; i < (int) MaxTries.GetValue(); i++)
             {
                 Vector2 dir = Random.insideUnitCircle;
-                float d = Random.Range(MinDistance.GetValue(BehaviorTreeMachine), MaxDistance.GetValue(BehaviorTreeMachine));
+                float d = Random.Range((float) MinDistance.GetValue(), (float)MaxDistance.GetValue());
 
                 Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
                 
-                if (NavMesh.SamplePosition(randomPosition, out var hit, SampleDistance.GetValue(BehaviorTreeMachine), NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(randomPosition, out var hit, (int) SampleDistance.GetValue(), NavMesh.AllAreas))
                 {
                     SavePosition(hit.position);
                     return ExecutionStatus.Success;
@@ -38,9 +54,9 @@ namespace ArcaneOnyx.BehaviorTree
             return ExecutionStatus.Failure;
         }
 
-        private void SavePosition(Vector3 position)
+        private void SavePosition(Vector3 value)
         {
-            BehaviorTreeMachine.GraphInstance.declarations.Set(GeneratePositionKey, position);
+            SaveVariable((string)PositionKey.GetValue(), VariableKind, value);
         }
     }
 }

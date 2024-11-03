@@ -7,21 +7,39 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Animator/Play Animation")]
     public class PlayAnimation : GameplayNode
     {
-        [Serialize] [Inspectable] private string stateName = "";
-        [Serialize] [Inspectable] private int layer = 0;
-        [Serialize] [Inspectable] private float normalizeTransitionDiration = 0.15f;
-        [Serialize] [Inspectable] private float normalizeTimeOffset = 0.0f;
-
+        [DoNotSerialize]
+        public ValueInput Animator { get; private set; }
+        [DoNotSerialize]
+        public ValueInput StateName { get; private set; }
+        [DoNotSerialize]
+        public ValueInput Layer { get; private set; }
+        [DoNotSerialize]
+        public ValueInput TransitionDuration { get; private set; }
+        [DoNotSerialize]
+        public ValueInput TimeOffset { get; private set; }
+        
         public override string NodeName => "Play Animation";
 
-       
+        protected override void Definition()
+        {
+            base.Definition();
+
+            Animator = ValueInput<string>(nameof(Animator), null);
+            StateName = ValueInput<string>(nameof(StateName), string.Empty);
+            Layer = ValueInput<int>(nameof(Layer), 0);
+            TransitionDuration = ValueInput<string>(nameof(TransitionDuration), 0.0f);
+            TimeOffset = ValueInput<string>(nameof(TimeOffset), 0.0f);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            if (!VariableDeclarations.IsDefined("Animator")) return ExecutionStatus.Failure;
+            var animator = Animator.GetValue() as Animator;
+            string stateName = (string) StateName.GetValue();
+            float normalizeTransitionDuration = (float) TransitionDuration.GetValue();
+            int layer = (int) Layer.GetValue();
+            float normalizeTimeOffset = (float) TimeOffset.GetValue();
             
-            var animator = VariableDeclarations.Get<Animator>("Animator");
-
-            animator.CrossFade(stateName, normalizeTransitionDiration, layer, normalizeTimeOffset);
+            animator.CrossFade(stateName, normalizeTransitionDuration, layer, normalizeTimeOffset);
             return ExecutionStatus.Success;
         }
     }

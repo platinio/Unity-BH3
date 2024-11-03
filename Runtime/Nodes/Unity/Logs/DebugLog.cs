@@ -4,16 +4,24 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Logs/Log")]
-    public class Log : GameplayNode
+    [GraphCreateMenu("Unity/Logs/Debug Log")]
+    public class DebugLog : GameplayNode
     {
-        [Serialize] [Inspectable] private string logText;
+        [DoNotSerialize]
+        public ValueInput LogText { get; private set; }
 
-        public override string NodeName => "Log";
+        public override string NodeName => "Debug Log";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            LogText = ValueInput<string>(nameof(LogText), string.Empty);
+        }
 
         public override ExecutionStatus OnUpdate()
         {
-            Debug.Log(logText);
+            Debug.Log(LogText);
             return ExecutionStatus.Success;
         }
 
