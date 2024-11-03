@@ -280,7 +280,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (!node.ShowIcon)
             {
                 Rect newPosition = position;
-                newPosition.height = 60 + (GetPortSectionHeight());
+                newPosition.height = 70 + (GetPortSectionHeight());
                 position = newPosition;
             }
             
