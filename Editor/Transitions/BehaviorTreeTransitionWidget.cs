@@ -152,7 +152,8 @@ namespace ArcaneOnyx.BehaviorTree
 
                 destinationPosition.height += conditionalCount * 45.0f;
                 destinationPosition.position -= new Vector2(0, conditionalCount * 45.0f);
-
+             
+                sourcePosition.position += new Vector2(0, conditionalCount * 45.0f);
             }
             catch 
             {
