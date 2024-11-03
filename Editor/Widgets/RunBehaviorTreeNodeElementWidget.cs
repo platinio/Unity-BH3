@@ -42,19 +42,24 @@ namespace ArcaneOnyx.BehaviorTree
                 if (graphElement is RunBehaviorTreeGraphNode runNode)
                 {
                     RunBehaviorTreeNodeElementWidget w = behaviorTreeGraph.Canvas().Widget(runNode) as RunBehaviorTreeNodeElementWidget;
+                    w.CachePosition();
                     w.DrawForeground(subBehaviorTreeOffset, true, false);
                 }
                 else if (graphElement is BehaviorTreeNode node)
                 {
                     var w = behaviorTreeGraph.Canvas().Widget(node) as BehaviorTreeNodeElementWidget;
+                    w.CachePosition();
                     w.DrawForeground(subBehaviorTreeOffset, true, false);
                 }
                 else if (graphElement is BehaviorTreeTransition transition)
                 {
                     var w = behaviorTreeGraph.Canvas().Widget(transition) as BehaviorTreeTransitionWidget;
+                    w.CachePosition();
                     w.DrawConnection(subBehaviorTreeOffset);
                 }
             }
+            
+            //GraphDrawer.DrawSelectionBox(position, GetBorderThickness(), Color.cyan);
         }
         
         private BehaviorTreeGraph GetBehaviorTreeGraph()
@@ -87,7 +92,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private Rect CalculateSubBehaviorTreeBox()
         {
-            Vector2 margin = new Vector2(300, 300);
+            Vector2 margin = new Vector2(600, 200);
             
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
@@ -146,28 +151,6 @@ namespace ArcaneOnyx.BehaviorTree
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null)
             {
                 base.CachePosition();
-                return;
-            }
-
-            BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
-
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (graphElement is RunBehaviorTreeGraphNode runNode)
-                {
-                    var w = behaviorTreeGraph.Canvas().Widget(runNode) as RunBehaviorTreeNodeElementWidget;
-                    w.CachePosition();
-                }
-                else if (graphElement is BehaviorTreeNode node)
-                {
-                    var w = behaviorTreeGraph.Canvas().Widget(node) as BehaviorTreeNodeElementWidget;
-                    w.CachePosition();
-                }
-                else if (graphElement is BehaviorTreeTransition transition)
-                {
-                    var w = behaviorTreeGraph.Canvas().Widget(transition) as BehaviorTreeTransitionWidget;
-                    w.CachePosition();
-                }
             }
         }
     }
