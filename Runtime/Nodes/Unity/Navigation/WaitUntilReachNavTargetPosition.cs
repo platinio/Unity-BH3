@@ -27,6 +27,6 @@ namespace ArcaneOnyx.BehaviorTree
             navAgent = GetTarget(Target).GetComponent<NavMeshAgent>();
         }
 
-        public override ExecutionStatus OnUpdate() => navAgent.remainingDistance < Mathf.Epsilon ? ExecutionStatus.Success : ExecutionStatus.Running;
+        public override ExecutionStatus OnUpdate() => navAgent.remainingDistance < navAgent.stoppingDistance ? ExecutionStatus.Success : ExecutionStatus.Running;
     }
 }
