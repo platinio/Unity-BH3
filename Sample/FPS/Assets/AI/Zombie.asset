@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6aefa9c7ad4a4d3a9fb7ae5666f9b0b2, type: 3}
+  m_Name: Zombie
+  m_EditorClassIdentifier: 
+  _data:
+    _json: '{"declarations":{"Kind":"Graph","collection":{"$content":[],"$version":"A"},"$version":"A"},"graph":{"controlInputDefinitions":[],"controlOutputDefinitions":[],"valueInputDefinitions":[],"valueOutputDefinitions":[],"entryNode":{"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-96.0,"yMin":-15.0,"xMax":54.0,"yMax":85.0},"guid":"c194ae04-bdbd-44e8-912e-1a8853fdea68","$id":"8"},"scriptGraphAssets":[],"title":null,"summary":null,"pan":{"x":830.7101,"y":928.2197},"zoom":0.4,"elements":[{"PlaceHolderNodes":[{"owner":{"$ref":"13"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":85.0,"xMax":-19.0,"yMax":132.5},"guid":"65c67bbb-f3ad-4fe6-b835-ec24e599fe2c","$id":"15"},{"owner":{"$ref":"13"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":132.5,"xMax":-19.0,"yMax":134.5},"guid":"a59aba67-09b0-4be0-8b98-843c078695b1","$id":"18"},{"owner":{"$ref":"13"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":132.5,"xMax":-19.0,"yMax":180.0},"guid":"d8e9e80f-59c5-4c22-b79c-a0d41bbe5c3d","$id":"21"}],"source":{"$ref":"8"},"destination":{"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-96.0,"yMin":180.0,"xMax":54.0,"yMax":280.0},"guid":"4bd3eee3-2ca6-4d59-9ded-1c71194e0dcf","$type":"ArcaneOnyx.BehaviorTree.Repeater","$id":"24"},"Position":{"xMin":-21.0,"yMin":132.0,"xMax":-21.0,"yMax":132.0},"transitionIndex":0,"guid":"796ba721-e68c-4cde-b313-68dacfb25240","$type":"ArcaneOnyx.BehaviorTree.BehaviorTreeTransition","$id":"13"},{"PlaceHolderNodes":[{"owner":{"$ref":"27"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":280.0,"xMax":-19.0,"yMax":338.0},"guid":"f7bc9e04-7688-4657-9648-51a102e4c4b3","$id":"29"},{"owner":{"$ref":"27"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":338.0,"xMax":-19.0,"yMax":340.0},"guid":"5b6878d1-f30e-474c-99e1-b423858e5d8a","$id":"32"},{"owner":{"$ref":"27"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":338.0,"xMax":-19.0,"yMax":396.0},"guid":"0ae46f96-72fc-4d5a-9c91-ab1b9e19c1a0","$id":"35"}],"source":{"$ref":"24"},"destination":{"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-96.0,"yMin":396.0,"xMax":54.0,"yMax":496.0},"guid":"dd17b468-9c0b-4fba-8048-a79c2ce13ac5","$type":"ArcaneOnyx.BehaviorTree.Selector","$id":"38"},"Position":{"xMin":-21.0,"yMin":338.0,"xMax":-21.0,"yMax":338.0},"transitionIndex":0,"guid":"ef26a3de-c496-4ca3-a258-588c676bad90","$type":"ArcaneOnyx.BehaviorTree.BehaviorTreeTransition","$id":"27"},{"PlaceHolderNodes":[{"owner":{"$ref":"41"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":496.0,"xMax":-19.0,"yMax":584.0},"guid":"dbeb46d0-3c7c-49d5-a1fb-5e0087e1e210","$id":"43"},{"owner":{"$ref":"41"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-21.0,"yMin":584.0,"xMax":1298.0,"yMax":586.0},"guid":"2aa24a9a-60e1-4625-a4d4-0fc3d70c01e2","$id":"46"},{"owner":{"$ref":"41"},"IsSelected":false,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":1296.0,"yMin":584.0,"xMax":1298.0,"yMax":672.0},"guid":"196228b6-7524-4ce1-9a9c-9bb23ec2222d","$id":"49"}],"source":{"$ref":"38"},"destination":{"behaviorTreeGraphAsset":0,"relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
+      Platinio.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":696.0,"yMin":672.0,"xMax":1896.0,"yMax":1475.0},"guid":"9c595ec2-444a-470c-9296-1c2a38cc8cae","$type":"ArcaneOnyx.BehaviorTree.RunBehaviorTreeGraphNode","$id":"52"},"Position":{"xMin":638.0,"yMin":584.0,"xMax":638.0,"yMax":584.0},"transitionIndex":0,"guid":"87d112de-6bdc-4c0e-a496-e41b0ee91aa7","$type":"ArcaneOnyx.BehaviorTree.BehaviorTreeTransition","$id":"41"},{"$ref":"8"},{"$ref":"24"},{"$ref":"15"},{"$ref":"18"},{"$ref":"21"},{"$ref":"38"},{"$ref":"29"},{"$ref":"32"},{"$ref":"35"},{"$ref":"52"},{"$ref":"43"},{"$ref":"46"},{"$ref":"49"}],"$version":"A"}}'
+    _objectReferences:
+    - {fileID: 11400000, guid: 427be378a1a5a1744951f9c8691ecec0, type: 2}
