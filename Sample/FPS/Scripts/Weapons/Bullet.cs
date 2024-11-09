@@ -39,12 +39,9 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                 Destroy( gameObject );           
                 return;
             }
-
                       
             float travelDistance = Time.deltaTime * shootInfo.speed;
             distanceTraveled += travelDistance;
-
-           
 
             RaycastHit hit;
             bool hitSomething = HitSomething(transform.position, transform.forward, travelDistance, out hit);
