@@ -10,7 +10,7 @@ namespace ArcaneOnyx.Share
         [SerializeField] private float maxMovementSpeed;
         [SerializeField] private float dampTime;
       
-        private static readonly int Forward = Animator.StringToHash("Forwards");
+        private static readonly int Forward = Animator.StringToHash("Forward");
         private static readonly int Horizontal = Animator.StringToHash("Horizontal");
 
         private void Update()
