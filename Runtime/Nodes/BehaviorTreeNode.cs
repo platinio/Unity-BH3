@@ -75,9 +75,10 @@ namespace ArcaneOnyx.BehaviorTree
         public virtual bool CanCopy => true;
         public virtual bool CanDuplicate => true;
         public virtual bool CanCut => true;
+        public virtual bool DrawInSubTree => true;
 
         public virtual string Description => string.Empty;
-
+        
         public void PortsChanged()
         {
             onPortsChanged?.Invoke();

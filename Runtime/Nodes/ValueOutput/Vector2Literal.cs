@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Literal/Vector2")]
-    public class Vector2Literal : GameplayNode
+    public class Vector2Literal : Literal
     {
         [Serialize, Inspectable] private Vector3 value;
         

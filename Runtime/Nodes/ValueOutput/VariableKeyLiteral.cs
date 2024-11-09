@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Literal/Variable Key")]
-    public class VariableKeyLiteral : GameplayNode
+    public class VariableKeyLiteral : Literal
     {
         [Serialize, Inspectable] private BlackboardKey Key = new();
         

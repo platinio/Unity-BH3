@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Variables/Get Variable")]
-    public class GetVariable : GameplayNode
+    public class GetVariable : Literal
     {
         [DoNotSerialize]
         public ValueInput Key { get; private set; }

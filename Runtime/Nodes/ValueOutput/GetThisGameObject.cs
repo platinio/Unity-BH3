@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Literal/This/GameObject")]
-    public class GetThisGameObject : GameplayNode
+    public class GetThisGameObject : Literal
     {
         public override string NodeName => "GameObject";
 

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Literal/This/Transform")]
-    public class GetThisTransform : GameplayNode
+    public class GetThisTransform : Literal
     {
         public override string NodeName => "Transform";
 

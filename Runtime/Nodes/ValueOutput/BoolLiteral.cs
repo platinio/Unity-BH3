@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Literal/Boolean")]
-    public class BoolLiteral : GameplayNode
+    public class BoolLiteral : Literal
     {
         [Serialize, Inspectable] private bool value;
         
