@@ -134,7 +134,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         private Rect CalculateSubBehaviorTreeBox()
         {
-            Vector2 margin = new Vector2(600, 200);
+            
+            
+            Vector2 margin = new Vector2(300, 200);
             
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
@@ -181,13 +183,24 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
 
-            float w = Mathf.Abs(left - right);
-            float h = Mathf.Abs(up - down);
+            //TODO: address comment
+            /*
+             * in order to make this fast we are not taking into account offsets, we are just calculating the larger side and go with it
+             * this can cause blank spaces in the subgraph if it is not properly aligned 
+             */
+            
+            float largerHSide = Mathf.Abs(left) > Mathf.Abs(right)? left : right;
+            largerHSide = Mathf.Abs(largerHSide);
+            float w = largerHSide * 2.0f;
+            
+            float largerVSide = Mathf.Abs(down) > Mathf.Abs(up)? down : up;
+            largerVSide = Mathf.Abs(largerVSide);
+            float h = largerVSide;
 
             var r = position;
-           r.size = new Vector2(w, h);
+            r.size = new Vector2(w, h);
             r.size += margin;
-
+           
             return r;
         }
 
@@ -207,6 +220,7 @@ namespace ArcaneOnyx.BehaviorTree
                 @group = new GUIStyle();
                 @group.normal.background = BoltCore.Resources.LoadTexture("Group.png", new TextureResolution[] { 64 }, CreateTextureOptions.PixelPerfect)?.Single();
                 @group.onNormal.background = @group.normal.background;
+                
                 @group.border = new RectOffset(16, 16, 25, 16);
 
                 label = new GUIStyle();
