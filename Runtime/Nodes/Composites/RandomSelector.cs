@@ -11,6 +11,12 @@ namespace ArcaneOnyx.BehaviorTree
         protected override string NodeIconPath => "NodeIcons/RandomSelector";
         public override string Description => "Executes child nodes in random order.\nExecution ends when any child node returns FAILURE.";
 
+        public override void OnExit()
+        {
+            base.OnExit();
+            SortChildren();
+        }
+
         public override void SortChildren()
         {
             children = GetChildren().OrderBy(_ => Random.value).ToList();
