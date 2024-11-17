@@ -8,16 +8,9 @@ namespace ArcaneOnyx.BehaviorTree.Test
     {
         public override string NodeName => "ThrowExceptionNode";
 
-        public override void OnEnter()
-        {
-            //base.OnEnter();
-            throw new Exception("This is a test exception");
-        }
-
         public override ExecutionStatus OnUpdate()
         {
-            //throw new Exception("This is a test exception");
-            return ExecutionStatus.Running;
+            throw new Exception("This is a test exception");
         }
     }
 }
