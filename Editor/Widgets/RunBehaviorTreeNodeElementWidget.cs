@@ -134,8 +134,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         private Rect CalculateSubBehaviorTreeBox()
         {
-            
-            
             Vector2 margin = new Vector2(300, 200);
             
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
