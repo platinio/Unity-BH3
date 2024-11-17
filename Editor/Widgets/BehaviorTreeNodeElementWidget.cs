@@ -154,9 +154,9 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawOutsideBox(p);
                 
-                using (LudiqGUI.color.Override(new Color(0.2f, 0.2f, 0.2f, 1)))
+               
+                using (LudiqGUI.color.Override( element.Color))
                 {
-                    
                     Styles.background.normal.background = element.NodeBackground;
                     Styles.background.Draw(p, false, IsSelected, false, false);
 
@@ -184,7 +184,7 @@ namespace ArcaneOnyx.BehaviorTree
                         Styles.background.Draw(topConnection, false, IsSelected, false, false);
                     }
                 }
-               
+             
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
                 if (node.ShowIcon)
