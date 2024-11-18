@@ -4,6 +4,7 @@
     {
         public override void OnEnter()
         {
+            base.OnEnter();
             if (GetChildren().Count == 0) return;
             
             var task = GetChildren()[0];

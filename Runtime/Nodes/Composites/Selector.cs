@@ -14,6 +14,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
+            base.OnEnter();
             currentExecutingChildIndex = 0;
             callOnEnter = true;
         }
@@ -27,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (callOnEnter)
             {
                 callOnEnter = false;
-                task.OnEnter();
+                task.OnNodeEnter();
             }
             
             var result = task.OnUpdateInternal();
@@ -53,6 +54,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnExit()
         {
+            base.OnExit();
             currentExecutingChildIndex = 0;
         }
     }
