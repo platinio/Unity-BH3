@@ -1,6 +1,5 @@
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
-using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -8,14 +7,16 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Variables/Get Variable")]
     public class GetVariable : Literal
     {
+        [Serialize, Inspectable] private VariableKind VariableKind;
+        
         [DoNotSerialize]
         public ValueInput Key { get; private set; }
         
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
 
-        public override string NodeName => "Get Variable";
-        
+        public override string NodeName => string.IsNullOrEmpty(VariableName)? "Get Variable" : VariableName;
+
         protected override void Definition()
         {
             base.Definition();
@@ -26,75 +27,49 @@ namespace ArcaneOnyx.BehaviorTree
         
         public object GetValue(string key, BehaviorTreeMachine machine)
         {
-            object result;            
-
-            if (TryGetValueFromObject(key, machine, out result)) return result;
-            if (TryGetValueFromGraph(key, machine, out result)) return result;
-            if (TryGetValueFromScene(key, out result)) return result;
-            if (TryGetValueFromApp(key, out result)) return result;
-            if (TryGetValueFromSave(key, out result)) return result;
-
+            switch (VariableKind)
+            {
+                case VariableKind.Graph:
+                    return GetValueFromGraph(key, machine);
+                case VariableKind.Object:
+                    return GetValueFromObject(key, machine);
+                case VariableKind.Scene:
+                    return GetValueFromScene(key);
+                case VariableKind.Application:
+                    return GetValueFromApp(key);
+                case VariableKind.Saved:
+                    return GetValueFromSaved(key);
+            }
+           
             return default;
         }
        
-        private bool TryGetValueFromGraph(string key, BehaviorTreeMachine machine, out object value)
+        private object GetValueFromGraph(string key, BehaviorTreeMachine machine)
         {
-            value = default;
             var declarations = machine.GraphInstance.declarations;
-
-            if (!declarations.IsDefined(key)) return false;
-            
-            value = declarations.Get(key);
-            return true;
+            return declarations.Get(key);
         }
         
-        private bool TryGetValueFromObject(string key, IGraphMachine machine, out object value)
+        private object GetValueFromObject(string key, IGraphMachine machine)
         {
-            value = default;
-            
-            if (machine == null)
-            {
-                Debug.LogError("BehaviorTreeMachine is null");
-                return false;
-            }
-
-            if (!machine.Variables.declarations.IsDefined(key)) return false;
-
-
-            value = machine.Variables.declarations.Get(key);
-            return true;
+            return machine.Variables.declarations.Get(key);
         }
 
 
-        private bool TryGetValueFromScene(string key, out object value)
+        private object GetValueFromScene(string key)
         {
-            value = default;
-            
             var variables =  SceneVariables.Instance(SceneManager.GetActiveScene());
-            if (!variables.variables.declarations.IsDefined(key)) return false;
-            
-            value = variables.variables.declarations.Get(key);
-            return true;
+            return variables.variables.declarations.Get(key);
         }
 
-        private bool TryGetValueFromApp(string key, out object value)
+        private object GetValueFromApp(string key)
         {
-            value = default;
-
-            if (!ApplicationVariables.current.IsDefined(key)) return false;
-            
-            value = ApplicationVariables.current.Get(key);
-            return true;
+            return ApplicationVariables.current.Get(key);
         }
 
-        private bool TryGetValueFromSave(string key, out object value)
+        private object GetValueFromSaved(string key)
         {
-            value = default;
-
-            if (!SavedVariables.current.IsDefined(key)) return false;
-            
-            value = SavedVariables.current.Get(key);
-            return true;
+            return SavedVariables.current.Get(key);
         }
        
     }

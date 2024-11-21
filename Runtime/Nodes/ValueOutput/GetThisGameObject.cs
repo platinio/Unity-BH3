@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Literal/This/GameObject")]
     public class GetThisGameObject : Literal
     {
-        public override string NodeName => "GameObject";
+        public override string NodeName => string.IsNullOrEmpty(VariableName)? "GameObject" : VariableName;
 
         [DoNotSerialize]
         public ValueOutput thisValueOutput { get; private set; }

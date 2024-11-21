@@ -11,7 +11,7 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
 
-        public override string NodeName => "Float Literal";
+        public override string NodeName => string.IsNullOrEmpty(VariableName)? "Float Literal" : VariableName;
         public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()

@@ -13,7 +13,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override bool CanBeUseAsTransitionDestination => false;
 
-        public override string NodeName => "Boolean Literal";
+        public override string NodeName => string.IsNullOrEmpty(VariableName)? "Boolean Literal" : VariableName;
         
         protected override void Definition()
         {
