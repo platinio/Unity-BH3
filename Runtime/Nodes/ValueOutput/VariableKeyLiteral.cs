@@ -11,7 +11,7 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
 
-        public override string NodeName => string.IsNullOrEmpty(VariableName)? "Variable Key Literal" : VariableName;
+        public override string NodeName => string.IsNullOrEmpty(NodeComment)? "Variable Key Literal" : NodeComment;
         public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()

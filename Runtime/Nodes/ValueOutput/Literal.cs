@@ -5,7 +5,7 @@ namespace ArcaneOnyx.BehaviorTree
 {
     public class Literal : GameplayNode
     {
-        [Serialize, Inspectable] protected string VariableName;
+        [Serialize, Inspectable] protected string NodeComment;
         
         public override bool DrawInSubTree => false;
         public override int MaxChildrenLimit => 0;

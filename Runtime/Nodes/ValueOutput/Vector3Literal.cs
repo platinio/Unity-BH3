@@ -12,7 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
 
-        public override string NodeName => string.IsNullOrEmpty(VariableName)? "Vector3 Literal" : VariableName;
+        public override string NodeName => string.IsNullOrEmpty(NodeComment)? "Vector3 Literal" : NodeComment;
         public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()
