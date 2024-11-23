@@ -16,7 +16,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         public BehaviorTreeGraphAsset GraphInstance => graphInstance;
         public BehaviorTreeGraphAsset GraphAsset => nest.macro;
-        
+        public BehaviorTreeGraphAsset OriginalMacro { get; private set; }
+
         protected override void Awake()
         {
             base.Awake();
@@ -25,6 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (hasGraph)
             {
                 graphInstance = null;
+                OriginalMacro = nest.macro;
 
                 if (nest.macro != null)
                 {

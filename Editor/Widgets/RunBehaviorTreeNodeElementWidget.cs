@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -45,13 +46,22 @@ namespace ArcaneOnyx.BehaviorTree
             }
           
             position = CalculateSubBehaviorTreeBox();
-            DrawSubGraphGroup();
+            DrawSubGraphGroup(offset);
 
             BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
             Vector2 entryOffset = behaviorTreeGraph.GetEntryNodeOffset() + offset;
             Vector2 subBehaviorTreeOffset = position.position + (new Vector2(position.size.x / 2.0f, 0.0f)) + entryOffset;
             
+            if (GraphWillCauseRecursion()) return;
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
+        }
+
+        private bool GraphWillCauseRecursion()
+        {
+            if (!(element is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)) return false;
+            
+            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { runBehaviorTreeGraphNode.BehaviorTreeGraphAsset });
+            return runBehaviorTreeGraphNode.GraphWillCauseRecursion(runStack);
         }
 
         private void DrawSubTreeNodes(BehaviorTreeGraph behaviorTreeGraph, Vector2 offset)
@@ -81,7 +91,7 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private void DrawSubGraphGroup()
+        private void DrawSubGraphGroup(Vector2 offset)
         {
             string name = GetBehaviorTreeGraphAsset().name;
             AdjustLabelFontSize();
@@ -89,7 +99,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             using (LudiqGUI.color.Override(Color.cyan))
             {
-                box.position += new Vector2(0, -40.0f);
+                box.position += new Vector2(0, -40.0f) + offset;
                 Styles.group.Draw(box, false, false, true, false);
             }
             

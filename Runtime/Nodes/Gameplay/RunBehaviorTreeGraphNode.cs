@@ -1,6 +1,8 @@
+using System;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
-using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -28,6 +30,11 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        private bool willCauseRecursion = false;
+        private string stackTraceLog = null;
+
+        //public override bool DrawInSubTree => false;
+
         public override string NodeName
         {
             get
@@ -36,19 +43,64 @@ namespace ArcaneOnyx.BehaviorTree
                 return behaviorTreeGraphAsset.name;
             }
         }
-
+       
         public override void OnAwake()
         {
             BehaviorTreeGraphInstance.OnAwake();
+            
+            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { behaviorTreeGraphAsset });
+            willCauseRecursion = GraphWillCauseRecursion(runStack);
+            if (willCauseRecursion)
+            {
+                stackTraceLog = "";
+                while (runStack.Count > 0)
+                {
+                    var graphAsset = runStack.Pop();
+                    stackTraceLog += $"{graphAsset.name} ->";
+                }
+                
+                throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
+            }
+        }
+
+        private void ThrowIfWillCauseRecursion()
+        {
+            if (willCauseRecursion)
+            {
+                throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
+            }
         }
 
         public override void OnEnter()
         {
+            ThrowIfWillCauseRecursion();
             BehaviorTreeGraphInstance.OnEnter();
         }
-        
+
+        public bool GraphWillCauseRecursion(Stack<BehaviorTreeGraphAsset> runStack)
+        {
+            var graphAsset = runStack.Peek();
+            if (graphAsset == null) return false;
+            
+            foreach (var node in graphAsset.graph.Nodes)
+            {
+                if (node is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
+                {
+                    if (runStack.Contains(runBehaviorTreeGraphNode.behaviorTreeGraphAsset)) return true;
+                    
+                    runStack.Push(runBehaviorTreeGraphNode.behaviorTreeGraphAsset);
+                    if (GraphWillCauseRecursion(runStack)) return true;
+
+                    runStack.Pop();
+                }
+            }
+
+            return false;
+        }
+
         public override ExecutionStatus OnUpdate()
         {
+            ThrowIfWillCauseRecursion();
             return BehaviorTreeGraphInstance.OnUpdate();
         }
 
