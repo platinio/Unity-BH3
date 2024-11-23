@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using Object = UnityEngine.Object;
@@ -29,12 +30,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return behaviorTreeGraphAssetInstance;
             }
         }
-
-        private bool willCauseRecursion = false;
-        private string stackTraceLog = null;
-
-        //public override bool DrawInSubTree => false;
-
+      
         public override string NodeName
         {
             get
@@ -47,33 +43,32 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnAwake()
         {
             BehaviorTreeGraphInstance.OnAwake();
-            
-            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { behaviorTreeGraphAsset });
-            willCauseRecursion = GraphWillCauseRecursion(runStack);
-            if (willCauseRecursion)
-            {
-                stackTraceLog = "";
-                while (runStack.Count > 0)
-                {
-                    var graphAsset = runStack.Pop();
-                    stackTraceLog += $"{graphAsset.name} ->";
-                }
-                
-                throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
-            }
         }
 
-        private void ThrowIfWillCauseRecursion()
+        public void ThrowIfCausesRecursion()
         {
-            if (willCauseRecursion)
+            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { behaviorTreeGraphAsset });
+            if (!GraphWillCauseRecursion(runStack)) return;
+          
+            string stackTraceLog = "";
+               
+            var runStackList = runStack.ToList();
+            string firstNode = runStack.First().name;
+                
+            while (runStackList.Count > 0)
             {
-                throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
+                var graphAsset = runStackList[0];
+                stackTraceLog += $"{graphAsset.name} ->";
+                runStackList.RemoveAt(0);
             }
+
+            stackTraceLog += $" {firstNode}";
+               
+            throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
         }
 
         public override void OnEnter()
         {
-            ThrowIfWillCauseRecursion();
             BehaviorTreeGraphInstance.OnEnter();
         }
 
@@ -100,7 +95,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            ThrowIfWillCauseRecursion();
             return BehaviorTreeGraphInstance.OnUpdate();
         }
 

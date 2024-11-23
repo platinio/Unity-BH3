@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -37,13 +38,16 @@ namespace ArcaneOnyx.BehaviorTree
                 behaviorTreeGraph = nest.embed;
                 var graph = graphInstance == null ? nest.embed : graphInstance.graph;
                 
+                //throws an exception if subgraphs causes recursion
+                graph.ThrowIfCausesRecursion();
+                
                 var nodes = behaviorTreeGraph.Nodes;
-
                 foreach (var node in nodes)
                 {
                     node.SetMachine(this);
                 }
-                #if UNITY_EDITOR
+
+               #if UNITY_EDITOR
                 try
                 {
                     OverrideGraphAndSubGraphVariables(graphInstance, graph);

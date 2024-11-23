@@ -276,6 +276,16 @@ namespace ArcaneOnyx.BehaviorTree
 
             return entryOffset;
         }
-        
+
+        public void ThrowIfCausesRecursion()
+        {
+            foreach (var node in Nodes)
+            {
+                if (node is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
+                {
+                    runBehaviorTreeGraphNode.ThrowIfCausesRecursion();
+                }
+            }
+        }
     }
 }

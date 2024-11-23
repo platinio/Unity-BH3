@@ -90,7 +90,7 @@ namespace ArcaneOnyx.BehaviorTree
                     DrawIcon(offset);
                 }
                 
-                DrawTitle(offset);
+                DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
             }
         }

@@ -192,7 +192,7 @@ namespace ArcaneOnyx.BehaviorTree
                     DrawIcon(offset);
                 }
                 
-                DrawTitle(offset);
+                DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
             }
         }
@@ -257,12 +257,12 @@ namespace ArcaneOnyx.BehaviorTree
             style.Draw(p, false, IsSelected, false, false);
         }
 
-        protected void DrawTitle(Vector2 offset)
+        protected virtual void DrawTitle(Vector2 offset, string title)
         {
             Rect p = TittleRect;
             p.position += offset;
             
-            Styles.title.Draw(p, element.NodeName, false, IsSelected, false, false);
+            Styles.title.Draw(p, title, false, IsSelected, false, false);
         }
 
         public override void CachePosition()

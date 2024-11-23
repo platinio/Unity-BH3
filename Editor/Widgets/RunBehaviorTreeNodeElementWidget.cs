@@ -38,9 +38,10 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
-            if (GetBehaviorTreeGraphAsset() == null)
+            if (GetBehaviorTreeGraphAsset() == null || GraphWillCauseRecursion())
             {
                 position = new Rect(position.position, EmptyNodeSize);
+                base.CachePosition();
                 base.DrawForeground(Vector2.zero, e.IsRepaint);
                 return;
             }
@@ -51,9 +52,13 @@ namespace ArcaneOnyx.BehaviorTree
             BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
             Vector2 entryOffset = behaviorTreeGraph.GetEntryNodeOffset() + offset;
             Vector2 subBehaviorTreeOffset = position.position + (new Vector2(position.size.x / 2.0f, 0.0f)) + entryOffset;
-            
-            if (GraphWillCauseRecursion()) return;
+          
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
+        }
+
+        protected override void DrawTitle(Vector2 offset, string title)
+        {
+            base.DrawTitle(offset, GraphWillCauseRecursion()? "RECURSION ERROR!" : element.NodeName);
         }
 
         private bool GraphWillCauseRecursion()
