@@ -10,7 +10,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
     public class RunBehaviorTreeGraphNode : GameplayNode
     {
-        [Serialize] [Inspectable]
+        [Serialize, Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
 
         private BehaviorTreeGraphAsset behaviorTreeGraphAssetInstance = null;
@@ -39,7 +39,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return behaviorTreeGraphAsset.name;
             }
         }
-       
+        
         public override void OnAwake()
         {
             BehaviorTreeGraphInstance.OnAwake();
