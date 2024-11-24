@@ -1,3 +1,4 @@
+using ArcaneOnyx.ScriptableObjectDatabase;
 using Platinio.FactionSystem;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ namespace ArcaneOnyx.Share
 {
     public class GameEntity : MonoBehaviour
     {
-        [SerializeField] private Faction faction;
+        [SerializeField, ScriptableItemDatabaseSelector(typeof(FactionDatabase))] private Faction faction;
         [SerializeField] private EntityNavAgent entityNavAgent;
 
         public Faction Faction => faction;

@@ -1,10 +1,12 @@
 ﻿using ArcaneOnyx.Share;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class DamageableManager : MonoBehaviour
     {
+        [SerializeField] private UnityEvent OnKill;
         [SerializeField] private float maxHP;
 
         private float currentHP;
@@ -50,7 +52,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                 return;
             }
 
-            ModifyHP(info.Damage);
+            ModifyHP(-info.Damage);
 
             //modify HP can kill the instance too so check again for isDead
             if (HP <= 0.0f)
@@ -63,6 +65,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             if (isDead) return;
 
+            OnKill.Invoke();
             currentHP = 0;
             isDead = true;
         }

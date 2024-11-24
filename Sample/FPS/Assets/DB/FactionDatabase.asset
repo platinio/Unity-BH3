@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3101045427055675022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8cc27d80a5974ce4689fd33084f28cbf, type: 3}
+  m_Name: Soldier
+  m_EditorClassIdentifier: 
+  Name: Soldier
+  icon: {fileID: 0}
+  id: 0
+  factionLinks:
+  - Faction: {fileID: -3101045427055675022}
+    Link: 1
+  - Faction: {fileID: -803875819184220847}
+    Link: 4
+  layer: 6
+--- !u!114 &-803875819184220847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8cc27d80a5974ce4689fd33084f28cbf, type: 3}
+  m_Name: Zombie
+  m_EditorClassIdentifier: 
+  Name: Zombie
+  icon: {fileID: 0}
+  id: 1
+  factionLinks:
+  - Faction: {fileID: -3101045427055675022}
+    Link: 4
+  - Faction: {fileID: -803875819184220847}
+    Link: 1
+  layer: 7
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d4201f6f4444c1db04ef3e819a7aeb1, type: 3}
+  m_Name: FactionDatabase
+  m_EditorClassIdentifier: 
+  items:
+  - {fileID: -3101045427055675022}
+  - {fileID: -803875819184220847}
+  isEnabled: 1
+  id: 2
