@@ -1,12 +1,11 @@
 ﻿using ArcaneOnyx.Share;
+using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
     public class DamageableManager : MonoBehaviour
     {
-        [SerializeField] private UnityEvent OnKill;
         [SerializeField] private float maxHP;
 
         private float currentHP;
@@ -25,6 +24,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             ownerEntity = GetComponentInParent<GameEntity>();
             SetDamageablePartsOwner();
+            currentHP = maxHP;
         }
 
         private void SetDamageablePartsOwner()
@@ -65,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             if (isDead) return;
 
-            OnKill.Invoke();
+            CustomEvent.Trigger(gameObject, "OnKilled");
             currentHP = 0;
             isDead = true;
         }

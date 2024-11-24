@@ -2183,7 +2183,7 @@ GameObject:
   - component: {fileID: 1976178634388214103}
   - component: {fileID: 3577845218095496086}
   m_Layer: 0
-  m_Name: Skin
+  m_Name: Soldier
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
