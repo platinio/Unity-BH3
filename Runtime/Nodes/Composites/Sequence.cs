@@ -50,11 +50,5 @@ namespace ArcaneOnyx.BehaviorTree
 
             return result;
         }
-
-        public override void OnExit()
-        {
-            base.OnExit();
-            currentExecutingChildIndex = 0;
-        }
     }
 }

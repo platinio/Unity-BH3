@@ -41,7 +41,8 @@ namespace ArcaneOnyx.BehaviorTree
                 return ExecutionStatus.Success;
             }
                 
-            return GetChildren()[0].OnUpdateInternal();
+            var status = GetChildren()[0].OnUpdateInternal();
+            return status;
         }
     }
 }

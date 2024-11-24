@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    public class ContainerNode : GameplayNode
+    public abstract class ContainerNode : GameplayNode
     {
         [DoNotSerialize] protected List<BehaviorTreeNode> children;
 
@@ -14,7 +14,7 @@ namespace ArcaneOnyx.BehaviorTree
         public virtual bool CanExecute => true;
         public override int MaxChildrenLimit => MaxTransitionAmount;
         public override bool ShowIcon => true;
-
+        
         public void AddChild(BehaviorTreeNode child, int index)
         {
             if (children == null) children = new List<BehaviorTreeNode>();
@@ -50,6 +50,17 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             return ExecutionStatus.Running;
+        }
+
+        public override void OnExit()
+        {
+            base.OnExit();
+
+            //call children on exit by hand if they havent finished yet
+            for (int i = 0; i < GetChildren().Count; i++)
+            {
+                GetChildren()[i].OnNodeExit();
+            }
         }
     }
 }

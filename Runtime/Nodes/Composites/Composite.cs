@@ -8,10 +8,5 @@
         {
             currentExecutingChildIndex = 0;
         }
-
-        protected void MoveCurrentExecutingChildIndex()
-        {
-            
-        }
     }
 }

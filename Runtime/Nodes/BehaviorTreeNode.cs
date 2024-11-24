@@ -320,6 +320,16 @@ namespace ArcaneOnyx.BehaviorTree
             conditionalExecutionIndexCache.Clear();
         }
 
+        public sealed override void OnNodeEnter()
+        {
+            foreach (var conditionalExecution in conditionalExecutions)
+            {
+                if (!conditionalExecution.EvaluateInternal()) return;
+            }
+            
+            base.OnNodeEnter();
+        }
+
         public sealed override ExecutionStatus OnUpdateInternal()
         {
             foreach (var conditionalExecution in conditionalExecutions)

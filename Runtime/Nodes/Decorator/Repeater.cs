@@ -40,7 +40,16 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             return ExecutionStatus.Running;
+        }
 
+        public override void OnExit()
+        {
+            base.OnExit();
+
+            foreach (var child in GetChildren())
+            {
+                child.OnNodeExit();
+            }
         }
     }
 }
