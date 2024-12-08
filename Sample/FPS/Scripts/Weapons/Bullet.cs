@@ -44,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             distanceTraveled += travelDistance;
 
             RaycastHit hit;
-            bool hitSomething = HitSomething(transform.position, transform.forward, travelDistance, out hit);
+            bool hitSomething = HitSomething(transform.position, shootInfo.dir, travelDistance, out hit);
 
             if (hitSomething && hit.collider != playerCollider)
             {                
@@ -96,7 +96,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         protected void CheckForImmediatelyHit()
         {
-            bool hitSomething = HitSomething(transform.position, transform.forward, inmeadiatleHitDistance, out RaycastHit hit);
+            bool hitSomething = HitSomething(transform.position, shootInfo.dir, inmeadiatleHitDistance, out RaycastHit hit);
 
             if (hitSomething && hit.collider != playerCollider)
             {                

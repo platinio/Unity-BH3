@@ -44,6 +44,25 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             DoDamage(damageInfo, null);
         }
 
+        //test function needs to be remove
+        public void DoDamage(float v)
+        {
+            //if we are dead just apply the impact force
+            if (isDead)
+            {
+                return;
+            }
+
+            //CustomEvent.Trigger(gameObject, "OnDamaged", null, null);
+            ModifyHP(-v);
+
+            //modify HP can kill the instance too so check again for isDead
+            if (HP <= 0.0f)
+            {
+                Kill(null);
+            }
+        }
+
         public virtual void DoDamage(DamageInfo info, Hitbox hitbox)
         {
             //if we are dead just apply the impact force
@@ -52,6 +71,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                 return;
             }
 
+            CustomEvent.Trigger(gameObject, "OnDamaged", info, hitbox);
             ModifyHP(-info.Damage);
 
             //modify HP can kill the instance too so check again for isDead
