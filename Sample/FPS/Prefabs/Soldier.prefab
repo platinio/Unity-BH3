@@ -1619,7 +1619,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trackedEntities: []
-  maxRange: 100
+  maxRange: 200
   visionConeAngle: 360
   memoryTime: 5
 --- !u!1 &4485516817945904610
@@ -3052,6 +3052,7 @@ MonoBehaviour:
   spineBone: {fileID: 1976153038648335570}
   bulletSpawnTransform: {fileID: 462294717463699306}
   targetTransform: {fileID: 0}
+  aimSpeed: 3
 --- !u!114 &4792867688659644190
 MonoBehaviour:
   m_ObjectHideFlags: 0
