@@ -56,12 +56,16 @@ namespace ArcaneOnyx.BehaviorTree
             if (owner == null || !node.graph.elements.Contains(owner)) return;
             
             int index = owner.GetConditionalIndex(node as ConditionalExecution) + 1;
+            Vector2 offset = Vector2.zero;
+
+            if (owner is RunBehaviorTreeGraphNode) offset += new Vector2(0.0f, -40.0f);
 
             var widget = canvas.Widget(owner);
             Rect p = widget.position;
             p.height = height;
             p.position -= new Vector2(0, (p.height / 2.0f) * index);
             p.position -= new Vector2(0, ((height / 2.0f) + separation) * index);
+            p.position += offset;
             
             TittleRect = p;
             position = p;
