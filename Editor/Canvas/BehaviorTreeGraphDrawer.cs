@@ -15,11 +15,22 @@ namespace ArcaneOnyx.BehaviorTree
             
             List<Rect> lineRects = new List<Rect>();
             Vector2 destinationCenter = transitionWidget.destinationEdgeCenter;
+          
             Vector2 sourceCenter = transitionWidget.sourceEdgeCenter;
+
+            int conditionalCount = transitionWidget.element.destination.CountConditionalExection();
+
+            if (conditionalCount > 0)
+            {
+                sourceCenter += Vector2.up * conditionalCount * -40.0f;
+                sourceCenter += Vector2.up * (conditionalCount - 1) * -5.0f;
+            }
 
             //draw transition first section
             float closerDestPositionY = GetCloserVerticalNodePosition(graph, transitionWidget).y;
             float verticalDistanceFromSourceToCloserDest = closerDestPositionY - sourceCenter.y;
+            
+           
             float firstSectionHeight = Mathf.Clamp(verticalDistanceFromSourceToCloserDest, minDistanceFromNodeToTransition, float.MaxValue) / 2.0f;
             Vector2 transitionFirstSectionSize = new Vector2(lineWidth, firstSectionHeight);
             Rect firstSectionRect = new Rect(sourceCenter, transitionFirstSectionSize);
@@ -83,6 +94,15 @@ namespace ArcaneOnyx.BehaviorTree
                     if (transition.source == transitionWidget.element.source)
                     {
                         Vector2 destPosition = transition.destination.Position.GetEdgeCenter(transitionWidget.DestinationEdge);
+
+                        int conditionalExecutionCount = transition.destination.CountConditionalExection();
+
+                        if (conditionalExecutionCount > 0)
+                        {
+                            destPosition += new Vector2(0, -40.0f) * conditionalExecutionCount;
+                            destPosition += new Vector2(0, -5.0f) * (conditionalExecutionCount);
+                        }
+                        
                         if (destPosition.y < closerDestinationPosition.y) closerDestinationPosition = destPosition;
                     }
                 }

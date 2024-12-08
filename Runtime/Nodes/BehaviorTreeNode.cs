@@ -314,6 +314,24 @@ namespace ArcaneOnyx.BehaviorTree
             conditionalExecutionIndexCache[conditionalExecution.guid] = index;
             return index;
         }
+        
+        public int CountConditionalExection()
+        {
+            int count = 0;
+            
+            foreach (var graphElement in graph.elements)
+            {
+                if (graphElement is ConditionalExecution conditionalExecutionNode)
+                {
+                    if (conditionalExecutionNode.Owner == this)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
 
         public void ClearConditionalExecutionInexCache()
         {
