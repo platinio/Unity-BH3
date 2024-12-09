@@ -45,6 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trackedEntities: []
+  visionTransform: {fileID: 2813902164086048091}
   maxRange: 100
   visionConeAngle: 360
   memoryTime: 5
@@ -1259,6 +1260,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damageMultiplier: 1
+--- !u!4 &2813902164086048091 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3321919801592875672, guid: 523f860d7ca76374083e8f95840cc487, type: 3}
+  m_PrefabInstance: {fileID: 8568897182482378803}
+  m_PrefabAsset: {fileID: 0}
 --- !u!95 &2846348905001880994 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 523f860d7ca76374083e8f95840cc487, type: 3}

@@ -9,7 +9,7 @@ namespace ArcaneOnyx.BehaviorTree
     public class SetVariable : GameplayNode
     {
         [Serialize, Inspectable] private VariableKind VariableKind;
-        
+      
         [DoNotSerialize]
         public ValueInput Key { get; private set; }
         
@@ -25,12 +25,12 @@ namespace ArcaneOnyx.BehaviorTree
             Key = ValueInput<string>(nameof(Key));
             Value = ValueInput<object>(nameof(Value));
         }
-
-        public override void OnEnter()
+       
+        public override ExecutionStatus OnUpdate()
         {
             string key = (string) Key.GetValue();
             object value = Value.GetValue();
-            
+
             switch (VariableKind)
             {
                 case VariableKind.Graph:
@@ -52,8 +52,8 @@ namespace ArcaneOnyx.BehaviorTree
                     Debug.LogError($"BehaviorTree doesnt support Flow VariableKind Node={NodeName} Key={key}");
                     break;
             }
-        }
 
-        public override ExecutionStatus OnUpdate() => ExecutionStatus.Success;
+            return ExecutionStatus.Success;
+        }
     }
 }
