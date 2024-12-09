@@ -11,11 +11,15 @@ namespace ArcaneOnyx.Share
         [SerializeField] private Transform aimTarget;
 
         public Transform AimTarget => aimTarget;
+
+        private static int avoidanceIndex = 0;
         
         protected virtual void Start()
         {
             var gameEntityDatabaseService = ServicesContainer.Resolve<IDatabaseService<AIEntity>>();
             gameEntityDatabaseService?.Add(this);
+
+            navMeshAgent.avoidancePriority = avoidanceIndex++;
         }
 
         private void OnDestroy()
