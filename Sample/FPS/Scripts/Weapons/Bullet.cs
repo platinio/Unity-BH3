@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using Platinio.SDK.DependencyInjection;
 
 
 namespace ArcaneOnyx.BehaviorTree.Sample
@@ -36,7 +37,8 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                 if (shootInfo.hitEffect != null)
                     Instantiate(shootInfo.hitEffect , transform.position , Quaternion.identity);
 
-                Destroy( gameObject );           
+                var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
+                projectilePool.Destroy(this);
                 return;
             }
                       
@@ -56,7 +58,8 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
                 if (distanceTraveled >= shootInfo.range)
                 {
-                    Destroy( gameObject );
+                    var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
+                    projectilePool.Destroy(this);
                 }
                    
             }
@@ -84,6 +87,13 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         public override void Launch(ShootInfo info)
         {
             HandleBulletLaunch(info);
+        }
+
+        public override void Reset()
+        {
+            shouldHit = false;
+            distanceTraveled = 0.0f;
+            launched = false;
         }
 
         protected virtual void HandleBulletLaunch(ShootInfo info)
@@ -115,15 +125,16 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         private IEnumerator SetInvisibleForTwoFrames()
         {
+            launched = false;
             if(trailRender != null)
                 trailRender.colorGradient = invisibleGrandient;
             yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
             if (trailRender != null)
                 trailRender.colorGradient = originalGradient;
-                       
-
+            
             launched = true;
+            trailRender.enabled = true;
         }
     }
 }

@@ -43,9 +43,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (CanExecute)
             {
-                foreach (var children in children)
+                for (int i = 0; i < GetChildren().Count; i++)
                 {
-                    children.OnUpdateInternal();
+                    GetChildren()[i].OnUpdateInternal();
                 }
             }
 

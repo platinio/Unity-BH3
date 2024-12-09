@@ -1,5 +1,3 @@
-using System;
-using RPGDamage;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
@@ -72,5 +70,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
             rb.AddForceAtPosition( shootInfo.dir * shootInfo.hitForce, impactPoint );
         }
+        
+        public virtual void Reset() { }
     }
 }

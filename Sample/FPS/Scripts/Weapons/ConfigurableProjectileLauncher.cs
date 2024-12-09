@@ -1,4 +1,5 @@
 using ArcaneOnyx.Share;
+using Platinio.SDK.DependencyInjection;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
@@ -7,7 +8,6 @@ namespace ArcaneOnyx.BehaviorTree.Sample
     {
         [Header("Launcher Config")]
         [SerializeField] private LayerMask layerMask;
-        [SerializeField] private Projectile projectilePrefab;
         [SerializeField] protected Transform spawnPosition;
         [SerializeField] private float dmg;
         [SerializeField] private float range;
@@ -22,8 +22,10 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             shootInfo.speed = speed;
             shootInfo.range = range;
             shootInfo.hitLayer = layerMask;
-            
-            var projectile = Instantiate(projectilePrefab, spawnPosition.position, Quaternion.identity);
+
+            var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
+            var projectile = projectilePool.Instantiate(spawnPosition.position, Quaternion.identity);
+          
             projectile.Launch(shootInfo);
             return projectile;
         }

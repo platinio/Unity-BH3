@@ -33,6 +33,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             bullet.gameObject.SetActive(false);
             bullet.transform.parent = transform;
+            bullet.Reset();
         }
 
         // Called when an item is taken from the pool using Get

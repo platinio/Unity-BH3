@@ -20,17 +20,17 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
-            foreach (var children in GetChildren())
+            for (int i = 0; i < GetChildren().Count; i++)
             {
-                children.OnNodeEnter();
+                GetChildren()[i].OnNodeEnter();
             }
         }
 
         public override void OnExit()
         {
-            foreach (var children in GetChildren())
+            for (int i = 0; i < GetChildren().Count; i++)
             {
-                children.OnNodeExit();
+                GetChildren()[i].OnNodeExit();
             }
         }
 

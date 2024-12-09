@@ -21,6 +21,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
+            
             if (GetChildren().Count <= 0) return ExecutionStatus.Success; 
             
             var task = GetChildren()[currentExecutingChildIndex];
@@ -46,9 +47,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnExit();
 
-            foreach (var child in GetChildren())
+            for (int i = 0; i < GetChildren().Count; i++)
             {
-                child.OnNodeExit();
+                GetChildren()[i].OnNodeExit();
             }
         }
     }
