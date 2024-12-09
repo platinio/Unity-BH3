@@ -8,8 +8,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
     public class Bullet : Projectile
     {
         [SerializeField] private TrailRenderer trailRender = null;
-        [SerializeField] private Gradient invisibleGrandient;
-
+     
         private float distanceTraveled = 0.0f;
         protected bool shouldHit = false;
         protected int bounceCount = 0;
@@ -94,6 +93,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             shouldHit = false;
             distanceTraveled = 0.0f;
             launched = false;
+            trailRender.Clear();
         }
 
         protected virtual void HandleBulletLaunch(ShootInfo info)
@@ -125,9 +125,9 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         private IEnumerator SetInvisibleForTwoFrames()
         {
+            trailRender.Clear();
             launched = false;
-            if(trailRender != null)
-                trailRender.colorGradient = invisibleGrandient;
+            
             yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
             if (trailRender != null)

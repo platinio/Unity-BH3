@@ -679,7 +679,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   projectilePrefab: {fileID: 2929276689411151821, guid: e88a387aa54d77b46aedf52194404cfe, type: 3}
-  maxPoolSize: 20
+  maxPoolSize: 50
 --- !u!4 &639683652
 Transform:
   m_ObjectHideFlags: 0
@@ -781,11 +781,11 @@ Transform:
   m_GameObject: {fileID: 675371004}
   serializedVersion: 2
   m_LocalRotation: {x: 0.44819376, y: -0.22859973, z: 0.119709074, w: 0.85588217}
-  m_LocalPosition: {x: 9.106977, y: 16.520096, z: 0.17108345}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 2.94, y: 8.5, z: -3.87}
+  m_LocalScale: {x: 0.62460965, y: 0.6246096, z: 0.62460965}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 938986098353187280}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1096431011
 PrefabInstance:
@@ -838,6 +838,10 @@ PrefabInstance:
     - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
       propertyPath: m_Name
       value: Soldier (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1487,9 +1491,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4976712653693080377, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
+      propertyPath: _data._json
+      value: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"NavAgent","value":{"$content":0,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.AI.NavMeshAgent,
+        UnityEngine.AIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"This","value":{"$content":1,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.GameObject,
+        UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Sensor","value":{"$content":2,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.AISensor,
+        Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Animator","value":{"$content":3,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Animator,
+        UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"RotateTransform","value":{"$content":4,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Transform,
+        UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Weapon","value":{"$content":5,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.Weapon,
+        Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"RotateAim","value":{"$content":6,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.RotateAim,
+        Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"ThisAIEntity","value":{"$content":7,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.Share.AIEntity,
+        Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      objectReference: {fileID: 0}
     - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
       propertyPath: m_Name
       value: Soldier
+      objectReference: {fileID: 0}
+    - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1548,6 +1568,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Soldier (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1604,6 +1628,10 @@ PrefabInstance:
     - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
       propertyPath: m_Name
       value: Soldier (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 6761476204822451812, guid: 051c658e61276584e96dbcabb29264bc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1820,9 +1848,17 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 8169652779561277400, guid: 41e869c12fcad1d4b8a411795a213630, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 675371007}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 41e869c12fcad1d4b8a411795a213630, type: 3}
+--- !u!4 &938986098353187280 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8169652779561277400, guid: 41e869c12fcad1d4b8a411795a213630, type: 3}
+  m_PrefabInstance: {fileID: 938986098353187279}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1831,7 +1867,6 @@ SceneRoots:
   - {fileID: 596582632}
   - {fileID: 1496163395}
   - {fileID: 1967822056}
-  - {fileID: 675371007}
   - {fileID: 1460979907}
   - {fileID: 1401177921}
   - {fileID: 1234651353}
