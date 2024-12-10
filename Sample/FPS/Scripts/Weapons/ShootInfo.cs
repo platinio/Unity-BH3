@@ -1,6 +1,5 @@
 using System;
 using ArcaneOnyx.Share;
-using RPGDamage;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Sample

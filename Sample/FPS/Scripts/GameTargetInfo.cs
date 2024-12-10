@@ -3,8 +3,5 @@ using Platinio.AIPerception;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
-    public class GameTargetInfo : TargetInfo<AIEntity>
-    {
-        
-    }
+    public class GameTargetInfo : TargetInfo<AIEntity> { }
 }

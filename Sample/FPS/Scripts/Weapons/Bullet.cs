@@ -32,9 +32,10 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             
             if (shouldHit)
             {
-                
                 if (shootInfo.hitEffect != null)
+                {
                     Instantiate(shootInfo.hitEffect , transform.position , Quaternion.identity);
+                }
 
                 var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
                 projectilePool.Destroy(this);
@@ -60,7 +61,6 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                     var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
                     projectilePool.Destroy(this);
                 }
-                   
             }
         }
 
