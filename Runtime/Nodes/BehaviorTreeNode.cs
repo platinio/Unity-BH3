@@ -260,8 +260,6 @@ namespace ArcaneOnyx.BehaviorTree
             defaultValues = new Dictionary<string, object>();
         }
 
-
-        private BehaviorTreeMachineDebug machineDebug;
         protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
 
         public virtual int MaxChildrenLimit => 0;
@@ -276,16 +274,6 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (valueInput.connection == null) return gameObject;
             return valueInput.GetValue() as GameObject;
-        }
-
-        protected BehaviorTreeMachineDebug GetMachineDebug()
-        {
-            if (machineDebug == null)
-            {
-                machineDebug = gameObject.GetComponent<BehaviorTreeMachineDebug>();
-            }
-
-            return machineDebug;
         }
         
         public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => conditionalExecutions;
