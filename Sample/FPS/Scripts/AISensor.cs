@@ -23,6 +23,20 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             base.Update();
             UpdateTemporalTrackedEntities();
+            RemoveDeadEntities();
+        }
+
+        private void RemoveDeadEntities()
+        {
+            for (int i = trackedEntities.Count - 1; i >= 0; i--)
+            {
+                if (!trackedEntities[i].GameEntity.IsAlive()) trackedEntities.RemoveAt(i);
+            }
+            
+            for (int i = temporalTrackedEntities.Count - 1; i >= 0; i--)
+            {
+                if (!temporalTrackedEntities[i].GameEntity.IsAlive()) temporalTrackedEntities.RemoveAt(i);
+            }
         }
 
         private void UpdateTemporalTrackedEntities()
