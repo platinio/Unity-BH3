@@ -1649,7 +1649,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a98df3607efbe943a5dbf99cd2357de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  trackedEntities: []
   visionTransform: {fileID: 6032665151081645516}
   maxRange: 40
   visionConeAngle: 100
@@ -1986,7 +1985,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   spawnPosition: {fileID: 462294717463699306}
-  dmg: 1.4
+  dmg: 3
   range: 100
   speed: 30
 --- !u!1 &5130738120143368574
@@ -3085,6 +3084,7 @@ MonoBehaviour:
   bulletSpawnTransform: {fileID: 462294717463699306}
   targetTransform: {fileID: 0}
   aimSpeed: 4
+  aimAngle: -75
 --- !u!114 &4792867688659644190
 MonoBehaviour:
   m_ObjectHideFlags: 0
