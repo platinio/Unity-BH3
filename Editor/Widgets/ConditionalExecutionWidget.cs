@@ -34,6 +34,9 @@ namespace ArcaneOnyx.BehaviorTree
             }
             set { }
         }
+        
+        public const float Height = 40.0f;
+        public const float Separation = 5.0f;
 
         public ConditionalExecutionWidget(BehaviorTreeCanvas canvas, BehaviorTreeNode element) : base(canvas, element)
         {
@@ -48,23 +51,20 @@ namespace ArcaneOnyx.BehaviorTree
         public override void CachePosition()
         {
             base.CachePosition();
-            
-            float height = 40.0f;
-            float separation = 5.0f;
-            
+           
             var owner = (node as ConditionalExecution)?.Owner;
             if (owner == null || !node.graph.elements.Contains(owner)) return;
             
             int index = owner.GetConditionalIndex(node as ConditionalExecution) + 1;
             Vector2 offset = Vector2.zero;
 
-            if (owner is RunBehaviorTreeGraphNode) offset += new Vector2(0.0f, -40.0f);
+            if (owner is RunBehaviorTreeGraphNode) offset += new Vector2(0.0f, -Height);
 
             var widget = canvas.Widget(owner);
             Rect p = widget.position;
-            p.height = height;
+            p.height = Height;
             p.position -= new Vector2(0, (p.height / 2.0f) * index);
-            p.position -= new Vector2(0, ((height / 2.0f) + separation) * index);
+            p.position -= new Vector2(0, ((Height / 2.0f) + Separation) * index);
             p.position += offset;
             
             TittleRect = p;

@@ -22,8 +22,8 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (conditionalCount > 0)
             {
-                sourceCenter += Vector2.up * conditionalCount * -40.0f;
-                sourceCenter += Vector2.up * (conditionalCount - 1) * -5.0f;
+                sourceCenter += Vector2.up * conditionalCount * -ConditionalExecutionWidget.Height;
+                sourceCenter += Vector2.up * (conditionalCount - 1) * -ConditionalExecutionWidget.Separation;
             }
 
             //draw transition first section
@@ -99,8 +99,8 @@ namespace ArcaneOnyx.BehaviorTree
 
                         if (conditionalExecutionCount > 0)
                         {
-                            destPosition += new Vector2(0, -40.0f) * conditionalExecutionCount;
-                            destPosition += new Vector2(0, -5.0f) * (conditionalExecutionCount);
+                            destPosition += new Vector2(0, -ConditionalExecutionWidget.Height) * conditionalExecutionCount;
+                            destPosition += new Vector2(0, -ConditionalExecutionWidget.Separation) * (conditionalExecutionCount);
                         }
                         
                         if (destPosition.y < closerDestinationPosition.y) closerDestinationPosition = destPosition;
