@@ -9,11 +9,7 @@ namespace ArcaneOnyx.BehaviorTree
         public BehaviorTreeGraphEditor(Metadata metadata) : base(metadata) { }
 
         protected override float GetHeight(float width, GUIContent label) => 0;
-        
 
-        protected override void OnGUI(Rect position, GUIContent label)
-        {
-            
-        }
+        protected override void OnGUI(Rect position, GUIContent label) { }
     }
 }

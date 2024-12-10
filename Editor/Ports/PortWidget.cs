@@ -8,7 +8,7 @@ using GraphGUI = ArcaneOnyx.GraphCore.GraphGUI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [Unity.VisualScripting.Widget(typeof(IPort))]
+    [Widget(typeof(IPort))]
     public abstract class PortWidget<TPort> : GraphCore.Widget<BehaviorTreeCanvas, TPort>, IPortWidget where TPort : class, IPort
     {
         protected PortWidget(BehaviorTreeCanvas canvas, TPort port) : base(canvas, port) { }
@@ -40,17 +40,17 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected PortDescription description { get; private set; }
 
-        public Unity.VisualScripting.Metadata inspectorMetadata { get; private set; }
+        public Metadata inspectorMetadata { get; private set; }
 
-        protected Unity.VisualScripting.Inspector inspector { get; private set; }
+        protected Inspector inspector { get; private set; }
 
-        public override Unity.VisualScripting.Metadata FetchMetadata()
+        public override Metadata FetchMetadata()
         {
             //return description.getMetadata(unitWidget.metadata);
             return null;
         }
 
-        public virtual Unity.VisualScripting.Metadata FetchInspectorMetadata()
+        public virtual Metadata FetchInspectorMetadata()
         {
             return null;
         }

@@ -13,16 +13,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public EditorTexture icon
         {
-            get
-            {
-                /*
-                if (_icon == null || !_icon.IsValid())
-                {
-                    _icon = GetIcon(portType);
-                }*/
-
-                return _icon;
-            }
+            get => _icon;
             set => _icon = value;
         }
 
@@ -55,27 +46,6 @@ namespace ArcaneOnyx.BehaviorTree
             summary = other.summary;
             portType = other.portType ?? portType;
             getMetadata = other.getMetadata ?? getMetadata;
-        }
-
-        private static EditorTexture GetIcon(IUnitPort portType)
-        {
-            if (portType is IUnitControlPort)
-            {
-                return typeof(Flow).Icon();
-            }
-            else if (portType is IUnitValuePort)
-            {
-                return Icons.Type(((IUnitValuePort)portType).type);
-            }
-            else if (portType is IUnitInvalidPort)
-            {
-                return BoltCore.Resources.icons.errorState;
-            }
-            else
-            {
-                // throw new NotSupportedException();
-                return null;
-            }
         }
     }
 }

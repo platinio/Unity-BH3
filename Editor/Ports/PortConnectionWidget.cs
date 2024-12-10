@@ -12,28 +12,8 @@ namespace ArcaneOnyx.BehaviorTree
 
 
         #region Model
-
         protected TConnection connection => element;
-
-        //protected IUnitConnectionDebugData ConnectionDebugData => GetDebugData<IUnitConnectionDebugData>();
-
         #endregion
-
-
-        #region Lifecycle
-
-        public override void BeforeFrame()
-        {
-            base.BeforeFrame();
-
-            if (showDroplets)
-            {
-                //GraphGUI.UpdateDroplets(canvas, droplets, ConnectionDebugData.lastInvokeFrame, ref lastInvokeTime, ref dropTime);
-            }
-        }
-
-        #endregion
-
 
         #region Positioning
 
@@ -41,7 +21,6 @@ namespace ArcaneOnyx.BehaviorTree
         {
             get
             {
-                //GraphCore.XCanvasProvider.Widget(canvas, connection.source);
                 yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
                 yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
             }
@@ -65,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override Rect position
         {
-            get { return _position; }
+            get => _position;
             set { }
         }
 
@@ -103,22 +82,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public abstract Color color { get; }
 
-        protected override bool dim
-        {
-            get
-            {
-                /*
-                var dim = BoltCore.Configuration.dimInactiveNodes && !connection.destination.unit.Analysis<UnitAnalysis>(context).isEntered;
-
-                if (BoltCore.Configuration.dimIncompatibleNodes && canvas.isCreatingConnection)
-                {
-                    dim = true;
-                }
-
-                return dim;*/
-                return default;
-            }
-        }
+        protected override bool dim => default;
 
         public override void DrawBackground()
         {

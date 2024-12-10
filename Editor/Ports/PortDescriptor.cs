@@ -31,12 +31,7 @@ namespace ArcaneOnyx.BehaviorTree
                 isDirty = false;
 
                 description.fallbackLabel = target.key.Filter(symbols: false, punctuation: false).Prettify();
-
                 description.portType = target;
-
-                //target.behaviorTreeNode?.Descriptor<IUnitDescriptor>().DescribePort(target, description);
-
-                // No DescriptionAssignment is run, so we'll just always assume that the description changes.
                 DescriptorProvider.instance.TriggerDescriptionChange(target);
             }
         }

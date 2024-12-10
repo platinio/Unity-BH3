@@ -7,9 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     [Editor(typeof(BehaviorTreeNode))]
     public class BehaviorTreeNodeEditor : Inspector
     {
-        public BehaviorTreeNodeEditor(Metadata metadata) : base(metadata)
-        {
-        }
+        public BehaviorTreeNodeEditor(Metadata metadata) : base(metadata) { }
 
         protected override float GetHeight(float width, GUIContent label)
         {

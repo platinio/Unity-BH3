@@ -1,6 +1,5 @@
 ﻿using System;
 using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -131,22 +130,5 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         #endregion
-
-
-        private static class Styles
-        {
-            static Styles()
-            {
-                prediction = new GUIStyle(EditorStyles.label);
-                prediction.normal.textColor = Color.white;
-                prediction.fontSize = 9;
-                prediction.normal.background = new Color(0, 0, 0, 0.25f).GetPixel();
-                prediction.padding = new RectOffset(4, 6, 3, 3);
-                prediction.margin = new RectOffset(0, 0, 0, 0);
-                prediction.alignment = TextAnchor.MiddleCenter;
-            }
-
-            public static readonly GUIStyle prediction;
-        }
     }
 }
