@@ -1986,7 +1986,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   spawnPosition: {fileID: 462294717463699306}
-  dmg: 1
+  dmg: 1.4
   range: 100
   speed: 30
 --- !u!1 &5130738120143368574

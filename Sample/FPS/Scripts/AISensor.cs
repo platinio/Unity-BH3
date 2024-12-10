@@ -46,10 +46,10 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         public override bool IsEntityBeingTracked(GameTargetInfo target)
         {
-            if (target.GameEntity == null) return false;
+            if (target == null || target.GameEntity == null) return false;
             
             bool isBeingTracked = base.IsEntityBeingTracked(target);
-            if (!isBeingTracked) isBeingTracked = temporalTrackedEntities.Where(x => x.GameEntity == target.GameEntity) != null;
+            if (!isBeingTracked) isBeingTracked = temporalTrackedEntities.Where(x => x.GameEntity == target.GameEntity).FirstOrDefault() != null;
 
             return isBeingTracked;
         }
