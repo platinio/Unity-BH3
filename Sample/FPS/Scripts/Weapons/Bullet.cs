@@ -71,7 +71,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         protected void HandleHit(RaycastHit hit)
         {
-            transform.position += transform.forward * hit.distance;                
+            transform.position += shootInfo.dir * hit.distance;                
             bool handleByDamageSystem = TryDoDamage(hit.collider);
 
             //if we hit a object that dont process the damage in his on way using Damageable components, add just the impact force in a default way
