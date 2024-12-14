@@ -39,6 +39,11 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             return targetRot * spineBone.rotation;
         }
 
+        public void CleanTarget()
+        {
+            targetTransform = null;
+        }
+
         public void UpdateTarget(Transform target)
         {
             targetTransform = target;
