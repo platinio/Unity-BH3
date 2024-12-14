@@ -22,6 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Awake();
             Variables = GetComponent<Variables>();
+            Variables.declarations.Set("This", gameObject);
             
             if (hasGraph)
             {
