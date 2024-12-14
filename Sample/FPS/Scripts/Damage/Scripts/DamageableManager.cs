@@ -85,7 +85,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             if (isDead) return;
 
-            CustomEvent.Trigger(gameObject, "OnKilled");
+            CustomEvent.Trigger(gameObject, "OnKilled", killer);
             currentHP = 0;
             isDead = true;
         }
