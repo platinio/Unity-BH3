@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            var animator = FindComponent<Animator>(Animator);
+            var animator = GetComponent<Animator>(Animator);
             var valueName = ValueName.GetValue() as string;
             var animatorValue = Value.GetValue();
             

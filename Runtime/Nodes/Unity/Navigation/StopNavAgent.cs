@@ -17,7 +17,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override void OnAwake()
         {
-            navAgent = FindComponent<NavMeshAgent>(Target);
+            navAgent = GetComponent<NavMeshAgent>(Target);
         }
 
         public override void OnEnter()

@@ -271,7 +271,7 @@ namespace ArcaneOnyx.BehaviorTree
             return target == null ? gameObject : target;
         }
         
-        protected T FindComponent<T>(ValueInput valueInput) where T : Component
+        protected T GetComponent<T>(ValueInput valueInput) where T : Component
         {
             var component = valueInput.GetComponent<T>();
             if (component == null) return gameObject.GetComponent<T>();

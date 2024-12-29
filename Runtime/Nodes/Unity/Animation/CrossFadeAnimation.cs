@@ -41,7 +41,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             remainingDuration = (float)Duration.GetValue();
 
-            var animator = FindComponent<Animator>(Animator);
+            var animator = GetComponent<Animator>(Animator);
             string stateName = (string) StateName.GetValue();
             float normalizeTransitionDuration = (float) TransitionDuration.GetValue();
             int layer = (int) Layer.GetValue();

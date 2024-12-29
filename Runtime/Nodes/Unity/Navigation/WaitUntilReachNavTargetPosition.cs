@@ -24,7 +24,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override void OnAwake()
         {
-            navAgent = FindComponent<NavMeshAgent>(Target);
+            navAgent = GetComponent<NavMeshAgent>(Target);
         }
 
         public override ExecutionStatus OnUpdate() => navAgent.remainingDistance < navAgent.stoppingDistance ? ExecutionStatus.Success : ExecutionStatus.Running;
