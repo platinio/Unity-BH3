@@ -1,21 +1,32 @@
-﻿using Unity.VisualScripting;
+﻿using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
+using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
+    [GraphCreateMenu("Unity/Game Object/Find Game Object")]
     public class FindGameObject : GameplayNode
     {
         [DoNotSerialize]
-        public ValueInput GameObjectName { get; private set; }
+        public ValueInput Name { get; private set; }
+        
+        [DoNotSerialize]
+        public ValueOutput Output { get; private set; }
         
         public override string NodeName => "Find Game Object";
+        public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()
         {
             base.Definition();
            
-            GameObjectName = ValueInput<string>(nameof(GameObjectName), null);
+            Name = ValueInput<string>(nameof(Name), null);
+            
+            Output = ValueOutput<GameObject>(nameof(Output), () =>
+            {
+                string gameObjectName = Name.GetValue() as string;
+                return GameObject.Find(gameObjectName);
+            });
         }
-        
-        
     }
 }

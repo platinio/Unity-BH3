@@ -174,6 +174,15 @@ namespace ArcaneOnyx.BehaviorTree
                 throw new MissingValuePortInputException(key);
             }
         }
-        
+
+        public T GetComponent<T>() where T : Component
+        {
+            var value = GetValue();
+            
+            if (value is T component) return component;
+            if (value is GameObject go) return go.GetComponent<T>();
+
+            throw new Exception($"Cant get component {typeof(T).FullName} from ValueInput");
+        }
     }
 }

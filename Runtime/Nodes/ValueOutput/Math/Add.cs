@@ -1,11 +1,10 @@
 ﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
-using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Math/Sum")]
-    public class Sum : GameplayNode
+    public class Add : GameplayNode
     {
         [DoNotSerialize]
         public ValueInput A { get; private set; }
@@ -16,7 +15,7 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Result { get; private set; }
         
-        public override string NodeName => "Sum";
+        public override string NodeName => "A + B";
         public override bool CanBeUseAsTransitionDestination => false;
         
         protected override void Definition()
@@ -26,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
             A = ValueInput<float>(nameof(A), 0.0f);
             B = ValueInput<float>(nameof(B), 0.0f);
             
-            Result = ValueOutput<GameObject>(nameof(Result), () =>
+            Result = ValueOutput<float>(nameof(Result), () =>
             {
                 float a = (float) A.GetValue();
                 float b = (float) B.GetValue();

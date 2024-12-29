@@ -4,16 +4,19 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    public class Destroy : GameplayNode
+    [GraphCreateMenu("Unity/Game Object/Destroy Object")]
+    public class DestroyObject : GameplayNode
     {
         [DoNotSerialize]
         public ValueInput Object { get; private set; }
-        
+
+        public override string NodeName => "Destroy Object";
+
         protected override void Definition()
         {
             base.Definition();
            
-            Object = ValueInput<object>(nameof(Object), null);
+            Object = ValueInput<Object>(nameof(Object), null);
         }
 
         public override ExecutionStatus OnUpdate()

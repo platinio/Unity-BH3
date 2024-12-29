@@ -1,7 +1,28 @@
-﻿namespace ArcaneOnyx.BehaviorTree
+﻿using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
+using UnityEngine;
+
+namespace ArcaneOnyx.BehaviorTree
 {
-    public class DontDestroyOnLoad
+    [GraphCreateMenu("Unity/Game Object/Dont Destroy On Load")]
+    public class DontDestroyOnLoad : GameplayNode
     {
-        
+        [DoNotSerialize]
+        public ValueInput Object { get; private set; }
+
+        public override string NodeName => "Dont Destroy On Load";
+
+        protected override void Definition()
+        {
+            base.Definition();
+           
+            Object = ValueInput<Object>(nameof(Object), null);
+        }
+
+        public override ExecutionStatus OnUpdate()
+        {
+            UnityEngine.Object.DontDestroyOnLoad(Object.GetValue() as Object);
+            return ExecutionStatus.Success;
+        }
     }
 }

@@ -1,7 +1,24 @@
-﻿namespace ArcaneOnyx.BehaviorTree
+﻿using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
+
+namespace ArcaneOnyx.BehaviorTree
 {
-    public class IntegerLiteral
+    [GraphCreateMenu("Unity/Literal/Integer")]
+    public class IntegerLiteral : Literal
     {
+        [Serialize, Inspectable] private float value;
         
+        [DoNotSerialize]
+        public ValueOutput Value { get; private set; }
+
+        public override string NodeName => string.IsNullOrEmpty(NodeComment)? "Integer Literal" : NodeComment;
+        public override bool CanBeUseAsTransitionDestination => false;
+        
+        protected override void Definition()
+        {
+            base.Definition();
+            
+            Value = ValueOutput<int>(nameof(Value), () => value);
+        }
     }
 }

@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Animator/Play Animation")]
-    public class PlayAnimation : GameplayNode
+    [GraphCreateMenu("Unity/Animation/Cross Fade Animation")]
+    public class CrossFadeAnimation : GameplayNode
     {
         [DoNotSerialize]
         public ValueInput Animator { get; private set; }
@@ -17,30 +17,43 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput TransitionDuration { get; private set; }
         [DoNotSerialize]
         public ValueInput TimeOffset { get; private set; }
+        [DoNotSerialize]
+        public ValueInput Duration { get; private set; }
+
+        private float remainingDuration = 0.0f;
         
-        public override string NodeName => "Play Animation";
+        public override string NodeName => "Cross Fade Animation";
 
         protected override void Definition()
         {
             base.Definition();
 
-            Animator = ValueInput<string>(nameof(Animator), null);
+            Animator = ValueInput<object>(nameof(Animator), null);
             StateName = ValueInput<string>(nameof(StateName), string.Empty);
             Layer = ValueInput<int>(nameof(Layer), 0);
-            TransitionDuration = ValueInput<string>(nameof(TransitionDuration), 0.0f);
-            TimeOffset = ValueInput<string>(nameof(TimeOffset), 0.0f);
+            TransitionDuration = ValueInput<float>(nameof(TransitionDuration), 0.0f);
+            TimeOffset = ValueInput<float>(nameof(TimeOffset), 0.0f);
+            Duration = ValueInput<float>(nameof(Duration), 0.0f);
         }
 
-        public override ExecutionStatus OnUpdate()
+        public override void OnEnter()
         {
-            var animator = Animator.GetValue() as Animator;
+            base.OnEnter();
+            remainingDuration = (float)Duration.GetValue();
+            
+            var animator = Animator.GetComponent<Animator>();
             string stateName = (string) StateName.GetValue();
             float normalizeTransitionDuration = (float) TransitionDuration.GetValue();
             int layer = (int) Layer.GetValue();
             float normalizeTimeOffset = (float) TimeOffset.GetValue();
             
             animator.CrossFade(stateName, normalizeTransitionDuration, layer, normalizeTimeOffset);
-            return ExecutionStatus.Success;
+        }
+
+        public override ExecutionStatus OnUpdate()
+        {
+            remainingDuration -= Time.deltaTime;
+            return remainingDuration <= 0? ExecutionStatus.Success : ExecutionStatus.Running;
         }
     }
 }
