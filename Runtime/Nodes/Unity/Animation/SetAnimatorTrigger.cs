@@ -24,7 +24,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
-            var animator = Animator.GetComponent<Animator>();
+            var animator = FindComponent<Animator>(Animator);
             string triggerName = TriggerName.GetValue() as string;
             
             animator.SetTrigger(triggerName);

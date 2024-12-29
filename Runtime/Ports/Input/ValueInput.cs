@@ -182,7 +182,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (value is T component) return component;
             if (value is GameObject go) return go.GetComponent<T>();
 
-            throw new Exception($"Cant get component {typeof(T).FullName} from ValueInput");
+            return null;
         }
     }
 }

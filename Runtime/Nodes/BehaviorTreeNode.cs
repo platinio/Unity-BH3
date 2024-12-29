@@ -4,6 +4,7 @@ using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -270,10 +271,12 @@ namespace ArcaneOnyx.BehaviorTree
             return target == null ? gameObject : target;
         }
         
-        protected GameObject GetTarget(ValueInput valueInput)
+        protected T FindComponent<T>(ValueInput valueInput) where T : Component
         {
-            if (valueInput.connection == null) return gameObject;
-            return valueInput.GetValue() as GameObject;
+            var component = valueInput.GetComponent<T>();
+            if (component == null) return gameObject.GetComponent<T>();
+
+            return component;
         }
         
         public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => conditionalExecutions;

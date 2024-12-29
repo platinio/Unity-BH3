@@ -27,13 +27,13 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
             
-            Target = ValueInput<GameObject>(nameof(Target));
+            Target = ValueInput<object>(nameof(Target));
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
         
         public override void OnAwake()
         {
-            navAgent = GetTarget(Target).GetComponent<NavMeshAgent>();
+            navAgent = FindComponent<NavMeshAgent>(Target);
         }
 
         public override void OnEnter()
