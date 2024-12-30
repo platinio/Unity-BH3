@@ -27,7 +27,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
             
-            Target = ValueInput<object>(nameof(Target));
+            Target = ValueInput<Object>(nameof(Target));
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
         
