@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         protected override string NodeIconPath => "NodeIcons/UntilFailure";
         public override string NodeName => "Until Failure";
-        public override string Description => "Runs child until return FAILURE";
+        public override string Description => "Executes child node until it returns FAILURE";
         public override int MaxChildrenLimit => 1;
         
         public override ExecutionStatus OnUpdate()

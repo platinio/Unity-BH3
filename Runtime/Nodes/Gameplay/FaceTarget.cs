@@ -19,7 +19,8 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput AcceptableRotation { get; private set; }
        
         public override string NodeName => "Face Target";
-        
+        public override string Description => "Rotates target transform to face TransformTarget";
+
         protected override void Definition()
         {
             base.Definition();

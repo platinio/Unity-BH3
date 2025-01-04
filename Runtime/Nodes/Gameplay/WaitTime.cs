@@ -12,7 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
         private float timer = 0.0f;
 
         public override string NodeName => "Wait";
-
+        
         protected override void Definition()
         {
             base.Definition();

@@ -10,6 +10,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Value { get; private set; }
 
         public override string NodeName => "Boolean Conditional Execution";
+        public override string Description => "Only executes the node if the input boolean value is true";
 
         protected override void Definition()
         {

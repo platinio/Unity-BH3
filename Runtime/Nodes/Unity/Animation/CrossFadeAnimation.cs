@@ -23,6 +23,7 @@ namespace ArcaneOnyx.BehaviorTree
         private float remainingDuration = 0.0f;
         
         public override string NodeName => "Cross Fade Animation";
+        public override string Description => "Cross Fade Animation to StateName";
 
         protected override void Definition()
         {

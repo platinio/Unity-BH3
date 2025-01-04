@@ -13,7 +13,8 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput TriggerName { get; private set; }
        
         public override string NodeName => "Set Animator Trigger";
-        
+        public override string Description => "Sets triggerName in the animator";
+
         protected override void Definition()
         {
             base.Definition();

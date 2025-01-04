@@ -11,6 +11,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Object { get; private set; }
 
         public override string NodeName => "Destroy Object";
+        public override string Description => "Destroys the input GameObject, component or asset.";
 
         protected override void Definition()
         {

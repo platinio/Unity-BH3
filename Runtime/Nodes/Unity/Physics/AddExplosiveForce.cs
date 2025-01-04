@@ -26,6 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ForceMode forceMode;
 
         public override string NodeName => "Add Explosive Force";
+        public override string Description => "Applies a force that simulates explosion effects to the target RigidBody.";
 
         protected override void Definition()
         {

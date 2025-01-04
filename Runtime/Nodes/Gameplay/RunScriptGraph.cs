@@ -10,6 +10,8 @@ namespace ArcaneOnyx.BehaviorTree
     {
         [Serialize, Inspectable] private ScriptGraphAsset scripGraphAsset;
 
+        public override string Description => "Executes ScriptGraphAsset";
+
         public override string NodeName 
         {
             get

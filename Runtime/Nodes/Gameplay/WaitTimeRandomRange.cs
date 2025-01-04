@@ -15,7 +15,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         private float timer = 0.0f;
 
-        public override string NodeName => $"Wait Range";
+        public override string NodeName => "Wait Range";
+        public override string Description => "Wait random random from minTime to maxTime";
 
         protected override void Definition()
         {

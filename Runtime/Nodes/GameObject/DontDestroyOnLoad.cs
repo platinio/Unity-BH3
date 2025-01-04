@@ -11,6 +11,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Object { get; private set; }
 
         public override string NodeName => "Dont Destroy On Load";
+        public override string Description => "Do not destroy the target Object when loading a new Scene.";
 
         protected override void Definition()
         {

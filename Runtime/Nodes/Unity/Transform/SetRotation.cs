@@ -12,6 +12,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput NewRotation { get; private set; }
 
+        public override string NodeName => "Set Rotation";
+
         protected override void Definition()
         {
             base.Definition();

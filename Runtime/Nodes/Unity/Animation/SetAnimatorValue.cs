@@ -15,7 +15,8 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Value { get; private set; }
         
         public override string NodeName => "Set Animator Value";
-        
+        public override string Description => "Sets value in the animator, value can be int/float/boolean";
+
         protected override void Definition()
         {
             base.Definition();

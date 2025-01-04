@@ -12,8 +12,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput LookTarget { get; private set; }
 
-        public override string Description => "Rotates the Target to look at the LookTarget.";
         public override string NodeName => "Look At";
+        public override string Description => "Rotates the Target to look at the LookTarget.";
 
         protected override void Definition()
         {

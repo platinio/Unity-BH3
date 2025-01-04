@@ -13,6 +13,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput NewPosition { get; private set; }
 
+        public override string NodeName => "Set Position";
+
         protected override void Definition()
         {
             base.Definition();

@@ -16,6 +16,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ForceMode forceMode;
 
         public override string NodeName => "Add Torque";
+        public override string Description => "Applies torque to the target Rigidbody.";
 
         protected override void Definition()
         {

@@ -15,6 +15,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Rotation { get; private set; }
 
         public override string NodeName => "Instantiate Object";
+        public override string Description => "Clones the original object";
 
         protected override void Definition()
         {

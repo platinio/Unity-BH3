@@ -22,6 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
         private float currentTime;
         private float duration;
 
+        public override string NodeName => "Rotate";
         public override string Description => "Rotates the transform to a target rotation in a define duration";
 
         protected override void Definition()
