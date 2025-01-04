@@ -11,23 +11,26 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Target { get; private set; }
         
         [DoNotSerialize]
-        public ValueInput TargetPosition { get; private set; }
+        public ValueInput TargetRotation { get; private set; }
         
         [DoNotSerialize]
         public ValueInput Duration { get; private set; }
 
-        private Vector3 targetPosition;
-        private Vector3 fromPosition;
+        private Quaternion targetRotation;
+        private Quaternion fromRotation;
         private Transform targetTransform;
         private float currentTime;
         private float duration;
-       
+
+        public override string Description => "Rotates the transform to a target rotation in a define duration";
+
         protected override void Definition()
         {
             base.Definition();
             
             Target = ValueInput<Object>(nameof(Target), null);
-            TargetPosition = ValueInput<Vector3>(nameof(TargetPosition), Vector3.zero);
+            TargetRotation = ValueInput<Vector3>(nameof(TargetRotation), Vector3.zero);
+            Duration = ValueInput<float>(nameof(Duration), 0.0f);
         }
         
         public override void OnEnter()
@@ -35,15 +38,18 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             
             targetTransform = GetComponent<Transform>(Target);
-            targetPosition = (Vector3) TargetPosition.GetValue();
+            
+            var targetRotationEuler = (Vector3) TargetRotation.GetValue();
+            targetRotation = Quaternion.Euler(targetRotationEuler);
+            
             duration = (float)Duration.GetValue();
-            fromPosition = targetTransform.position;
+            fromRotation = targetTransform.rotation;
             currentTime = 0;
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            targetTransform.position = Vector3.Lerp(fromPosition, targetPosition, currentTime / duration);
+            targetTransform.rotation = Quaternion.Slerp(fromRotation, targetRotation, currentTime / duration);
             currentTime += Time.deltaTime;
 
             return currentTime >= duration ? ExecutionStatus.Success : ExecutionStatus.Running;
