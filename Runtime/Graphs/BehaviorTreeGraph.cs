@@ -259,6 +259,56 @@ namespace ArcaneOnyx.BehaviorTree
 
             return ExecutionStatus.Running;
         }
+        
+        public void OnLateUpdate()
+        {
+            foreach (var node in Nodes)
+            {
+                if (node.LastExecutionStatus == ExecutionStatus.Running) return;
+                node.OnLateUpdate();
+            }
+        }
+        
+        public void OnFixedUpdate()
+        {
+            foreach (var node in Nodes)
+            {
+                if (node.LastExecutionStatus == ExecutionStatus.Running) return;
+                node.OnFixedUpdate();
+            }
+        }
+
+        public void OnDestroy()
+        {
+            foreach (var node in Nodes)
+            {
+                node.OnDestroy();
+            }
+        }
+        
+        public void OnApplicationPause(bool pauseStatus)
+        {
+            foreach (var node in Nodes)
+            {
+                node.OnApplicationPause(pauseStatus);
+            }
+        }
+
+        public void OnDrawGizmos()
+        {
+            foreach (var node in Nodes)
+            {
+                node.OnDrawGizmos();
+            }
+        }
+        
+        public void OnDrawGizmosSelected()
+        {
+            foreach (var node in Nodes)
+            {
+                node.OnDrawGizmosSelected();
+            }
+        }
 
         public Vector2 GetEntryNodeOffset()
         {

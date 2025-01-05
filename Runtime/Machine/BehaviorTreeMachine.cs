@@ -135,12 +135,34 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        private void LateUpdate() => behaviorTreeGraph.OnLateUpdate();
+
+        private void FixedUpdate() => behaviorTreeGraph.OnFixedUpdate();
+        
+
         protected override void OnDestroy()
         {
+            behaviorTreeGraph.OnDestroy();
+            
             if (graphInstance)
             {
                 Destroy(graphInstance);
             }
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            behaviorTreeGraph.OnApplicationPause(pauseStatus);
+        }
+
+        private void OnDrawGizmos()
+        {
+            behaviorTreeGraph.OnDrawGizmos();
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            behaviorTreeGraph.OnDrawGizmosSelected();
         }
 
         public override BehaviorTreeGraph DefaultGraph()
