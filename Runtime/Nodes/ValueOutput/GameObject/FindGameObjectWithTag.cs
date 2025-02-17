@@ -12,7 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueOutput Output { get; private set; }
         
         public override string NodeName => "Find Game Object";
-        public override bool CanBeUseAsTransitionDestination => false;
+        public override bool CanBeUsedAsTransitionDestination => false;
         
         protected override void Definition()
         {

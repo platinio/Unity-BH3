@@ -10,7 +10,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private bool callOnEnter = false;
 
-        public override string Description => "Executes child nodes in order from left to right.\nExecution ends when any child node returns FAILURE.";
+        public override string Description => "Executes child nodes in order from left to right.\nExecution ends when any child node returns SUCCESS.";
 
         public override void OnEnter()
         {

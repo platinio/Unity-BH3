@@ -173,7 +173,7 @@ namespace ArcaneOnyx.BehaviorTree
                         Styles.background.Draw(bottomConnection, false, IsSelected, false, false);
                     }
 
-                    if (element.CanBeUseAsTransitionDestination)
+                    if (element.CanBeUsedAsTransitionDestination)
                     {
                         var topConnection = new Rect();
                         topConnection.x = p.x + (p.width / 2.0f) - (connectorSize / 2.0f);
@@ -477,7 +477,7 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     canvas.CancelTransition();
                 }
-                else if (destination.CanBeUseAsTransitionDestination)
+                else if (destination.CanBeUsedAsTransitionDestination)
                 {
                     canvas.EndTransition(destination);
                 }

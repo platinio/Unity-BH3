@@ -12,7 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueOutput Value { get; private set; }
 
         public override string NodeName => string.IsNullOrEmpty(NodeComment)? "Integer Literal" : NodeComment;
-        public override bool CanBeUseAsTransitionDestination => false;
+        public override bool CanBeUsedAsTransitionDestination => false;
         
         protected override void Definition()
         {

@@ -177,6 +177,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         public T GetComponent<T>() where T : Component
         {
+            if (connection == null) return default;
+            
             var value = GetValue();
             
             if (value is T component) return component;

@@ -11,7 +11,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         [DoNotSerialize]
         public ValueOutput thisValueOutput { get; private set; }
-        public override bool CanBeUseAsTransitionDestination => false;
+        public override bool CanBeUsedAsTransitionDestination => false;
         
         protected override void Definition()
         {

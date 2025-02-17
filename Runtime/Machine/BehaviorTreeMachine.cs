@@ -135,14 +135,29 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private void LateUpdate() => behaviorTreeGraph.OnLateUpdate();
+        private void LateUpdate()
+        {
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnLateUpdate();
+            }
+        }
 
-        private void FixedUpdate() => behaviorTreeGraph.OnFixedUpdate();
+        private void FixedUpdate()
+        {
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnFixedUpdate();
+            }
+        } 
         
 
         protected override void OnDestroy()
         {
-            behaviorTreeGraph.OnDestroy();
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnDestroy();
+            }
             
             if (graphInstance)
             {
@@ -152,17 +167,26 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void OnApplicationPause(bool pauseStatus)
         {
-            behaviorTreeGraph.OnApplicationPause(pauseStatus);
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnApplicationPause(pauseStatus);
+            }
         }
 
         private void OnDrawGizmos()
         {
-            behaviorTreeGraph.OnDrawGizmos();
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnDrawGizmos();
+            }
         }
 
         private void OnDrawGizmosSelected()
         {
-            behaviorTreeGraph.OnDrawGizmosSelected();
+            if (hasGraph && behaviorTreeGraph != null)
+            {
+                behaviorTreeGraph.OnDrawGizmosSelected();
+            }
         }
 
         public override BehaviorTreeGraph DefaultGraph()

@@ -16,7 +16,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueOutput Result { get; private set; }
         
         public override string NodeName => "A x B";
-        public override bool CanBeUseAsTransitionDestination => false;
+        public override bool CanBeUsedAsTransitionDestination => false;
         
         protected override void Definition()
         {

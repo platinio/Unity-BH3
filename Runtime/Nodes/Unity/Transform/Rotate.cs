@@ -11,16 +11,14 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Target { get; private set; }
         
         [DoNotSerialize]
-        public ValueInput TargetRotation { get; private set; }
+        public ValueInput Speed { get; private set; }
         
         [DoNotSerialize]
-        public ValueInput Duration { get; private set; }
-
-        private Quaternion targetRotation;
-        private Quaternion fromRotation;
+        public ValueInput Axis { get; private set; }
+       
         private Transform targetTransform;
-        private float currentTime;
-        private float duration;
+        private float speed;
+        private Vector3 axis;
 
         public override string NodeName => "Rotate";
         public override string Description => "Rotates the transform to a target rotation in a define duration";
@@ -30,8 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.Definition();
             
             Target = ValueInput<Object>(nameof(Target), null);
-            TargetRotation = ValueInput<Vector3>(nameof(TargetRotation), Vector3.zero);
-            Duration = ValueInput<float>(nameof(Duration), 0.0f);
+            Speed = ValueInput<float>(nameof(Speed), 0);
         }
         
         public override void OnEnter()
@@ -39,21 +36,14 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             
             targetTransform = GetComponent<Transform>(Target);
-            
-            var targetRotationEuler = (Vector3) TargetRotation.GetValue();
-            targetRotation = Quaternion.Euler(targetRotationEuler);
-            
-            duration = (float)Duration.GetValue();
-            fromRotation = targetTransform.rotation;
-            currentTime = 0;
+            speed = (float) Speed.GetValue();
+            axis = (Vector3)Axis.GetValue();
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            targetTransform.rotation = Quaternion.Slerp(fromRotation, targetRotation, currentTime / duration);
-            currentTime += Time.deltaTime;
-
-            return currentTime >= duration ? ExecutionStatus.Success : ExecutionStatus.Running;
+            targetTransform.Rotate(axis, speed);
+            return ExecutionStatus.Running;
         }
     }
 }

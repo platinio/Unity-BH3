@@ -9,8 +9,8 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override bool DrawInSubTree => false;
         public override int MaxChildrenLimit => 0;
-        public override bool CanBeUseAsTransitionDestination => false;
-        public override bool CanBeUseAsTransitionSource => false;
+        public override bool CanBeUsedAsTransitionDestination => false;
+        public override bool CanBeUsedAsTransitionSource => false;
 
         public override ExecutionStatus OnUpdate() => ExecutionStatus.Failure;
     }
