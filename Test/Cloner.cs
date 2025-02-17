@@ -1,15 +1,20 @@
 using UnityEngine;
 
-public class Cloner : MonoBehaviour
+namespace ArcaneOnyx.BehaviorTree
 {
-   public GameObject prefab;
-   public int amount;
+    public class Cloner : MonoBehaviour
+    {
+        public GameObject prefab;
+        public int amount;
 
-   private void Start()
-   {
-      for (int i = 0; i < amount; i++)
-      {
-         Instantiate(prefab);
-      }
-   }
+        private void Start()
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                Instantiate(prefab);
+            }
+        }
+    }
+
 }
+
