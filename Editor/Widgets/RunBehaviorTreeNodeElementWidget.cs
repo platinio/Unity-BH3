@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         private void AdjustLabelFontSize()
         {
-            Styles.label.fontSize = Styles.labelSelected.fontSize = Mathf.RoundToInt(Styles.headerFontSize / graph.zoom);
+            RunBehaviorTreeNodeElementWidgetStyles.label.fontSize = RunBehaviorTreeNodeElementWidgetStyles.labelSelected.fontSize = Mathf.RoundToInt(RunBehaviorTreeNodeElementWidgetStyles.headerFontSize / graph.zoom);
         }
 
         private BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
@@ -105,18 +105,18 @@ namespace ArcaneOnyx.BehaviorTree
             using (LudiqGUI.color.Override(Color.cyan))
             {
                 box.position += new Vector2(0, -40.0f) + offset;
-                Styles.group.Draw(box, false, false, true, false);
+                RunBehaviorTreeNodeElementWidgetStyles.group.Draw(box, false, false, true, false);
             }
             
             var labelPosition = new Rect
             (
-                box.x + Styles.label.margin.left,
-                box.y + Styles.label.margin.top,
-                Styles.label.CalcSize(new GUIContent(name)).x + Styles.label.CalcSize(maxHeadLabelSizeContent).x,
-                Styles.group.border.top
+                box.x + RunBehaviorTreeNodeElementWidgetStyles.label.margin.left,
+                box.y + RunBehaviorTreeNodeElementWidgetStyles.label.margin.top,
+                RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(new GUIContent(name)).x + RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(maxHeadLabelSizeContent).x,
+                RunBehaviorTreeNodeElementWidgetStyles.group.border.top
             );
             
-            EditorGUI.TextField(labelPosition, GUIContent.none, name, selection.Contains(element) ? Styles.labelSelected : Styles.label);
+            EditorGUI.TextField(labelPosition, GUIContent.none, name, selection.Contains(element) ? RunBehaviorTreeNodeElementWidgetStyles.labelSelected : RunBehaviorTreeNodeElementWidgetStyles.label);
         }
 
         private BehaviorTreeGraph GetBehaviorTreeGraph()
@@ -226,9 +226,9 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
         
-        public static class Styles
+        private static class RunBehaviorTreeNodeElementWidgetStyles
         {
-            static Styles()
+            static RunBehaviorTreeNodeElementWidgetStyles()
             {
                 @group = new GUIStyle();
                 @group.normal.background = BoltCore.Resources.LoadTexture("Group.png", new TextureResolution[] { 64 }, CreateTextureOptions.PixelPerfect)?.Single();
