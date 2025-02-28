@@ -39,8 +39,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         private static ScriptGraphAssetsRepository instance;
 
-        [SerializeField] private List<ScriptGraphAssetKeyValuePair> repository = new();
-        [SerializeField] private List<ScriptGraphAsset> uniqueAssets = new();
+        [SerializeField, HideInInspector] private List<ScriptGraphAssetKeyValuePair> repository = new();
+        [SerializeField, HideInInspector] private List<ScriptGraphAsset> uniqueAssets = new();
 
         private static Dictionary<Object, string> discoveredAssetGuid = new();
         
