@@ -39,9 +39,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         private static ScriptGraphAssetsRepository instance;
 
-        [SerializeField, HideInInspector] private List<ScriptGraphAssetKeyValuePair> repository = new();
-        [SerializeField, HideInInspector] private List<ScriptGraphAsset> uniqueAssets = new();
+        [SerializeField] private List<ScriptGraphAssetKeyValuePair> repository = new();
+        [SerializeField] private List<ScriptGraphAsset> uniqueAssets = new();
 
+        private static Dictionary<Object, string> discoveredAssetGuid = new();
+        
         public void RemoveInvalid()
         {
             for (int i = repository.Count - 1; i >= 0; i--)
@@ -55,8 +57,18 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        public List<ScriptGraphAsset> GetScriptGraphAssets(string key)
+        private string GetAssetGuid(Object asset)
         {
+            if (discoveredAssetGuid.TryGetValue(asset, out var guid)) return guid;
+            
+            string key = GlobalObjectId.GetGlobalObjectIdSlow(asset).assetGUID.ToString();
+            discoveredAssetGuid[asset] = key;
+            return key;
+        }
+
+        public List<ScriptGraphAsset> GetScriptGraphAssets(Object asset)
+        {
+            string key = GetAssetGuid(asset);
             List<ScriptGraphAsset> result = new();
             
             foreach (var scriptGraphAssetKeyValuePair in repository)
@@ -70,9 +82,11 @@ namespace ArcaneOnyx.BehaviorTree
             return result;
         }
 
-        public void AddScriptGraphAsset(string key, ScriptGraphAsset scriptGraphAsset)
+        public void AddScriptGraphAsset(Object asset, ScriptGraphAsset scriptGraphAsset)
         {
             if (uniqueAssets.Contains(scriptGraphAsset)) return;
+            
+            string key = GetAssetGuid(asset);
             
             uniqueAssets.Add(scriptGraphAsset);
             repository.Add(new ScriptGraphAssetKeyValuePair(key, scriptGraphAsset));
@@ -82,7 +96,7 @@ namespace ArcaneOnyx.BehaviorTree
             #endif
         }
 
-        public void RemoveScriptGraphAsset(string key, ScriptGraphAsset scriptGraphAsset)
+        public void RemoveScriptGraphAsset(ScriptGraphAsset scriptGraphAsset)
         {
             uniqueAssets.Remove(scriptGraphAsset);
             

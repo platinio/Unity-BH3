@@ -80,10 +80,10 @@ namespace ArcaneOnyx.BehaviorTree
             foreach (var graphElement in graph.elements)
             {
                 if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
-                graph.AddScriptGraphAssets(graphElement.scriptGraphAssets);
+                graph.AddScriptGraphAssets(GetBehaviorTreeGraphAsset(), graphElement.scriptGraphAssets);
             }
             
-            graph.DestroyUnusedScriptGraphAssets();
+            graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
         }
 
         private void RemoveInvalidConditionals()

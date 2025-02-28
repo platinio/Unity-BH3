@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree
         private List<ScriptGraphAsset> scriptGraphAssets = new();
 
         public Entry EntryNode => entryNode;
-        
+      
         public BehaviorTreeGraph() : base()
         {
             entryNode = new Entry();
@@ -88,11 +88,11 @@ namespace ArcaneOnyx.BehaviorTree
             valueOutputDefinitions = new PortDefinitionCollection<ValueOutputDefinition>();
         }
 
-        public void DestroyUnusedScriptGraphAssets()
+        public void DestroyUnusedScriptGraphAssets(BehaviorTreeGraphAsset graphAsset)
         {
-            List<ScriptGraphAsset> unusedScriptGraphAssets = ScriptGraphAssetsRepository.Instance.GetScriptGraphAssets(entryNode.guid.ToString());
+            List<ScriptGraphAsset> unusedScriptGraphAssets = ScriptGraphAssetsRepository.Instance.GetScriptGraphAssets(graphAsset);
             if (unusedScriptGraphAssets == null) return;
-            
+
             foreach (var graphElement in elements)
             {
                 if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
@@ -105,16 +105,16 @@ namespace ArcaneOnyx.BehaviorTree
 
             for (int i = unusedScriptGraphAssets.Count - 1; i >= 0; i--)
             {
-                ScriptGraphAssetsRepository.Instance.RemoveScriptGraphAsset(entryNode.guid.ToString(), unusedScriptGraphAssets[i]);
+                ScriptGraphAssetsRepository.Instance.RemoveScriptGraphAsset(unusedScriptGraphAssets[i]);
                 Object.DestroyImmediate(unusedScriptGraphAssets[i], true);
             }
         }
 
-        public void AddScriptGraphAssets(IEnumerable<ScriptGraphAsset> newScriptGraphAssets)
+        public void AddScriptGraphAssets(BehaviorTreeGraphAsset asset, IEnumerable<ScriptGraphAsset> newScriptGraphAssets)
         {
             foreach (var scriptGraphAsset in newScriptGraphAssets)
             {
-                ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(entryNode.guid.ToString(), scriptGraphAsset);
+                ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(asset, scriptGraphAsset);
             }
         }
        
