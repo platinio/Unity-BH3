@@ -1,14 +1,17 @@
 ﻿using ArcaneOnyx.GraphCore;
+using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
     [CreateAssetMenu(menuName = "Visual Scripting/Behavior Tree", fileName = "New Behavior Tree Graph", order = 81)]
-    public class BehaviorTreeGraphAsset : BaseGraphAsset<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
+    public class BehaviorTreeGraphAsset : BaseGraphAsset<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>, IExposeVariableDeclarations
     {
         [Serialize, Inspectable]
         public VariableDeclarations declarations { get; internal set; } = new() { Kind = VariableKind.Graph };
+
+        public VariableDeclarations VariableDeclarations => declarations;
         
         //[ContextMenu("Show Data...")]
         protected override void ShowData()
