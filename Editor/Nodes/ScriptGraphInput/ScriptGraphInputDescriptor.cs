@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using ArcaneOnyxArcaneOnyx.VisualScripting;
+using ArcaneOnyx.VisualScripting;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.VisualScripting

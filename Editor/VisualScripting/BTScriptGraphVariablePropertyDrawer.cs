@@ -1,7 +1,6 @@
 using System;
 using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.VisualScripting;
-using ArcaneOnyxArcaneOnyx.VisualScripting;
 using Platinio;
 using Unity.VisualScripting;
 using UnityEditor;
