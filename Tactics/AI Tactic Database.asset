@@ -17,14 +17,132 @@ MonoBehaviour:
   id: 1
   description: 
   weight: 0
-  scoreEvaluators: []
+  scoreEvaluators:
+  - rid: 2288067468157779974
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
+  - rid: -2
   canBeRestarted: 0
   configurableBehavior:
-    behaviorTreeGraphAsset: {fileID: 0}
-    parameters: []
+    behaviorTreeGraphAsset: {fileID: 11400000, guid: 219dbe60656de47449601d6061daae02, type: 2}
+    parameters:
+    - rid: 2288067468157779972
+    - rid: 2288067468157779973
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 2288067468157779972
+      type: {class: SingleBlockVariable, ns: Platinio, asm: ArcaneOnyx.BlockVariables.Runtime}
+      data:
+        key: FloatTest
+        value: 0
+    - rid: 2288067468157779973
+      type: {class: SingleBlockVariable, ns: Platinio, asm: ArcaneOnyx.BlockVariables.Runtime}
+      data:
+        key: float2
+        value: 0
+    - rid: 2288067468157779974
+      type: {class: ExposeTacticEvaluator, ns: Platinio.Considerations, asm: ArcaneOnyx.ScriptableDecisions}
+      data:
+        tacticEvaluator: {fileID: 4259194001348928424, guid: 2fac3782933d73544824e5ed05731498, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -62,9 +180,10 @@ MonoBehaviour:
   scoreEvaluators: []
   canBeRestarted: 0
   configurableBehavior:
-    behaviorTreeGraphAsset: {fileID: 11400000, guid: 0cafbb3df2af86847acdab3d894f2fbf, type: 2}
+    behaviorTreeGraphAsset: {fileID: 11400000, guid: 219dbe60656de47449601d6061daae02, type: 2}
     parameters:
     - rid: 2288067452155199489
+    - rid: 2288067468157779971
   references:
     version: 2
     RefIds:
@@ -72,4 +191,9 @@ MonoBehaviour:
       type: {class: SingleBlockVariable, ns: Platinio, asm: ArcaneOnyx.BlockVariables.Runtime}
       data:
         key: FloatTest
+        value: 0
+    - rid: 2288067468157779971
+      type: {class: SingleBlockVariable, ns: Platinio, asm: ArcaneOnyx.BlockVariables.Runtime}
+      data:
+        key: float2
         value: 0

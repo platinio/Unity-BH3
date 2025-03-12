@@ -34,19 +34,28 @@ MonoBehaviour:
   id: 0
   description: 
   considerationPackages:
-  - scoreConsiderations: []
-    booleanConsiderations: []
-  - scoreConsiderations: []
-    booleanConsiderations: []
-  - scoreConsiderations: []
-    booleanConsiderations: []
-  - scoreConsiderations: []
-    booleanConsiderations: []
-  - scoreConsiderations: []
+  - scoreConsiderations:
+    - rid: 2288067468157779975
     booleanConsiderations: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 2288067468157779975
+      type: {class: DistanceConsideration, ns: Platinio.Considerations, asm: ArcaneOnyx.ScriptableDecisions}
+      data:
+        shortDescription: 
+        description: 
+        positionKey: 
+        evaluationCurve:
+          predefinedAnimationCurve: {fileID: 0}
+          animationCurve:
+            serializedVersion: 2
+            m_Curve: []
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+        distanceStart: 1
+        distanceEnd: 20
 --- !u!114 &4675679337892763776
 MonoBehaviour:
   m_ObjectHideFlags: 0
