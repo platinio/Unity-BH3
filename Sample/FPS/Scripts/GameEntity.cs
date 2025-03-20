@@ -1,5 +1,5 @@
+using ArcaneOnyx.Factions;
 using ArcaneOnyx.ScriptableObjectDatabase;
-using Platinio.FactionSystem;
 using UnityEngine;
 
 namespace ArcaneOnyx.Share
