@@ -1,9 +1,9 @@
-﻿using ArcaneOnyx.VisualScripting;
+﻿using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace ArcaneOnyx.VisualScripting
+namespace ArcaneOnyx.BehaviorTree
 {
     [Inspector(typeof(ScriptGraphInput))]
     public class ScriptGraphInputInspector : Inspector

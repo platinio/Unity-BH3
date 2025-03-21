@@ -1,7 +1,8 @@
 ﻿using System.Linq;
+using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 
-namespace ArcaneOnyx.VisualScripting
+namespace ArcaneOnyx.BehaviorTree
 {
     [Descriptor(typeof(ScriptGraphOutput))]
     public class ScriptGraphOutputDescriptor : UnitDescriptor<ScriptGraphOutput>

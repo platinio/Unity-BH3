@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using ArcaneOnyx.Share;
+using ArcaneOnyx.AIEntities;
+using ArcaneOnyx.AIPerception;
 using Platinio.AIPerception;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
-    public class AISensor : Sensor<GameTargetInfo, AIEntity>
+    public class AISensor : Sensor
     {
         [SerializeField] private float maxRange;
         [SerializeField] private float visionConeAngle;
@@ -17,7 +18,7 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         public override float MemoryTime => memoryTime;
         
         private List<TempTargetInfo> temporalTrackedEntities = new();
-        public override IEnumerable<TargetInfo<AIEntity>> TrackedEntities => trackedEntities.Concat(temporalTrackedEntities);
+        public override IEnumerable<TargetInfo> TrackedEntities => trackedEntities.Concat(temporalTrackedEntities);
 
         protected override void Update()
         {
@@ -30,12 +31,14 @@ namespace ArcaneOnyx.BehaviorTree.Sample
         {
             for (int i = trackedEntities.Count - 1; i >= 0; i--)
             {
-                if (!trackedEntities[i].GameEntity.IsAlive()) trackedEntities.RemoveAt(i);
+                //TODO: FIX THIS
+                //if (!trackedEntities[i].GameEntity.IsAlive()) trackedEntities.RemoveAt(i);
             }
             
             for (int i = temporalTrackedEntities.Count - 1; i >= 0; i--)
             {
-                if (!temporalTrackedEntities[i].GameEntity.IsAlive()) temporalTrackedEntities.RemoveAt(i);
+                //TODO: FIX THIS
+                //if (!temporalTrackedEntities[i].GameEntity.IsAlive()) temporalTrackedEntities.RemoveAt(i);
             }
         }
 
@@ -53,19 +56,22 @@ namespace ArcaneOnyx.BehaviorTree.Sample
             }
         }
         
-        public void AddTemporalTrackedEntity(AIEntity entity, float time)
+        public void AddTemporalTrackedEntity(GameEntity entity, float time)
         {
             temporalTrackedEntities.Add(new TempTargetInfo(entity, time));
         }
 
-        public override bool IsEntityBeingTracked(GameTargetInfo target)
+        public override bool IsEntityBeingTracked(TargetInfo target)
         {
+            return false;
+            //TODO: FIX THIS
+            /*
             if (target == null || target.GameEntity == null) return false;
-            
+
             bool isBeingTracked = base.IsEntityBeingTracked(target);
             if (!isBeingTracked) isBeingTracked = temporalTrackedEntities.Where(x => x.GameEntity == target.GameEntity).FirstOrDefault() != null;
 
-            return isBeingTracked;
+            return isBeingTracked;*/
         }
     }
 }

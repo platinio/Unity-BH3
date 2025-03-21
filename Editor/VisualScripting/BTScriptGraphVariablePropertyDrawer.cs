@@ -1,12 +1,11 @@
 using System;
-using ArcaneOnyx.BehaviorTree;
-using ArcaneOnyx.VisualScripting;
+using ArcaneOnyx.VisualScriptingExtension;
 using Platinio;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
-namespace ArcaneOnyx
+namespace ArcaneOnyx.BehaviorTree
 {
     [CustomPropertyDrawer(typeof(BTScriptGraphVariable))]
     public class BTScriptGraphVariablePropertyDrawer : PropertyDrawer

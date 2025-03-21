@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
+using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 
-namespace ArcaneOnyx.VisualScripting
+namespace ArcaneOnyx.BehaviorTree
 {
     [Analyser(typeof(ScriptGraphOutput))]
     public class ScriptGraphOutputAnalyser : UnitAnalyser<ScriptGraphOutput>

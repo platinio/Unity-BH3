@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using ArcaneOnyx.VisualScripting;
+using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
 

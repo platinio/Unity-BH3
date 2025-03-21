@@ -1,7 +1,7 @@
-﻿using ArcaneOnyx.VisualScripting;
+﻿using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 
-namespace ArcaneOnyx.VisualScripting
+namespace ArcaneOnyx.BehaviorTree
 {
     [Widget(typeof(ScriptGraphInput))]
     public sealed class ScriptGraphInputWidget : UnitWidget<ScriptGraphInput>
