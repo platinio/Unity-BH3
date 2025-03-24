@@ -17,7 +17,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             for (int n = 0; n < GetChildren().Count; n++)
             {
-                if (childrenTaskStatus[n] != ExecutionStatus.Failure) continue;
+                if (childrenTaskStatus[n] == ExecutionStatus.Failure) continue;
+                if (childrenTaskStatus[n] == ExecutionStatus.Success) return ExecutionStatus.Success;
+                
                 childrenTaskStatus[n] = GetChildren()[n].OnUpdateInternal();
             }
 
