@@ -83,7 +83,7 @@ namespace ArcaneOnyx.BehaviorTree
                 graph.AddScriptGraphAssets(GetBehaviorTreeGraphAsset(), graphElement.scriptGraphAssets);
             }
             
-            graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
+            if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
         }
 
         private void RemoveInvalidConditionals()
