@@ -53,7 +53,6 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                 return true;
             }
 
-
             return false;
         }
 
