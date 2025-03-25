@@ -1,6 +1,6 @@
 using System;
+using ArcaneOnyx.EditorTools;
 using ArcaneOnyx.VisualScriptingExtension;
-using Platinio;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -12,7 +12,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            PlatinioPropertyDrawer.CalculateLabelAndValueRect(position, out Rect labelRect, out Rect valueRect);
+            ArcaneOnyxPropertyDrawer.CalculateLabelAndValueRect(position, out Rect labelRect, out Rect valueRect);
             
             GUI.Label(labelRect, label);
 

@@ -1,4 +1,4 @@
-﻿using Platinio;
+﻿using ArcaneOnyx.EditorTools;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return PlatinioPropertyDrawer.LineHeight;
+            return ArcaneOnyxPropertyDrawer.LineHeight;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
                 DrawToggleButton(position, property, buttonRectPercent);
                 
                 position.width = position.width * (1.0f - buttonRectPercent);
-                PlatinioPropertyDrawer.PropertyField(position, property.FindPropertyRelative("value"), label.text, ref yPosition);
+                ArcaneOnyxPropertyDrawer.PropertyField(position, property.FindPropertyRelative("value"), label.text, ref yPosition);
             }
             else
             {
@@ -38,7 +38,7 @@ namespace ArcaneOnyx.BehaviorTree
         private void DrawToggleButton(Rect position, SerializedProperty property, float buttonSizePercent)
         {
             Rect buttonRect = position;
-            buttonRect.height = PlatinioPropertyDrawer.LineHeight;
+            buttonRect.height = ArcaneOnyxPropertyDrawer.LineHeight;
             buttonRect.width = position.width * buttonSizePercent;
             Vector2 newPosition = buttonRect.position;
             newPosition.x += position.width * (1.0f - buttonSizePercent);
@@ -54,8 +54,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var variableName = property.FindPropertyRelative("variableName").stringValue;
 
-            var rect = PlatinioPropertyDrawer.CalculatePropertyRect(position, ref yPosition);
-            PlatinioPropertyDrawer.CalculateLabelAndValueRect(rect, out Rect label, out Rect value);
+            var rect = ArcaneOnyxPropertyDrawer.CalculatePropertyRect(position, ref yPosition);
+            ArcaneOnyxPropertyDrawer.CalculateLabelAndValueRect(rect, out Rect label, out Rect value);
             
             EditorGUI.LabelField(label, propertyName);
 
