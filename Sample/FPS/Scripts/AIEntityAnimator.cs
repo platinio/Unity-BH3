@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -6,14 +7,20 @@ namespace ArcaneOnyx.Share
     public class AIEntityAnimator : MonoBehaviour
     {
         [SerializeField] private NavMeshAgent navAgent;
-        [SerializeField] private Animator animator;
         [SerializeField] private float maxMovementSpeed;
         [SerializeField] private float dampTime;
         [SerializeField] private float minMovementSpeed;
       
+        private Animator animator;
+        
         private static readonly int Forward = Animator.StringToHash("Forward");
         private static readonly int Horizontal = Animator.StringToHash("Horizontal");
         private static readonly int Movement = Animator.StringToHash("Movement");
+
+        private void Awake()
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
 
         private void Update()
         {
