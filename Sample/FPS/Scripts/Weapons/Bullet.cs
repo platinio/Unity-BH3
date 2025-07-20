@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections;
-using Platinio.SDK.DependencyInjection;
-
+using ArcaneOnyx.ServiceLocator;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {

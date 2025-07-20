@@ -1,5 +1,5 @@
 ﻿using ArcaneOnyx.BehaviorTree.Sample;
-using Platinio.SDK.DependencyInjection;
+using ArcaneOnyx.ServiceLocator;
 using UnityEngine;
 using UnityEngine.AI;
 

@@ -1,4 +1,4 @@
-using Platinio.SDK.DependencyInjection;
+using ArcaneOnyx.ServiceLocator;
 using UnityEngine;
 using UnityEngine.Pool;
 
