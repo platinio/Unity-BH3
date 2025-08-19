@@ -1,5 +1,4 @@
-﻿using ArcaneOnyx.ServiceLocator;
-using ArcaneOnyx.Share;
+﻿using ArcaneOnyx.Share;
 
 namespace ArcaneOnyx.AIPerception
 {
