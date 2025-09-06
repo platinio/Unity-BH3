@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -20,6 +21,18 @@ namespace ArcaneOnyx
         {
             return scriptGraphAsset.GetScriptGraphOutput<T>(input, gameObject);
         }
+        
+        public T GetValue<T>(GameObject gameObject, VariableDeclarations variableDeclarations)
+        {
+            Dictionary<string, object> dynamicParameters = new();
+
+            foreach (var variableDeclaration in variableDeclarations)
+            {
+                dynamicParameters[variableDeclaration.name] = variableDeclaration.value;
+            }
+
+            return scriptGraphAsset.GetScriptGraphOutput<T>(dynamicParameters, gameObject);
+        }
 
         public void Run(Variables input = null)
         {
@@ -31,6 +44,11 @@ namespace ArcaneOnyx
             scriptGraphAsset.Run(input, gameObject);
         }
         
+        public void Run(GameObject gameObject, VariableDeclarations input = null)
+        {
+            scriptGraphAsset.Run(input, gameObject);
+        }
+
     }
 }
 

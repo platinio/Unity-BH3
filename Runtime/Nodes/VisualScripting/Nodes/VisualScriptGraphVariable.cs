@@ -27,7 +27,7 @@ namespace ArcaneOnyx.BehaviorTree
                 try
                 {
                     runtimeException = null;
-                    return ScriptGraphVariable.GetValue<object>(gameObject);
+                    return ScriptGraphVariable.GetValue<object>(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
                 }
                 catch (Exception e)
                 {
