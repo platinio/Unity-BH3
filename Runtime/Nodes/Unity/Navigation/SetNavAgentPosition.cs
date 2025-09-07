@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override string NodeName => "Set Nav Agent Position";
         public override string Description => "Updates the nav agent destination";
 
-        private NavMeshAgent navAgent = null;
+        protected NavMeshAgent navAgent = null;
         private bool setPositionWasCompleted = false;
 
         protected override void Definition()
