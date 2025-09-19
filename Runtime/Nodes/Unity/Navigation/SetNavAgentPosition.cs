@@ -38,6 +38,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
+            if (navAgent == null)
+            {
+                navAgent = GetComponent<NavMeshAgent>(Target);
+            }
+            
             if (!WaitForPathComplete)
             {
                 navAgent.updatePosition = true;
