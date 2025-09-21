@@ -59,11 +59,15 @@ namespace ArcaneOnyx.BehaviorTree
 
         private string GetAssetGuid(Object asset)
         {
+#if UNITY_EDITOR
             if (discoveredAssetGuid.TryGetValue(asset, out var guid)) return guid;
             
             string key = GlobalObjectId.GetGlobalObjectIdSlow(asset).assetGUID.ToString();
             discoveredAssetGuid[asset] = key;
             return key;
+#else
+            return null;
+#endif
         }
 
         public List<ScriptGraphAsset> GetScriptGraphAssets(Object asset)
