@@ -389,7 +389,7 @@ ModelImporter:
     second: Spine3
   - first:
       74: 7400000
-    second: SoldierStrafeWalkRightAim
+    second: StrafeWalkRight
   - first:
       95: 9500000
     second: //RootNode
@@ -406,12 +406,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: "Copied Avatar Rig Configuration mis-match. Inbetween bone
-      rotation in copied configuration does not match rotation in animation file:\n\t'Spine1'
-      : rotation error = 1.874323 deg\n\t'RArmUpper2' : rotation error = 3.355459
-      deg\n\t'RArmForearm2' : rotation error = 1.076842 deg\n\t'LArmUpper2' : rotation
-      error = 9.020609 deg\n\t'LArmForearm2' : rotation error = 7.756529 deg\n"
     animationImportErrors: 
     animationImportWarnings: "\nClip 'Take 001' has import animation warnings that
       might lower retargeting quality:\nNote: Activate translation DOF on avatar
@@ -434,7 +428,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: SoldierStrafeWalkRightAim
+      name: StrafeWalkRight
       takeName: Take 001
       internalID: 0
       firstFrame: 0

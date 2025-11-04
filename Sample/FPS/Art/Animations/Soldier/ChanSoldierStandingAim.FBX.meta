@@ -389,7 +389,7 @@ ModelImporter:
     second: Spine3
   - first:
       74: 7400000
-    second: SoldierStandingAim
+    second: Standing
   - first:
       95: 9500000
     second: //RootNode
@@ -406,12 +406,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: "Copied Avatar Rig Configuration mis-match. Inbetween bone
-      rotation in copied configuration does not match rotation in animation file:\n\t'Spine1'
-      : rotation error = 0.741396 deg\n\t'RArmUpper2' : rotation error = 3.355527
-      deg\n\t'LArmUpper2' : rotation error = 12.132947 deg\n\t'LArmForearm2' : rotation
-      error = 5.904428 deg\n"
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -427,7 +421,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: SoldierStandingAim
+      name: Standing
       takeName: Take 001
       internalID: 0
       firstFrame: 0
