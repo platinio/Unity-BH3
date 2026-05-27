@@ -30,7 +30,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             float d = Vector3.Distance( navAgent.transform.position, navAgent.destination);
-            return d < navAgent.stoppingDistance + Mathf.Epsilon ? ExecutionStatus.Success : ExecutionStatus.Running;
+            return d < 0.001f ? ExecutionStatus.Success : ExecutionStatus.Running;
         }
     }
 }
