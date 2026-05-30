@@ -272,3 +272,81 @@ MyOutput = ValueOutput<float>(nameof(MyOutput), () => someValue);
 // Read a connected value at runtime
 float value = MyInput.GetValue<float>();
 ```
+
+---
+
+## Best Practices
+
+### Fetching Information and Game Logic are Two Separate Puzzle Pieces
+
+Traditionally, when we create Behavior Tree Nodes fetching the information and game logic form part of the same node:
+
+```csharp
+public class SetNavAgentPosition : BehaviorTreeNode
+{
+    public string targetPositionKey;
+
+    private ExecutionStatus OnUpdate()
+    {
+        Vector3 targetPosition = blackboard.Get<Vector3>(targetPositionKey);
+        navAgent.SetNavAgentPosition(targetPosition);
+    }
+}
+```
+
+This node is hard to reuse. Something else must constantly update the blackboard before it can run, and designers can't change what it reads without a developer's help. The better approach is to split the two responsibilities into separate nodes.
+
+```csharp
+public class GetEscapePosition : GameplayNode
+{
+    [DoNotSerialize] public ValueOutput Value { get; private set; }
+
+    public override string NodeName => "Get Escape Position";
+
+    protected override void Definition()
+    {
+        base.Definition();
+        Value = ValueOutput<Vector3>(nameof(Value), () => CalculateEscapePosition());
+    }
+
+    private Vector3 CalculateEscapePosition()
+    {
+        // logic to calculate escape position
+    }
+}
+```
+
+```csharp
+public class SetNavAgentPosition : GameplayNode
+{
+    [DoNotSerialize] public ValueInput NavPosition { get; private set; }
+
+    protected override void Definition()
+    {
+        base.Definition();
+        NavPosition = ValueInput<Vector3>(nameof(NavPosition));
+    }
+
+    private ExecutionStatus OnUpdate()
+    {
+        Vector3 pos = (Vector3)NavPosition.GetValue();
+        navAgent.SetNavAgentPosition(pos);
+    }
+}
+```
+
+Now each node does one thing. `SetNavAgentPosition` works with any `Vector3` source, and `GetEscapePosition` can feed into any node that needs a position. Designers mix and match without touching code.
+
+---
+
+### We Have Conditionals but Try First ConditionalExecutions
+
+If you want to prematurely end an action because the AI has something more important to do, like attacking an enemy while in the middle of an idle action, we can use Conditional nodes. But try first `ConditionalExecution` nodes, which will mark an entire behavior tree branch as failed based on custom logic.
+
+---
+
+### Think of Behavior Tree Branches Like a Function that Does Just One Thing
+
+Each branch does exactly one job and knows nothing about the others. The Patrol branch doesn't care about enemies, only a `ConditionalExecution` decides when to interrupt it.
+
+Once your branches are that focused, you can share them across different AI using Sub-Behavior Trees. Designers then build new enemies by picking existing branches and assigning priorities, creating the illusion of unique behavior from reusable pieces.
