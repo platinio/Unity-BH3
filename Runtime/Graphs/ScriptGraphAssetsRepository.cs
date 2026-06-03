@@ -10,8 +10,8 @@ namespace ArcaneOnyx.BehaviorTree
 {
     public class ScriptGraphAssetsRepository : ScriptableObject
     {
-        private const string DirectoryPath = "Assets/BehaviorTree.Generated";
-        private const string AssetsPath = "Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset";
+        private const string DefaultDirectoryPath = "Assets/BehaviorTree.Generated";
+        private const string DefaultAssetsPath = "Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset";
         
         public static ScriptGraphAssetsRepository Instance
         {
@@ -20,14 +20,23 @@ namespace ArcaneOnyx.BehaviorTree
                 #if UNITY_EDITOR
                 if (instance == null)
                 {
-                    instance = AssetDatabase.LoadAssetAtPath<ScriptGraphAssetsRepository>(AssetsPath);
-                    if (instance == null)
+                    //try to find the first one available
+                    var guids = AssetDatabase.FindAssets($"t:{typeof(ScriptGraphAssetsRepository).Name}");
+                   
+                    foreach (var guid in guids)
                     {
-                        if (!Directory.Exists(DirectoryPath)) Directory.CreateDirectory(DirectoryPath);
-                        
-                        instance = CreateInstance(typeof(ScriptGraphAssetsRepository)) as ScriptGraphAssetsRepository;
-                        AssetDatabase.CreateAsset(instance, AssetsPath);
+                        var path = AssetDatabase.GUIDToAssetPath(guid);
+                        instance = AssetDatabase.LoadAssetAtPath(path, typeof(ScriptGraphAssetsRepository)) as ScriptGraphAssetsRepository;
+                        if (instance == null) continue;
+
+                        return instance;
                     }
+                    
+                    //create a new one at the default location
+                    if (!Directory.Exists(DefaultDirectoryPath)) Directory.CreateDirectory(DefaultDirectoryPath);
+                        
+                    instance = CreateInstance(typeof(ScriptGraphAssetsRepository)) as ScriptGraphAssetsRepository;
+                    AssetDatabase.CreateAsset(instance, DefaultAssetsPath);
                 }
 
                 return instance;
