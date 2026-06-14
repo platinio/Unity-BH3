@@ -1,4 +1,5 @@
-using ArcaneOnyx.ServiceLocator;
+// TODO: ServiceLocator submodule removed — restore IProjectilePool registration via the UnityExtensions service registry.
+// using ArcaneOnyx.ServiceLocator;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -19,7 +20,8 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
         private void Awake()
         {
-            ServicesContainer.Register(typeof(IProjectilePool), this);
+            // TODO: ServiceLocator removed — re-register this pool so Bullet/ConfigurableProjectileLauncher can resolve it.
+            // ServicesContainer.Register(typeof(IProjectilePool), this);
             pool = new LinkedPool<Projectile>(CreateBullet, OnTakeFromPool, OnReturnedToPool, OnDestroyPoolObject, false, maxPoolSize);
         }
         

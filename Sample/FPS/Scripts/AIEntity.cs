@@ -1,5 +1,6 @@
 ﻿using ArcaneOnyx.BehaviorTree.Sample;
-using ArcaneOnyx.ServiceLocator;
+// TODO: ServiceLocator submodule removed — restore entity registration via the UnityExtensions service registry.
+// using ArcaneOnyx.ServiceLocator;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -19,8 +20,9 @@ namespace ArcaneOnyx.Share
         {
             damageableManager = GetComponent<DamageableManager>();
             
-            var gameEntityDatabaseService = ServicesContainer.Resolve<IDatabaseService<AIEntity>>();
-            gameEntityDatabaseService?.Add(this);
+            // TODO: ServiceLocator removed — re-register this entity once service resolution is restored.
+            // var gameEntityDatabaseService = ServicesContainer.Resolve<IDatabaseService<AIEntity>>();
+            // gameEntityDatabaseService?.Add(this);
 
             navMeshAgent.avoidancePriority = avoidanceIndex++;
         }
@@ -33,8 +35,9 @@ namespace ArcaneOnyx.Share
 
         private void OnDestroy()
         {
-            var gameEntityDatabaseService = ServicesContainer.Resolve<IDatabaseService<AIEntity>>();
-            gameEntityDatabaseService?.Remove(this);
+            // TODO: ServiceLocator removed — unregister this entity once service resolution is restored.
+            // var gameEntityDatabaseService = ServicesContainer.Resolve<IDatabaseService<AIEntity>>();
+            // gameEntityDatabaseService?.Remove(this);
         }
         
         public void SetDestination(Vector3 target)

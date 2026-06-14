@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
-using ArcaneOnyx.ServiceLocator;
+// TODO: ServiceLocator submodule removed — restore projectile-pool resolution via the UnityExtensions service registry.
+// using ArcaneOnyx.ServiceLocator;
 
 namespace ArcaneOnyx.BehaviorTree.Sample
 {
@@ -36,8 +37,9 @@ namespace ArcaneOnyx.BehaviorTree.Sample
                     Instantiate(shootInfo.hitEffect , transform.position , Quaternion.identity);
                 }
 
-                var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
-                projectilePool.Destroy(this);
+                // TODO: ServiceLocator removed — return this bullet to the pool once resolution is restored.
+                // var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
+                // projectilePool.Destroy(this);
                 return;
             }
                       
@@ -57,8 +59,9 @@ namespace ArcaneOnyx.BehaviorTree.Sample
 
                 if (distanceTraveled >= shootInfo.range)
                 {
-                    var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
-                    projectilePool.Destroy(this);
+                    // TODO: ServiceLocator removed — return this bullet to the pool once resolution is restored.
+                    // var projectilePool = ServicesContainer.Resolve<IProjectilePool>();
+                    // projectilePool.Destroy(this);
                 }
             }
         }
