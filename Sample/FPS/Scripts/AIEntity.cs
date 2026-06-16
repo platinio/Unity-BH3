@@ -1,4 +1,5 @@
 ﻿using ArcaneOnyx.BehaviorTree.Sample;
+using ArcaneOnyx.Services;
 // TODO: ServiceLocator submodule removed — restore entity registration via the UnityExtensions service registry.
 // using ArcaneOnyx.ServiceLocator;
 using UnityEngine;
