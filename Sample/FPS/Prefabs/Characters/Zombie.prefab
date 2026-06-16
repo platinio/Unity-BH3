@@ -1171,8 +1171,8 @@ MonoBehaviour:
     _json: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"NavAgent","value":{"$content":0,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.AI.NavMeshAgent,
       UnityEngine.AIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Animator","value":{"$content":1,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Animator,
       UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Sensor","value":{"$content":2,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.AISensor,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"ThisAIEntity","value":{"$content":3,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.Share.AIEntity,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"ThisAIEntity","value":{"$content":3,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.Share.AIEntity,
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
     _objectReferences:
     - {fileID: 9143596941716542538}
     - {fileID: 2104616648033750479}

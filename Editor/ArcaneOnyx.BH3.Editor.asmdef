@@ -1,5 +1,5 @@
 {
-    "name": "Platinio.BehaviorTreeEditor",
+    "name": "ArcaneOnyx.BehaviorTree.Editor",
     "rootNamespace": "",
     "references": [
         "GUID:9fabc768deb89264aadbbe41663b09f3",

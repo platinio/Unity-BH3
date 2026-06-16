@@ -3,7 +3,7 @@ using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace ArcaneOnyx
+namespace ArcaneOnyx.BehaviorTree
 {
     [System.Serializable]
     public class ScriptGraphVariable

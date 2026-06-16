@@ -2607,12 +2607,12 @@ MonoBehaviour:
   _data:
     _json: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"NavAgent","value":{"$content":0,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.AI.NavMeshAgent,
       UnityEngine.AIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Sensor","value":{"$content":1,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.AISensor,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Animator","value":{"$content":2,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Animator,
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Animator","value":{"$content":2,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Animator,
       UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"RotateTransform","value":{"$content":3,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"UnityEngine.Transform,
       UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"Weapon","value":{"$content":4,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.Weapon,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"RotateAim","value":{"$content":5,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.RotateAim,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"ThisAIEntity","value":{"$content":6,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.Share.AIEntity,
-      Platinio.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"RotateAim","value":{"$content":5,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.BehaviorTree.Sample.RotateAim,
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"},{"name":"ThisAIEntity","value":{"$content":6,"$type":"UnityEngine.Object"},"typeHandle":{"Identification":"ArcaneOnyx.Share.AIEntity,
+      ArcaneOnyx.BehaviorTree.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
     _objectReferences:
     - {fileID: 7494776538690332247}
     - {fileID: 6166925736874987705}
