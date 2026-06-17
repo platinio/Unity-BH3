@@ -221,7 +221,7 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":267.0,"yMin":1976.0,"xMax":269.0,"yMax":2052.0},"guid":"f0179872-6807-4999-a836-0c875da95c64","$id":"125"}],"source":{"$ref":"69"},"destination":{"OnAwakeGraph":{"returnType":"","scriptGraphAsset":null,"$id":"129"},"OnEnterGraph":{"returnType":"","scriptGraphAsset":0,"$id":"130"},"OnUpdateGraph":{"returnType":"ArcaneOnyx.GraphCore.ExecutionStatus,
-      Platinio.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":null,"$id":"131"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"132"},"scriptGraphVariables":[{"$ref":"129"},{"$ref":"130"},{"$ref":"131"},{"$ref":"132"}],"comment":"Do
+      ArcaneOnyx.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":null,"$id":"131"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"132"},"scriptGraphVariables":[{"$ref":"129"},{"$ref":"130"},{"$ref":"131"},{"$ref":"132"}],"comment":"Do
       Damage","relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
@@ -259,7 +259,7 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-333.0,"yMin":1976.0,"xMax":-331.0,"yMax":2016.0},"guid":"73228297-f171-4233-aba6-3552f6d2b689","$id":"172"}],"source":{"$ref":"69"},"destination":{"OnAwakeGraph":{"returnType":"","scriptGraphAsset":null,"$id":"176"},"OnEnterGraph":{"returnType":"","scriptGraphAsset":1,"$id":"177"},"OnUpdateGraph":{"returnType":"ArcaneOnyx.GraphCore.ExecutionStatus,
-      Platinio.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":null,"$id":"178"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"179"},"scriptGraphVariables":[{"$ref":"176"},{"$ref":"177"},{"$ref":"178"},{"$ref":"179"}],"comment":"Play
+      ArcaneOnyx.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":null,"$id":"178"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"179"},"scriptGraphVariables":[{"$ref":"176"},{"$ref":"177"},{"$ref":"178"},{"$ref":"179"}],"comment":"Play
       Attack Animation","relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
@@ -291,7 +291,7 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-573.0,"yMin":1976.0,"xMax":-571.0,"yMax":2028.0},"guid":"7579944b-f7ab-4904-98dd-3013ab66195e","$id":"213"}],"source":{"$ref":"69"},"destination":{"OnAwakeGraph":{"returnType":"","scriptGraphAsset":null,"$id":"217"},"OnEnterGraph":{"returnType":"","scriptGraphAsset":null,"$id":"218"},"OnUpdateGraph":{"returnType":"ArcaneOnyx.GraphCore.ExecutionStatus,
-      Platinio.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":2,"$id":"219"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"220"},"scriptGraphVariables":[{"$ref":"217"},{"$ref":"218"},{"$ref":"219"},{"$ref":"220"}],"comment":"Target
+      ArcaneOnyx.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":2,"$id":"219"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"220"},"scriptGraphVariables":[{"$ref":"217"},{"$ref":"218"},{"$ref":"219"},{"$ref":"220"}],"comment":"Target
       is in Attack Distance?","relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
@@ -377,7 +377,7 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-2937.0,"yMin":2018.0,"xMax":-2935.0,"yMax":2100.0},"guid":"607874b8-0c65-4506-b290-fc3f4cb493a1","$id":"316"}],"source":{"$ref":"114"},"destination":{"OnAwakeGraph":{"returnType":"","scriptGraphAsset":null,"$id":"320"},"OnEnterGraph":{"returnType":"","scriptGraphAsset":null,"$id":"321"},"OnUpdateGraph":{"returnType":"ArcaneOnyx.GraphCore.ExecutionStatus,
-      Platinio.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":4,"$id":"322"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"323"},"scriptGraphVariables":[{"$ref":"320"},{"$ref":"321"},{"$ref":"322"},{"$ref":"323"}],"comment":"Target
+      ArcaneOnyx.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":4,"$id":"322"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"323"},"scriptGraphVariables":[{"$ref":"320"},{"$ref":"321"},{"$ref":"322"},{"$ref":"323"}],"comment":"Target
       is Null?","relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
@@ -391,7 +391,7 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-801.0,"yMin":1976.0,"xMax":-799.0,"yMax":2016.0},"guid":"85132487-0038-426a-aa3b-89da376d1209","$id":"335"}],"source":{"$ref":"69"},"destination":{"OnAwakeGraph":{"returnType":"","scriptGraphAsset":null,"$id":"339"},"OnEnterGraph":{"returnType":"","scriptGraphAsset":null,"$id":"340"},"OnUpdateGraph":{"returnType":"ArcaneOnyx.GraphCore.ExecutionStatus,
-      Platinio.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":5,"$id":"341"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"342"},"scriptGraphVariables":[{"$ref":"339"},{"$ref":"340"},{"$ref":"341"},{"$ref":"342"}],"comment":"Target
+      ArcaneOnyx.GraphCore, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null","scriptGraphAsset":5,"$id":"341"},"OnExitGraph":{"returnType":"","scriptGraphAsset":null,"$id":"342"},"scriptGraphVariables":[{"$ref":"339"},{"$ref":"340"},{"$ref":"341"},{"$ref":"342"}],"comment":"Target
       is Null?","relations":{"$content":[],"$type":"Unity.VisualScripting.ConnectionCollection`3[[ArcaneOnyx.BehaviorTree.IPortRelation,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
