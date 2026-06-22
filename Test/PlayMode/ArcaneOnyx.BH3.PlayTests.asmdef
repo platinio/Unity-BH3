@@ -1,0 +1,24 @@
+{
+    "name": "ArcaneOnyx.BH3.PlayTests",
+    "rootNamespace": "ArcaneOnyx.BehaviorTree.Tests.PlayMode",
+    "references": [
+        "ArcaneOnyx.BehaviorTree",
+        "ArcaneOnyx.GraphCore",
+        "GUID:21b0c8d1703a94250bfac916590cea4f",
+        "GUID:ea715009a4efd4c6cbc85be3ae097dd3",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
