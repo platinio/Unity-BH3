@@ -40,7 +40,7 @@ namespace ArcaneOnyx.BehaviorTree
         private bool _showClean;
         private string _typeStatus = string.Empty;
 
-        [MenuItem("Tools/Visual Scripting/Find Broken Behavior Tree Graphs")]
+        [MenuItem("Window/Arcane Onyx/BH3/Find Broken Behavior Tree Graphs")]
         public static void Open()
         {
             var w = GetWindow<BrokenBehaviorTreeGraphFinder>("Broken BT Graphs");
