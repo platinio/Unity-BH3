@@ -134,14 +134,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public static BehaviorTreeGraph CreateEmpty()
         {
-            var stateGraph = new BehaviorTreeGraph();
-
-            var entryNode = new Entry();
-            entryNode.Position = new Rect(new Vector2(-96, -15), entryNode.StartingSize);
-
-            stateGraph.Nodes.Add(entryNode);
-            stateGraph.elements.Add(entryNode);
-            return stateGraph;
+            return new BehaviorTreeGraph();
         }
 
         public void ConvertTransitionNodesIntoTaskNodeChild()
