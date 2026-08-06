@@ -17,6 +17,12 @@ namespace ArcaneOnyx.BehaviorTree
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
         public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
+       
+        public void SetBehaviorTreeGraphAsset(BehaviorTreeGraphAsset asset)
+        {
+            behaviorTreeGraphAsset = asset;
+            behaviorTreeGraphAssetInstance = null;
+        }
 
         public override string Description => "Executes BehaviorTreeGraphAsset";
 
