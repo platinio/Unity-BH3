@@ -58,11 +58,18 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.HandleInput();
 
+            if (element.PlaceHolderNodes == null) return;
+
+            // Ask the selection, never PlaceHolderNode.IsSelected. That field is a cache refreshed only when
+            // the placeholder's own widget runs HandleInput, so after the canvas clears the selection it can
+            // still read true here — and this method would then re-add the transition and every placeholder,
+            // refilling the selection the user just cleared. Overlapping lines on a busy node make several
+            // transitions do it at once, and the selection becomes impossible to move.
             bool placeHolderNodeIsSelected = false;
-            
+
             foreach (var placeHolderNode in element.PlaceHolderNodes)
             {
-                if (placeHolderNode.IsSelected)
+                if (selection.Contains(placeHolderNode))
                 {
                     placeHolderNodeIsSelected = true;
                     break;
@@ -75,7 +82,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 foreach (var placeHolderNode in element.PlaceHolderNodes)
                 {
-                    if (!placeHolderNode.IsSelected) selection.Add(placeHolderNode);
+                    if (!selection.Contains(placeHolderNode)) selection.Add(placeHolderNode);
                 }
             }
         }
