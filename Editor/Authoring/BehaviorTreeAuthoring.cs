@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using Unity.Pipeline.Models;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+
 // StickyNote exists in both ArcaneOnyx.GraphCore and Unity.VisualScripting; the graph uses the GraphCore one
 using StickyNote = ArcaneOnyx.GraphCore.StickyNote;
 
@@ -300,6 +302,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Use this, not <c>SetDefaultValue</c>, for any port whose <c>Definition()</c> declares no default.
         /// An inline value only survives serialization on ports that were declared with one — on the rest the
         /// value is silently gone by the time the asset reloads, and the port reads as unset and throws.
+        /// </para>
         /// </para>
         /// </summary>
         public static void FeedFloat(BehaviorTreeGraphAsset asset, ValueInput port, float value, float x, float y)
@@ -621,20 +624,74 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         [CliCommand("bt_declare",
-            "Declare a variable on the tree. On a sub-tree this documents the contract the agent must " +
-            "satisfy rather than supplying a default — every read resolves against the root tree.")]
+            "Declare a variable on the tree. Every read resolves against the root tree, so on a sub-tree an " +
+            "'instance' declaration supplies nothing — use 'required' to state what the agent must declare, " +
+            "or 'optional' to give the branch a default it carries on its own.")]
         public static object DeclareCommand(
             [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
             [CliArg("name", "Variable name.", Required = true)] string name,
-            [CliArg("value", "Value as text, parsed as 'type'.", Required = true)] string value,
-            [CliArg("type", "How to read 'value': string, float, int, bool, vector2 or vector3.")] string type = "string")
+            [CliArg("value", "Value as text, parsed as 'type'. For 'required' this only carries the type.", Required = true)] string value,
+            [CliArg("type", "How to read 'value': string, float, int, bool, vector2 or vector3.")] string type = "string",
+            [CliArg("scope", "Which list to write: instance, required or optional.")] string scope = "instance")
         {
             var asset = ResolveTree(tree, out var normalized);
 
-            Declare(asset, name, ParseNamedType(value, type, name));
+            if (!Enum.TryParse<DeclarationScope>(scope, ignoreCase: true, out var declarationScope))
+            {
+                throw new ArgumentException(
+                    $"Unknown scope '{scope}'. Expected instance, required or optional.");
+            }
+
+            Declare(asset, name, ParseNamedType(value, type, name), declarationScope);
             Save(asset);
 
-            return new { tree = normalized, declared = name, value };
+            return new { tree = normalized, declared = name, value, scope = declarationScope.ToString() };
+        }
+
+        [CliCommand("bt_refresh_sub_tree_ports",
+            "Rebuild a Run Behavior Tree node's parameter ports from the sub-tree's required and optional " +
+            "declarations. Run it after changing a branch's contract; bt_verify reports which nodes need it. " +
+            "Omit --node to refresh every sub-tree node in the tree.")]
+        public static object RefreshSubTreePortsCommand(
+            [CliArg("tree", "Asset path of the behavior tree that contains the sub-tree node(s).", Required = true)] string tree,
+            [CliArg("node", "Guid of one Run Behavior Tree node. Omit to refresh all of them.")] string node = null)
+        {
+            var asset = ResolveTree(tree, out var normalized);
+
+            var targets = asset.graph.Nodes.OfType<RunBehaviorTreeGraphNode>().ToList();
+
+            if (!string.IsNullOrEmpty(node))
+            {
+                targets = targets.Where(candidate => candidate.guid.ToString() == node).ToList();
+
+                if (targets.Count == 0)
+                {
+                    throw new ArgumentException($"No Run Behavior Tree node with guid '{node}' in {normalized}.");
+                }
+            }
+
+            var refreshed = new List<object>();
+
+            foreach (var target in targets)
+            {
+                // Report the drift before it is resolved — after the refresh there is nothing left to see, and
+                // a dropped connection is exactly the thing the caller should know happened.
+                var drift = target.DescribeContractDrift();
+
+                target.RefreshParameters();
+
+                refreshed.Add(new
+                {
+                    node = target.guid.ToString(),
+                    subTree = target.BehaviorTreeGraphAsset != null ? target.BehaviorTreeGraphAsset.name : null,
+                    ports = target.Parameters.Select(parameter => parameter.ToString()).ToArray(),
+                    resolved = drift.ToArray()
+                });
+            }
+
+            Save(asset);
+
+            return new { tree = normalized, refreshed };
         }
 
         [CliCommand("bt_set_value",

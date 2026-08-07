@@ -97,12 +97,7 @@ namespace ArcaneOnyx.BehaviorTree
             //description = unit.Description<UnitDescription>();
             Reposition();
         }
-        
-        public virtual Inspector GetPortInspector(IUnitPort port, Metadata metadata)
-        {
-            return metadata.Inspector();
-        }
-        
+
         public Rect edgePosition
         {
             get => position;
@@ -141,6 +136,55 @@ namespace ArcaneOnyx.BehaviorTree
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
         
+        /// <summary>
+        /// Stand-in port markers for the sub-tree preview.
+        /// </summary>
+        protected virtual void DrawPortPreviews(Rect p)
+        {
+            const float size = 8.0f;
+            const float spacing = 4.0f;
+
+            DrawPortColumn(p.x - (size * 0.5f), p, element.valueInputs?.Count() ?? 0, size, spacing);
+            DrawPortColumn(p.xMax - (size * 0.5f), p, element.valueOutputs?.Count() ?? 0, size, spacing);
+        }
+
+        private static void DrawPortColumn(float x, Rect p, int count, float size, float spacing)
+        {
+            if (count <= 0) return;
+
+            // centred on the node's edge, and clamped so a node with many ports does not spill past its box
+            float step = Mathf.Min(size + spacing, (p.height - size) / count);
+            float top = p.y + ((p.height - (step * (count - 1))) * 0.5f) - (size * 0.5f);
+
+            for (int i = 0; i < count; i++)
+            {
+                var dot = new Rect(x, top + (step * i), size, size);
+                Styles.background.Draw(dot, false, false, false, false);
+            }
+        }
+
+        /// <summary>Set while this widget is being drawn inside another tree's sub-tree preview.</summary>
+        protected bool previewPorts;
+
+        /// <summary>
+        /// Draws this node as part of a parent tree's sub-tree preview: offset into the parent's box, not
+        /// selectable, and with stand-in port markers. Kept as its own entry point so the overrides of
+        /// <see cref="DrawForeground(Vector2, bool, bool)"/> do not all need a new parameter.
+        /// </summary>
+        public void DrawSubTreePreview(Vector2 offset)
+        {
+            previewPorts = true;
+
+            try
+            {
+                DrawForeground(offset, true, false);
+            }
+            finally
+            {
+                previewPorts = false;
+            }
+        }
+
         public virtual void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
             if (!element.IsVisible) return;
@@ -183,8 +227,10 @@ namespace ArcaneOnyx.BehaviorTree
                     
                         Styles.background.Draw(topConnection, false, IsSelected, false, false);
                     }
+
+                    if (previewPorts) DrawPortPreviews(p);
                 }
-             
+
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
                 if (node.ShowIcon)
@@ -302,6 +348,19 @@ namespace ArcaneOnyx.BehaviorTree
                 LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
             }
         }
+
+        /// <summary>
+        /// Lays this node'''s ports out and draws them, for a subclass that replaces the whole node body and so
+        /// never reaches the base drawing that would normally do it. <see cref="RunBehaviorTreeNodeElementWidget"/>
+        /// draws a sub-tree as a group frame rather than a box, and still needs its parameter ports.
+        /// </summary>
+        protected void CachePortPositions(float y, float edgeX, float edgeWidth) => CachePortPosition(y, edgeX, edgeWidth);
+
+        /// <summary>Positions the child widgets — the ports among them — without the node box layout.</summary>
+        protected void CacheChildWidgetPositions() => base.CachePosition();
+
+        /// <summary>Draws the child widgets, which is what puts ports on the canvas.</summary>
+        protected void DrawChildWidgets() => base.DrawForeground();
 
         private void CachePortPosition(float y, float edgeX, float edgeWidth)
         {
@@ -628,7 +687,7 @@ namespace ArcaneOnyx.BehaviorTree
        
         public Inspector GetPortInspector(IPort port, Metadata metadata)
         {
-            return null;
+            return metadata?.Inspector();
         }
     }
 }

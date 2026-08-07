@@ -263,11 +263,61 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
 
+        [DoNotSerialize]
+        private BehaviorTreeVariableScope variableScope;
+
+        /// <summary>
+        /// The variables this node can see. Assigned alongside the machine when the graph loads, so a node
+        /// inside a sub-tree resolves against that sub-tree's own instance before searching outward — see
+        /// <see cref="BehaviorTreeVariableScope"/>.
+        /// <para>
+        /// Falls back to a scope over the root tree's declarations when nothing assigned one, so any path that
+        /// loads a graph without calling <see cref="SetVariableScope"/> behaves exactly as it did before.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        public BehaviorTreeVariableScope VariableScope
+        {
+            get
+            {
+                if (variableScope != null) return variableScope;
+
+                var instance = BehaviorTreeMachine?.GraphInstance;
+                if (instance == null) return null;
+
+                variableScope = new BehaviorTreeVariableScope(instance.declarations);
+                return variableScope;
+            }
+        }
+
+        /// <summary>
+        /// Hands this node the scope it resolves variables against. Mirrors <c>SetMachine</c> — the machine
+        /// calls it across the root graph, and <see cref="RunBehaviorTreeGraphNode"/> overrides it to build a
+        /// child scope and pass that one down instead.
+        /// </summary>
+        public virtual void SetVariableScope(BehaviorTreeVariableScope scope)
+        {
+            variableScope = scope;
+        }
+
+        /// <summary>
+        /// What an embedded Visual Scripting graph sees, as the flat collection those entry points take.
+        /// Collapses the scope chain so a script graph inside a branch reads that branch's values first and
+        /// the agent's underneath — matching what every other read in the tree resolves to.
+        /// <para>
+        /// A node in the root tree hands over the root declarations unchanged, so nothing is copied in the
+        /// common case; only a node inside a sub-tree pays for the merge.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        protected VariableDeclarations ScriptGraphVariables =>
+            VariableScope?.Flatten() ?? BehaviorTreeMachine?.GraphInstance?.declarations;
+
         public virtual int MaxChildrenLimit => 0;
         
         protected GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable)
         {
-            var target = gameObjectVariable.GetValue(BehaviorTreeMachine);
+            var target = gameObjectVariable.GetValue(BehaviorTreeMachine, VariableScope);
             return target == null ? gameObject : target;
         }
         

@@ -11,6 +11,27 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable]
         public VariableDeclarations declarations { get; internal set; } = new() { Kind = VariableKind.Graph };
 
+        /// <summary>
+        /// What an agent running this tree must declare on its Variables component. Reading a variable that
+        /// nothing supplies throws, so a branch reused on an agent that lacks one fails at the tick rather
+        /// than at author time — this is the list that makes that checkable before play.
+        /// <para>
+        /// Nothing is read from here at runtime. It is a contract, and the values only carry the type so the
+        /// Blackboard panel can edit it with the same inspector as any other declaration.
+        /// </para>
+        /// </summary>
+        [Serialize, Inspectable]
+        public VariableDeclarations requiredDeclarations { get; internal set; } = new() { Kind = VariableKind.Graph };
+
+        /// <summary>
+        /// Values this tree supplies for itself when the agent does not. Applied to the root tree's
+        /// declarations by <c>BehaviorTreeMachine.OverrideGraphAndSubGraphVariables</c>, and always losing to
+        /// the agent, so a branch can ship a sensible default and only genuinely agent-specific values need
+        /// to appear in <see cref="requiredDeclarations"/>.
+        /// </summary>
+        [Serialize, Inspectable]
+        public VariableDeclarations optionalDeclarations { get; internal set; } = new() { Kind = VariableKind.Graph };
+
         public VariableDeclarations VariableDeclarations => declarations;
         
         //[ContextMenu("Show Data...")]

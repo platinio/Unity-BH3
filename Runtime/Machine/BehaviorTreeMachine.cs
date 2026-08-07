@@ -66,25 +66,36 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Builds the root scope and opens a nested one for every sub-tree.
+        /// <para>
+        /// The root scope holds the agent's variables, so anything an agent declares is visible to every
+        /// branch however deeply nested. Each <c>RunBehaviorTreeGraphNode</c> then opens a child scope around
+        /// its own instance, seeded with that branch's optional defaults — so a branch reads its own values
+        /// first and the agent's only when it declares none, and its writes stay inside it.
+        /// </para>
+        /// </summary>
         private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
         {
             OverrideGraphVariables(graphAsset);
 
-            if (graph == null) return;
+            if (graph == null || graphAsset == null) return;
+
+            var rootScope = new BehaviorTreeVariableScope(graphAsset.declarations);
+            rootScope.SeedDefaults(graphAsset.optionalDeclarations);
+
+            // Each node opens its own child scope from here; RunBehaviorTreeGraphNode overrides
+            // SetVariableScope to do exactly that and recurse.
             foreach (var behaviorTreeNode in graph.Nodes)
             {
-                if (behaviorTreeNode is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
-                {
-                    var internalGraphAsset = runBehaviorTreeGraphNode.BehaviorTreeGraphAssetInstance;
-                    OverrideGraphAndSubGraphVariables(internalGraphAsset, internalGraphAsset.graph);
-                }
+                behaviorTreeNode.SetVariableScope(rootScope);
             }
         }
 
         private void OverrideGraphVariables(BehaviorTreeGraphAsset graphAsset)
         {
             if (graphAsset == null || graphAsset.declarations == null) return;
-            
+
             foreach (var variableDeclaration in Variables.declarations)
             {
                 graphAsset.declarations.Set(variableDeclaration.name, variableDeclaration.value);

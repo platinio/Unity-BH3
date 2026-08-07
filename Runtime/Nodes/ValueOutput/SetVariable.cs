@@ -31,27 +31,9 @@ namespace ArcaneOnyx.BehaviorTree
             string key = (string) Key.GetValue();
             object value = Value.GetValue();
 
-            switch (VariableKind)
-            {
-                case VariableKind.Graph:
-                    BehaviorTreeMachine.GraphAsset.declarations.Set(key, value);
-                    break;
-                case VariableKind.Object:
-                    BehaviorTreeMachine.Variables.declarations.Set(key, value);
-                    break;
-                case VariableKind.Scene:
-                    SceneVariables.Instance(SceneManager.GetActiveScene()).variables.declarations.Set(key, value);
-                    break;
-                case VariableKind.Application:
-                    ApplicationVariables.current.Set(key, value);
-                    break;
-                case VariableKind.Saved:
-                    SavedVariables.current.Set(key, value);
-                    break;
-                case VariableKind.Flow:
-                    Debug.LogError($"BehaviorTree doesnt support Flow VariableKind Node={NodeName} Key={key}");
-                    break;
-            }
+            // Same switch as GameplayNode.SaveVariable, which is why this defers to it: two copies of the
+            // rule about where a Graph write lands is exactly one copy too many.
+            SaveVariable(key, VariableKind, value);
 
             return ExecutionStatus.Success;
         }

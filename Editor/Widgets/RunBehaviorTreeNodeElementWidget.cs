@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -54,6 +55,8 @@ namespace ArcaneOnyx.BehaviorTree
             Vector2 subBehaviorTreeOffset = position.position + (new Vector2(position.size.x / 2.0f, 0.0f)) + entryOffset;
           
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
+
+            DrawParameterPorts();
         }
 
         protected override void DrawTitle(Vector2 offset, string title)
@@ -79,13 +82,13 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     RunBehaviorTreeNodeElementWidget w = behaviorTreeGraph.Canvas().Widget(runNode) as RunBehaviorTreeNodeElementWidget;
                     w.CachePosition();
-                    w.DrawForeground(offset, true, false);
+                    w.DrawSubTreePreview(offset);
                 }
                 else if (graphElement is BehaviorTreeNode node)
                 {
                     var w = behaviorTreeGraph.Canvas().Widget(node) as BehaviorTreeNodeElementWidget;
                     w.CachePosition();
-                    w.DrawForeground(offset, true, false);
+                    w.DrawSubTreePreview(offset);
                 }
                 else if (graphElement is BehaviorTreeTransition transition)
                 {
@@ -223,6 +226,83 @@ namespace ArcaneOnyx.BehaviorTree
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null)
             {
                 base.CachePosition();
+                return;
+            }
+            
+            CacheParameterPortPositions();
+        }
+
+        /// <summary>
+        /// Puts the parameter ports on the left edge of the sub-tree frame, below the name header.
+        /// <para>
+        /// A branch's parameters belong to the frame as a whole rather than to any node inside it, which
+        /// is what the edge placement is for: the same place a caller looks to see what the branch takes.
+        /// </para>
+        /// </summary>
+        private void CacheParameterPortPositions()
+        {
+            var box = CalculateSubBehaviorTreeBox();
+            if (box.width <= 0f) return;
+
+            CachePortPositions(box.y + RunBehaviorTreeNodeElementWidgetStyles.headerHeight, box.x, box.width);
+            CacheChildWidgetPositions();
+        }
+
+        /// <summary>
+        /// Draws the ports the frame carries. The group path never reaches the base node drawing, so
+        /// without this a parameter exists on the node and is invisible on the canvas: declared, and
+        /// impossible to connect anything to.
+        /// </summary>
+        private void DrawParameterPorts()
+        {
+            if (element.valueInputs == null || !element.valueInputs.Any()) return;
+
+            DrawChildWidgets();
+        }
+
+        /// <summary>
+        /// Adds the refresh this node needs, because its ports deliberately do not follow the sub-tree on their
+        /// own.
+        /// <para>
+        /// Ports are matched by key, so rebuilding them the moment a branch's contract changes would drop every
+        /// connection whose name no longer exists, at every call site at once and without saying so. Refreshing
+        /// is therefore a decision — and this is where someone makes it. The entry reports how far the node has
+        /// drifted so the decision is an informed one rather than a guess.
+        /// </para>
+        /// </summary>
+        protected override IEnumerable<DropdownOption> contextOptions
+        {
+            get
+            {
+                foreach (var dropdownOption in base.contextOptions)
+                {
+                    yield return dropdownOption;
+                }
+
+                if (!(element is RunBehaviorTreeGraphNode runNode) || runNode.BehaviorTreeGraphAsset == null) yield break;
+
+                var drift = runNode.DescribeContractDrift();
+
+                var label = drift.Count == 0
+                    ? "Refresh Parameters (up to date)"
+                    : $"Refresh Parameters ({drift.Count} change(s) in {runNode.BehaviorTreeGraphAsset.name})";
+
+                yield return new DropdownOption((System.Action)(() =>
+                {
+                    UndoUtility.RecordEditedObject("Refresh Sub-Tree Parameters");
+
+                    // Say what it did. A refresh that removes a port silently removes whatever fed it, and the
+                    // canvas alone will not make that obvious on a large tree.
+                    if (drift.Count > 0)
+                    {
+                        Debug.Log($"[{runNode.NodeName}] refreshed parameters:{System.Environment.NewLine}  " +
+                                  string.Join(System.Environment.NewLine + "  ", drift));
+                    }
+
+                    runNode.RefreshParameters();
+
+                    GUI.changed = true;
+                }), label);
             }
         }
         

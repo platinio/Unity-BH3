@@ -16,6 +16,16 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueOutput Output { get; private set; }
 
         public override bool DrawInSubTree => false;
+
+        /// <summary>
+        /// Points this node at the graph that produces its value. Only useful after the node has been added
+        /// to a graph, since <see cref="Definition"/> is what creates the variable this assigns into.
+        /// Needed to author a node's Visual Scripting from code.
+        /// </summary>
+        public void SetScriptGraph(ScriptGraphAsset asset)
+        {
+            ScriptGraphVariable?.SetScriptGraphAsset(asset);
+        }
         
         protected override void Definition()
         {
@@ -27,7 +37,7 @@ namespace ArcaneOnyx.BehaviorTree
                 try
                 {
                     runtimeException = null;
-                    return ScriptGraphVariable.GetValue<object>(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
+                    return ScriptGraphVariable.GetValue<object>(gameObject, ScriptGraphVariables);
                 }
                 catch (Exception e)
                 {

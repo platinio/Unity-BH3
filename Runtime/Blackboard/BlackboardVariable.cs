@@ -15,7 +15,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public string VariableName => variableName;
         
-        public T GetValue(BehaviorTreeMachine machine)
+        public T GetValue(BehaviorTreeMachine machine, BehaviorTreeVariableScope scope = null)
         {
             if (inlineValue) return value;
             if (string.IsNullOrEmpty(variableName)) return default;
@@ -23,7 +23,7 @@ namespace ArcaneOnyx.BehaviorTree
             T result;            
 
             if (TryGetValueFromObject(machine, out result)) return result;
-            if (TryGetValueFromGraph(machine, out result)) return result;
+            if (TryGetValueFromGraph(machine, scope, out result)) return result;
             if (TryGetValueFromScene(out result)) return result;
             if (TryGetValueFromApp(out result)) return result;
             if (TryGetValueFromSave(out result)) return result;
@@ -32,6 +32,9 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         public bool TryGetValue(BehaviorTreeMachine machine, out T result)
+            => TryGetValue(machine, null, out result);
+
+        public bool TryGetValue(BehaviorTreeMachine machine, BehaviorTreeVariableScope scope, out T result)
         {
             if (inlineValue)
             {
@@ -43,7 +46,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (string.IsNullOrEmpty(variableName)) return false;
             
             if (TryGetValueFromObject(machine, out result)) return true;
-            if (TryGetValueFromGraph(machine, out result)) return true;
+            if (TryGetValueFromGraph(machine, scope, out result)) return true;
             if (TryGetValueFromScene(out result)) return true;
             if (TryGetValueFromApp(out result)) return true;
             if (TryGetValueFromSave(out result)) return true;
@@ -51,9 +54,23 @@ namespace ArcaneOnyx.BehaviorTree
             return false;
         }
 
-        private bool TryGetValueFromGraph(BehaviorTreeMachine machine, out T value)
+        /// <summary>
+        /// Resolves through the reading node's scope when it has one — the tree the node lives in first, then
+        /// outward — so a branch sees its own parameter rather than a same-named value elsewhere on the agent.
+        /// Falls back to the root instance for callers that have no scope to offer.
+        /// </summary>
+        private bool TryGetValueFromGraph(BehaviorTreeMachine machine, BehaviorTreeVariableScope scope, out T value)
         {
             value = default;
+
+            if (scope != null)
+            {
+                if (!scope.TryGet(variableName, out var scoped) || scoped is not T typed) return false;
+
+                value = typed;
+                return true;
+            }
+
             var declarations = machine.GraphInstance.declarations;
 
             if (!declarations.IsDefined(variableName)) return false;

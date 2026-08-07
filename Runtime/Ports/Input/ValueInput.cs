@@ -18,7 +18,13 @@ namespace ArcaneOnyx.BehaviorTree
 
         public Type Type { get; }
 
-        public bool hasDefaultValue => false;//behaviorTreeNode.defaultValues.ContainsKey(key);
+        /// <summary>
+        /// Whether this port carries an inline value, which is what lets the canvas draw an editable field on it
+        /// rather than a bare handle. Both readers — <c>ValueInputWidget.showInspector</c> and
+        /// <c>FetchInspectorMetadata</c> — test this before touching <see cref="_defaultValue"/>, so the key
+        /// lookup behind it is guarded.
+        /// </summary>
+        public bool hasDefaultValue => behaviorTreeNode != null && behaviorTreeNode.defaultValues.ContainsKey(key);
 
         public override IEnumerable<PortValueConnection> validConnections => behaviorTreeNode?.graph?.valueConnections.WithDestination(this) ?? Enumerable.Empty<PortValueConnection>();
 

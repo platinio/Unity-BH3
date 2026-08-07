@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -27,27 +27,27 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnAwake()
         {
             if (OnAwakeGraph?.ScriptGraphAsset == null) return;
-            OnAwakeGraph.Run(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
+            OnAwakeGraph.Run(gameObject, ScriptGraphVariables);
         }
 
         public override void OnEnter()
         {
             base.OnEnter();
             if (OnEnterGraph?.ScriptGraphAsset == null) return;
-            OnEnterGraph?.Run(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
+            OnEnterGraph?.Run(gameObject, ScriptGraphVariables);
         }
 
         public override ExecutionStatus OnUpdate()
         {
             if (OnUpdateGraph?.ScriptGraphAsset == null) return ExecutionStatus.Success;
-            return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
+            return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject, ScriptGraphVariables);
         }
 
         public override void OnExit()
         {
             base.OnExit();
             if (OnExitGraph?.ScriptGraphAsset == null) return;
-            OnExitGraph?.Run(gameObject, BehaviorTreeMachine.GraphInstance.declarations);
+            OnExitGraph?.Run(gameObject, ScriptGraphVariables);
         }
     }
 }

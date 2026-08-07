@@ -86,5 +86,57 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             Assert.AreEqual(ExecutionStatus.Success, new Repeater().OnUpdate());
         }
+
+        [Test]
+        public void Cooldown_RunsChildOnFirstActivation()
+        {
+            var child = new ScriptedNode(ExecutionStatus.Success);
+            var cooldown = new Cooldown().WithChildren(child);
+            cooldown.Define();
+
+            Assert.AreEqual(ExecutionStatus.Success, cooldown.RunToCompletion());
+            Assert.AreEqual(1, child.UpdateCalls, "A cooldown that has never fired must let the child through.");
+        }
+
+        [Test]
+        public void Cooldown_BlocksChildWhileRecharging()
+        {
+            var child = new ScriptedNode(ExecutionStatus.Success);
+            var cooldown = new Cooldown().WithChildren(child);
+            cooldown.Define();
+
+            cooldown.RunToCompletion();
+            int updatesBefore = child.UpdateCalls;
+
+            // Edit mode advances no game time between these two runs, so the cooldown is still active.
+            Assert.AreEqual(ExecutionStatus.Failure, cooldown.RunToCompletion());
+            Assert.AreEqual(updatesBefore, child.UpdateCalls, "Child must not tick while the decorator is cooling down.");
+            Assert.AreEqual(1, child.EnterCalls, "Child must not be entered while the decorator is cooling down.");
+        }
+
+        [Test]
+        public void RandomChance_AlwaysRunsChildAtFullChance()
+        {
+            var child = new ScriptedNode(ExecutionStatus.Success);
+            var decorator = new RandomChance().WithChildren(child);
+            decorator.Define();
+            decorator.Chance.SetDefaultValue(1.0f);
+
+            Assert.AreEqual(ExecutionStatus.Success, decorator.RunToCompletion());
+            Assert.AreEqual(1, child.UpdateCalls, "A chance of 1 must always pass the roll.");
+        }
+
+        [Test]
+        public void RandomChance_NeverRunsChildAtZeroChance()
+        {
+            var child = new ScriptedNode(ExecutionStatus.Success);
+            var decorator = new RandomChance().WithChildren(child);
+            decorator.Define();
+            decorator.Chance.SetDefaultValue(0.0f);
+
+            Assert.AreEqual(ExecutionStatus.Failure, decorator.RunToCompletion());
+            Assert.AreEqual(0, child.UpdateCalls, "A chance of 0 must never tick the child.");
+            Assert.AreEqual(0, child.EnterCalls, "A chance of 0 must never enter the child.");
+        }
     }
 }

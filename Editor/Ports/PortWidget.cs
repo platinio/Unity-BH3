@@ -46,8 +46,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override Metadata FetchMetadata()
         {
-            //return description.getMetadata(unitWidget.metadata);
-            return null;
+            // Hangs this port's metadata off its node's, which is what lets a port carrying a default draw an
+            // editable value field instead of a bare handle.
+            //
+            // Returning null here is not neutral: Widget.CacheItem only calls CacheMetadata when the fetched
+            // metadata differs from the last one, so null on the first pass compares equal to the initial null
+            // and CacheMetadata never runs at all — leaving the widget with no inspector and nothing drawn.
+            //
+            // The descriptor's getMetadata is honoured when it supplies one, but the port itself is the
+            // fallback rather than null, which is the same universal form Visual Scripting's UnitDescriptor
+            // uses for ports it cannot reach through a declaring member.
+            var nodeMetadata = unitWidget?.metadata;
+            if (nodeMetadata == null) return null;
+
+            return description?.getMetadata != null
+                ? description.getMetadata(nodeMetadata)
+                : nodeMetadata.StaticObject(port);
         }
 
         public virtual Metadata FetchInspectorMetadata()

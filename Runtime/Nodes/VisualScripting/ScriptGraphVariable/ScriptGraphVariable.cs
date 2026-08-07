@@ -11,7 +11,17 @@ namespace ArcaneOnyx.BehaviorTree
         [SerializeField] protected ScriptGraphAsset scriptGraphAsset;
 
         public ScriptGraphAsset ScriptGraphAsset => scriptGraphAsset;
-        
+
+        /// <summary>
+        /// Assigns the graph this variable reads from. Needed to build a node's Visual Scripting graph from
+        /// code, where the inspector is not involved — the counterpart of
+        /// <see cref="RunBehaviorTreeGraphNode.SetBehaviorTreeGraphAsset"/> for sub-trees.
+        /// </summary>
+        public void SetScriptGraphAsset(ScriptGraphAsset asset)
+        {
+            scriptGraphAsset = asset;
+        }
+
         public T GetValue<T>(Variables input = null)
         {
             return scriptGraphAsset.GetScriptGraphOutput<T>(input);

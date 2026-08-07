@@ -10,8 +10,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             color = ValueConnectionWidget.DetermineColor(port.Type);
         }
-
-        protected override bool showInspector => port.hasDefaultValue && !port.hasValidConnection;
+       
+        protected override bool showInspector => port.hasDefaultValue && !port.hasValidConnection && inspector != null;
 
         protected override bool colorIfActive => !BoltFlow.Configuration.animateControlConnections || !BoltFlow.Configuration.animateValueConnections;
 
