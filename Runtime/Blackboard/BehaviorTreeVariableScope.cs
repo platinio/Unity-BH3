@@ -4,19 +4,6 @@ namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// The variables a node can see, and the chain it searches to find them.
-    /// <para>
-    /// One scope per running tree instance: the root tree has one, and every
-    /// <see cref="RunBehaviorTreeGraphNode"/> makes a child scope around the instance it runs. Because a node
-    /// appears once in a tree, and a sub-tree asset is instantiated per call site, a scope is effectively
-    /// per call site — two branches running in parallel under a Parallel Selector are two different nodes
-    /// holding two different scopes, so their variables cannot collide.
-    /// </para>
-    /// <para>
-    /// Reads walk outward to the root, so a branch still sees what the agent supplied. Writes stay local,
-    /// which is what makes a branch a function rather than a script sharing globals: values arrive as
-    /// parameters and scratch state cannot leak sideways into a sibling. State that genuinely belongs to the
-    /// whole agent has a home already — <c>VariableKind.Object</c>, on the agent's Variables component.
-    /// </para>
     /// </summary>
     public class BehaviorTreeVariableScope
     {
