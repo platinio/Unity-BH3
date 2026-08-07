@@ -301,9 +301,29 @@ namespace ArcaneOnyx.BehaviorTree
             innerScope = new BehaviorTreeVariableScope(instance.declarations, scope);
             innerScope.SeedDefaults(instance.optionalDeclarations);
 
+            // The scope chain is already one scope per call site, so it is what the recorder numbers to tell
+            // two uses of the same branch apart. Registered here because this is the moment the call site
+            // comes into existence.
+            Debugging.BehaviorTreeRecorder.RegisterCallSite(this, innerScope, scope);
+
             foreach (var node in instance.graph.Nodes)
             {
                 node.SetVariableScope(innerScope);
+            }
+        }
+
+        /// <summary>Reaches the branch's nodes, the way <see cref="SetMachine"/> and
+        /// <see cref="SetVariableScope"/> do — otherwise everything inside a sub-tree goes unrecorded.</summary>
+        public override void SetFlightRecorder(Debugging.BehaviorTreeFlightRecorder recorder)
+        {
+            base.SetFlightRecorder(recorder);
+
+            var instance = BehaviorTreeGraphAssetInstance;
+            if (instance == null) return;
+
+            foreach (var node in instance.graph.Nodes)
+            {
+                node.SetFlightRecorder(recorder);
             }
         }
 

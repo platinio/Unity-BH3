@@ -18,6 +18,17 @@ namespace ArcaneOnyx.BehaviorTree
         public BehaviorTreeGraphAsset GraphAsset => nest.macro;
         public BehaviorTreeGraphAsset OriginalMacro { get; private set; }
 
+        /// <summary>
+        /// This agent's black box, or null outside the editor and dev builds. Assigned through
+        /// <see cref="Debugging.BehaviorTreeRecorder"/>, which is what makes it disappear from a shipped build.
+        /// </summary>
+        public Debugging.BehaviorTreeFlightRecorder FlightRecorder { get; private set; }
+
+        public void SetFlightRecorder(Debugging.BehaviorTreeFlightRecorder recorder)
+        {
+            FlightRecorder = recorder;
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -46,6 +57,11 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     node.SetMachine(this);
                 }
+
+                // Before the scopes are built, because building them is when call sites are registered and a
+                // call site can only be registered against a recorder that already exists.
+                Debugging.BehaviorTreeRecorder.Attach(this, OriginalMacro != null ? OriginalMacro.name : name);
+                Debugging.BehaviorTreeRecorder.Bind(behaviorTreeGraph, FlightRecorder);
 
                #if UNITY_EDITOR
                 try
@@ -84,6 +100,8 @@ namespace ArcaneOnyx.BehaviorTree
             var rootScope = new BehaviorTreeVariableScope(graphAsset.declarations);
             rootScope.SeedDefaults(graphAsset.optionalDeclarations);
 
+            Debugging.BehaviorTreeRecorder.BindRootScope(this, rootScope);
+
             // Each node opens its own child scope from here; RunBehaviorTreeGraphNode overrides
             // SetVariableScope to do exactly that and recurse.
             foreach (var behaviorTreeNode in graph.Nodes)
@@ -117,6 +135,8 @@ namespace ArcaneOnyx.BehaviorTree
                 node.SetMachine(this);
             }
 
+            Debugging.BehaviorTreeRecorder.Bind(behaviorTreeGraph, FlightRecorder);
+
             OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset, behaviorTreeGraphAsset.graph);
             nest.SwitchToEmbed(behaviorTreeGraph);
         }
@@ -141,6 +161,11 @@ namespace ArcaneOnyx.BehaviorTree
                 }
 #endif
                 if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
+
+                // Opens the tick before the tree runs, so everything the tree does this frame is stamped with
+                // the same tick and ordered within it.
+                Debugging.BehaviorTreeRecorder.BeginTick(this);
+
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
 
             }
@@ -165,11 +190,13 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected override void OnDestroy()
         {
+            Debugging.BehaviorTreeRecorder.Detach(this);
+
             if (hasGraph && behaviorTreeGraph != null)
             {
                 behaviorTreeGraph.OnDestroy();
             }
-            
+
             if (graphInstance)
             {
                 Destroy(graphInstance);
