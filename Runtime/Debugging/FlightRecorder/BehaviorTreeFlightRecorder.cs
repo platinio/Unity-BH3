@@ -19,7 +19,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// editor and dev builds. Reach for that rather than calling a recorder directly from runtime code.
     /// </para>
     /// </summary>
-    public sealed class BehaviorTreeFlightRecorder
+    public sealed class BehaviorTreeFlightRecorder : IBehaviorTreeRecording
     {
         /// <summary>
         /// Events, not ticks. The spec asks for "~2000 ticks", but a tick produces anywhere from zero to a
@@ -73,6 +73,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public BehaviorTreeEventRing Events => ring;
 
         public IReadOnlyList<BehaviorTreeCallSite> CallSites => callSites;
+
+        /// <summary>
+        /// A live recorder is also a readable recording, so the why-inspector reads an agent that is still
+        /// running through exactly the same interface it uses for a recording loaded from a file. Nothing here
+        /// copies: these forward straight to the ring.
+        /// </summary>
+        public int EventCount => ring.Count;
+
+        public BehaviorTreeEvent EventAt(int index) => ring[index];
+
+        public int Dropped => ring.Dropped;
 
         /// <summary>
         /// True when this recorder is actually keeping events. The global switch is checked here rather than
