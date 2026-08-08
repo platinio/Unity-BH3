@@ -147,35 +147,13 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Where this write lands. One switch used by both the write and the read of the previous value, so
-        /// the two can never disagree about which store they are talking about.
+        /// Where this write lands. Shared with <see cref="GetBehaviorTreeVariable"/> so a get can never look
+        /// somewhere other than the matching set, and used by both the write and the read of the previous
+        /// value here for the same reason.
         /// </summary>
         private Unity.VisualScripting.VariableDeclarations Declarations(Unity.VisualScripting.Flow flow)
         {
-            switch (kind)
-            {
-                case Unity.VisualScripting.VariableKind.Flow:
-                    return flow.variables;
-
-                case Unity.VisualScripting.VariableKind.Graph:
-                    return Unity.VisualScripting.Variables.Graph(flow.stack);
-
-                case Unity.VisualScripting.VariableKind.Object:
-                    var target = flow.GetValue<GameObject>(@object);
-                    return target != null ? Unity.VisualScripting.Variables.Object(target) : null;
-
-                case Unity.VisualScripting.VariableKind.Scene:
-                    return flow.stack.scene.HasValue ? Unity.VisualScripting.Variables.Scene(flow.stack.scene.Value) : null;
-
-                case Unity.VisualScripting.VariableKind.Application:
-                    return Unity.VisualScripting.Variables.Application;
-
-                case Unity.VisualScripting.VariableKind.Saved:
-                    return Unity.VisualScripting.Variables.Saved;
-
-                default:
-                    return null;
-            }
+            return BehaviorTreeVariableStore.Of(flow, kind, @object);
         }
 
         /// <summary>

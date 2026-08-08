@@ -165,14 +165,18 @@ The **graph** button opens that graph with the values that were on its wires at 
 
 ---
 
-## Writing variables from a script graph
+## Reading and writing variables from a script graph
 
-Use **BH3 → Variables → Set BT Variable** rather than Unity's built-in **Set Variable**.
+BH3 ships two units under **BH3 → Variables**:
 
-It behaves identically — same kinds, same ports, same assignment — but it reports the write, so it shows up
-in the recording and the panel can name it as the cause of a guard flipping. Unity's own unit gives no
-notice that anything changed, so a value written by one simply has no writer as far as the panel is
-concerned.
+| Unit | Use it because |
+|---|---|
+| **Set BT Variable** | It reports the write. Unity's built-in **Set Variable** cannot be observed, so a value written by one has no writer as far as the panel is concerned. **Always prefer this one.** |
+| **Get BT Variable** | Only so both live in one menu. It does nothing Unity's **Get Variable** doesn't — reads are not recorded, and there is nothing to record, since a read changes nothing and a tree reads constantly. |
+
+Both behave identically to Unity's: same kinds, same ports, same semantics. `Get BT Variable` also has the
+same **Fallback** option, which is worth turning on for anything a reused branch reads — without it, reading
+a name the agent doesn't declare throws, so a branch that is safe on one prefab breaks on another.
 
 Attribution is as precise as it can be:
 
