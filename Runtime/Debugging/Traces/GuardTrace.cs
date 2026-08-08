@@ -30,7 +30,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public GuardTrace(
             int tick,
             int sequence,
-            int scopeId,
+            int callSiteId,
             Guid guardGuid,
             Guid ownerGuid,
             bool result,
@@ -39,7 +39,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             Tick = tick;
             Sequence = sequence;
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             GuardGuid = guardGuid;
             OwnerGuid = ownerGuid;
             Result = result;
@@ -56,7 +56,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public int Sequence { get; }
 
-        public int ScopeId { get; }
+        public int CallSiteId { get; }
 
         public Guid GuardGuid { get; }
 

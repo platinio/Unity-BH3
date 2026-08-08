@@ -32,7 +32,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// Returns null when there is nothing worth keeping.
         /// </summary>
         public static GuardTrace Capture(
-            BehaviorTreeNode owner, ConditionalExecution guard, bool result, int tick, int sequence, int scopeId)
+            BehaviorTreeNode owner, ConditionalExecution guard, bool result, int tick, int sequence, int callSiteId)
         {
             if (guard == null) return null;
 
@@ -53,7 +53,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (chain.Count <= 1) return null;
 
                 return new GuardTrace(
-                    tick, sequence, scopeId, guard.guid, owner != null ? owner.guid : Guid.Empty,
+                    tick, sequence, callSiteId, guard.guid, owner != null ? owner.guid : Guid.Empty,
                     result, chain, snapshots);
             }
             catch (Exception)

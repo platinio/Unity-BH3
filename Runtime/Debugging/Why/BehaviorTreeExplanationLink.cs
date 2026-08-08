@@ -43,7 +43,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// Which call site the target is in. Always carried with a node guid: a guid alone is ambiguous when
         /// two call sites run the same shared branch.
         /// </summary>
-        public readonly int ScopeId;
+        public readonly int CallSiteId;
 
         /// <summary>The tick the clause is about, or -1.</summary>
         public readonly int Tick;
@@ -54,11 +54,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>The variable key, when <see cref="Kind"/> is <see cref="BehaviorTreeLinkKind.Variable"/>.</summary>
         public readonly string VariableKey;
 
-        private BehaviorTreeExplanationLink(BehaviorTreeLinkKind kind, Guid nodeGuid, int scopeId, int tick, int sequence, string variableKey)
+        private BehaviorTreeExplanationLink(BehaviorTreeLinkKind kind, Guid nodeGuid, int callSiteId, int tick, int sequence, string variableKey)
         {
             Kind = kind;
             NodeGuid = nodeGuid;
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             Tick = tick;
             Sequence = sequence;
             VariableKey = variableKey;
@@ -66,16 +66,16 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public bool HasLink => Kind != BehaviorTreeLinkKind.None;
 
-        public static BehaviorTreeExplanationLink ToNode(Guid guid, int scopeId, int tick = -1, int sequence = -1) =>
-            new(BehaviorTreeLinkKind.Node, guid, scopeId, tick, sequence, null);
+        public static BehaviorTreeExplanationLink ToNode(Guid guid, int callSiteId, int tick = -1, int sequence = -1) =>
+            new(BehaviorTreeLinkKind.Node, guid, callSiteId, tick, sequence, null);
 
-        public static BehaviorTreeExplanationLink ToGuard(Guid guid, int scopeId, int tick = -1, int sequence = -1) =>
-            new(BehaviorTreeLinkKind.Guard, guid, scopeId, tick, sequence, null);
+        public static BehaviorTreeExplanationLink ToGuard(Guid guid, int callSiteId, int tick = -1, int sequence = -1) =>
+            new(BehaviorTreeLinkKind.Guard, guid, callSiteId, tick, sequence, null);
 
-        public static BehaviorTreeExplanationLink ToTick(int tick, int scopeId, int sequence = -1) =>
-            new(BehaviorTreeLinkKind.Tick, Guid.Empty, scopeId, tick, sequence, null);
+        public static BehaviorTreeExplanationLink ToTick(int tick, int callSiteId, int sequence = -1) =>
+            new(BehaviorTreeLinkKind.Tick, Guid.Empty, callSiteId, tick, sequence, null);
 
-        public static BehaviorTreeExplanationLink ToVariable(string key, int scopeId, int tick = -1, int sequence = -1) =>
-            new(BehaviorTreeLinkKind.Variable, Guid.Empty, scopeId, tick, sequence, key);
+        public static BehaviorTreeExplanationLink ToVariable(string key, int callSiteId, int tick = -1, int sequence = -1) =>
+            new(BehaviorTreeLinkKind.Variable, Guid.Empty, callSiteId, tick, sequence, key);
     }
 }

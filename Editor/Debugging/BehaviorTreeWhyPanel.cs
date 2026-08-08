@@ -360,7 +360,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (canFollow && GUI.Button(new Rect(cursor, row.y, LinkButtonWidth, row.height), "→", EditorStyles.miniButton))
                 {
-                    Follow(BehaviorTreeExplanationLink.ToNode(node.NodeGuid, trace.ScopeId));
+                    Follow(BehaviorTreeExplanationLink.ToNode(node.NodeGuid, trace.CallSiteId));
                 }
 
                 y += LineHeight();

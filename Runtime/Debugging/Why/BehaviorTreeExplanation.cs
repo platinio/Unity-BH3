@@ -40,7 +40,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public BehaviorTreeExplanation(
             Guid nodeGuid,
-            int scopeId,
+            int callSiteId,
             string subjectName,
             string callSitePath,
             int atTick,
@@ -51,7 +51,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             Trace = trace;
             NodeGuid = nodeGuid;
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             SubjectName = subjectName;
             CallSitePath = callSitePath;
             AtTick = atTick;
@@ -64,7 +64,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public Guid NodeGuid { get; }
 
         /// <summary>Which call site it is about — a guid alone does not identify a node within one agent.</summary>
-        public int ScopeId { get; }
+        public int CallSiteId { get; }
 
         /// <summary>What to call the node: its name when a topology was supplied, its short guid otherwise.</summary>
         public string SubjectName { get; }

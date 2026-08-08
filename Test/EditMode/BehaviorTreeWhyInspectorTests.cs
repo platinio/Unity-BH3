@@ -132,7 +132,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 }
 
                 traces.Add(new GuardTrace(
-                    last.Tick, last.Sequence, last.ScopeId, last.NodeGuid, last.RelatedGuid, last.Flag, nodes, null));
+                    last.Tick, last.Sequence, last.CallSiteId, last.NodeGuid, last.RelatedGuid, last.Flag, nodes, null));
 
                 return this;
             }
@@ -683,7 +683,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 
-            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 1, sequence: 0, scopeId: 0);
+            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 1, sequence: 0, callSiteId: 0);
 
             Assert.IsNull(trace,
                 "A guard reading its own inline value has no chain, and a row saying only what the sentence already said is noise.");
@@ -707,7 +707,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             graph.Nodes.Add(not);
             not.Result.ValidlyConnectTo(guard.Value);
 
-            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 7, sequence: 2, scopeId: 0);
+            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 7, sequence: 2, callSiteId: 0);
 
             Assert.IsNotNull(trace);
             Assert.AreEqual(7, trace.Tick);
