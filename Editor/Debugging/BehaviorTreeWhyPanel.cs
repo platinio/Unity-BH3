@@ -29,6 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
         private const float Padding = 6.0f;
         private const float RowSpacing = 4.0f;
         private const float LinkButtonWidth = 26.0f;
+        private const float SnapshotButtonWidth = 44.0f;
 
         private readonly List<BehaviorTreeMachine> machines = new();
 
@@ -129,6 +130,11 @@ namespace ArcaneOnyx.BehaviorTree
             foreach (var clause in explanation.Clauses)
             {
                 height += ClauseHeight(clause, inner) + RowSpacing;
+            }
+
+            if (explanation.Trace != null && explanation.Trace.Chain.Count > 1)
+            {
+                height += LineHeight() * (explanation.Trace.Chain.Count + 1) + RowSpacing;
             }
 
             return height;
@@ -303,6 +309,99 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 DrawClause(x, ref y, width, clause);
             }
+
+            DrawChain(x, ref y, width, explanation.Trace);
+        }
+
+        /// <summary>
+        /// The chain the guard was reading, indented as a tree.
+        ///
+        /// <para>
+        /// This is the part that turns "it returned false" into an answer. Most branches are guarded by a
+        /// Visual Scripting graph, so without this the reader is told the guard was false and left to open
+        /// the graph and work out which of its inputs did it.
+        /// </para>
+        /// </summary>
+        private void DrawChain(float x, ref float y, float width, GuardTrace trace)
+        {
+            if (trace == null || trace.Chain.Count <= 1) return;
+
+            EditorGUI.LabelField(new Rect(x, y, width, LineHeight()), "GUARD CHAIN", role);
+            y += LineHeight();
+
+            // From index 1: the headline already named the guard and said what it returned, and the chain's
+            // own record of the guard's name is its raw node name rather than the one the sentence uses.
+            for (int i = 1; i < trace.Chain.Count; i++)
+            {
+                var node = trace.Chain[i];
+                var indent = (node.Depth - 1) * 12.0f;
+                var row = new Rect(x + indent, y, width - indent, LineHeight());
+
+                var canFollow = FindOnCanvas(node.NodeGuid) != null;
+                var buttons = (canFollow ? LinkButtonWidth : 0.0f) + (node.HasSnapshot ? SnapshotButtonWidth : 0.0f);
+                var textWidth = Mathf.Max(40.0f, row.width - buttons - 4.0f);
+
+                EditorGUI.LabelField(
+                    new Rect(row.x, row.y, textWidth, row.height),
+                    $"{(node.Depth <= 1 ? string.Empty : "└ ")}{node.Name}  →  {node.Value}",
+                    node.Depth == 1 ? EditorStyles.miniBoldLabel : EditorStyles.miniLabel);
+
+                var cursor = row.x + textWidth + 4.0f;
+
+                if (node.HasSnapshot)
+                {
+                    if (GUI.Button(new Rect(cursor, row.y, SnapshotButtonWidth, row.height), "graph", EditorStyles.miniButton))
+                    {
+                        OpenSnapshot(trace, node);
+                    }
+
+                    cursor += SnapshotButtonWidth;
+                }
+
+                if (canFollow && GUI.Button(new Rect(cursor, row.y, LinkButtonWidth, row.height), "→", EditorStyles.miniButton))
+                {
+                    Follow(BehaviorTreeExplanationLink.ToNode(node.NodeGuid, trace.ScopeId));
+                }
+
+                y += LineHeight();
+            }
+
+            y += RowSpacing;
+        }
+
+        /// <summary>
+        /// Opens the snapshot for a chain node, resolving the live asset so the window can lay the graph out.
+        /// A recording loaded from a file usually has no asset to resolve, and the window falls back to a wire
+        /// list rather than refusing.
+        /// </summary>
+        private void OpenSnapshot(GuardTrace trace, GuardTraceNode node)
+        {
+            if (node.SnapshotIndex < 0 || node.SnapshotIndex >= trace.Snapshots.Count) return;
+
+            var snapshot = trace.Snapshots[node.SnapshotIndex];
+
+            BehaviorTreeGuardSnapshotWindow.Open(trace, snapshot, ResolveGraphAsset(snapshot), node.Name);
+        }
+
+        private ScriptGraphAsset ResolveGraphAsset(GuardGraphSnapshot snapshot)
+        {
+            var owner = FindOnCanvas(snapshot.OwnerNodeGuid);
+            if (owner?.scriptGraphAssets == null) return null;
+
+            ScriptGraphAsset first = null;
+
+            foreach (var asset in owner.scriptGraphAssets)
+            {
+                if (asset == null) continue;
+
+                first ??= asset;
+
+                // Names are not unique across a project, so this is a preference rather than an identity
+                // check — matching the recorded name picks the right one when a node owns several.
+                if (asset.name == snapshot.GraphName) return asset;
+            }
+
+            return first;
         }
 
         private void DrawClause(float x, ref float y, float width, BehaviorTreeExplanationClause clause)
