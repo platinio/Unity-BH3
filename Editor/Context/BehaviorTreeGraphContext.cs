@@ -14,6 +14,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             yield return new GraphCore.GraphInspectorPanel(this);
             yield return new BehaviorTreeVariablesPanel(this);
+            yield return new BehaviorTreeWhyPanel(this);
         }
     }
 }
