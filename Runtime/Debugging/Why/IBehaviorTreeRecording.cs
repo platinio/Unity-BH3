@@ -42,5 +42,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// second one is safe to make when nothing was dropped.
         /// </summary>
         int Dropped { get; }
+
+        /// <summary>
+        /// The guard trace captured alongside a <see cref="BehaviorTreeEventKind.GuardEval"/>, or null.
+        ///
+        /// <para>
+        /// Keyed by the event's tick and sequence rather than by guard guid, because a guard that flips
+        /// repeatedly has one trace per flip and the interesting one is the flip being explained. Null is
+        /// ordinary: traces are captured on transitions only, live in a much shorter ring than the events,
+        /// and can be turned off independently of recording.
+        /// </para>
+        /// </summary>
+        GuardTrace TraceFor(int tick, int sequence);
     }
 }

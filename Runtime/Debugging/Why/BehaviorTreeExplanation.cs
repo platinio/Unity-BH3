@@ -46,8 +46,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             int atTick,
             BehaviorTreeOutcome outcome,
             string headline,
-            List<BehaviorTreeExplanationClause> clauses)
+            List<BehaviorTreeExplanationClause> clauses,
+            GuardTrace trace = null)
         {
+            Trace = trace;
             NodeGuid = nodeGuid;
             ScopeId = scopeId;
             SubjectName = subjectName;
@@ -80,6 +82,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public IReadOnlyList<BehaviorTreeExplanationClause> Clauses => clauses;
 
+        /// <summary>
+        /// What the guard was looking at when it changed its mind, or null when no trace was captured.
+        ///
+        /// <para>
+        /// Structured rather than folded into a clause because the chain is a tree whose every node is worth
+        /// pointing at — the panel makes each one selectable and offers a snapshot where one exists, and a
+        /// consumer that only wants a sentence can call <see cref="GuardTrace.Describe"/>. Formatting it into
+        /// text here would force every other reader to parse it back out.
+        /// </para>
+        /// </summary>
+        public GuardTrace Trace { get; }
+
         /// <summary>The whole thing as text, for a CLI, a log, or a test assertion.</summary>
         public override string ToString()
         {
@@ -93,6 +107,28 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             foreach (var clause in clauses)
             {
                 text.Append('\n').Append("  - ").Append(clause.Text);
+            }
+
+            return text.ToString();
+        }
+
+        /// <summary>The explanation plus the guard chain indented under it, for a log or a CLI.</summary>
+        public string ToStringWithTrace()
+        {
+            if (Trace == null || Trace.Chain.Count <= 1) return ToString();
+
+            var text = new StringBuilder(ToString());
+
+            // From index 1: the guard itself is the subject of the sentence above, and repeating it here
+            // says nothing while inviting a contradiction — the chain records the guard's own node name,
+            // whereas the sentence calls it by the value it reads.
+            for (int i = 1; i < Trace.Chain.Count; i++)
+            {
+                var node = Trace.Chain[i];
+
+                text.Append('\n').Append("    ");
+                text.Append(' ', (node.Depth - 1) * 2);
+                text.Append(node.Name).Append(" -> ").Append(node.Value);
             }
 
             return text.ToString();

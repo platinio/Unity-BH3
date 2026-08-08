@@ -27,6 +27,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         public static int DefaultCapacity { get; set; } = BehaviorTreeFlightRecorder.DefaultCapacity;
 
+        /// <summary>
+        /// The kill switch for guard traces specifically. Separate from
+        /// <see cref="GloballyEnabled"/> because the two cost very different amounts: an event is a struct
+        /// written into a pre-allocated slot, a trace re-pulls a chain of ports and walks a script graph on
+        /// every guard transition. Turning this off keeps the recording and drops only the explanations of
+        /// why guards changed their minds.
+        /// </summary>
+        public static bool TracingGloballyEnabled { get; set; } = true;
+
+        /// <summary>Trace ring size handed to recorders created from here on.</summary>
+        public static int DefaultTraceCapacity { get; set; } = GuardTraceRing.DefaultCapacity;
+
         public static IReadOnlyList<BehaviorTreeFlightRecorder> Active => active;
 
         public static void Register(BehaviorTreeFlightRecorder recorder)

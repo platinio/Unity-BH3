@@ -114,8 +114,31 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 return this;
             }
 
+            private readonly List<GuardTrace> traces = new();
+
+            /// <summary>Attaches a trace to the most recently added event, the way a real capture does.</summary>
+            public RecordingBuilder Trace(params (string name, string value)[] chain)
+            {
+                var last = events[events.Count - 1];
+                var nodes = new List<GuardTraceNode>
+                {
+                    new(last.NodeGuid, "guard", "BooleanConditionalExecution", last.Flag ? "true" : "false", 0, -1, -1),
+                };
+
+                for (int i = 0; i < chain.Length; i++)
+                {
+                    nodes.Add(new GuardTraceNode(
+                        Guid.NewGuid(), chain[i].name, "Node", chain[i].value, i + 1, i, -1));
+                }
+
+                traces.Add(new GuardTrace(
+                    last.Tick, last.Sequence, last.ScopeId, last.NodeGuid, last.RelatedGuid, last.Flag, nodes, null));
+
+                return this;
+            }
+
             public BehaviorTreeRecordingSnapshot Build(int dropped = 0) =>
-                new("Zombie", "ZombieTree", tick, events, callSites, dropped);
+                new("Zombie", "ZombieTree", tick, events, callSites, dropped, traces);
         }
 
         private static string TextOf(BehaviorTreeExplanation explanation) => explanation.ToString();
@@ -590,6 +613,113 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #endregion
 
+        #region Guard traces
+
+        [Test]
+        public void AnAbortShowsWhatTheGuardWasReading()
+        {
+            var recording = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(412)
+                    .GuardEval(Guard, Branch, false).Trace(("Not", "False"), ("hasTarget", "True"))
+                    .Aborted(Branch, Guard)
+                .Build();
+
+            var topology = new StubTopology().Node(Branch, "Idle").Node(Guard, "not hasTarget");
+
+            var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, topology);
+
+            Assert.IsNotNull(explanation.Trace,
+                "The trace is attached by the guard flip's (tick, seq) — that pairing is the only link between them.");
+            Assert.AreEqual(3, explanation.Trace.Chain.Count);
+
+            Assert.IsTrue(HasClause(explanation, BehaviorTreeClauseRole.Cause, "Not -> False <- hasTarget -> True"),
+                "'It returned false' restates the question; what it read is the answer.");
+        }
+
+        [Test]
+        public void ATraceIsFoundOnlyForTheFlipItBelongsTo()
+        {
+            // A guard that flips repeatedly has one trace per flip, and an explanation about the second must
+            // not pick up the first.
+            var recording = new RecordingBuilder()
+                .At(100).GuardEval(Guard, Branch, false).Trace(("hasTarget", "False"))
+                .At(200).GuardEval(Guard, Branch, true).Trace(("hasTarget", "True"))
+                .Build();
+
+            var early = recording.TraceFor(100, 0);
+            var late = recording.TraceFor(200, 0);
+
+            Assert.AreEqual("hasTarget -> False", early.Describe());
+            Assert.AreEqual("hasTarget -> True", late.Describe());
+            Assert.IsNull(recording.TraceFor(150, 0), "A tick with no transition has no trace.");
+        }
+
+        [Test]
+        public void TheTraceRingKeepsTheNewestAndSaysWhatItLost()
+        {
+            var ring = new GuardTraceRing(2);
+
+            for (int i = 0; i < 4; i++)
+            {
+                ring.Add(new GuardTrace(i, 0, 0, Guard, Branch, true, null, null));
+            }
+
+            Assert.AreEqual(2, ring.Count);
+            Assert.AreEqual(2, ring.Dropped);
+            Assert.IsNull(ring.Find(0, 0), "The oldest traces scrolled off, and Find must not pretend otherwise.");
+            Assert.IsNotNull(ring.Find(3, 0));
+        }
+
+        [Test]
+        public void AGuardWithNothingConnectedProducesNoTrace()
+        {
+            var graph = new BehaviorTreeGraph();
+            var sequence = new Sequence { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(sequence);
+
+            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(guard);
+            guard.UpdateOwner(sequence);
+            guard.Value.SetDefaultValue(true);
+
+            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 1, sequence: 0, scopeId: 0);
+
+            Assert.IsNull(trace,
+                "A guard reading its own inline value has no chain, and a row saying only what the sentence already said is noise.");
+        }
+
+        [Test]
+        public void CaptureRePullsTheChainFromARealGraph()
+        {
+            var graph = new BehaviorTreeGraph();
+
+            var sequence = new Sequence { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(sequence);
+
+            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(guard);
+            guard.UpdateOwner(sequence);
+
+            // Not's own input is left at its default false, so Result is true. Behavior tree ports keep no
+            // history, so this value exists in the trace only because capture re-pulls the port.
+            var not = new Not { Position = new Rect(-300.0f, 100.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(not);
+            not.Result.ValidlyConnectTo(guard.Value);
+
+            var trace = GuardTraceCapture.Capture(sequence, guard, true, tick: 7, sequence: 2, scopeId: 0);
+
+            Assert.IsNotNull(trace);
+            Assert.AreEqual(7, trace.Tick);
+            Assert.AreEqual(2, trace.Sequence);
+            Assert.AreEqual(2, trace.Chain.Count, trace.Describe());
+            Assert.AreEqual(not.guid, trace.Chain[1].NodeGuid);
+            Assert.AreEqual("True", trace.Chain[1].Value,
+                "Re-pulling is the only way to recover this — nothing on the behavior tree side records it.");
+        }
+
+        #endregion
+
         #region Export and re-import
 
         [Test]
@@ -641,6 +771,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual("TargetingSensor", written.Writer,
                 "The dump writes a node guid and a sensor name into one field; telling them apart on the way back is the importer's job.");
             Assert.AreEqual(Guid.Empty, written.RelatedGuid);
+        }
+
+        [Test]
+        public void AnExportedTraceStillExplainsWhyTheGuardWasFalse()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+
+            var chain = new List<GuardTraceNode>
+            {
+                new(Guard, "not hasTarget", "BooleanConditionalExecution", "false", 0, -1, -1),
+                new(Sibling, "Not", "Not", "False", 1, 0, 0),
+            };
+
+            var wires = new List<GuardWireValue>
+            {
+                new(Guid.NewGuid(), Guid.NewGuid(), "value", Guid.NewGuid(), "Result", "True", true),
+                new(Guid.NewGuid(), Guid.NewGuid(), "output", Guid.NewGuid(), "fallback", "(not evaluated)", false),
+            };
+
+            recorder.Traces.Add(new GuardTrace(
+                412, 3, 0, Guard, Branch, false, chain,
+                new List<GuardGraphSnapshot> { new(Sibling, "hasTargetRead", wires) }));
+
+            var reimported = BehaviorTreeRecordingImport.FromJson(BehaviorTreeRecordingDump.ToJson(recorder));
+            var trace = reimported.TraceFor(412, 3);
+
+            Assert.IsNotNull(trace, "A recording whose traces do not survive export explains less after a round trip than before it.");
+            Assert.AreEqual("Not -> False", trace.Describe());
+            Assert.AreEqual(1, trace.Snapshots.Count);
+            Assert.AreEqual(2, trace.Snapshots[0].Wires.Count);
+
+            Assert.IsTrue(trace.Snapshots[0].Wires[0].WasEvaluated);
+            Assert.AreEqual("True", trace.Snapshots[0].Wires[0].Value);
+
+            Assert.IsFalse(trace.Snapshots[0].Wires[1].WasEvaluated,
+                "A wire the flow never took is information about which way it went, not a missing field.");
+            Assert.AreEqual("(not evaluated)", trace.Snapshots[0].Wires[1].Label);
         }
 
         [Test]

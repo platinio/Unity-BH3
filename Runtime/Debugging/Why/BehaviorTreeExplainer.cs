@@ -140,6 +140,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     BehaviorTreeExplanationLink.ToTick(abort.Tick, scopeId, recording.EventAt(exit).Sequence)));
             }
 
+            GuardTrace trace = null;
+
             var flip = LastGuardTransitionIndex(recording, scopeId, guardGuid, episode, false);
             if (flip >= 0)
             {
@@ -149,6 +151,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     $"The guard was last recorded turning false at tick {flipped.Tick} (step {flipped.Sequence}).",
                     BehaviorTreeExplanationLink.ToTick(flipped.Tick, scopeId, flipped.Sequence)));
 
+                trace = AddTraceClause(recording, flip, clauses);
+
                 AddWriteCause(recording, topology, guardGuid, flip, clauses);
             }
 
@@ -156,7 +160,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Aborted, headline, clauses);
+                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Aborted, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainSkipped(
@@ -172,6 +176,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var headline = guardGuid == Guid.Empty
                 ? $"Never entered at tick {skip.Tick}: a guard was false."
                 : $"Never entered at tick {skip.Tick}: guard '{guardName}' was false when it was about to start.";
+
+            GuardTrace trace = null;
 
             if (guardGuid != Guid.Empty)
             {
@@ -192,6 +198,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                         BehaviorTreeClauseRole.Evidence, since,
                         BehaviorTreeExplanationLink.ToTick(flipped.Tick, scopeId, flipped.Sequence)));
 
+                    trace = AddTraceClause(recording, flip, clauses);
+
                     AddWriteCause(recording, topology, guardGuid, flip, clauses);
                 }
             }
@@ -200,7 +208,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Skipped, headline, clauses);
+                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Skipped, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainExited(
@@ -277,6 +285,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     BehaviorTreeExplanationLink.ToNode(eval.RelatedGuid, scopeId)));
             }
 
+            var trace = AddTraceClause(recording, index, clauses);
+
             AddWriteCause(recording, topology, guardGuid, index, clauses);
 
             var flips = CountGuardTransitions(recording, scopeId, guardGuid, atTick - OscillationWindow, atTick);
@@ -291,7 +301,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             return new BehaviorTreeExplanation(
                 guardGuid, scopeId, subject, path, atTick,
-                eval.Flag ? BehaviorTreeOutcome.Running : BehaviorTreeOutcome.Skipped, headline, clauses);
+                eval.Flag ? BehaviorTreeOutcome.Running : BehaviorTreeOutcome.Skipped, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainNeverRan(
@@ -394,6 +404,31 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     $"Written by node '{writer}'.",
                     BehaviorTreeExplanationLink.ToNode(written.RelatedGuid, written.ScopeId, written.Tick, written.Sequence)));
             }
+        }
+
+        /// <summary>
+        /// The chain the guard was reading, when a trace was captured for this flip.
+        ///
+        /// <para>
+        /// This is the clause that answers the question "it returned false" only restates. Most branches in a
+        /// real tree are guarded by a Visual Scripting graph, so without the trace the account stops at the
+        /// guard's own result and the reader has to open the graph and work out which input did it.
+        /// </para>
+        /// </summary>
+        private static GuardTrace AddTraceClause(
+            IBehaviorTreeRecording recording, int flipIndex, List<BehaviorTreeExplanationClause> clauses)
+        {
+            var flipped = recording.EventAt(flipIndex);
+            var trace = recording.TraceFor(flipped.Tick, flipped.Sequence);
+
+            if (trace == null || trace.Chain.Count <= 1) return trace;
+
+            clauses.Add(new BehaviorTreeExplanationClause(
+                BehaviorTreeClauseRole.Cause,
+                $"It read {trace.Describe()}",
+                BehaviorTreeExplanationLink.ToGuard(trace.GuardGuid, trace.ScopeId, trace.Tick, trace.Sequence)));
+
+            return trace;
         }
 
         /// <summary>Which sibling ran instead, when the topology can say who the siblings are.</summary>

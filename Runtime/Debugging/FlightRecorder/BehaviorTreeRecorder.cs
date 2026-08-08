@@ -43,7 +43,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var recorder = new BehaviorTreeFlightRecorder(
                 machine.gameObject != null ? machine.gameObject.name : "(agent)",
                 treeName,
-                BehaviorTreeFlightRecorders.DefaultCapacity);
+                BehaviorTreeFlightRecorders.DefaultCapacity,
+                BehaviorTreeFlightRecorders.DefaultTraceCapacity);
 
             machine.SetFlightRecorder(recorder);
             BehaviorTreeFlightRecorders.Register(recorder);

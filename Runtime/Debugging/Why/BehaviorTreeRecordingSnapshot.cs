@@ -17,18 +17,23 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private readonly List<BehaviorTreeEvent> events;
         private readonly List<BehaviorTreeCallSite> callSites;
 
+        private readonly List<GuardTrace> traces;
+
         public BehaviorTreeRecordingSnapshot(
             string agentName,
             string treeName,
             int tick,
             IEnumerable<BehaviorTreeEvent> events = null,
             IEnumerable<BehaviorTreeCallSite> callSites = null,
-            int dropped = 0)
+            int dropped = 0,
+            IEnumerable<GuardTrace> traces = null)
         {
             AgentName = agentName;
             TreeName = treeName;
             Tick = tick;
             Dropped = dropped;
+
+            this.traces = traces != null ? new List<GuardTrace>(traces) : new List<GuardTrace>();
 
             this.events = events != null ? new List<BehaviorTreeEvent>(events) : new List<BehaviorTreeEvent>();
             this.callSites = callSites != null ? new List<BehaviorTreeCallSite>(callSites) : new List<BehaviorTreeCallSite>();
@@ -57,6 +62,20 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public IReadOnlyList<BehaviorTreeCallSite> CallSites => callSites;
 
+        public IReadOnlyList<GuardTrace> Traces => traces;
+
+        public GuardTrace TraceFor(int tick, int sequence)
+        {
+            // Newest first: an explanation is almost always about something that just happened, and a guard
+            // that flips often has several traces that differ only in when.
+            for (int i = traces.Count - 1; i >= 0; i--)
+            {
+                if (traces[i] != null && traces[i].Matches(tick, sequence)) return traces[i];
+            }
+
+            return null;
+        }
+
         /// <summary>Copies a live recorder, so a recording can be frozen without stopping the agent.</summary>
         public static BehaviorTreeRecordingSnapshot From(BehaviorTreeFlightRecorder recorder)
         {
@@ -68,7 +87,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 recorder.Tick,
                 recorder.Events,
                 recorder.CallSites,
-                recorder.Events.Dropped);
+                recorder.Events.Dropped,
+                recorder.Traces);
         }
     }
 }

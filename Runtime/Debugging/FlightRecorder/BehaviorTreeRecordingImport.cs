@@ -56,7 +56,72 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var dropped = root["dropped"].AsInt();
 
             return new BehaviorTreeRecordingSnapshot(
-                agent, tree, tick, ReadEvents(root["events"]), ReadCallSites(root["callSites"], tree), dropped);
+                agent, tree, tick, ReadEvents(root["events"]), ReadCallSites(root["callSites"], tree), dropped,
+                ReadTraces(root["traces"]));
+        }
+
+        private static List<GuardTrace> ReadTraces(JsonValue array)
+        {
+            var traces = new List<GuardTrace>();
+
+            foreach (var item in array.Items)
+            {
+                var snapshots = ReadSnapshots(item["snapshots"]);
+                var chain = new List<GuardTraceNode>();
+
+                foreach (var node in item["chain"].Items)
+                {
+                    chain.Add(new GuardTraceNode(
+                        ReadGuid(node["node"]),
+                        node["name"].AsString("(unnamed)"),
+                        node["type"].AsString("(unknown)"),
+                        node["value"].AsString("null"),
+                        node["depth"].AsInt(),
+                        node.Has("parent") ? node["parent"].AsInt(-1) : -1,
+                        node.Has("snapshot") ? node["snapshot"].AsInt(-1) : -1));
+                }
+
+                traces.Add(new GuardTrace(
+                    item["tick"].AsInt(),
+                    item["seq"].AsInt(),
+                    item["callSite"].AsInt(),
+                    ReadGuid(item["guard"]),
+                    ReadGuid(item["owner"]),
+                    item["result"].AsBool(),
+                    chain,
+                    snapshots));
+            }
+
+            return traces;
+        }
+
+        private static List<GuardGraphSnapshot> ReadSnapshots(JsonValue array)
+        {
+            var snapshots = new List<GuardGraphSnapshot>();
+
+            foreach (var item in array.Items)
+            {
+                var wires = new List<GuardWireValue>();
+
+                foreach (var wire in item["wires"].Items)
+                {
+                    var evaluated = wire["evaluated"].AsBool();
+
+                    wires.Add(new GuardWireValue(
+                        ReadGuid(wire["connection"]),
+                        ReadGuid(wire["sourceUnit"]),
+                        wire["sourceKey"].AsString(""),
+                        ReadGuid(wire["destUnit"]),
+                        wire["destKey"].AsString(""),
+                        evaluated ? wire["value"].AsString("null") : "(not evaluated)",
+                        evaluated));
+                }
+
+                snapshots.Add(new GuardGraphSnapshot(
+                    ReadGuid(item["owner"]), item["graph"].AsString("(unnamed)"), wires));
+            }
+
+            return snapshots;
         }
 
         private static List<BehaviorTreeCallSite> ReadCallSites(JsonValue array, string treeName)

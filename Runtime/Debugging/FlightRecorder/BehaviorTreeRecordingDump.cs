@@ -52,10 +52,114 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             WriteCallSites(json, recorder);
             WriteEvents(json, events);
+            WriteTraces(json, recorder);
 
             json.CloseObject();
 
             return json.ToString();
+        }
+
+        /// <summary>
+        /// Guard traces, in their own array rather than nested inside the events they belong to.
+        ///
+        /// <para>
+        /// They are linked by tick and sequence, which is a weaker join than nesting would be, but a trace is
+        /// captured only on a transition and lives in a much shorter ring than the events — so nesting would
+        /// mean most events carried an empty field, and a recording whose traces had scrolled away would look
+        /// as though its guards had never been traced rather than as though the window had moved.
+        /// </para>
+        /// </summary>
+        private static void WriteTraces(JsonWriter json, BehaviorTreeFlightRecorder recorder)
+        {
+            if (recorder.TraceCount == 0) return;
+
+            json.PropertyName("traces");
+            json.OpenArray();
+
+            for (int i = 0; i < recorder.TraceCount; i++)
+            {
+                var trace = recorder.TraceAt(i);
+                if (trace == null) continue;
+
+                json.OpenObject();
+
+                json.Property("tick", trace.Tick);
+                json.Property("seq", trace.Sequence);
+                json.Property("callSite", trace.ScopeId);
+                json.Property("guard", trace.GuardGuid.ToString());
+                if (trace.OwnerGuid != Guid.Empty) json.Property("owner", trace.OwnerGuid.ToString());
+                json.Property("result", trace.Result);
+
+                WriteChain(json, trace);
+                WriteSnapshots(json, trace);
+
+                json.CloseObject();
+            }
+
+            json.CloseArray();
+        }
+
+        private static void WriteChain(JsonWriter json, GuardTrace trace)
+        {
+            json.PropertyName("chain");
+            json.OpenArray();
+
+            foreach (var node in trace.Chain)
+            {
+                json.OpenObject();
+                json.Property("node", node.NodeGuid.ToString());
+                json.Property("name", node.Name ?? "(unnamed)");
+                json.Property("type", node.TypeName ?? "(unknown)");
+                json.Property("value", node.Value ?? "null");
+                json.Property("depth", node.Depth);
+                json.Property("parent", node.ParentIndex);
+
+                if (node.HasSnapshot) json.Property("snapshot", node.SnapshotIndex);
+
+                json.CloseObject();
+            }
+
+            json.CloseArray();
+        }
+
+        private static void WriteSnapshots(JsonWriter json, GuardTrace trace)
+        {
+            if (trace.Snapshots.Count == 0) return;
+
+            json.PropertyName("snapshots");
+            json.OpenArray();
+
+            foreach (var snapshot in trace.Snapshots)
+            {
+                json.OpenObject();
+                json.Property("owner", snapshot.OwnerNodeGuid.ToString());
+                json.Property("graph", snapshot.GraphName ?? "(unnamed)");
+
+                json.PropertyName("wires");
+                json.OpenArray();
+
+                foreach (var wire in snapshot.Wires)
+                {
+                    json.OpenObject();
+                    json.Property("connection", wire.ConnectionGuid.ToString());
+                    json.Property("sourceUnit", wire.SourceUnitGuid.ToString());
+                    json.Property("sourceKey", wire.SourceKey ?? "");
+                    json.Property("destUnit", wire.DestinationUnitGuid.ToString());
+                    json.Property("destKey", wire.DestinationKey ?? "");
+
+                    // Written even when nothing traversed the wire: "(not evaluated)" is information about
+                    // which way the flow went, not a missing field.
+                    json.Property("evaluated", wire.WasEvaluated);
+                    if (wire.WasEvaluated) json.Property("value", wire.Value ?? "null");
+
+                    json.CloseObject();
+                }
+
+                json.CloseArray();
+                json.CloseObject();
+            }
+
+            json.CloseArray();
         }
 
         private static void WriteCallSites(JsonWriter json, BehaviorTreeFlightRecorder recorder)
