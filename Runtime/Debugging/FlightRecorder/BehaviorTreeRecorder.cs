@@ -143,6 +143,22 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             writer?.FlightRecorder?.VariableWrite(writer, key, oldValue, newValue);
         }
 
+        /// <summary>
+        /// A write made by something outside the tree — a perception sensor publishing a fact.
+        ///
+        /// <para>
+        /// Gated like everything else here, which is the reason a sensor should call this rather than reaching
+        /// for the recorder itself: the call and its arguments vanish from a shipped build, so publishing a
+        /// fact costs a sensor nothing outside the editor and dev builds.
+        /// </para>
+        /// </summary>
+        [Conditional(Editor), Conditional(DevToolsDefine)]
+        public static void ExternalVariableWrite(
+            BehaviorTreeMachine machine, string writerName, string key, object oldValue, object newValue)
+        {
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue);
+        }
+
         #endregion
     }
 }
