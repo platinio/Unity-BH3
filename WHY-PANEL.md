@@ -165,6 +165,28 @@ The **graph** button opens that graph with the values that were on its wires at 
 
 ---
 
+## Writing variables from a script graph
+
+Use **BH3 → Variables → Set BT Variable** rather than Unity's built-in **Set Variable**.
+
+It behaves identically — same kinds, same ports, same assignment — but it reports the write, so it shows up
+in the recording and the panel can name it as the cause of a guard flipping. Unity's own unit gives no
+notice that anything changed, so a value written by one simply has no writer as far as the panel is
+concerned.
+
+Attribution is as precise as it can be:
+
+- Run from a **Script Graph Variable** node or a **Visual Scripting** node's lifecycle graph, the write is
+  attributed to **that node** — so the clause names it and the `→` button selects it on the canvas.
+- Run anywhere else, it falls back to a name. Set **Writer Name** on the unit to something you'd recognise;
+  it defaults to `Script Graph`.
+
+> **If you don't see the unit in the node finder**, run **Edit → Project Settings → Visual Scripting →
+> Regenerate Units** once. Unity caches its node library and any newly added custom unit needs that before
+> it appears.
+
+---
+
 ## What it will not tell you
 
 Worth knowing up front, so you don't read a limit as an answer.
@@ -182,9 +204,10 @@ guard reads, the write that changed it is a **BECAUSE**. When it can't — a gua
 runtime, say — the same write appears as **EVIDENCE** with a CAVEAT saying it is the last change before the
 flip rather than a proven cause. Treat that difference seriously.
 
-**Writes from inside a Visual Scripting graph are invisible.** BH3 records writes made by tree nodes and by
-sensors. A `SetVariable` unit inside an embedded script graph cannot be intercepted, so it won't appear as
-the writer.
+**Unity's built-in `Set Variable` unit is invisible — use `Set BT Variable` instead.** Unity's unit cannot
+be observed from outside, so a variable written by one inside a script graph appears in no recording and
+the panel cannot name it as the writer. BH3 ships a replacement that records: see
+[Writing variables from a script graph](#writing-variables-from-a-script-graph).
 
 **Ticks are not frames.** A tick is one update of *that agent's* tree, counted from when it started. Two
 agents' tick numbers don't line up with each other.

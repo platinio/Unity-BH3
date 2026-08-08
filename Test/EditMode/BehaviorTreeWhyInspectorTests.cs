@@ -718,6 +718,50 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "Re-pulling is the only way to recover this — nothing on the behavior tree side records it.");
         }
 
+        [Test]
+        public void AWriteFromInsideAScriptGraphIsAttributedToTheNodeThatRanIt()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            var node = new ScriptedNode { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
+            node.SetFlightRecorder(recorder);
+
+            // What VisualScriptGraphVariable does around the graph it runs.
+            BehaviorTreeRecorder.PushScriptGraphOwner(node);
+            BehaviorTreeRecorder.ScriptGraphVariableWrite(null, "Script Graph", "hasTarget", false, true);
+            BehaviorTreeRecorder.PopScriptGraphOwner();
+
+            var written = recorder.EventAt(0);
+
+            Assert.AreEqual(BehaviorTreeEventKind.VariableWrite, written.Kind);
+            Assert.AreEqual(node.guid, written.RelatedGuid,
+                "A unit inside a graph has no guid of its own, so the node that ran the graph is the locatable writer.");
+            Assert.IsNull(written.Writer, "With a node to name, the weaker name field should stay empty.");
+        }
+
+        [Test]
+        public void AWriteWithNoOwningNodeFallsBackToTheWriterName()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            var machine = new UnityEngine.GameObject("Zombie").AddComponent<BehaviorTreeMachine>();
+            machine.SetFlightRecorder(recorder);
+
+            try
+            {
+                // No push: a graph run outside a tree still has a writer worth recording, just not one the
+                // canvas can point at.
+                BehaviorTreeRecorder.ScriptGraphVariableWrite(machine, "VisionCheck", "hasTarget", false, true);
+
+                var written = recorder.EventAt(0);
+
+                Assert.AreEqual("VisionCheck", written.Writer);
+                Assert.AreEqual(Guid.Empty, written.RelatedGuid);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(machine.gameObject);
+            }
+        }
+
         #endregion
 
         #region Export and re-import
