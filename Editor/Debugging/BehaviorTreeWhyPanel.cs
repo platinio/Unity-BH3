@@ -420,7 +420,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var button = new Rect(x + textWidth + 2.0f, y + LineHeight(), LinkButtonWidth, LineHeight());
 
-                if (GUI.Button(button, "→", EditorStyles.miniButton)) Follow(clause.Link);
+                if (GUI.Button(button, LinkGlyph(clause.Link), EditorStyles.miniButton)) Follow(clause.Link);
             }
 
             y += height + RowSpacing;
@@ -474,6 +474,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private bool CanFollow(BehaviorTreeExplanationLink link)
         {
+            // A tick goes to the scrubber rather than to the canvas, so it needs no node to land on. This is
+            // what the explainer's tick links were emitted for; until Component 2 they went nowhere.
+            if (link.Kind == BehaviorTreeLinkKind.Tick) return link.Tick >= 0;
+
             if (link.Kind != BehaviorTreeLinkKind.Node && link.Kind != BehaviorTreeLinkKind.Guard) return false;
 
             return FindOnCanvas(link.NodeGuid) != null;
@@ -481,11 +485,23 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void Follow(BehaviorTreeExplanationLink link)
         {
+            if (link.Kind == BehaviorTreeLinkKind.Tick)
+            {
+                BehaviorTreeTimelinePanel.RequestScrub(link.Tick);
+                return;
+            }
+
             var node = FindOnCanvas(link.NodeGuid);
             if (node == null) return;
 
             context.selection.Select(node);
             Invalidate();
+        }
+
+        /// <summary>The glyph for a link, so a jump-in-time does not look like a jump-on-canvas.</summary>
+        private static string LinkGlyph(BehaviorTreeExplanationLink link)
+        {
+            return link.Kind == BehaviorTreeLinkKind.Tick ? "⏱" : "→";
         }
 
         private BehaviorTreeNode FindOnCanvas(Guid guid)

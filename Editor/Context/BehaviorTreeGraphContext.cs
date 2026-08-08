@@ -16,5 +16,14 @@ namespace ArcaneOnyx.BehaviorTree
             yield return new BehaviorTreeVariablesPanel(this);
             yield return new BehaviorTreeWhyPanel(this);
         }
+
+        /// <summary>
+        /// The scrubber goes under the canvas rather than beside it: its axis is time, and a sidebar column
+        /// would turn a timeline into a list of events.
+        /// </summary>
+        protected override IEnumerable<ISidebarPanelContent> BottomPanels()
+        {
+            yield return new BehaviorTreeTimelinePanel(this);
+        }
     }
 }

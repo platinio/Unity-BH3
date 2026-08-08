@@ -9,7 +9,15 @@ namespace ArcaneOnyx.BehaviorTree
         public static List<Rect> DrawTransition(GraphCore.IGraph graph, BehaviorTreeTransitionWidget transitionWidget, WidgetElementState widgetElementState, Vector2 offset, float lineWidth = 2.0f, float minDistanceFromNodeToTransition = 30.0f)
         {
             var oldColor = GUI.color;
-            if (transitionWidget.element.destination.IsRunning) GUI.color = Color.green;
+            var destination = transitionWidget.element.destination;
+
+            // Historical while the scrubber is parked, live otherwise — the override decides, not this drawer.
+            if (BehaviorTreeScrubOverride.IsRunning(destination, destination.IsRunning))
+            {
+                GUI.color = BehaviorTreeScrubOverride.IsActive
+                    ? Color.Lerp(Color.green, Color.white, 1.0f - BehaviorTreeScrubOverride.GhostAlpha)
+                    : Color.green;
+            }
             else GUI.color = Color.white;
            
             
