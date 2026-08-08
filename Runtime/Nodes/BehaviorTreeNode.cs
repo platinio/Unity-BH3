@@ -300,6 +300,30 @@ namespace ArcaneOnyx.BehaviorTree
             variableScope = scope;
         }
 
+        [DoNotSerialize]
+        private Debugging.BehaviorTreeFlightRecorder flightRecorder;
+
+        /// <summary>
+        /// Where this node reports what it did, or null when nothing is recording.
+        /// <para>
+        /// Injected rather than fetched from the machine so a node can be recorded without one. The
+        /// composites and decorators drive their children purely through the lifecycle hooks and never touch
+        /// the machine, which is what lets a tree be ticked in an edit-mode test — and a recorder that only
+        /// worked with a live machine could not be tested by the same means.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        public Debugging.BehaviorTreeFlightRecorder FlightRecorder => flightRecorder;
+
+        /// <summary>
+        /// Hands this node the recorder to report to. Mirrors <see cref="SetVariableScope"/>;
+        /// <see cref="RunBehaviorTreeGraphNode"/> overrides it to reach the nodes inside its branch.
+        /// </summary>
+        public virtual void SetFlightRecorder(Debugging.BehaviorTreeFlightRecorder recorder)
+        {
+            flightRecorder = recorder;
+        }
+
         /// <summary>
         /// What an embedded Visual Scripting graph sees, as the flat collection those entry points take.
         /// Collapses the scope chain so a script graph inside a branch reads that branch's values first and
@@ -383,23 +407,64 @@ namespace ArcaneOnyx.BehaviorTree
         {
             foreach (var conditionalExecution in conditionalExecutions)
             {
-                if (!conditionalExecution.EvaluateInternal()) return;
+                bool passed = conditionalExecution.EvaluateInternal();
+                Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
+
+                if (!passed)
+                {
+                    // Never started, as opposed to started and killed. The two read differently to whoever is
+                    // asking why this branch did not happen, so they are recorded as different events.
+                    Debugging.BehaviorTreeRecorder.NodeSkipped(this, conditionalExecution);
+                    return;
+                }
             }
-            
+
+            Debugging.BehaviorTreeRecorder.NodeEnter(this);
+
             base.OnNodeEnter();
+        }
+
+        /// <summary>
+        /// Records the exit and the status it ended on.
+        /// <para>
+        /// <see cref="BaseGraphNode{TGraph,TNode,TNodeTransition}.OnNodeExit"/> is called on nodes that never
+        /// ran and does nothing for them, so <see cref="BaseGraphNode{TGraph,TNode,TNodeTransition}.IsRunning"/>
+        /// is read first — base clears it — and only a real exit is recorded. Without that the recording fills
+        /// with exits for branches a selector never reached.
+        /// </para>
+        /// </summary>
+        public sealed override void OnNodeExit()
+        {
+            bool wasRunning = IsRunning;
+
+            base.OnNodeExit();
+
+            if (wasRunning) Debugging.BehaviorTreeRecorder.NodeExit(this, LastExecutionStatus);
         }
 
         public sealed override ExecutionStatus OnUpdateInternal()
         {
             foreach (var conditionalExecution in conditionalExecutions)
             {
-                if (!conditionalExecution.EvaluateInternal())
+                bool passed = conditionalExecution.EvaluateInternal();
+                Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
+
+                if (!passed)
                 {
+                    // The guard that did it is named here and nowhere else: by the time the parent composite
+                    // sees the Failure, which guard caused it is gone.
+                    //
+                    // A composite ticks a child on the same frame it declined to enter it, so this also runs
+                    // for nodes that never started. Only a node that was running can be aborted; the other
+                    // case was already recorded as skipped by OnNodeEnter, and recording it twice would
+                    // report every declined branch as though something had interrupted it.
+                    if (IsRunning) Debugging.BehaviorTreeRecorder.NodeAborted(this, conditionalExecution);
+
                     LastExecutionStatus = ExecutionStatus.Failure;
                     return ExecutionStatus.Failure;
                 }
             }
-            
+
             return base.OnUpdateInternal();
         }
     }
