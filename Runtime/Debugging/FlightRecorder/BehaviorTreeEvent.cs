@@ -12,6 +12,57 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// allocation per event and a garbage spike proportional to how interesting the frame was, which is
     /// exactly backwards for a tool you leave on while hunting an intermittent bug.
     /// </para>
+    ///
+    /// <para>
+    /// The cost of that choice is that several fields mean different things depending on
+    /// <see cref="Kind"/>, so <b>read this table before reading the fields</b> — the per-field summaries
+    /// below cannot tell you what a field holds without knowing the kind, and one row genuinely inverts the
+    /// usual roles.
+    /// </para>
+    ///
+    /// <list type="table">
+    ///   <listheader>
+    ///     <term>Kind</term><description>NodeGuid / RelatedGuid / Key / other</description>
+    ///   </listheader>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.NodeEnter"/></term>
+    ///     <description>the node that started / empty / null.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.NodeExit"/></term>
+    ///     <description>the node that stopped / empty / null. <see cref="Status"/> is what it ended on.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.NodeAborted"/></term>
+    ///     <description>the node killed mid-run / the guard that killed it / null.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.NodeSkipped"/></term>
+    ///     <description>the node refused entry / the guard that refused it / null.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.GuardEval"/></term>
+    ///     <description><b>inverted:</b> the <i>guard</i> / the node it protects / null.
+    ///     <see cref="Flag"/> is the guard's new answer. This is the one kind whose subject is not a
+    ///     behaviour node, because the event is about the guard changing its mind.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.VariableWrite"/></term>
+    ///     <description>empty / the writing node, or empty when the writer was outside the tree / the
+    ///     <b>variable name</b>. <see cref="OldValue"/> and <see cref="NewValue"/> are that variable's
+    ///     values, and <see cref="Writer"/> names an out-of-tree writer.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term><see cref="BehaviorTreeEventKind.TreePushed"/>, <see cref="BehaviorTreeEventKind.TreePopped"/></term>
+    ///     <description>the <c>RunBehaviorTreeGraphNode</c> / empty / the <b>sub-tree asset name</b>, not a
+    ///     variable name.</description>
+    ///   </item>
+    /// </list>
+    ///
+    /// <para>
+    /// <see cref="CallSiteId"/>, <see cref="Tick"/>, <see cref="Sequence"/>, <see cref="Frame"/> and
+    /// <see cref="Time"/> mean the same thing on every kind.
+    /// </para>
     /// </summary>
     public readonly struct BehaviorTreeEvent
     {
@@ -37,36 +88,63 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly float Time;
 
         /// <summary>
-        /// Which call site this happened in. A node guid alone is not unique within an agent: a sub-tree
-        /// asset is instantiated per <see cref="RunBehaviorTreeGraphNode"/> and the clone keeps the original
-        /// guids, so the same guid appears once per call site. The variable scope chain is already one scope
-        /// per call site, so the recorder numbers those and pairs the id with the guid.
+        /// Which <b>call site</b> — which running instance of a tree — this happened in. Not which node:
+        /// a whole branch shares one call site, and the nodes inside it are told apart by
+        /// <see cref="NodeGuid"/>. Think stack frame, not instruction pointer.
+        /// <para>
+        /// Needed because a node guid alone is not unique within one agent. A sub-tree asset is instantiated
+        /// per <see cref="RunBehaviorTreeGraphNode"/> and <c>guid</c> is serialized, so the clone keeps the
+        /// original guids and the same guid appears once per call site. The variable scope chain is already
+        /// exactly one scope per call site, so the recorder numbers those; see
+        /// <see cref="BehaviorTreeCallSite"/> for the table this indexes into.
+        /// </para>
         /// </summary>
-        public readonly int ScopeId;
+        public readonly int CallSiteId;
 
-        /// <summary>The node this is about.</summary>
+        /// <summary>
+        /// The subject. Which node that is depends on <see cref="Kind"/> — see the table on this type, and
+        /// note that <see cref="BehaviorTreeEventKind.GuardEval"/> puts the guard here rather than a
+        /// behaviour node.
+        /// </summary>
         public readonly Guid NodeGuid;
 
         /// <summary>
-        /// The other party, by kind: the guard for <see cref="BehaviorTreeEventKind.NodeAborted"/> and
-        /// <see cref="BehaviorTreeEventKind.NodeSkipped"/>, the writing node for
-        /// <see cref="BehaviorTreeEventKind.VariableWrite"/>, and <see cref="Guid.Empty"/> otherwise.
+        /// The other party, or <see cref="Guid.Empty"/> where the kind has none. Which party depends on
+        /// <see cref="Kind"/> — see the table on this type.
         /// </summary>
         public readonly Guid RelatedGuid;
 
-        /// <summary>The status on <see cref="BehaviorTreeEventKind.NodeExit"/>.</summary>
+        /// <summary>
+        /// What a node ended on. Only meaningful for <see cref="BehaviorTreeEventKind.NodeExit"/>;
+        /// <see cref="ExecutionStatus.None"/> elsewhere.
+        /// </summary>
         public readonly ExecutionStatus Status;
 
-        /// <summary>The new result on <see cref="BehaviorTreeEventKind.GuardEval"/>.</summary>
+        /// <summary>
+        /// A guard's new answer. Only meaningful for <see cref="BehaviorTreeEventKind.GuardEval"/>, where the
+        /// guard is <see cref="NodeGuid"/> and the node it protects is <see cref="RelatedGuid"/>.
+        /// </summary>
         public readonly bool Flag;
 
-        /// <summary>Variable name, or the sub-tree asset name for a push/pop. Null otherwise.</summary>
+        /// <summary>
+        /// A name whose meaning depends on <see cref="Kind"/>: the <b>variable name</b> on
+        /// <see cref="BehaviorTreeEventKind.VariableWrite"/>, the <b>sub-tree asset name</b> on
+        /// <see cref="BehaviorTreeEventKind.TreePushed"/> and <see cref="BehaviorTreeEventKind.TreePopped"/>,
+        /// null on every other kind. Two unrelated meanings sharing a slot is the price of the flat struct.
+        /// </summary>
         public readonly string Key;
 
-        /// <summary>Previous value, already stringified and capped. Null except on a write.</summary>
+        /// <summary>
+        /// The value <see cref="Key"/> held <i>before</i> the write, stringified and capped. Only meaningful
+        /// on <see cref="BehaviorTreeEventKind.VariableWrite"/>; null elsewhere. "null" here means the
+        /// variable was not declared yet, which is a real answer rather than an error.
+        /// </summary>
         public readonly string OldValue;
 
-        /// <summary>New value, already stringified and capped. Null except on a write.</summary>
+        /// <summary>
+        /// The value <see cref="Key"/> was set to, stringified and capped. Only meaningful on
+        /// <see cref="BehaviorTreeEventKind.VariableWrite"/>; null elsewhere.
+        /// </summary>
         public readonly string NewValue;
 
         /// <summary>
@@ -88,7 +166,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             int sequence,
             int frame,
             float time,
-            int scopeId,
+            int callSiteId,
             Guid nodeGuid,
             Guid relatedGuid,
             ExecutionStatus status,
@@ -103,7 +181,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             Sequence = sequence;
             Frame = frame;
             Time = time;
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             NodeGuid = nodeGuid;
             RelatedGuid = relatedGuid;
             Status = status;
@@ -128,7 +206,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             int sequence,
             int frame,
             float time,
-            int scopeId,
+            int callSiteId,
             Guid nodeGuid,
             Guid relatedGuid = default,
             ExecutionStatus status = ExecutionStatus.None,
@@ -139,7 +217,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string writer = null)
         {
             return new BehaviorTreeEvent(
-                kind, tick, sequence, frame, time, scopeId,
+                kind, tick, sequence, frame, time, callSiteId,
                 nodeGuid, relatedGuid, status, flag, key, oldValue, newValue, writer);
         }
 

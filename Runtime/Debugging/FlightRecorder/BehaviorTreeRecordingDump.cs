@@ -103,7 +103,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             json.Property("frame", recorded.Frame);
             json.Property("time", recorded.Time);
             json.Property("kind", recorded.Kind.ToString());
-            json.Property("callSite", recorded.ScopeId);
+            json.Property("callSite", recorded.CallSiteId);
 
             if (recorded.NodeGuid != Guid.Empty) json.Property("node", recorded.NodeGuid.ToString());
 

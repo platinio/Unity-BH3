@@ -111,7 +111,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 ring.Add(BehaviorTreeEvent.Create(
                     BehaviorTreeEventKind.NodeEnter, tick: i, sequence: 0, frame: 0, time: 0.0f,
-                    scopeId: 0, nodeGuid: Guid.Empty));
+                    callSiteId: 0, nodeGuid: Guid.Empty));
             }
 
             Assert.AreEqual(3, ring.Count, "A ring holds its capacity and no more.");
@@ -298,8 +298,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(2, entries.Length);
             Assert.AreEqual(shared.guid, entries[0].NodeGuid);
             Assert.AreEqual(shared.guid, entries[1].NodeGuid, "The guid genuinely is the same.");
-            Assert.AreEqual(firstId, entries[0].ScopeId);
-            Assert.AreEqual(secondId, entries[1].ScopeId, "Which is why the call site has to carry the difference.");
+            Assert.AreEqual(firstId, entries[0].CallSiteId);
+            Assert.AreEqual(secondId, entries[1].CallSiteId, "Which is why the call site has to carry the difference.");
         }
 
         [Test]
@@ -339,7 +339,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.OnNodeEnter();
 
             Assert.AreEqual(BehaviorTreeCallSite.RootId,
-                EventsOfKind(BehaviorTreeEventKind.NodeEnter).Single().ScopeId,
+                EventsOfKind(BehaviorTreeEventKind.NodeEnter).Single().CallSiteId,
                 "A node the machine never scoped still has to land somewhere readable rather than throw.");
         }
 
