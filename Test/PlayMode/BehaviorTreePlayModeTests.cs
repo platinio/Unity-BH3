@@ -18,9 +18,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
     public class BehaviorTreePlayModeTests
     {
         [UnityTest]
-        public IEnumerator Sequence_AdvancesOneChildPerFrame_AndSucceeds()
+        public IEnumerator Sequence_AdvancesAsEachChildFinishes_AndSucceeds()
         {
-            // Each child takes one frame: Running on the frame it is entered, Success on the next.
+            // Each child takes one frame: Running on the frame it is entered, Success on the next. The
+            // frames here are spent by the children actually working, which is the only thing that may cost
+            // one — the sequence itself moves on to the next child within the tick that freed it, so this
+            // takes three frames and not four.
             var a = new RecordingPlayNode().Returns(ExecutionStatus.Running, ExecutionStatus.Success);
             var b = new RecordingPlayNode().Returns(ExecutionStatus.Running, ExecutionStatus.Success);
             var sequence = new Sequence();

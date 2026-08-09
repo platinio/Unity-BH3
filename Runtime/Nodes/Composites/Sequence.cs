@@ -18,37 +18,57 @@ namespace ArcaneOnyx.BehaviorTree
             callOnEnter = true;
         }
 
+        /// <summary>
+        /// Walks the children left to right <em>within a single tick</em>, stepping over each one that
+        /// succeeds and stopping at the first that returns Failure or Running. The mirror image of
+        /// <see cref="Selector"/>; see that node for why the descent must complete on one frame.
+        /// <para>
+        /// The loop terminates because every iteration either returns or advances
+        /// <see cref="Composite.currentExecutingChildIndex"/>, which is bounded by the child count.
+        /// </para>
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
-            if (GetChildren().Count == 0) return ExecutionStatus.Success;
+            var children = GetChildren();
+            if (children.Count == 0) return ExecutionStatus.Success;
 
-            var task = GetChildren()[currentExecutingChildIndex];
-            
-            if (callOnEnter)
+            while (currentExecutingChildIndex < children.Count)
             {
-                callOnEnter = false;
-                task.OnNodeEnter();
-            }
-            
-            var result = task.OnUpdateInternal();
-            
-            if (result == ExecutionStatus.Success)
-            {
-                task.OnNodeExit();
-                currentExecutingChildIndex++;
-                if (GetChildren().Count <= currentExecutingChildIndex) return ExecutionStatus.Success;
-                
-                GetChildren()[currentExecutingChildIndex].OnNodeEnter();
-                return ExecutionStatus.Running;
-            }
-            if (result == ExecutionStatus.Failure)
-            {
-                task.OnNodeExit();
-                currentExecutingChildIndex = 0;
-                return ExecutionStatus.Failure;
+                var task = children[currentExecutingChildIndex];
+
+                if (callOnEnter)
+                {
+                    callOnEnter = false;
+                    task.OnNodeEnter();
+                }
+
+                var result = task.OnUpdateInternal();
+
+                if (result == ExecutionStatus.Success)
+                {
+                    task.OnNodeExit();
+
+                    currentExecutingChildIndex++;
+                    callOnEnter = true;
+                    continue;
+                }
+
+                if (result == ExecutionStatus.Failure)
+                {
+                    task.OnNodeExit();
+
+                    currentExecutingChildIndex = 0;
+                    callOnEnter = true;
+                    return ExecutionStatus.Failure;
+                }
+
+                // Running — the child owns the rest of this frame.
+                return result;
             }
 
-            return result;
+            currentExecutingChildIndex = 0;
+            callOnEnter = true;
+            return ExecutionStatus.Success;
         }
     }
 }
