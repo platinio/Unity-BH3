@@ -18,38 +18,54 @@ namespace ArcaneOnyx.BehaviorTree
             currentExecutingChildIndex = 0;
             callOnEnter = true;
         }
-        
+
+        /// <summary>
+        /// Walks the children left to right <em>within a single tick</em>, stepping over each one that fails
+        /// and stopping at the first that returns Success or Running.
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
-            if (GetChildren().Count == 0) return ExecutionStatus.Success;
+            var children = GetChildren();
+      
+            while (currentExecutingChildIndex < children.Count)
+            {
+                var task = children[currentExecutingChildIndex];
 
-            var task = GetChildren()[currentExecutingChildIndex];
-            
-            if (callOnEnter)
-            {
-                callOnEnter = false;
-                task.OnNodeEnter();
-            }
-            
-            var result = task.OnUpdateInternal();
+                // Do NOT make this unconditional — it reads as redundant and is not. OnUpdate runs once per
+                // frame for as long as this selector is running, but OnEnter runs only when the parent
+                // enters it. So on every frame after the first, this first iteration is *resuming* a child
+                // that is already running, and entering it again would re-run its OnEnter every frame:
+                // WaitTime would reset its timer to full, an animation would restart, RandomChance would
+                // re-roll. Any multi-frame action would hang forever.
+                // The flag is only ever false here, on that resume; after a Failure below it is set back to
+                // true so the next child does get entered. Pinned by ARunningChild_IsTickedAgainButNotReEntered.
+                if (callOnEnter)
+                {
+                    callOnEnter = false;
+                    task.OnNodeEnter();
+                }
 
-            if (result == ExecutionStatus.Success)
-            {
-                task.OnNodeExit();
-                return ExecutionStatus.Success;
-            }
-            if (result == ExecutionStatus.Failure)
-            {
-                task.OnNodeExit();
+                var result = task.OnUpdateInternal();
+
+                if (result == ExecutionStatus.Success)
+                {
+                    task.OnNodeExit();
+                    return ExecutionStatus.Success;
+                }
+
+                if (result == ExecutionStatus.Failure)
+                {
+                    task.OnNodeExit();
+
+                    currentExecutingChildIndex++;
+                    callOnEnter = true;
+                    continue;
+                }
                
-                currentExecutingChildIndex++;
-                if (GetChildren().Count <= currentExecutingChildIndex) return ExecutionStatus.Failure;
-                
-                GetChildren()[currentExecutingChildIndex].OnNodeEnter();
-                return ExecutionStatus.Running;
+                return result;
             }
 
-            return result;
+            return ExecutionStatus.Failure;
         }
 
         public override void OnExit()

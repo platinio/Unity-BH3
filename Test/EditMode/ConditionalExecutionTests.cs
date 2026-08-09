@@ -131,6 +131,41 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "A branch whose precondition already fails must never start.");
         }
 
+        /// <summary>
+        /// The priority scheme only works if declining a branch is free. A guarded-off branch reports Failure
+        /// to its selector, and the selector has to treat that like any other failure — try the next one now,
+        /// not next frame. With three gated branches above the one that runs, the old behaviour delayed the
+        /// agent's actual decision by three frames.
+        /// </summary>
+        [Test]
+        public void ASelectorSkipsGuardedOffBranchesWithoutSpendingAFrame()
+        {
+            var graph = new BehaviorTreeGraph();
+            var selector = AddNode<Selector>(graph);
+
+            var gatedOff = new ScriptedNode(ExecutionStatus.Success) { Position = new Rect(-200.0f, 300.0f, 150.0f, 100.0f) };
+            var fallback = new ScriptedNode(ExecutionStatus.Success) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(gatedOff);
+            graph.Nodes.Add(fallback);
+
+            Connect(graph, graph.EntryNode, selector);
+            Connect(graph, selector, gatedOff);
+            Connect(graph, selector, fallback);
+
+            var guard = AddNode<BooleanConditionalExecution>(graph);
+            guard.UpdateOwner(gatedOff);
+            guard.Value.SetDefaultValue(false);
+
+            graph.OnAwake();
+            selector.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Success, selector.OnUpdateInternal(),
+                "The selector must fall past the gated branch and resolve the next one in the same tick.");
+            Assert.AreEqual(0, gatedOff.UpdateCalls, "A branch whose precondition fails must never run.");
+            Assert.AreEqual(0, gatedOff.EnterCalls, "Nor be entered.");
+            Assert.AreEqual(1, fallback.UpdateCalls, "The branch that should run did, on the first tick.");
+        }
+
         [Test]
         public void GuardsAreReportedUnderTheOwnerTheyProtect()
         {

@@ -37,11 +37,10 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             if (IsCoolingDown) return;
-            cooldownEndTime = Time.time + (float) Duration.GetValue();
-            
+
             base.OnEnter();
         }
-
+     
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
@@ -52,6 +51,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
             task.OnNodeExit();
+            cooldownEndTime = Time.time + (float) Duration.GetValue();
 
             return result;
         }

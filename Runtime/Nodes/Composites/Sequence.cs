@@ -17,38 +17,56 @@ namespace ArcaneOnyx.BehaviorTree
             currentExecutingChildIndex = 0;
             callOnEnter = true;
         }
-
+      
         public override ExecutionStatus OnUpdate()
         {
-            if (GetChildren().Count == 0) return ExecutionStatus.Success;
+            var children = GetChildren();
+            if (children.Count == 0) return ExecutionStatus.Success;
 
-            var task = GetChildren()[currentExecutingChildIndex];
-            
-            if (callOnEnter)
+            while (currentExecutingChildIndex < children.Count)
             {
-                callOnEnter = false;
-                task.OnNodeEnter();
-            }
-            
-            var result = task.OnUpdateInternal();
-            
-            if (result == ExecutionStatus.Success)
-            {
-                task.OnNodeExit();
-                currentExecutingChildIndex++;
-                if (GetChildren().Count <= currentExecutingChildIndex) return ExecutionStatus.Success;
-                
-                GetChildren()[currentExecutingChildIndex].OnNodeEnter();
-                return ExecutionStatus.Running;
-            }
-            if (result == ExecutionStatus.Failure)
-            {
-                task.OnNodeExit();
-                currentExecutingChildIndex = 0;
-                return ExecutionStatus.Failure;
+                var task = children[currentExecutingChildIndex];
+
+                // Do NOT make this unconditional — it reads as redundant and is not. OnUpdate runs once per
+                // frame for as long as this sequence is running, but OnEnter runs only when the parent
+                // enters it. So on every frame after the first, this first iteration is *resuming* a child
+                // that is already running, and entering it again would re-run its OnEnter every frame:
+                // WaitTime would reset its timer to full, an animation would restart, RandomChance would
+                // re-roll. Any multi-frame action would hang forever.
+                // The flag is only ever false here, on that resume; after a Success below it is set back to
+                // true so the next child does get entered. Pinned by ARunningChild_IsTickedAgainButNotReEntered.
+                if (callOnEnter)
+                {
+                    callOnEnter = false;
+                    task.OnNodeEnter();
+                }
+
+                var result = task.OnUpdateInternal();
+
+                if (result == ExecutionStatus.Success)
+                {
+                    task.OnNodeExit();
+
+                    currentExecutingChildIndex++;
+                    callOnEnter = true;
+                    continue;
+                }
+
+                if (result == ExecutionStatus.Failure)
+                {
+                    task.OnNodeExit();
+
+                    currentExecutingChildIndex = 0;
+                    callOnEnter = true;
+                    return ExecutionStatus.Failure;
+                }
+             
+                return result;
             }
 
-            return result;
+            currentExecutingChildIndex = 0;
+            callOnEnter = true;
+            return ExecutionStatus.Success;
         }
     }
 }
