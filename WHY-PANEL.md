@@ -34,10 +34,18 @@ Double-click the tree asset to open the behavior tree window, as usual.
 
 It's in the window's sidebar, next to **Blackboard** and **Graph Inspector**.
 
-**4. Pick the agent**
+**4. Check which agent it's explaining**
 
-A dropdown at the top lists every agent in the scene currently recording. If you have one enemy, it's
-already selected.
+The line at the top names it. There's no agent picker — the panel follows the canvas, so it always explains
+the agent whose tree you're looking at. It says where that came from:
+
+| It says | Meaning |
+|---|---|
+| *shown on this canvas* | You opened the tree through a machine, so the canvas already is that agent. |
+| *selected in the hierarchy* | The tree was opened as a plain asset, so your hierarchy selection decides. |
+| *the only agent recording* | Nothing said which, but there is only one it could be. |
+
+If it says **No live agent**, select the agent in the hierarchy.
 
 **5. Click a node on the canvas**
 
@@ -141,8 +149,11 @@ the value.
 | **graph** | Opens the Visual Scripting graph snapshot for that chain row. |
 | **Export…** | Saves the whole recording to a JSON file. |
 | **Load…** | Opens a recording from a file and explains it with no agent running. |
-| *agent dropdown* | Which agent you're looking at. |
 | *call-site dropdown* | Appears **only** when the selected node ran in more than one place — a shared branch used by two parents is two different stories, and the canvas can't tell which one you meant. |
+
+> There is deliberately no agent picker. The canvas is already showing one particular agent's tree, so a
+> second control choosing a different one wouldn't just be confusing — clicking a node would explain
+> *another* agent's history for it. One source of truth, and the panel reads it.
 
 **Export and Load** are how you hand a bug to someone else. A recording plus the tree asset is a complete
 account — they can read the same explanations you can, on a machine that never ran your scene.
@@ -225,8 +236,12 @@ read and to correlate.
 
 **"Select a node on the canvas…"** — the panel has an agent but no node. Click one.
 
-**"No live agent" / "Enter play mode to watch an agent"** — nothing is recording. Either you're not in play
-mode, or `BehaviorTreeFlightRecorders.GloballyEnabled` was turned off.
+**"No live agent"** — the panel can't tell which agent you mean. Select it in the hierarchy, or open its
+tree from the machine rather than from the asset. If several agents are recording and none is selected,
+that's expected: the panel would rather say nothing than guess.
+
+**"Enter play mode to watch an agent"** — nothing is recording. Either you're not in play mode, or
+`BehaviorTreeFlightRecorders.GloballyEnabled` was turned off.
 
 **"This node has no recorded activity in the selected call site."** — the node ran somewhere else. Check the
 call-site dropdown.
