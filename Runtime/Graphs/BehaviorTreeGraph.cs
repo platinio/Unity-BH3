@@ -250,21 +250,21 @@ namespace ArcaneOnyx.BehaviorTree
 
             return ExecutionStatus.Running;
         }
-        
+      
         public void OnLateUpdate()
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus == ExecutionStatus.Running) return;
+                if (node.LastExecutionStatus == ExecutionStatus.Running) continue;
                 node.OnLateUpdate();
             }
         }
-        
+
         public void OnFixedUpdate()
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus == ExecutionStatus.Running) return;
+                if (node.LastExecutionStatus == ExecutionStatus.Running) continue;
                 node.OnFixedUpdate();
             }
         }
