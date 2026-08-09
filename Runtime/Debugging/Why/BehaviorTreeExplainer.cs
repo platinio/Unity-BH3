@@ -39,7 +39,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <param name="atTick">The vantage point. Negative means the end of the recording.</param>
         public static BehaviorTreeExplanation Explain(
             IBehaviorTreeRecording recording,
-            int scopeId,
+            int callSiteId,
             Guid nodeGuid,
             IBehaviorTreeTopology topology = null,
             int atTick = -1)
@@ -49,40 +49,40 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (atTick < 0) atTick = recording.Tick;
 
             var subject = NameOf(topology, nodeGuid);
-            var path = CallSitePath(recording, scopeId);
+            var path = CallSitePath(recording, callSiteId);
             var clauses = new List<BehaviorTreeExplanationClause>();
 
-            var episode = LastLifecycleIndex(recording, scopeId, nodeGuid, atTick);
+            var episode = LastLifecycleIndex(recording, callSiteId, nodeGuid, atTick);
 
             if (episode < 0)
             {
                 // No lifecycle events. Either it is a guard (which only ever emits GuardEval), or it genuinely
                 // never ran — two very different answers, so check for the first before concluding the second.
-                if (LastGuardEvalIndex(recording, scopeId, nodeGuid, atTick) >= 0)
+                if (LastGuardEvalIndex(recording, callSiteId, nodeGuid, atTick) >= 0)
                 {
-                    return ExplainGuard(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses);
+                    return ExplainGuard(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses);
                 }
 
-                return ExplainNeverRan(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses);
+                return ExplainNeverRan(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses);
             }
 
-            episode = PreferAbortOverItsOwnExit(recording, scopeId, nodeGuid, episode);
+            episode = PreferAbortOverItsOwnExit(recording, callSiteId, nodeGuid, episode);
 
             var last = recording.EventAt(episode);
 
             switch (last.Kind)
             {
                 case BehaviorTreeEventKind.NodeAborted:
-                    return ExplainAborted(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses, episode);
+                    return ExplainAborted(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
 
                 case BehaviorTreeEventKind.NodeSkipped:
-                    return ExplainSkipped(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses, episode);
+                    return ExplainSkipped(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
 
                 case BehaviorTreeEventKind.NodeExit:
-                    return ExplainExited(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses, episode);
+                    return ExplainExited(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
 
                 default:
-                    return ExplainRunning(recording, scopeId, nodeGuid, topology, atTick, subject, path, clauses, episode);
+                    return ExplainRunning(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
             }
         }
 
@@ -99,9 +99,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.NodeGuid != nodeGuid && recorded.RelatedGuid != nodeGuid) continue;
-                if (found.Contains(recorded.ScopeId)) continue;
+                if (found.Contains(recorded.CallSiteId)) continue;
 
-                found.Add(recorded.ScopeId);
+                found.Add(recorded.CallSiteId);
             }
 
             return found;
@@ -110,7 +110,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         #region Outcomes
 
         private static BehaviorTreeExplanation ExplainAborted(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses, int episode)
         {
             var abort = recording.EventAt(episode);
@@ -126,45 +126,45 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Cause,
                     $"Guard '{guardName}' aborted it, so everything under it stopped on the same tick.",
-                    BehaviorTreeExplanationLink.ToGuard(guardGuid, scopeId, abort.Tick, abort.Sequence)));
+                    BehaviorTreeExplanationLink.ToGuard(guardGuid, callSiteId, abort.Tick, abort.Sequence)));
             }
 
-            AddEnteredClause(recording, scopeId, nodeGuid, clauses, episode, abort.Tick);
+            AddEnteredClause(recording, callSiteId, nodeGuid, clauses, episode, abort.Tick);
 
-            var exit = ExitAfterAbort(recording, scopeId, nodeGuid, episode);
+            var exit = ExitAfterAbort(recording, callSiteId, nodeGuid, episode);
             if (exit >= 0)
             {
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Context,
                     $"It returned {recording.EventAt(exit).Status} to its parent on the same tick.",
-                    BehaviorTreeExplanationLink.ToTick(abort.Tick, scopeId, recording.EventAt(exit).Sequence)));
+                    BehaviorTreeExplanationLink.ToTick(abort.Tick, callSiteId, recording.EventAt(exit).Sequence)));
             }
 
             GuardTrace trace = null;
 
-            var flip = LastGuardTransitionIndex(recording, scopeId, guardGuid, episode, false);
+            var flip = LastGuardTransitionIndex(recording, callSiteId, guardGuid, episode, false);
             if (flip >= 0)
             {
                 var flipped = recording.EventAt(flip);
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Evidence,
                     $"The guard was last recorded turning false at tick {flipped.Tick} (step {flipped.Sequence}).",
-                    BehaviorTreeExplanationLink.ToTick(flipped.Tick, scopeId, flipped.Sequence)));
+                    BehaviorTreeExplanationLink.ToTick(flipped.Tick, callSiteId, flipped.Sequence)));
 
                 trace = AddTraceClause(recording, flip, clauses);
 
                 AddWriteCause(recording, topology, guardGuid, flip, clauses);
             }
 
-            AddOscillationClause(recording, scopeId, nodeGuid, atTick, clauses);
+            AddOscillationClause(recording, callSiteId, nodeGuid, atTick, clauses);
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Aborted, headline, clauses, trace);
+                nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.Aborted, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainSkipped(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses, int episode)
         {
             var skip = recording.EventAt(episode);
@@ -184,9 +184,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Cause,
                     $"Guard '{guardName}' was false, so the node was skipped rather than interrupted — it never started.",
-                    BehaviorTreeExplanationLink.ToGuard(guardGuid, scopeId, skip.Tick, skip.Sequence)));
+                    BehaviorTreeExplanationLink.ToGuard(guardGuid, callSiteId, skip.Tick, skip.Sequence)));
 
-                var flip = LastGuardTransitionIndex(recording, scopeId, guardGuid, episode, false);
+                var flip = LastGuardTransitionIndex(recording, callSiteId, guardGuid, episode, false);
                 if (flip >= 0)
                 {
                     var flipped = recording.EventAt(flip);
@@ -196,7 +196,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                     clauses.Add(new BehaviorTreeExplanationClause(
                         BehaviorTreeClauseRole.Evidence, since,
-                        BehaviorTreeExplanationLink.ToTick(flipped.Tick, scopeId, flipped.Sequence)));
+                        BehaviorTreeExplanationLink.ToTick(flipped.Tick, callSiteId, flipped.Sequence)));
 
                     trace = AddTraceClause(recording, flip, clauses);
 
@@ -204,15 +204,15 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 }
             }
 
-            AddSiblingClause(recording, scopeId, nodeGuid, topology, skip.Tick, clauses);
+            AddSiblingClause(recording, callSiteId, nodeGuid, topology, skip.Tick, clauses);
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Skipped, headline, clauses, trace);
+                nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.Skipped, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainExited(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses, int episode)
         {
             var exit = recording.EventAt(episode);
@@ -222,12 +222,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             var headline = $"Exited {exit.Status} at tick {exit.Tick}.";
 
-            AddEnteredClause(recording, scopeId, nodeGuid, clauses, episode, exit.Tick);
+            AddEnteredClause(recording, callSiteId, nodeGuid, clauses, episode, exit.Tick);
 
             // The child whose status the parent passed on. Only claimed when the topology confirms the
             // parentage — "the node that exited just before this one" is a guess, and a guess in a tool built
             // to replace guessing is worse than saying nothing.
-            var child = LastChildExitIndex(recording, scopeId, nodeGuid, topology, episode, exit.Tick);
+            var child = LastChildExitIndex(recording, callSiteId, nodeGuid, topology, episode, exit.Tick);
             if (child >= 0)
             {
                 var childExit = recording.EventAt(child);
@@ -236,17 +236,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Cause,
                     $"Its child '{childName}' returned {childExit.Status} on the same tick (step {childExit.Sequence}).",
-                    BehaviorTreeExplanationLink.ToNode(childExit.NodeGuid, scopeId, childExit.Tick, childExit.Sequence)));
+                    BehaviorTreeExplanationLink.ToNode(childExit.NodeGuid, callSiteId, childExit.Tick, childExit.Sequence)));
             }
 
-            AddOscillationClause(recording, scopeId, nodeGuid, atTick, clauses);
+            AddOscillationClause(recording, callSiteId, nodeGuid, atTick, clauses);
             AddClippedCaveat(recording, clauses);
 
-            return new BehaviorTreeExplanation(nodeGuid, scopeId, subject, path, atTick, outcome, headline, clauses);
+            return new BehaviorTreeExplanation(nodeGuid, callSiteId, subject, path, atTick, outcome, headline, clauses);
         }
 
         private static BehaviorTreeExplanation ExplainRunning(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses, int episode)
         {
             var enter = recording.EventAt(episode);
@@ -257,21 +257,21 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             clauses.Add(new BehaviorTreeExplanationClause(
                 BehaviorTreeClauseRole.Evidence,
                 $"Entered at tick {enter.Tick} and has not exited.",
-                BehaviorTreeExplanationLink.ToTick(enter.Tick, scopeId, enter.Sequence)));
+                BehaviorTreeExplanationLink.ToTick(enter.Tick, callSiteId, enter.Sequence)));
 
-            AddActiveGuardsClause(recording, scopeId, nodeGuid, topology, atTick, clauses);
-            AddOscillationClause(recording, scopeId, nodeGuid, atTick, clauses);
+            AddActiveGuardsClause(recording, callSiteId, nodeGuid, topology, atTick, clauses);
+            AddOscillationClause(recording, callSiteId, nodeGuid, atTick, clauses);
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.Running, headline, clauses);
+                nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.Running, headline, clauses);
         }
 
         private static BehaviorTreeExplanation ExplainGuard(
-            IBehaviorTreeRecording recording, int scopeId, Guid guardGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid guardGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses)
         {
-            var index = LastGuardEvalIndex(recording, scopeId, guardGuid, atTick);
+            var index = LastGuardEvalIndex(recording, callSiteId, guardGuid, atTick);
             var eval = recording.EventAt(index);
             var ownerName = NameOf(topology, eval.RelatedGuid);
 
@@ -282,14 +282,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Context,
                     $"It guards '{ownerName}', and is re-evaluated every tick while that node runs.",
-                    BehaviorTreeExplanationLink.ToNode(eval.RelatedGuid, scopeId)));
+                    BehaviorTreeExplanationLink.ToNode(eval.RelatedGuid, callSiteId)));
             }
 
             var trace = AddTraceClause(recording, index, clauses);
 
             AddWriteCause(recording, topology, guardGuid, index, clauses);
 
-            var flips = CountGuardTransitions(recording, scopeId, guardGuid, atTick - OscillationWindow, atTick);
+            var flips = CountGuardTransitions(recording, callSiteId, guardGuid, atTick - OscillationWindow, atTick);
             if (flips >= OscillationThreshold)
             {
                 clauses.Add(new BehaviorTreeExplanationClause(
@@ -300,17 +300,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             AddClippedCaveat(recording, clauses);
 
             return new BehaviorTreeExplanation(
-                guardGuid, scopeId, subject, path, atTick,
+                guardGuid, callSiteId, subject, path, atTick,
                 eval.Flag ? BehaviorTreeOutcome.Running : BehaviorTreeOutcome.Skipped, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainNeverRan(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses)
         {
             var headline = "Never ran: nothing about this node is in the recording.";
 
-            AddSiblingClause(recording, scopeId, nodeGuid, topology, atTick, clauses);
+            AddSiblingClause(recording, callSiteId, nodeGuid, topology, atTick, clauses);
 
             // Without this the sentence overclaims. An empty buffer and a node that never ran look identical
             // from here, and only one of them is the node's fault.
@@ -328,7 +328,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             }
 
             return new BehaviorTreeExplanation(
-                nodeGuid, scopeId, subject, path, atTick, BehaviorTreeOutcome.NoRecord, headline, clauses);
+                nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.NoRecord, headline, clauses);
         }
 
         #endregion
@@ -336,10 +336,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         #region Shared clauses
 
         private static void AddEnteredClause(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid,
             List<BehaviorTreeExplanationClause> clauses, int before, int endTick)
         {
-            var enter = LastIndexOf(recording, scopeId, nodeGuid, BehaviorTreeEventKind.NodeEnter, before);
+            var enter = LastIndexOf(recording, callSiteId, nodeGuid, BehaviorTreeEventKind.NodeEnter, before);
             if (enter < 0) return;
 
             var entered = recording.EventAt(enter);
@@ -348,7 +348,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             clauses.Add(new BehaviorTreeExplanationClause(
                 BehaviorTreeClauseRole.Context,
                 $"It entered at tick {entered.Tick} and ran for {ticks} {(ticks == 1 ? "tick" : "ticks")}.",
-                BehaviorTreeExplanationLink.ToTick(entered.Tick, scopeId, entered.Sequence)));
+                BehaviorTreeExplanationLink.ToTick(entered.Tick, callSiteId, entered.Sequence)));
         }
 
         /// <summary>
@@ -389,7 +389,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             clauses.Add(new BehaviorTreeExplanationClause(
                 resolved ? BehaviorTreeClauseRole.Cause : BehaviorTreeClauseRole.Evidence,
                 text,
-                BehaviorTreeExplanationLink.ToVariable(written.Key, written.ScopeId, written.Tick, written.Sequence)));
+                BehaviorTreeExplanationLink.ToVariable(written.Key, written.CallSiteId, written.Tick, written.Sequence)));
 
             if (!resolved)
             {
@@ -402,7 +402,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Evidence,
                     $"Written by node '{writer}'.",
-                    BehaviorTreeExplanationLink.ToNode(written.RelatedGuid, written.ScopeId, written.Tick, written.Sequence)));
+                    BehaviorTreeExplanationLink.ToNode(written.RelatedGuid, written.CallSiteId, written.Tick, written.Sequence)));
             }
         }
 
@@ -426,14 +426,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             clauses.Add(new BehaviorTreeExplanationClause(
                 BehaviorTreeClauseRole.Cause,
                 $"It read {trace.Describe()}",
-                BehaviorTreeExplanationLink.ToGuard(trace.GuardGuid, trace.ScopeId, trace.Tick, trace.Sequence)));
+                BehaviorTreeExplanationLink.ToGuard(trace.GuardGuid, trace.CallSiteId, trace.Tick, trace.Sequence)));
 
             return trace;
         }
 
         /// <summary>Which sibling ran instead, when the topology can say who the siblings are.</summary>
         private static void AddSiblingClause(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, List<BehaviorTreeExplanationClause> clauses)
         {
             if (topology == null) return;
@@ -448,7 +448,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (i == priority) continue;
 
                 var sibling = parent.Children[i];
-                var entered = LastIndexOf(recording, scopeId, sibling, BehaviorTreeEventKind.NodeEnter, recording.EventCount, atTick);
+                var entered = LastIndexOf(recording, callSiteId, sibling, BehaviorTreeEventKind.NodeEnter, recording.EventCount, atTick);
                 if (entered < 0) continue;
 
                 // Only a sibling that outranks this node explains it not running. A lower-priority sibling
@@ -459,14 +459,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Cause,
                     $"The {parent.TypeName} above it ran '{NameOf(topology, sibling)}' (priority {i + 1}) at tick {enteredEvent.Tick}; this node is priority {priority + 1}.",
-                    BehaviorTreeExplanationLink.ToNode(sibling, scopeId, enteredEvent.Tick, enteredEvent.Sequence)));
+                    BehaviorTreeExplanationLink.ToNode(sibling, callSiteId, enteredEvent.Tick, enteredEvent.Sequence)));
 
                 return;
             }
         }
 
         private static void AddActiveGuardsClause(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, List<BehaviorTreeExplanationClause> clauses)
         {
             // Guards name their owner on every eval, so the recording alone knows which guards protect this
@@ -477,7 +477,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
-                if (recorded.ScopeId != scopeId || recorded.RelatedGuid != nodeGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.RelatedGuid != nodeGuid) continue;
                 if (recorded.Tick > atTick || seen.Contains(recorded.NodeGuid)) continue;
 
                 seen.Add(recorded.NodeGuid);
@@ -485,7 +485,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Context,
                     $"Guard '{NameOf(topology, recorded.NodeGuid)}' has been {(recorded.Flag ? "true" : "false")} since tick {recorded.Tick}.",
-                    BehaviorTreeExplanationLink.ToGuard(recorded.NodeGuid, scopeId, recorded.Tick, recorded.Sequence)));
+                    BehaviorTreeExplanationLink.ToGuard(recorded.NodeGuid, callSiteId, recorded.Tick, recorded.Sequence)));
             }
         }
 
@@ -494,7 +494,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// spot from the buffer, and worth saying here because the reader is already looking at the node.
         /// </summary>
         private static void AddOscillationClause(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, int atTick,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int atTick,
             List<BehaviorTreeExplanationClause> clauses)
         {
             int enters = 0;
@@ -504,7 +504,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             for (int i = 0; i < recording.EventCount; i++)
             {
                 var recorded = recording.EventAt(i);
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != nodeGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
                 if (recorded.Tick < from || recorded.Tick > atTick) continue;
 
                 if (recorded.Kind == BehaviorTreeEventKind.NodeEnter) enters++;
@@ -541,7 +541,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// abort wins. The resulting status is not lost — it becomes a clause on the abort.
         /// </para>
         /// </summary>
-        private static int PreferAbortOverItsOwnExit(IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, int episode)
+        private static int PreferAbortOverItsOwnExit(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int episode)
         {
             var exit = recording.EventAt(episode);
             if (exit.Kind != BehaviorTreeEventKind.NodeExit) return episode;
@@ -550,7 +550,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Tick != exit.Tick) break;
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != nodeGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
 
                 // An enter in the same tick means this exit belongs to a later episode than any earlier abort.
                 if (recorded.Kind == BehaviorTreeEventKind.NodeEnter) break;
@@ -561,7 +561,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>The exit an abort produced, when the recording caught it.</summary>
-        private static int ExitAfterAbort(IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, int abortIndex)
+        private static int ExitAfterAbort(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int abortIndex)
         {
             var abort = recording.EventAt(abortIndex);
 
@@ -569,7 +569,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Tick != abort.Tick) return -1;
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != nodeGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
 
                 if (recorded.Kind == BehaviorTreeEventKind.NodeExit) return i;
             }
@@ -577,12 +577,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return -1;
         }
 
-        private static int LastLifecycleIndex(IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, int atTick)
+        private static int LastLifecycleIndex(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int atTick)
         {
             for (int i = recording.EventCount - 1; i >= 0; i--)
             {
                 var recorded = recording.EventAt(i);
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != nodeGuid || recorded.Tick > atTick) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid || recorded.Tick > atTick) continue;
 
                 switch (recorded.Kind)
                 {
@@ -598,13 +598,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         private static int LastIndexOf(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, BehaviorTreeEventKind kind,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, BehaviorTreeEventKind kind,
             int before, int atTick = int.MaxValue)
         {
             for (int i = Math.Min(before, recording.EventCount) - 1; i >= 0; i--)
             {
                 var recorded = recording.EventAt(i);
-                if (recorded.Kind != kind || recorded.ScopeId != scopeId || recorded.NodeGuid != nodeGuid) continue;
+                if (recorded.Kind != kind || recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
                 if (recorded.Tick > atTick) continue;
 
                 return i;
@@ -613,9 +613,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return -1;
         }
 
-        private static int LastGuardEvalIndex(IBehaviorTreeRecording recording, int scopeId, Guid guardGuid, int atTick)
+        private static int LastGuardEvalIndex(IBehaviorTreeRecording recording, int callSiteId, Guid guardGuid, int atTick)
         {
-            return LastIndexOf(recording, scopeId, guardGuid, BehaviorTreeEventKind.GuardEval, recording.EventCount, atTick);
+            return LastIndexOf(recording, callSiteId, guardGuid, BehaviorTreeEventKind.GuardEval, recording.EventCount, atTick);
         }
 
         /// <summary>
@@ -624,7 +624,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// skipped were never written.
         /// </summary>
         private static int LastGuardTransitionIndex(
-            IBehaviorTreeRecording recording, int scopeId, Guid guardGuid, int before, bool value)
+            IBehaviorTreeRecording recording, int callSiteId, Guid guardGuid, int before, bool value)
         {
             if (guardGuid == Guid.Empty) return -1;
 
@@ -632,7 +632,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != guardGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != guardGuid) continue;
                 if (recorded.Flag != value) continue;
 
                 return i;
@@ -641,7 +641,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return -1;
         }
 
-        private static int CountGuardTransitions(IBehaviorTreeRecording recording, int scopeId, Guid guardGuid, int fromTick, int toTick)
+        private static int CountGuardTransitions(IBehaviorTreeRecording recording, int callSiteId, Guid guardGuid, int fromTick, int toTick)
         {
             int count = 0;
 
@@ -649,7 +649,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
-                if (recorded.ScopeId != scopeId || recorded.NodeGuid != guardGuid) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != guardGuid) continue;
                 if (recorded.Tick < fromTick || recorded.Tick > toTick) continue;
 
                 count++;
@@ -678,7 +678,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         private static int LastChildExitIndex(
-            IBehaviorTreeRecording recording, int scopeId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int before, int tick)
         {
             if (topology == null || !topology.TryGetNode(nodeGuid, out var node) || node.Children.Count == 0) return -1;
@@ -687,7 +687,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.NodeExit) continue;
-                if (recorded.ScopeId != scopeId || recorded.Tick != tick) continue;
+                if (recorded.CallSiteId != callSiteId || recorded.Tick != tick) continue;
                 if (IndexOf(node.Children, recorded.NodeGuid) < 0) continue;
 
                 return i;
@@ -724,13 +724,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public static string ShortGuid(Guid guid) => guid == Guid.Empty ? "(none)" : guid.ToString("N").Substring(0, 8);
 
         /// <summary>The chain of call sites down to this one, e.g. <c>Zombie -> Combat -> Attack</c>.</summary>
-        public static string CallSitePath(IBehaviorTreeRecording recording, int scopeId)
+        public static string CallSitePath(IBehaviorTreeRecording recording, int callSiteId)
         {
             var callSites = recording.CallSites;
             if (callSites == null || callSites.Count == 0) return string.Empty;
 
             var names = new List<string>();
-            var id = scopeId;
+            var id = callSiteId;
 
             // Bounded by the number of call sites: a malformed parent chain must not spin here.
             for (int guard = 0; guard < callSites.Count; guard++)

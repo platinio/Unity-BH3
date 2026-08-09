@@ -85,7 +85,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 json.Property("tick", trace.Tick);
                 json.Property("seq", trace.Sequence);
-                json.Property("callSite", trace.ScopeId);
+                json.Property("callSite", trace.CallSiteId);
                 json.Property("guard", trace.GuardGuid.ToString());
                 if (trace.OwnerGuid != Guid.Empty) json.Property("owner", trace.OwnerGuid.ToString());
                 json.Property("result", trace.Result);
@@ -207,7 +207,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             json.Property("frame", recorded.Frame);
             json.Property("time", recorded.Time);
             json.Property("kind", recorded.Kind.ToString());
-            json.Property("callSite", recorded.ScopeId);
+            json.Property("callSite", recorded.CallSiteId);
 
             if (recorded.NodeGuid != Guid.Empty) json.Property("node", recorded.NodeGuid.ToString());
 

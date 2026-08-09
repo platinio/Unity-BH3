@@ -31,15 +31,13 @@ namespace ArcaneOnyx.BehaviorTree
         private const float LinkButtonWidth = 26.0f;
         private const float SnapshotButtonWidth = 44.0f;
 
-        private readonly List<BehaviorTreeMachine> machines = new();
-
         private BehaviorTreeRecordingSnapshot loaded;
         private string loadedFrom;
 
-        private int agentIndex;
         private int callSiteIndex;
 
         private BehaviorTreeExplanation cached;
+        private IBehaviorTreeRecording cachedRecording;
         private Guid cachedNode;
         private int cachedScope = -1;
         private int cachedTick = -1;
@@ -72,8 +70,6 @@ namespace ArcaneOnyx.BehaviorTree
             var width = position.width - Padding * 2.0f;
             var x = position.x + Padding;
 
-            RefreshSources();
-
             y = DrawSourceControls(x, y, width);
 
             var recording = CurrentRecording();
@@ -82,7 +78,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 DrawHelp(x, ref y, width,
                     Application.isPlaying
-                        ? "No agent in this scene is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
+                        ? "Select the agent in the hierarchy, or open its tree from the machine. Nothing here says which one to explain."
                         : "Enter play mode to watch an agent, or load an exported recording.");
                 return;
             }
@@ -143,30 +139,93 @@ namespace ArcaneOnyx.BehaviorTree
         #region Sources
 
         /// <summary>
-        /// Which agents can be explained. Machines are looked up rather than read from
-        /// <see cref="BehaviorTreeFlightRecorders"/> because a topology needs the graph, and the registry
-        /// deliberately holds recordings rather than agents — it exists to work when there are two hundred of
-        /// them and nobody wants the scene walked per frame.
+        /// The agent being explained, and where that answer came from.
+        ///
+        /// <para>
+        /// Deliberately not a picker. The canvas is already showing one particular agent's tree instance, so
+        /// a second control choosing a different agent would not merely be confusing — clicking a node would
+        /// explain <em>another</em> agent's history for that guid, which is a wrong answer rather than an
+        /// awkward one. There is one source of truth and this reads it.
+        /// </para>
         /// </summary>
-        private void RefreshSources()
+        private BehaviorTreeMachine CurrentMachine(out string source)
         {
-            machines.Clear();
+            // The canvas's own reference knows which machine it was opened through. This is the answer
+            // whenever the tree is being watched live, which is the case the panel exists for.
+            if (context?.reference != null)
+            {
+                if (context.reference.machine is BehaviorTreeMachine viewed && viewed.FlightRecorder != null)
+                {
+                    source = "shown on this canvas";
+                    return viewed;
+                }
 
-            if (!Application.isPlaying) return;
+                var owner = context.reference.gameObject;
+                if (owner != null)
+                {
+                    var onOwner = owner.GetComponent<BehaviorTreeMachine>();
+                    if (onOwner?.FlightRecorder != null)
+                    {
+                        source = "shown on this canvas";
+                        return onOwner;
+                    }
+                }
+            }
+
+            // The tree was opened as a bare asset, so the canvas has no agent. Hierarchy selection is then
+            // the only statement of intent the user has made.
+            var selected = Selection.activeGameObject;
+            if (selected != null)
+            {
+                var onSelection = selected.GetComponent<BehaviorTreeMachine>();
+                if (onSelection?.FlightRecorder != null)
+                {
+                    source = "selected in the hierarchy";
+                    return onSelection;
+                }
+            }
+
+            // Nothing said which agent, but there is only one it could be. Picking it cannot be wrong, and
+            // refusing to would make the panel useless in the common single-enemy case.
+            var only = SingleRecordingMachine();
+            if (only != null)
+            {
+                source = "the only agent recording";
+                return only;
+            }
+
+            source = null;
+            return null;
+        }
+
+        /// <summary>
+        /// The one machine recording, or null when there are none or several. Walks the scene only when the
+        /// cheaper answers failed, which is why the registry is not consulted — it holds recordings rather
+        /// than agents, and a topology needs the machine.
+        /// </summary>
+        private static BehaviorTreeMachine SingleRecordingMachine()
+        {
+            if (!Application.isPlaying) return null;
+
+            BehaviorTreeMachine found = null;
 
             foreach (var machine in UnityEngine.Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
             {
-                if (machine != null && machine.FlightRecorder != null) machines.Add(machine);
+                if (machine == null || machine.FlightRecorder == null) continue;
+
+                if (found != null) return null;
+
+                found = machine;
             }
 
-            if (agentIndex >= machines.Count) agentIndex = 0;
+            return found;
         }
 
         private IBehaviorTreeRecording CurrentRecording()
         {
             if (loaded != null) return loaded;
 
-            return agentIndex >= 0 && agentIndex < machines.Count ? machines[agentIndex].FlightRecorder : null;
+            return CurrentMachine(out _)?.FlightRecorder;
         }
 
         private IBehaviorTreeTopology CurrentTopology()
@@ -175,9 +234,10 @@ namespace ArcaneOnyx.BehaviorTree
             // That is right more often than it sounds: the reason someone opened the recording is usually that
             // they are looking at the tree it came from. When it is wrong, names simply do not resolve and the
             // explanation degrades to guids rather than lying.
-            if (loaded == null && agentIndex >= 0 && agentIndex < machines.Count)
+            if (loaded == null)
             {
-                return BehaviorTreeGraphTopology.From(machines[agentIndex]);
+                var machine = CurrentMachine(out _);
+                if (machine != null) return BehaviorTreeGraphTopology.From(machine);
             }
 
             return context?.graph is BehaviorTreeGraph graph ? BehaviorTreeGraphTopology.From(graph) : null;
@@ -211,25 +271,16 @@ namespace ArcaneOnyx.BehaviorTree
                     Invalidate();
                 }
             }
-            else if (machines.Count > 0)
-            {
-                var names = new string[machines.Count];
-                for (int i = 0; i < machines.Count; i++)
-                {
-                    names[i] = machines[i].name;
-                }
-
-                var picked = EditorGUI.Popup(row, agentIndex, names);
-                if (picked != agentIndex)
-                {
-                    agentIndex = picked;
-                    callSiteIndex = 0;
-                    Invalidate();
-                }
-            }
             else
             {
-                EditorGUI.LabelField(row, "No live agent", EditorStyles.miniLabel);
+                // A label rather than a control. Saying which agent this is, and why it is that one, is what
+                // a reader needs; letting them choose a different one is what would make the answer wrong.
+                var machine = CurrentMachine(out var source);
+
+                EditorGUI.LabelField(
+                    row,
+                    machine != null ? $"{machine.name}  ({source})" : "No live agent",
+                    EditorStyles.miniLabel);
             }
 
             y += row.height + RowSpacing;
@@ -360,7 +411,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (canFollow && GUI.Button(new Rect(cursor, row.y, LinkButtonWidth, row.height), "→", EditorStyles.miniButton))
                 {
-                    Follow(BehaviorTreeExplanationLink.ToNode(node.NodeGuid, trace.ScopeId));
+                    Follow(BehaviorTreeExplanationLink.ToNode(node.NodeGuid, trace.CallSiteId));
                 }
 
                 y += LineHeight();
@@ -529,7 +580,11 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var scope = CurrentScope(recording, nodeGuid);
 
+            // The recording itself is part of the key: selecting a different agent in the hierarchy changes
+            // which one this panel is about, and a cache watching only tick and count would happily serve the
+            // previous agent's answer for the new one.
             if (cached != null &&
+                ReferenceEquals(cachedRecording, recording) &&
                 cachedNode == nodeGuid &&
                 cachedScope == scope &&
                 cachedTick == recording.Tick &&
@@ -539,6 +594,7 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology());
+            cachedRecording = recording;
             cachedNode = nodeGuid;
             cachedScope = scope;
             cachedTick = recording.Tick;
@@ -550,6 +606,7 @@ namespace ArcaneOnyx.BehaviorTree
         private void Invalidate()
         {
             cached = null;
+            cachedRecording = null;
             cachedTick = -1;
             cachedEventCount = -1;
         }
