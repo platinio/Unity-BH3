@@ -89,7 +89,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void DrawOverlay()
         {
-            if (!element.destination.IsRunning) return;
+            if (!BehaviorTreeScrubOverride.IsRunning(element.destination, element.destination.IsRunning)) return;
             BehaviorTreeGraphDrawer.DrawTransition(graph, this, new WidgetElementState(), Vector2.zero);
         }
 

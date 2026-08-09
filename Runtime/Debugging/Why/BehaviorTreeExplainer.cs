@@ -308,7 +308,27 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
             int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses)
         {
-            var headline = "Never ran: nothing about this node is in the recording.";
+            // "Nothing about this node is in the recording" is only true when the vantage point is the end of
+            // it. Explaining at a scrubbed tick, the node may simply not have started yet — and saying "never"
+            // there is a claim about the whole recording that the recording itself contradicts a few ticks
+            // later. It also wastes the most useful thing this answer could carry: where to scrub to.
+            var upcoming = FirstLifecycleIndexAfter(recording, callSiteId, nodeGuid, atTick);
+
+            var headline = upcoming >= 0
+                ? $"Has not run yet as of tick {atTick}: the first thing recorded about it is at tick {recording.EventAt(upcoming).Tick}."
+                : "Never ran: nothing about this node is in the recording.";
+
+            if (upcoming >= 0)
+            {
+                var first = recording.EventAt(upcoming);
+
+                clauses.Add(new BehaviorTreeExplanationClause(
+                    BehaviorTreeClauseRole.Context,
+                    first.Kind == BehaviorTreeEventKind.NodeEnter
+                        ? $"It enters at tick {first.Tick}."
+                        : $"The first thing recorded about it is {first.Kind} at tick {first.Tick}.",
+                    BehaviorTreeExplanationLink.ToTick(first.Tick, callSiteId, first.Sequence)));
+            }
 
             AddSiblingClause(recording, callSiteId, nodeGuid, topology, atTick, clauses);
 
@@ -572,6 +592,36 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
 
                 if (recorded.Kind == BehaviorTreeEventKind.NodeExit) return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// The node's first lifecycle event *after* the vantage point, or -1.
+        ///
+        /// <para>
+        /// The counterpart to <see cref="LastLifecycleIndex"/>, and the only place the explainer deliberately
+        /// looks forward. It never reports what happened there — that would leak the future the scrubber is
+        /// trying to hide — only that something does, which is what separates "has not started yet" from
+        /// "never ran at all".
+        /// </para>
+        /// </summary>
+        private static int FirstLifecycleIndexAfter(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int atTick)
+        {
+            for (int i = 0; i < recording.EventCount; i++)
+            {
+                var recorded = recording.EventAt(i);
+                if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid || recorded.Tick <= atTick) continue;
+
+                switch (recorded.Kind)
+                {
+                    case BehaviorTreeEventKind.NodeEnter:
+                    case BehaviorTreeEventKind.NodeExit:
+                    case BehaviorTreeEventKind.NodeAborted:
+                    case BehaviorTreeEventKind.NodeSkipped:
+                        return i;
+                }
             }
 
             return -1;

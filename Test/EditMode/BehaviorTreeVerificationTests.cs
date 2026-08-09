@@ -94,17 +94,17 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void SetValueUsesAnInlineValueWhenThePortDeclaresOne()
         {
-            // PlayAnimationAndWait.TriggerName is declared with a null default, so the key exists and an
+            // SetAnimatorTrigger.TriggerName is declared with a null default, so the key exists and an
             // inline value persists — no literal node needed, and none should be added.
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var play = BehaviorTreeAuthoring.AddNode<PlayAnimationAndWait>(asset, 0.0f, 100.0f);
+            var play = BehaviorTreeAuthoring.AddNode<SetAnimatorTrigger>(asset, 0.0f, 100.0f);
             BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, play);
 
             BehaviorTreeAuthoring.SetValue(asset, play.TriggerName, "Attack", -200.0f, 100.0f);
             BehaviorTreeAuthoring.Save(asset);
 
             var reloaded = BehaviorTreeVerification.Reload(TreePath);
-            var reloadedPlay = reloaded.graph.Nodes.OfType<PlayAnimationAndWait>().Single();
+            var reloadedPlay = reloaded.graph.Nodes.OfType<SetAnimatorTrigger>().Single();
 
             Assert.AreEqual("Attack", reloadedPlay.defaultValues["TriggerName"]);
             Assert.IsFalse(reloaded.graph.Nodes.OfType<StringLiteral>().Any(),

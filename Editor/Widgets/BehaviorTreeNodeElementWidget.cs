@@ -271,15 +271,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected void DrawLastExecutionIcon(Vector2 offset)
         {
-            if (element.LastExecutionStatus == ExecutionStatus.None) return;
-            
+            // While the timeline scrubber is parked on a tick this is the node's status *then*, not now. The
+            // override falls back to the live value when nothing is scrubbing, so there is one code path.
+            var status = BehaviorTreeScrubOverride.StatusOf(element, element.LastExecutionStatus);
+
+            if (status == ExecutionStatus.None) return;
+
             GUIStyle style = new GUIStyle();
-            style.normal.background = Resources.Load<Texture2D>($"ExecutionStatus/{element.LastExecutionStatus.ToString()}");
+            style.normal.background = Resources.Load<Texture2D>($"ExecutionStatus/{status.ToString()}");
 
             Rect p = LastExecutionStateIconRect;
             p.position += offset + new Vector2(-10, 20);
-            
-            style.Draw(p, false, IsSelected, false, false);
+
+            using (BehaviorTreeScrubOverride.Ghost())
+            {
+                style.Draw(p, false, IsSelected, false, false);
+            }
         }
 
         protected int GetBorderThickness()

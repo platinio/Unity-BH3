@@ -40,6 +40,7 @@ namespace ArcaneOnyx.BehaviorTree
         private IBehaviorTreeRecording cachedRecording;
         private Guid cachedNode;
         private int cachedScope = -1;
+        private int cachedAtTick = -1;
         private int cachedTick = -1;
         private int cachedEventCount = -1;
 
@@ -150,76 +151,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private BehaviorTreeMachine CurrentMachine(out string source)
         {
-            // The canvas's own reference knows which machine it was opened through. This is the answer
-            // whenever the tree is being watched live, which is the case the panel exists for.
-            if (context?.reference != null)
-            {
-                if (context.reference.machine is BehaviorTreeMachine viewed && viewed.FlightRecorder != null)
-                {
-                    source = "shown on this canvas";
-                    return viewed;
-                }
-
-                var owner = context.reference.gameObject;
-                if (owner != null)
-                {
-                    var onOwner = owner.GetComponent<BehaviorTreeMachine>();
-                    if (onOwner?.FlightRecorder != null)
-                    {
-                        source = "shown on this canvas";
-                        return onOwner;
-                    }
-                }
-            }
-
-            // The tree was opened as a bare asset, so the canvas has no agent. Hierarchy selection is then
-            // the only statement of intent the user has made.
-            var selected = Selection.activeGameObject;
-            if (selected != null)
-            {
-                var onSelection = selected.GetComponent<BehaviorTreeMachine>();
-                if (onSelection?.FlightRecorder != null)
-                {
-                    source = "selected in the hierarchy";
-                    return onSelection;
-                }
-            }
-
-            // Nothing said which agent, but there is only one it could be. Picking it cannot be wrong, and
-            // refusing to would make the panel useless in the common single-enemy case.
-            var only = SingleRecordingMachine();
-            if (only != null)
-            {
-                source = "the only agent recording";
-                return only;
-            }
-
-            source = null;
-            return null;
+            // Shared with the timeline scrubber rather than resolved here. Both panels render into the same
+            // canvas, so two independent answers could disagree and put one agent's explanation beside
+            // another's ghosted tree — the same wrong answer the picker was removed to prevent.
+            return BehaviorTreeDebugTarget.Resolve(context, out source);
         }
 
         /// <summary>
-        /// The one machine recording, or null when there are none or several. Walks the scene only when the
-        /// cheaper answers failed, which is why the registry is not consulted — it holds recordings rather
-        /// than agents, and a topology needs the machine.
+        /// The one machine recording, or null when there are none or several. Lives on
+        /// <see cref="BehaviorTreeDebugTarget"/> now, alongside the rest of the resolution.
         /// </summary>
-        private static BehaviorTreeMachine SingleRecordingMachine()
-        {
-            if (!Application.isPlaying) return null;
-
-            BehaviorTreeMachine found = null;
-
-            foreach (var machine in UnityEngine.Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
-            {
-                if (machine == null || machine.FlightRecorder == null) continue;
-
-                if (found != null) return null;
-
-                found = machine;
-            }
-
-            return found;
-        }
+        private static BehaviorTreeMachine SingleRecordingMachine() => BehaviorTreeDebugTarget.SingleRecordingMachine();
 
         private IBehaviorTreeRecording CurrentRecording()
         {
@@ -471,7 +413,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var button = new Rect(x + textWidth + 2.0f, y + LineHeight(), LinkButtonWidth, LineHeight());
 
-                if (GUI.Button(button, "→", EditorStyles.miniButton)) Follow(clause.Link);
+                if (GUI.Button(button, LinkGlyph(clause.Link), EditorStyles.miniButton)) Follow(clause.Link);
             }
 
             y += height + RowSpacing;
@@ -525,6 +467,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private bool CanFollow(BehaviorTreeExplanationLink link)
         {
+            // A tick goes to the scrubber rather than to the canvas, so it needs no node to land on. This is
+            // what the explainer's tick links were emitted for; until Component 2 they went nowhere.
+            if (link.Kind == BehaviorTreeLinkKind.Tick) return link.Tick >= 0;
+
             if (link.Kind != BehaviorTreeLinkKind.Node && link.Kind != BehaviorTreeLinkKind.Guard) return false;
 
             return FindOnCanvas(link.NodeGuid) != null;
@@ -532,11 +478,23 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void Follow(BehaviorTreeExplanationLink link)
         {
+            if (link.Kind == BehaviorTreeLinkKind.Tick)
+            {
+                BehaviorTreeTimelinePanel.RequestScrub(link.Tick);
+                return;
+            }
+
             var node = FindOnCanvas(link.NodeGuid);
             if (node == null) return;
 
             context.selection.Select(node);
             Invalidate();
+        }
+
+        /// <summary>The glyph for a link, so a jump-in-time does not look like a jump-on-canvas.</summary>
+        private static string LinkGlyph(BehaviorTreeExplanationLink link)
+        {
+            return link.Kind == BehaviorTreeLinkKind.Tick ? "⏱" : "→";
         }
 
         private BehaviorTreeNode FindOnCanvas(Guid guid)
@@ -564,6 +522,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var scope = CurrentScope(recording, nodeGuid);
 
+            // Follow the scrubber. The canvas beside this panel is already ghosted to that tick, so explaining
+            // the end of the recording instead would describe a different moment than the one on screen —
+            // "aborted at tick 412" next to a canvas parked at tick 5. Explain's atTick was built for exactly
+            // this and takes care not to leak the future. -1 when nothing is scrubbing, which means "now".
+            var atTick = BehaviorTreeScrubOverride.TickFor(recording);
+
             // The recording itself is part of the key: selecting a different agent in the hierarchy changes
             // which one this panel is about, and a cache watching only tick and count would happily serve the
             // previous agent's answer for the new one.
@@ -571,16 +535,18 @@ namespace ArcaneOnyx.BehaviorTree
                 ReferenceEquals(cachedRecording, recording) &&
                 cachedNode == nodeGuid &&
                 cachedScope == scope &&
+                cachedAtTick == atTick &&
                 cachedTick == recording.Tick &&
                 cachedEventCount == recording.EventCount)
             {
                 return cached;
             }
 
-            cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology());
+            cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology(), atTick);
             cachedRecording = recording;
             cachedNode = nodeGuid;
             cachedScope = scope;
+            cachedAtTick = atTick;
             cachedTick = recording.Tick;
             cachedEventCount = recording.EventCount;
 
