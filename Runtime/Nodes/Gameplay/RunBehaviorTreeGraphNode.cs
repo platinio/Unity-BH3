@@ -32,15 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
         public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
-
-        /// <summary>
-        /// Whether the branch has already been instantiated, without instantiating it.
-        /// <para>
-        /// <see cref="BehaviorTreeGraphAssetInstance"/> clones on first read, so a tool that merely wants to
-        /// look inside a running tree would clone an asset per call site just by asking. Inspection code tests
-        /// this first and skips what has not been entered yet.
-        /// </para>
-        /// </summary>
+      
         public bool HasBehaviorTreeGraphInstance => behaviorTreeGraphAssetInstance != null;
        
         public void SetBehaviorTreeGraphAsset(BehaviorTreeGraphAsset asset)
@@ -103,21 +95,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// Rebuilds the remembered contract from the sub-tree's own required and optional declarations.
-        /// <para>
-        /// Deliberately explicit rather than automatic. Ports are matched by key, so silently redeclaring them
-        /// when a branch changes would drop every connection whose name no longer exists, at every call site
-        /// at once, with nothing said. Refreshing on request keeps that a decision someone makes and can see
-        /// the result of; <see cref="DescribeContractDrift"/> is how they find out it is needed.
-        /// </para>
         /// </summary>
         public void RefreshParameters()
         {
             parameters = ReadContract();
-
-            // Define() re-runs Definition(), which is what actually builds the ports; PortsChanged() only
-            // announces that they moved. Connections are re-resolved by key, so anything feeding a port whose
-            // name survived stays wired, and anything feeding a name that did not is dropped — the change
-            // DescribeContractDrift warns about before it happens.
+           
             Define();
             PortsChanged();
         }
@@ -281,6 +263,21 @@ namespace ArcaneOnyx.BehaviorTree
             return BehaviorTreeGraphInstance.OnUpdate();
         }
 
+        /// <summary>
+        /// Exits the branch's own nodes, the way <see cref="OnEnter"/> and <see cref="OnUpdate"/> reach into it.
+        /// </summary>
+        public override void OnExit()
+        {
+            base.OnExit();
+
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            foreach (var node in BehaviorTreeGraphInstance.Nodes)
+            {
+                node.OnNodeExit();
+            }
+        }
+
         public override void SetMachine(IGraphMachine machine)
         {
             base.SetMachine(machine);
@@ -295,11 +292,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// Opens a scope around the instance this node runs and hands that one to the sub-tree, so the branch
         /// gets its own variables while still seeing the caller's through the parent link.
-        /// <para>
-        /// The instance is cloned per node, so two call sites running the same branch asset hold two separate
-        /// scopes and cannot overwrite one another. The sub-tree's optional declarations seed it, which is
-        /// what lets a branch ship a usable default instead of demanding the agent declare everything.
-        /// </para>
         /// </summary>
         public override void SetVariableScope(BehaviorTreeVariableScope scope)
         {

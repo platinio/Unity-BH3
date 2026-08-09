@@ -9,24 +9,18 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             base.OnEnter();
-            if (childrenTaskStatus == null)
+      
+            int childCount = GetChildren().Count;
+            if (childrenTaskStatus == null || childrenTaskStatus.Length != childCount)
             {
-                childrenTaskStatus = new ExecutionStatus[GetChildren().Count];
+                childrenTaskStatus = new ExecutionStatus[childCount];
             }
+
             ResetChildrenTaskStatus();
-            
+
             for (int n = 0; n < children.Count; n++)
             {
                 children[n].OnNodeEnter();
-            }
-        }
-
-        public override void OnExit()
-        {
-            base.OnExit();
-            for (int n = 0; n < children.Count; n++)
-            {
-                children[n].OnNodeExit();
             }
         }
 
