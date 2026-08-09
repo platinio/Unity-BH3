@@ -78,6 +78,27 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, last.UpdateCalls, "The final child must have run inside that tick.");
         }
 
+        /// <summary>
+        /// The mirror of the Selector case: a Running child is ticked again next frame but never
+        /// re-entered, or its OnEnter would run every frame and the branch could never finish.
+        /// </summary>
+        [Test]
+        public void ARunningChild_IsTickedAgainButNotReEntered()
+        {
+            var child = new ScriptedNode().Returns(
+                ExecutionStatus.Running, ExecutionStatus.Running, ExecutionStatus.Success);
+            var sequence = new Sequence().WithChildren(child);
+
+            sequence.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal());
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal());
+            Assert.AreEqual(ExecutionStatus.Success, sequence.OnUpdateInternal());
+
+            Assert.AreEqual(1, child.EnterCalls, "A running child must be entered exactly once.");
+            Assert.AreEqual(3, child.UpdateCalls, "But ticked on every frame it stays Running.");
+        }
+
         [Test]
         public void RunningChild_OwnsTheFrameThenTheSequenceCompletesWhenItSucceeds()
         {

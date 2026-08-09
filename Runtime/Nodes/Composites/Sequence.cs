@@ -36,6 +36,14 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var task = children[currentExecutingChildIndex];
 
+                // Do NOT make this unconditional — it reads as redundant and is not. OnUpdate runs once per
+                // frame for as long as this sequence is running, but OnEnter runs only when the parent
+                // enters it. So on every frame after the first, this first iteration is *resuming* a child
+                // that is already running, and entering it again would re-run its OnEnter every frame:
+                // WaitTime would reset its timer to full, an animation would restart, RandomChance would
+                // re-roll. Any multi-frame action would hang forever.
+                // The flag is only ever false here, on that resume; after a Success below it is set back to
+                // true so the next child does get entered. Pinned by ARunningChild_IsTickedAgainButNotReEntered.
                 if (callOnEnter)
                 {
                     callOnEnter = false;

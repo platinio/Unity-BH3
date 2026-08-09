@@ -22,16 +22,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// Walks the children left to right <em>within a single tick</em>, stepping over each one that fails
         /// and stopping at the first that returns Success or Running.
-        /// <para>
-        /// A tick asks "given the world right now, what should this agent be doing?", so the answer has to be
-        /// reached on the frame the question is asked. Yielding a frame per failed child would make a ten-branch
-        /// selector take ten frames to reach its last branch, and the agent would then act on a world state that
-        /// is nine frames stale. Only a child that is genuinely still working — Running — ends the tick.
-        /// </para>
-        /// <para>
-        /// The loop terminates because every iteration either returns or advances
-        /// <see cref="Composite.currentExecutingChildIndex"/>, which is bounded by the child count.
-        /// </para>
         /// </summary>
         public override ExecutionStatus OnUpdate()
         {
@@ -45,6 +35,14 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var task = children[currentExecutingChildIndex];
 
+                // Do NOT make this unconditional — it reads as redundant and is not. OnUpdate runs once per
+                // frame for as long as this selector is running, but OnEnter runs only when the parent
+                // enters it. So on every frame after the first, this first iteration is *resuming* a child
+                // that is already running, and entering it again would re-run its OnEnter every frame:
+                // WaitTime would reset its timer to full, an animation would restart, RandomChance would
+                // re-roll. Any multi-frame action would hang forever.
+                // The flag is only ever false here, on that resume; after a Failure below it is set back to
+                // true so the next child does get entered. Pinned by ARunningChild_IsTickedAgainButNotReEntered.
                 if (callOnEnter)
                 {
                     callOnEnter = false;
@@ -67,8 +65,7 @@ namespace ArcaneOnyx.BehaviorTree
                     callOnEnter = true;
                     continue;
                 }
-
-                // Running — the child owns the rest of this frame.
+               
                 return result;
             }
 
