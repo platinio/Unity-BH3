@@ -19,7 +19,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// editor and dev builds. Reach for that rather than calling a recorder directly from runtime code.
     /// </para>
     /// </summary>
-    public sealed class BehaviorTreeFlightRecorder
+    public sealed class BehaviorTreeFlightRecorder : IBehaviorTreeRecording
     {
         /// <summary>
         /// Events, not ticks. The spec asks for "~2000 ticks", but a tick produces anywhere from zero to a
@@ -29,6 +29,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public const int DefaultCapacity = 2048;
 
         private readonly BehaviorTreeEventRing ring;
+
+        /// <summary>
+        /// Guard traces, in their own much shorter ring. Kept apart from the events because a trace is a
+        /// variable-length chain and the event ring's flatness is what keeps recording allocation-free.
+        /// </summary>
+        private readonly GuardTraceRing traces;
+
         private readonly List<BehaviorTreeCallSite> callSites = new();
 
         /// <summary>
@@ -45,11 +52,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private int sequence;
 
-        public BehaviorTreeFlightRecorder(string agentName, string treeName, int capacity = DefaultCapacity)
+        public BehaviorTreeFlightRecorder(
+            string agentName, string treeName, int capacity = DefaultCapacity, int traceCapacity = GuardTraceRing.DefaultCapacity)
         {
             AgentName = agentName;
             TreeName = treeName;
             ring = new BehaviorTreeEventRing(capacity);
+            traces = new GuardTraceRing(traceCapacity);
 
             callSites.Add(new BehaviorTreeCallSite(
                 BehaviorTreeCallSite.RootId, BehaviorTreeCallSite.RootId, Guid.Empty, treeName));
@@ -75,10 +84,40 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public IReadOnlyList<BehaviorTreeCallSite> CallSites => callSites;
 
         /// <summary>
+        /// A live recorder is also a readable recording, so the why-inspector reads an agent that is still
+        /// running through exactly the same interface it uses for a recording loaded from a file. Nothing here
+        /// copies: these forward straight to the ring.
+        /// </summary>
+        public int EventCount => ring.Count;
+
+        public BehaviorTreeEvent EventAt(int index) => ring[index];
+
+        public int Dropped => ring.Dropped;
+
+        public GuardTrace TraceFor(int tick, int sequence) => traces.Find(tick, sequence);
+
+        public int TraceCount => traces.Count;
+
+        public GuardTrace TraceAt(int index) => traces[index];
+
+        /// <summary>
         /// True when this recorder is actually keeping events. The global switch is checked here rather than
         /// at every call site so there is one answer to "is anything being recorded".
         /// </summary>
         public bool IsRecording => Enabled && BehaviorTreeFlightRecorders.GloballyEnabled;
+
+        /// <summary>
+        /// Whether guard traces are being captured. Separate from <see cref="Enabled"/> because they have
+        /// very different costs: an event is a struct written into a pre-allocated slot, while a trace
+        /// re-pulls a chain of ports and walks a script graph. A scene with two hundred agents can keep the
+        /// events and drop the traces.
+        /// </summary>
+        public bool TracingEnabled { get; set; } = true;
+
+        public bool IsTracing => IsRecording && TracingEnabled && BehaviorTreeFlightRecorders.TracingGloballyEnabled;
+
+        /// <summary>Guard traces, oldest first.</summary>
+        public GuardTraceRing Traces => traces;
 
         /// <summary>
         /// Opens a new tick. The machine calls this once per <c>Update</c>, before the tree runs.
@@ -140,6 +179,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public void Clear()
         {
             ring.Clear();
+            traces.Clear();
             lastGuardResults.Clear();
             sequence = 0;
         }
@@ -192,7 +232,19 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (lastGuardResults.TryGetValue(key, out var previous) && previous == result) return;
 
             lastGuardResults[key] = result;
+
+            // The sequence is read before Add stamps it, so the trace and the event agree on which moment
+            // this was. That pairing is the only thing linking them.
+            var eventSequence = sequence;
+
             Add(BehaviorTreeEventKind.GuardEval, callSite, guard.guid, relatedGuid: owner.guid, flag: result);
+
+            // Only here, on a transition. Guards evaluate every tick and a trace costs far more than an
+            // event, so steady state stays free while the moments worth explaining are kept.
+            if (IsTracing)
+            {
+                traces.Add(GuardTraceCapture.Capture(owner, guard, result, Tick, eventSequence, callSite));
+            }
         }
 
         /// <summary>A guard was false as its owner was about to start, so the owner never ran.</summary>

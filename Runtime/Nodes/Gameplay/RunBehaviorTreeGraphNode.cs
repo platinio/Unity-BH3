@@ -32,6 +32,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
         public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
+
+        /// <summary>
+        /// Whether the branch has already been instantiated, without instantiating it.
+        /// <para>
+        /// <see cref="BehaviorTreeGraphAssetInstance"/> clones on first read, so a tool that merely wants to
+        /// look inside a running tree would clone an asset per call site just by asking. Inspection code tests
+        /// this first and skips what has not been entered yet.
+        /// </para>
+        /// </summary>
+        public bool HasBehaviorTreeGraphInstance => behaviorTreeGraphAssetInstance != null;
        
         public void SetBehaviorTreeGraphAsset(BehaviorTreeGraphAsset asset)
         {

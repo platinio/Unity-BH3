@@ -27,27 +27,46 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnAwake()
         {
             if (OnAwakeGraph?.ScriptGraphAsset == null) return;
-            OnAwakeGraph.Run(gameObject, ScriptGraphVariables);
+
+            // Each of these four announces this node for the duration of the graph it runs, so a
+            // Set BT Variable unit inside any of them is attributed to a node the canvas can point at
+            // rather than to a bare name. The push and pop compile out with the recorder.
+            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+
+            try { OnAwakeGraph.Run(gameObject, ScriptGraphVariables); }
+            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
         public override void OnEnter()
         {
             base.OnEnter();
             if (OnEnterGraph?.ScriptGraphAsset == null) return;
-            OnEnterGraph?.Run(gameObject, ScriptGraphVariables);
+
+            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+
+            try { OnEnterGraph.Run(gameObject, ScriptGraphVariables); }
+            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
         public override ExecutionStatus OnUpdate()
         {
             if (OnUpdateGraph?.ScriptGraphAsset == null) return ExecutionStatus.Success;
-            return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject, ScriptGraphVariables);
+
+            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+
+            try { return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject, ScriptGraphVariables); }
+            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
         public override void OnExit()
         {
             base.OnExit();
             if (OnExitGraph?.ScriptGraphAsset == null) return;
-            OnExitGraph?.Run(gameObject, ScriptGraphVariables);
+
+            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+
+            try { OnExitGraph.Run(gameObject, ScriptGraphVariables); }
+            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
     }
 }

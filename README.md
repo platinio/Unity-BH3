@@ -10,6 +10,8 @@ BH3 is a Behavior Tree implementation in Unity that heavily focuses on Visual Sc
 
 BH3 uses ports to keep your node logic separate from where it gets its data. A node doesn't care if the value comes from the Blackboard, a Visual Scripting graph, or a literal — it just reads the port. This removes the need to write custom code to keep the blackboard updated. Fetching data and operating on it become two independent pieces that you can arrange freely to create different behaviors.
 
+> **Debugging:** when a branch doesn't run and you can't see why, see **[The Why Panel](WHY-PANEL.md)** — click a node and read what it did and why, assembled from what was actually recorded rather than inferred.
+
 ---
 
 ## Setup

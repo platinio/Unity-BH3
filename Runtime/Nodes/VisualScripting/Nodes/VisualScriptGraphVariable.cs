@@ -34,6 +34,10 @@ namespace ArcaneOnyx.BehaviorTree
             if (ScriptGraphVariable == null) ScriptGraphVariable = CreateGraphWithOutput(typeof(object));
             Output = ValueOutput<object>(nameof(Output), () =>
             {
+                // Announced for the duration of the call so a Set BT Variable unit inside the graph can be
+                // attributed to this node rather than to a bare name. Compiles out with the recorder.
+                Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+
                 try
                 {
                     runtimeException = null;
@@ -44,6 +48,12 @@ namespace ArcaneOnyx.BehaviorTree
                     LastExecutionStatus = ExecutionStatus.Exception;
                     runtimeException = e;
                     throw;
+                }
+                finally
+                {
+                    // A graph that throws must still leave the stack balanced, or every later write in this
+                    // agent is attributed to a node that finished long ago.
+                    Debugging.BehaviorTreeRecorder.PopScriptGraphOwner();
                 }
             });
         }

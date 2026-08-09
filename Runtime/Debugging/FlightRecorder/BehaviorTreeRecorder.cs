@@ -43,7 +43,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var recorder = new BehaviorTreeFlightRecorder(
                 machine.gameObject != null ? machine.gameObject.name : "(agent)",
                 treeName,
-                BehaviorTreeFlightRecorders.DefaultCapacity);
+                BehaviorTreeFlightRecorders.DefaultCapacity,
+                BehaviorTreeFlightRecorders.DefaultTraceCapacity);
 
             machine.SetFlightRecorder(recorder);
             BehaviorTreeFlightRecorders.Register(recorder);
@@ -141,6 +142,77 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public static void VariableWrite(BehaviorTreeNode writer, string key, object oldValue, object newValue)
         {
             writer?.FlightRecorder?.VariableWrite(writer, key, oldValue, newValue);
+        }
+
+        /// <summary>
+        /// The behavior tree node whose script graph is currently running, innermost first.
+        ///
+        /// <para>
+        /// A Visual Scripting unit has no way back to the node that invoked its graph — a
+        /// <see cref="GraphPointer"/>'s root is the script graph asset, and nothing links it to the tree. So
+        /// the node announces itself for the duration of the call, which is what lets a write made inside a
+        /// graph be attributed to a real node guid instead of a bare name.
+        /// </para>
+        ///
+        /// <para>
+        /// A stack rather than a field because a graph can run another graph. Safe as a static because graph
+        /// evaluation is synchronous and single-threaded — the push and its pop are the same call.
+        /// </para>
+        /// </summary>
+        private static readonly System.Collections.Generic.Stack<BehaviorTreeNode> scriptGraphOwners = new();
+
+        /// <summary>Announces the node about to run a script graph. Always pair with <see cref="PopScriptGraphOwner"/>.</summary>
+        [Conditional(Editor), Conditional(DevToolsDefine)]
+        public static void PushScriptGraphOwner(BehaviorTreeNode node)
+        {
+            scriptGraphOwners.Push(node);
+        }
+
+        [Conditional(Editor), Conditional(DevToolsDefine)]
+        public static void PopScriptGraphOwner()
+        {
+            if (scriptGraphOwners.Count > 0) scriptGraphOwners.Pop();
+        }
+
+        /// <summary>
+        /// A write made by a unit inside a Visual Scripting graph.
+        ///
+        /// <para>
+        /// Attributed to the node that ran the graph when one announced itself, so the write carries a guid
+        /// the why-inspector can point at. It falls back to a plain name when no node did — a graph run
+        /// outside a tree still has a writer worth recording, just not a locatable one. The choice lives here
+        /// rather than at the call site so that the whole decision compiles out with the rest of the facade.
+        /// </para>
+        /// </summary>
+        [Conditional(Editor), Conditional(DevToolsDefine)]
+        public static void ScriptGraphVariableWrite(
+            BehaviorTreeMachine machine, string writerName, string key, object oldValue, object newValue)
+        {
+            var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
+
+            if (owner != null)
+            {
+                owner.FlightRecorder?.VariableWrite(owner, key, oldValue, newValue);
+                return;
+            }
+
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue);
+        }
+
+        /// <summary>
+        /// A write made by something outside the tree — a perception sensor publishing a fact.
+        ///
+        /// <para>
+        /// Gated like everything else here, which is the reason a sensor should call this rather than reaching
+        /// for the recorder itself: the call and its arguments vanish from a shipped build, so publishing a
+        /// fact costs a sensor nothing outside the editor and dev builds.
+        /// </para>
+        /// </summary>
+        [Conditional(Editor), Conditional(DevToolsDefine)]
+        public static void ExternalVariableWrite(
+            BehaviorTreeMachine machine, string writerName, string key, object oldValue, object newValue)
+        {
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue);
         }
 
         #endregion
