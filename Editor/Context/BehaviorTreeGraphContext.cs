@@ -15,6 +15,10 @@ namespace ArcaneOnyx.BehaviorTree
             yield return new GraphCore.GraphInspectorPanel(this);
             yield return new BehaviorTreeVariablesPanel(this);
             yield return new BehaviorTreeWhyPanel(this);
+
+            // Opens on the right, opposite the others — it is read alongside them and the timeline rather
+            // than instead of them. See BehaviorTreeVariableWatchPanel.preferredAnchor.
+            yield return new BehaviorTreeVariableWatchPanel(this);
         }
 
         /// <summary>

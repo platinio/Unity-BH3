@@ -1,5 +1,6 @@
 using System;
 using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
@@ -50,7 +51,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     ///     <term><see cref="BehaviorTreeEventKind.VariableWrite"/></term>
     ///     <description>empty / the writing node, or empty when the writer was outside the tree / the
     ///     <b>variable name</b>. <see cref="OldValue"/> and <see cref="NewValue"/> are that variable's
-    ///     values, and <see cref="Writer"/> names an out-of-tree writer.</description>
+    ///     values, <see cref="VariableKind"/> is which store it landed in, and <see cref="Writer"/> names an
+    ///     out-of-tree writer.</description>
     ///   </item>
     ///   <item>
     ///     <term><see cref="BehaviorTreeEventKind.TreePushed"/>, <see cref="BehaviorTreeEventKind.TreePopped"/></term>
@@ -148,6 +150,24 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly string NewValue;
 
         /// <summary>
+        /// Which store the write landed in, and therefore whose value it is: <see cref="VariableKind.Graph"/>
+        /// is scratch belonging to the one branch instance named by <see cref="CallSiteId"/>, while
+        /// <see cref="VariableKind.Object"/> is agent state every branch can see.
+        /// <para>
+        /// Recorded because <see cref="CallSiteId"/> cannot stand in for it. That is where the write was made
+        /// <i>from</i>, not where the value lives — a node inside Combat writing agent state would otherwise
+        /// be filed under Combat, and a variable watch built on that would show agent-wide facts as branch
+        /// scratch.
+        /// </para>
+        /// <para>
+        /// <see cref="VariableKind.Flow"/> on every kind that is not a write, meaning "not applicable". It is
+        /// the enum's default and BH3 rejects Flow variables outright, so it can never collide with a real
+        /// recorded write.
+        /// </para>
+        /// </summary>
+        public readonly VariableKind VariableKind;
+
+        /// <summary>
         /// Who wrote it, when the writer is not a node in the tree — a perception sensor, or anything else
         /// outside the graph that publishes agent state. Null for a write made by a node, where
         /// <see cref="RelatedGuid"/> names it precisely.
@@ -174,6 +194,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key,
             string oldValue,
             string newValue,
+            VariableKind variableKind,
             string writer)
         {
             Kind = kind;
@@ -189,6 +210,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             Key = key;
             OldValue = oldValue;
             NewValue = newValue;
+            VariableKind = variableKind;
             Writer = writer;
         }
 
@@ -214,11 +236,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key = null,
             string oldValue = null,
             string newValue = null,
+            VariableKind variableKind = VariableKind.Flow,
             string writer = null)
         {
             return new BehaviorTreeEvent(
                 kind, tick, sequence, frame, time, callSiteId,
-                nodeGuid, relatedGuid, status, flag, key, oldValue, newValue, writer);
+                nodeGuid, relatedGuid, status, flag, key, oldValue, newValue, variableKind, writer);
         }
 
         /// <summary>
