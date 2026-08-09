@@ -28,6 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
         public const float GhostAlpha = 0.45f;
 
         private static BehaviorTreeTreeState state;
+        private static IBehaviorTreeRecording source;
         private static int callSiteId = -1;
 
         /// <summary>Whether the canvas is showing history rather than the present.</summary>
@@ -40,13 +41,32 @@ namespace ArcaneOnyx.BehaviorTree
         public static string AgentName { get; private set; }
 
         /// <summary>
+        /// The scrubbed tick, but only for the recording it was actually taken from — otherwise -1.
+        ///
+        /// <para>
+        /// This is what lets another panel follow the scrubber without being able to misread it. A tick number
+        /// means nothing outside its own recording, so handing tick 5 of a live agent to an explanation of a
+        /// recording loaded from a file would produce a confident answer about a moment that never existed.
+        /// Callers pass the recording they are about to explain and get a tick only if it belongs to it.
+        /// </para>
+        /// </summary>
+        public static int TickFor(IBehaviorTreeRecording recording)
+        {
+            if (state == null || recording == null) return -1;
+
+            return ReferenceEquals(source, recording) ? state.Tick : -1;
+        }
+
+        /// <summary>
         /// Parks the canvas on a reconstructed moment.
         /// <paramref name="callSite"/> is the call site the panel has selected, or -1 to answer for whichever
         /// copy of a shared branch was running.
         /// </summary>
-        public static void Set(BehaviorTreeTreeState value, string agentName, int callSite = -1)
+        public static void Set(
+            BehaviorTreeTreeState value, string agentName, IBehaviorTreeRecording recording, int callSite = -1)
         {
             state = value;
+            source = recording;
             AgentName = agentName;
             callSiteId = callSite;
 
@@ -59,6 +79,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (state == null) return;
 
             state = null;
+            source = null;
             AgentName = null;
             callSiteId = -1;
 

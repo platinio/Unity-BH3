@@ -40,6 +40,7 @@ namespace ArcaneOnyx.BehaviorTree
         private IBehaviorTreeRecording cachedRecording;
         private Guid cachedNode;
         private int cachedScope = -1;
+        private int cachedAtTick = -1;
         private int cachedTick = -1;
         private int cachedEventCount = -1;
 
@@ -521,6 +522,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var scope = CurrentScope(recording, nodeGuid);
 
+            // Follow the scrubber. The canvas beside this panel is already ghosted to that tick, so explaining
+            // the end of the recording instead would describe a different moment than the one on screen —
+            // "aborted at tick 412" next to a canvas parked at tick 5. Explain's atTick was built for exactly
+            // this and takes care not to leak the future. -1 when nothing is scrubbing, which means "now".
+            var atTick = BehaviorTreeScrubOverride.TickFor(recording);
+
             // The recording itself is part of the key: selecting a different agent in the hierarchy changes
             // which one this panel is about, and a cache watching only tick and count would happily serve the
             // previous agent's answer for the new one.
@@ -528,16 +535,18 @@ namespace ArcaneOnyx.BehaviorTree
                 ReferenceEquals(cachedRecording, recording) &&
                 cachedNode == nodeGuid &&
                 cachedScope == scope &&
+                cachedAtTick == atTick &&
                 cachedTick == recording.Tick &&
                 cachedEventCount == recording.EventCount)
             {
                 return cached;
             }
 
-            cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology());
+            cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology(), atTick);
             cachedRecording = recording;
             cachedNode = nodeGuid;
             cachedScope = scope;
+            cachedAtTick = atTick;
             cachedTick = recording.Tick;
             cachedEventCount = recording.EventCount;
 

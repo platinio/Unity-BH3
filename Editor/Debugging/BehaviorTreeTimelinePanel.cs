@@ -238,7 +238,7 @@ namespace ArcaneOnyx.BehaviorTree
                 stateTick = scrubTick;
             }
 
-            BehaviorTreeScrubOverride.Set(state, recording.AgentName);
+            BehaviorTreeScrubOverride.Set(state, recording.AgentName, recording);
         }
 
         private void GoLive()
@@ -574,17 +574,14 @@ namespace ArcaneOnyx.BehaviorTree
             // nobody can find again.
             var bar = new Rect(left, laneTrack.y + 1.0f, Mathf.Max(2.0f, right - left), laneTrack.height - 2.0f);
 
-            EditorGUI.DrawRect(bar, ColourFor(segment.Outcome));
+            DrawSegmentFill(segment, bar, end, laneTrack);
 
             if (bar.width > 34.0f && !string.IsNullOrEmpty(segment.Name))
             {
                 GUI.Label(new Rect(bar.x + 3.0f, bar.y - 1.0f, bar.width - 6.0f, bar.height), segment.Name, EditorStyles.miniLabel);
             }
 
-            var tooltip = $"{segment.Name}  ·  {segment.Outcome}  ·  ticks {segment.EnterTick}–{end}"
-                          + (segment.CallSiteId != BehaviorTreeCallSite.RootId ? $"  ·  call site {segment.CallSiteId}" : string.Empty);
-
-            GUI.Label(bar, new GUIContent(string.Empty, tooltip));
+            GUI.Label(bar, new GUIContent(string.Empty, TooltipFor(segment, end)));
 
             if (Event.current.type == EventType.MouseDown &&
                 Event.current.button == 0 &&
@@ -594,6 +591,88 @@ namespace ArcaneOnyx.BehaviorTree
                 SelectOnCanvas(segment.NodeGuid);
                 Event.current.Use();
             }
+        }
+
+        /// <summary>
+        /// Fills a bar in two parts, split at the playhead.
+        ///
+        /// <para>
+        /// The whole bar used to be painted with the segment's <em>final</em> outcome, which quietly broke the
+        /// one promise the scrubber makes. Parked at tick 0, a Selector that would not finish until tick 18
+        /// read "Succeeded" — with nothing inside it, because its children had not been chosen yet — so it
+        /// looked like a Selector that had somehow succeeded on its own. The engine never believed that
+        /// (<see cref="BehaviorTreeTreeState"/> reports Running before the exit tick, which is why the ghosted
+        /// canvas was right), so the bar and the canvas disagreed.
+        /// </para>
+        ///
+        /// <para>
+        /// Now the part up to the playhead is coloured by what was true <em>then</em>, and the part after it is
+        /// dimmed as the future you have not scrubbed to. Live, the playhead sits at the last tick, so there is
+        /// no future and the bars look exactly as they did.
+        /// </para>
+        /// </summary>
+        private void DrawSegmentFill(BehaviorTreeTimelineSegment segment, Rect bar, int end, Rect laneTrack)
+        {
+            var playhead = EffectiveTick;
+            var outcome = ColourFor(segment.Outcome);
+
+            // Not entered yet at this moment: show the whole thing as future so the lane still reads, but
+            // nothing about it claims to have happened.
+            if (segment.EnterTick > playhead)
+            {
+                EditorGUI.DrawRect(bar, Dimmed(outcome));
+                return;
+            }
+
+            var endedByNow = !segment.IsOpen && segment.ExitTick <= playhead;
+            var past = endedByNow ? outcome : ColourFor(BehaviorTreeOutcome.Running);
+
+            if (endedByNow || playhead >= end)
+            {
+                EditorGUI.DrawRect(bar, past);
+                return;
+            }
+
+            var splitX = Mathf.Clamp(TickToX(playhead, laneTrack), bar.x, bar.xMax);
+
+            EditorGUI.DrawRect(new Rect(bar.x, bar.y, Mathf.Max(1.0f, splitX - bar.x), bar.height), past);
+            EditorGUI.DrawRect(new Rect(splitX, bar.y, Mathf.Max(0.0f, bar.xMax - splitX), bar.height), Dimmed(outcome));
+        }
+
+        /// <summary>
+        /// What the bar says on hover, from the playhead's point of view rather than the recording's end.
+        /// A node still running at the scrubbed tick says so, and names the outcome as something that happens
+        /// later rather than something that is already true.
+        /// </summary>
+        private string TooltipFor(BehaviorTreeTimelineSegment segment, int end)
+        {
+            var playhead = EffectiveTick;
+            var callSite = segment.CallSiteId != BehaviorTreeCallSite.RootId
+                ? $"  ·  call site {segment.CallSiteId}"
+                : string.Empty;
+
+            if (segment.EnterTick > playhead)
+            {
+                return $"{segment.Name}  ·  has not entered yet at tick {playhead}"
+                       + $"  ·  enters at {segment.EnterTick}{callSite}";
+            }
+
+            if (!segment.IsOpen && segment.ExitTick <= playhead)
+            {
+                return $"{segment.Name}  ·  {segment.Outcome}  ·  ran {segment.EnterTick}–{end}{callSite}";
+            }
+
+            var ending = segment.IsOpen
+                ? "still running at the end of the recording"
+                : $"this run ended {segment.Outcome} at tick {end}";
+
+            return $"{segment.Name}  ·  Running at tick {playhead}  ·  entered at {segment.EnterTick}"
+                   + $"  ·  {ending}{callSite}";
+        }
+
+        private static Color Dimmed(Color colour)
+        {
+            return new Color(colour.r, colour.g, colour.b, colour.a * 0.22f);
         }
 
         private void DrawMarkers(Rect track, float height)
