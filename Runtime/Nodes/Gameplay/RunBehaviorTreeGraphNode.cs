@@ -281,6 +281,36 @@ namespace ArcaneOnyx.BehaviorTree
             return BehaviorTreeGraphInstance.OnUpdate();
         }
 
+        /// <summary>
+        /// Exits the branch's own nodes, the way <see cref="OnEnter"/> and <see cref="OnUpdate"/> reach into it.
+        /// <para>
+        /// Without this the cascade stops at the sub-tree boundary. A branch that ends on its own is fine — its
+        /// containers exit their children on the way out — but one killed from outside never runs
+        /// <see cref="ContainerNode.OnExit"/> at all: a guard returns Failure from the guard walk before
+        /// <see cref="OnUpdate"/> is reached, so the inner graph is not ticked and every node inside is left
+        /// with <see cref="GraphCore.BaseGraphNode.IsRunning"/> true and its exit never run. Anything acquired
+        /// on enter and released on exit leaks, and the recorder shows a branch that entered and never left.
+        /// </para>
+        /// <para>
+        /// Every node is told rather than only the running ones, because
+        /// <see cref="GraphCore.BaseGraphNode.OnNodeExit"/> already returns early for a node that never started.
+        /// Same blanket call <see cref="ContainerNode.OnExit"/> makes on its children, for the same reason.
+        /// <see cref="HasBehaviorTreeGraphInstance"/> is read first so exiting a branch that was never entered
+        /// does not clone the asset just to find nothing to do.
+        /// </para>
+        /// </summary>
+        public override void OnExit()
+        {
+            base.OnExit();
+
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            foreach (var node in BehaviorTreeGraphInstance.Nodes)
+            {
+                node.OnNodeExit();
+            }
+        }
+
         public override void SetMachine(IGraphMachine machine)
         {
             base.SetMachine(machine);
