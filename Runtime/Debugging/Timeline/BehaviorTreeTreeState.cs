@@ -96,7 +96,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             foreach (var segment in ordered)
             {
-                var key = new NodeKey(segment.ScopeId, segment.NodeGuid);
+                var key = new NodeKey(segment.CallSiteId, segment.NodeGuid);
                 var ended = !segment.IsOpen && segment.ExitTick <= Tick;
 
                 if (!ended)
@@ -121,7 +121,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (recorded.Tick > tick) break;
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
 
-                guards[new NodeKey(recorded.ScopeId, recorded.NodeGuid)] = recorded.Flag;
+                guards[new NodeKey(recorded.CallSiteId, recorded.NodeGuid)] = recorded.Flag;
             }
         }
 
@@ -156,9 +156,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>The status of one node in one call site.</summary>
-        public ExecutionStatus StatusOf(int scopeId, Guid nodeGuid)
+        public ExecutionStatus StatusOf(int callSiteId, Guid nodeGuid)
         {
-            return statuses.TryGetValue(new NodeKey(scopeId, nodeGuid), out var status)
+            return statuses.TryGetValue(new NodeKey(callSiteId, nodeGuid), out var status)
                 ? status
                 : ExecutionStatus.None;
         }
@@ -172,17 +172,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return byGuid.TryGetValue(nodeGuid, out var status) ? status : ExecutionStatus.None;
         }
 
-        public bool IsRunning(int scopeId, Guid nodeGuid) => StatusOf(scopeId, nodeGuid) == ExecutionStatus.Running;
+        public bool IsRunning(int callSiteId, Guid nodeGuid) => StatusOf(callSiteId, nodeGuid) == ExecutionStatus.Running;
 
         public bool IsRunning(Guid nodeGuid) => StatusOf(nodeGuid) == ExecutionStatus.Running;
 
         /// <summary>Whether this node was killed by a guard at or before this tick, and has not re-entered.</summary>
-        public bool WasAborted(int scopeId, Guid nodeGuid) => aborted.Contains(new NodeKey(scopeId, nodeGuid));
+        public bool WasAborted(int callSiteId, Guid nodeGuid) => aborted.Contains(new NodeKey(callSiteId, nodeGuid));
 
         /// <summary>A guard's last recorded result, or null when it never evaluated.</summary>
-        public bool? GuardResult(int scopeId, Guid guardGuid)
+        public bool? GuardResult(int callSiteId, Guid guardGuid)
         {
-            return guards.TryGetValue(new NodeKey(scopeId, guardGuid), out var result) ? result : (bool?)null;
+            return guards.TryGetValue(new NodeKey(callSiteId, guardGuid), out var result) ? result : (bool?)null;
         }
 
         /// <summary>How many nodes were running. Zero usually means the tree had stopped ticking.</summary>
@@ -203,16 +203,16 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private readonly struct NodeKey : IEquatable<NodeKey>
         {
-            public readonly int ScopeId;
+            public readonly int CallSiteId;
             public readonly Guid NodeGuid;
 
-            public NodeKey(int scopeId, Guid nodeGuid)
+            public NodeKey(int callSiteId, Guid nodeGuid)
             {
-                ScopeId = scopeId;
+                CallSiteId = callSiteId;
                 NodeGuid = nodeGuid;
             }
 
-            public bool Equals(NodeKey other) => ScopeId == other.ScopeId && NodeGuid.Equals(other.NodeGuid);
+            public bool Equals(NodeKey other) => CallSiteId == other.CallSiteId && NodeGuid.Equals(other.NodeGuid);
 
             public override bool Equals(object obj) => obj is NodeKey other && Equals(other);
 
@@ -220,7 +220,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 unchecked
                 {
-                    return (ScopeId * 397) ^ NodeGuid.GetHashCode();
+                    return (CallSiteId * 397) ^ NodeGuid.GetHashCode();
                 }
             }
         }

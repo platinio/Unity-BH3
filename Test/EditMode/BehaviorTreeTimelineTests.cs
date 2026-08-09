@@ -303,7 +303,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void TheSameBranchAtTwoCallSitesStaysTwoSegments()
         {
-            // The case the whole (ScopeId, NodeGuid) addressing exists for: a sub-tree asset is instantiated
+            // The case the whole (CallSiteId, NodeGuid) addressing exists for: a sub-tree asset is instantiated
             // per call site and the clone keeps the original guids, so guid alone shows one node twice.
             var recording = new RecordingBuilder()
                 .CallSite(1, 0, "Attack").CallSite(2, 0, "Attack")
@@ -319,8 +319,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 .ToArray();
 
             Assert.AreEqual(2, segments.Length);
-            Assert.AreEqual(1, segments[0].ScopeId);
-            Assert.AreEqual(2, segments[1].ScopeId);
+            Assert.AreEqual(1, segments[0].CallSiteId);
+            Assert.AreEqual(2, segments[1].CallSiteId);
             Assert.AreEqual(BehaviorTreeOutcome.Succeeded, segments[0].Outcome);
             Assert.AreEqual(BehaviorTreeOutcome.Failed, segments[1].Outcome,
                 "Two call sites of one branch can end differently, and collapsing them hides exactly that.");
@@ -563,7 +563,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                         var covered = segment.EnterTick <= tick && (segment.IsOpen || segment.ExitTick > tick);
                         if (!covered) continue;
 
-                        Assert.IsTrue(state.IsRunning(segment.ScopeId, segment.NodeGuid),
+                        Assert.IsTrue(state.IsRunning(segment.CallSiteId, segment.NodeGuid),
                             $"A bar covering tick {tick} and a node the canvas draws as idle cannot both be "
                             + "right. They are one source of truth or the scrubber contradicts itself.");
                     }

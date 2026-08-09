@@ -41,11 +41,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         private static BehaviorTreeTimelinePanel active;
 
-        private readonly List<BehaviorTreeMachine> machines = new();
-
         private BehaviorTreeRecordingSnapshot loaded;
         private string loadedFrom;
-        private int agentIndex;
 
         private BehaviorTreeTimeline timeline;
         private int cachedEventCount = -1;
@@ -106,8 +103,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void OnGUI(Rect position)
         {
-            RefreshSources();
-
             var recording = CurrentRecording();
             var toolbar = new Rect(position.x, position.y, position.width, ToolbarHeight);
 
@@ -149,32 +144,37 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Sources
 
-        private void RefreshSources()
+        /// <summary>
+        /// The agent being scrubbed, and where that answer came from.
+        ///
+        /// <para>
+        /// Not a picker, for a reason that is sharper here than in the why-inspector: scrubbing <em>ghosts the
+        /// canvas</em>. Aiming a dropdown at a different agent would paint that agent's history onto the nodes
+        /// of the one on screen — a confident, wrong picture rather than merely a confusing control.
+        /// Resolution is shared with the why-inspector so the two cannot disagree about whose history is up.
+        /// </para>
+        /// </summary>
+        private BehaviorTreeMachine CurrentMachine(out string source)
         {
-            machines.Clear();
-
-            if (!Application.isPlaying) return;
-
-            foreach (var machine in UnityEngine.Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
-            {
-                if (machine != null && machine.FlightRecorder != null) machines.Add(machine);
-            }
-
-            if (agentIndex >= machines.Count) agentIndex = 0;
+            return BehaviorTreeDebugTarget.Resolve(context, out source);
         }
 
         private IBehaviorTreeRecording CurrentRecording()
         {
             if (loaded != null) return loaded;
 
-            return agentIndex >= 0 && agentIndex < machines.Count ? machines[agentIndex].FlightRecorder : null;
+            return CurrentMachine(out _)?.FlightRecorder;
         }
 
         private IBehaviorTreeTopology CurrentTopology()
         {
-            if (loaded == null && agentIndex >= 0 && agentIndex < machines.Count)
+            // A loaded recording has no live graph, so it falls back to whatever tree is open on the canvas.
+            // When that is the wrong tree, names simply do not resolve and the lanes fall back to guids rather
+            // than labelling a bar with someone else's node name.
+            if (loaded == null)
             {
-                return BehaviorTreeGraphTopology.From(machines[agentIndex]);
+                var machine = CurrentMachine(out _);
+                if (machine != null) return BehaviorTreeGraphTopology.From(machine);
             }
 
             return context?.graph is BehaviorTreeGraph graph ? BehaviorTreeGraphTopology.From(graph) : null;
@@ -192,6 +192,14 @@ namespace ArcaneOnyx.BehaviorTree
                 cachedTick == recording.Tick)
             {
                 return timeline;
+            }
+
+            // A different agent means a different clock. Carrying the playhead across would park it on a tick
+            // number that means nothing in the new recording and ghost the canvas with it.
+            if (!ReferenceEquals(cachedSource, recording))
+            {
+                GoLive();
+                viewInitialised = false;
             }
 
             cachedSource = recording;
@@ -459,24 +467,14 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            if (machines.Count > 0)
-            {
-                var names = new string[machines.Count];
-                for (int i = 0; i < machines.Count; i++) names[i] = machines[i].name;
+            // A label, not a control: it states which agent is on the timeline and how that was decided, so a
+            // reader can tell "the one this canvas is showing" from "the only one running".
+            var machine = CurrentMachine(out var source);
 
-                var picked = EditorGUI.Popup(picker, agentIndex, names);
-
-                if (picked != agentIndex)
-                {
-                    agentIndex = picked;
-                    GoLive();
-                    Invalidate();
-                }
-            }
-            else
-            {
-                GUI.Label(picker, "No live agent", EditorStyles.miniLabel);
-            }
+            GUI.Label(
+                picker,
+                machine != null ? $"{machine.name}  ({source})" : "No agent — nothing says which one to scrub",
+                EditorStyles.miniLabel);
 
             if (GUI.Button(new Rect(area.xMax - buttonWidth, area.y, buttonWidth, area.height), "Load…", EditorStyles.miniButton))
             {
@@ -584,7 +582,7 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             var tooltip = $"{segment.Name}  ·  {segment.Outcome}  ·  ticks {segment.EnterTick}–{end}"
-                          + (segment.ScopeId != BehaviorTreeCallSite.RootId ? $"  ·  call site {segment.ScopeId}" : string.Empty);
+                          + (segment.CallSiteId != BehaviorTreeCallSite.RootId ? $"  ·  call site {segment.CallSiteId}" : string.Empty);
 
             GUI.Label(bar, new GUIContent(string.Empty, tooltip));
 

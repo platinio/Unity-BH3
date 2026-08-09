@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
         public const float GhostAlpha = 0.45f;
 
         private static BehaviorTreeTreeState state;
-        private static int scopeId = -1;
+        private static int callSiteId = -1;
 
         /// <summary>Whether the canvas is showing history rather than the present.</summary>
         public static bool IsActive => state != null;
@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             state = value;
             AgentName = agentName;
-            scopeId = callSite;
+            callSiteId = callSite;
 
             RepaintCanvas();
         }
@@ -60,7 +60,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             state = null;
             AgentName = null;
-            scopeId = -1;
+            callSiteId = -1;
 
             RepaintCanvas();
         }
@@ -75,7 +75,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (node == null) return live;
             if (state == null) return live;
 
-            return scopeId >= 0 ? state.StatusOf(scopeId, node.guid) : state.StatusOf(node.guid);
+            return callSiteId >= 0 ? state.StatusOf(callSiteId, node.guid) : state.StatusOf(node.guid);
         }
 
         /// <summary>Whether a node was running at the shown tick, or is running now when not scrubbing.</summary>

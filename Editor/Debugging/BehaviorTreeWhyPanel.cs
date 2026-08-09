@@ -150,76 +150,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private BehaviorTreeMachine CurrentMachine(out string source)
         {
-            // The canvas's own reference knows which machine it was opened through. This is the answer
-            // whenever the tree is being watched live, which is the case the panel exists for.
-            if (context?.reference != null)
-            {
-                if (context.reference.machine is BehaviorTreeMachine viewed && viewed.FlightRecorder != null)
-                {
-                    source = "shown on this canvas";
-                    return viewed;
-                }
-
-                var owner = context.reference.gameObject;
-                if (owner != null)
-                {
-                    var onOwner = owner.GetComponent<BehaviorTreeMachine>();
-                    if (onOwner?.FlightRecorder != null)
-                    {
-                        source = "shown on this canvas";
-                        return onOwner;
-                    }
-                }
-            }
-
-            // The tree was opened as a bare asset, so the canvas has no agent. Hierarchy selection is then
-            // the only statement of intent the user has made.
-            var selected = Selection.activeGameObject;
-            if (selected != null)
-            {
-                var onSelection = selected.GetComponent<BehaviorTreeMachine>();
-                if (onSelection?.FlightRecorder != null)
-                {
-                    source = "selected in the hierarchy";
-                    return onSelection;
-                }
-            }
-
-            // Nothing said which agent, but there is only one it could be. Picking it cannot be wrong, and
-            // refusing to would make the panel useless in the common single-enemy case.
-            var only = SingleRecordingMachine();
-            if (only != null)
-            {
-                source = "the only agent recording";
-                return only;
-            }
-
-            source = null;
-            return null;
+            // Shared with the timeline scrubber rather than resolved here. Both panels render into the same
+            // canvas, so two independent answers could disagree and put one agent's explanation beside
+            // another's ghosted tree — the same wrong answer the picker was removed to prevent.
+            return BehaviorTreeDebugTarget.Resolve(context, out source);
         }
 
         /// <summary>
-        /// The one machine recording, or null when there are none or several. Walks the scene only when the
-        /// cheaper answers failed, which is why the registry is not consulted — it holds recordings rather
-        /// than agents, and a topology needs the machine.
+        /// The one machine recording, or null when there are none or several. Lives on
+        /// <see cref="BehaviorTreeDebugTarget"/> now, alongside the rest of the resolution.
         /// </summary>
-        private static BehaviorTreeMachine SingleRecordingMachine()
-        {
-            if (!Application.isPlaying) return null;
-
-            BehaviorTreeMachine found = null;
-
-            foreach (var machine in UnityEngine.Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
-            {
-                if (machine == null || machine.FlightRecorder == null) continue;
-
-                if (found != null) return null;
-
-                found = machine;
-            }
-
-            return found;
-        }
+        private static BehaviorTreeMachine SingleRecordingMachine() => BehaviorTreeDebugTarget.SingleRecordingMachine();
 
         private IBehaviorTreeRecording CurrentRecording()
         {

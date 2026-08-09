@@ -171,8 +171,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             private readonly List<BehaviorTreeTimelineMarker> markers;
 
             private readonly Dictionary<NodeKey, OpenSegment> open = new();
-            private readonly Dictionary<int, HashSet<NodeKey>> openByScope = new();
-            private readonly Dictionary<int, int> scopeDepth = new();
+            private readonly Dictionary<int, HashSet<NodeKey>> openByCallSite = new();
+            private readonly Dictionary<int, int> callSiteDepth = new();
             private readonly Dictionary<int, List<BehaviorTreeCallSite>> callSitesByParent = new();
 
             // An aborted node exits on the same tick and the exit is recorded second (Finding 8). The abort
@@ -203,7 +203,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     siblings.Add(callSite);
                 }
 
-                scopeDepth[BehaviorTreeCallSite.RootId] = 0;
+                callSiteDepth[BehaviorTreeCallSite.RootId] = 0;
             }
 
             public List<BehaviorTreeTimelineSegment> Segments { get; } = new();
@@ -215,7 +215,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 for (int i = 0; i < recording.EventCount; i++)
                 {
                     var recorded = recording.EventAt(i);
-                    var key = new NodeKey(recorded.ScopeId, recorded.NodeGuid);
+                    var key = new NodeKey(recorded.CallSiteId, recorded.NodeGuid);
 
                     switch (recorded.Kind)
                     {
@@ -261,18 +261,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     Forget(key);
                 }
 
-                var depth = DepthOf(recorded.ScopeId);
+                var depth = DepthOf(recorded.CallSiteId);
 
                 open[key] = new OpenSegment(key, NameOf(topology, recorded.NodeGuid), recorded.Tick, depth, index);
                 Remember(key);
 
                 // A node that runs a sub-tree sits one level above everything inside it, whatever the buffer
                 // happens to have open elsewhere.
-                if (callSitesByParent.TryGetValue(recorded.ScopeId, out var children))
+                if (callSitesByParent.TryGetValue(recorded.CallSiteId, out var children))
                 {
                     foreach (var child in children)
                     {
-                        if (child.RunNodeGuid == recorded.NodeGuid) scopeDepth[child.Id] = depth + 1;
+                        if (child.RunNodeGuid == recorded.NodeGuid) callSiteDepth[child.Id] = depth + 1;
                     }
                 }
 
@@ -293,14 +293,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     markers.Add(new BehaviorTreeTimelineMarker(
                         BehaviorTreeTimelineMarkerKind.Abort,
                         recorded.Tick,
-                        recorded.ScopeId,
+                        recorded.CallSiteId,
                         recorded.NodeGuid,
                         recorded.RelatedGuid,
                         NameOf(topology, recorded.RelatedGuid),
                         aborting.Depth,
                         index));
 
-                    CloseCallSitesUnder(recorded.ScopeId, recorded.NodeGuid, recorded.Tick,
+                    CloseCallSitesUnder(recorded.CallSiteId, recorded.NodeGuid, recorded.Tick,
                         BehaviorTreeOutcome.Aborted, recorded.RelatedGuid);
                 }
 
@@ -314,7 +314,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     Forget(key);
                     Segments.Add(exiting.Close(recorded.Tick, OutcomeOf(recorded.Status), Guid.Empty, index));
 
-                    CloseCallSitesUnder(recorded.ScopeId, recorded.NodeGuid, recorded.Tick,
+                    CloseCallSitesUnder(recorded.CallSiteId, recorded.NodeGuid, recorded.Tick,
                         BehaviorTreeOutcome.NoRecord, Guid.Empty);
 
                     changed.Add(recorded.Tick);
@@ -334,11 +334,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                         ? BehaviorTreeTimelineMarkerKind.TreePushed
                         : BehaviorTreeTimelineMarkerKind.TreePopped,
                     recorded.Tick,
-                    recorded.ScopeId,
+                    recorded.CallSiteId,
                     recorded.NodeGuid,
                     Guid.Empty,
                     recorded.Key,
-                    open.TryGetValue(key, out var running) ? running.Depth : DepthOf(recorded.ScopeId),
+                    open.TryGetValue(key, out var running) ? running.Depth : DepthOf(recorded.CallSiteId),
                     index));
 
                 changed.Add(recorded.Tick);
@@ -355,14 +355,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             /// thousands of ticks long and inflated the depth of everything entered afterwards.
             /// </para>
             /// </summary>
-            private void CloseCallSitesUnder(int scopeId, Guid runNodeGuid, int tick, BehaviorTreeOutcome outcome, Guid guard)
+            private void CloseCallSitesUnder(int callSiteId, Guid runNodeGuid, int tick, BehaviorTreeOutcome outcome, Guid guard)
             {
-                if (!callSitesByParent.TryGetValue(scopeId, out var children)) return;
+                if (!callSitesByParent.TryGetValue(callSiteId, out var children)) return;
 
                 foreach (var child in children)
                 {
                     if (child.RunNodeGuid != runNodeGuid) continue;
-                    if (!openByScope.TryGetValue(child.Id, out var inside) || inside.Count == 0) continue;
+                    if (!openByCallSite.TryGetValue(child.Id, out var inside) || inside.Count == 0) continue;
 
                     foreach (var key in new List<NodeKey>(inside))
                     {
@@ -382,11 +382,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             /// inside it. Per scope rather than global, so a root that stays entered forever does not push
             /// every later branch one lane further down.
             /// </summary>
-            private int DepthOf(int scopeId)
+            private int DepthOf(int callSiteId)
             {
-                var baseDepth = scopeDepth.TryGetValue(scopeId, out var known) ? known : FallbackDepth(scopeId);
+                var baseDepth = callSiteDepth.TryGetValue(callSiteId, out var known) ? known : FallbackDepth(callSiteId);
 
-                return baseDepth + (openByScope.TryGetValue(scopeId, out var inside) ? inside.Count : 0);
+                return baseDepth + (openByCallSite.TryGetValue(callSiteId, out var inside) ? inside.Count : 0);
             }
 
             /// <summary>
@@ -394,10 +394,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             /// recording that starts mid-branch. Counting the call-site chain is coarser than watching the
             /// node enter, but it keeps the lanes ordered instead of collapsing them all onto zero.
             /// </summary>
-            private int FallbackDepth(int scopeId)
+            private int FallbackDepth(int callSiteId)
             {
                 var depth = 0;
-                var current = scopeId;
+                var current = callSiteId;
 
                 for (int guard = 0; guard < recording.CallSites.Count; guard++)
                 {
@@ -416,17 +416,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     if (!found) break;
                 }
 
-                scopeDepth[scopeId] = depth;
+                callSiteDepth[callSiteId] = depth;
 
                 return depth;
             }
 
             private void Remember(NodeKey key)
             {
-                if (!openByScope.TryGetValue(key.ScopeId, out var inside))
+                if (!openByCallSite.TryGetValue(key.CallSiteId, out var inside))
                 {
                     inside = new HashSet<NodeKey>();
-                    openByScope[key.ScopeId] = inside;
+                    openByCallSite[key.CallSiteId] = inside;
                 }
 
                 inside.Add(key);
@@ -436,22 +436,22 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 open.Remove(key);
 
-                if (openByScope.TryGetValue(key.ScopeId, out var inside)) inside.Remove(key);
+                if (openByCallSite.TryGetValue(key.CallSiteId, out var inside)) inside.Remove(key);
             }
         }
 
         private readonly struct NodeKey : IEquatable<NodeKey>
         {
-            public readonly int ScopeId;
+            public readonly int CallSiteId;
             public readonly Guid NodeGuid;
 
-            public NodeKey(int scopeId, Guid nodeGuid)
+            public NodeKey(int callSiteId, Guid nodeGuid)
             {
-                ScopeId = scopeId;
+                CallSiteId = callSiteId;
                 NodeGuid = nodeGuid;
             }
 
-            public bool Equals(NodeKey other) => ScopeId == other.ScopeId && NodeGuid.Equals(other.NodeGuid);
+            public bool Equals(NodeKey other) => CallSiteId == other.CallSiteId && NodeGuid.Equals(other.NodeGuid);
 
             public override bool Equals(object obj) => obj is NodeKey other && Equals(other);
 
@@ -459,7 +459,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 unchecked
                 {
-                    return (ScopeId * 397) ^ NodeGuid.GetHashCode();
+                    return (CallSiteId * 397) ^ NodeGuid.GetHashCode();
                 }
             }
         }
@@ -485,7 +485,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             public BehaviorTreeTimelineSegment Close(int exitTick, BehaviorTreeOutcome outcome, Guid guard, int exitIndex)
             {
                 return new BehaviorTreeTimelineSegment(
-                    key.ScopeId, key.NodeGuid, name, enterTick, exitTick, outcome, guard, Depth, enterIndex, exitIndex);
+                    key.CallSiteId, key.NodeGuid, name, enterTick, exitTick, outcome, guard, Depth, enterIndex, exitIndex);
             }
         }
     }

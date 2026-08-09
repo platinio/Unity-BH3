@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public readonly int Tick;
 
-        public readonly int ScopeId;
+        public readonly int CallSiteId;
 
         /// <summary>The node this happened to.</summary>
         public readonly Guid NodeGuid;
@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public BehaviorTreeTimelineMarker(
             BehaviorTreeTimelineMarkerKind kind,
             int tick,
-            int scopeId,
+            int callSiteId,
             Guid nodeGuid,
             Guid relatedGuid,
             string label,
@@ -57,7 +57,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             Kind = kind;
             Tick = tick;
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             NodeGuid = nodeGuid;
             RelatedGuid = relatedGuid;
             Label = label;

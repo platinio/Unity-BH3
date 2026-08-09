@@ -6,7 +6,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// One stretch of ticks during which a node was active: the coloured bar the scrubber draws.
     ///
     /// <para>
-    /// Addressed as <c>(ScopeId, NodeGuid)</c> rather than by guid alone, for the reason the whole debugger
+    /// Addressed as <c>(CallSiteId, NodeGuid)</c> rather than by guid alone, for the reason the whole debugger
     /// is: a sub-tree asset is instantiated per call site and the clone keeps the original guids, so the same
     /// guid appears once per call site and a guid-only address shows one Attack in two states at once.
     /// </para>
@@ -16,7 +16,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>An <see cref="ExitTick"/> meaning the node was still running when the recording ended.</summary>
         public const int StillOpen = -1;
 
-        public readonly int ScopeId;
+        public readonly int CallSiteId;
 
         public readonly Guid NodeGuid;
 
@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly int ExitIndex;
 
         public BehaviorTreeTimelineSegment(
-            int scopeId,
+            int callSiteId,
             Guid nodeGuid,
             string name,
             int enterTick,
@@ -59,7 +59,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             int enterIndex,
             int exitIndex)
         {
-            ScopeId = scopeId;
+            CallSiteId = callSiteId;
             NodeGuid = nodeGuid;
             Name = name;
             EnterTick = enterTick;
