@@ -17,16 +17,7 @@ namespace ArcaneOnyx.BehaviorTree
             currentExecutingChildIndex = 0;
             callOnEnter = true;
         }
-
-        /// <summary>
-        /// Walks the children left to right <em>within a single tick</em>, stepping over each one that
-        /// succeeds and stopping at the first that returns Failure or Running. The mirror image of
-        /// <see cref="Selector"/>; see that node for why the descent must complete on one frame.
-        /// <para>
-        /// The loop terminates because every iteration either returns or advances
-        /// <see cref="Composite.currentExecutingChildIndex"/>, which is bounded by the child count.
-        /// </para>
-        /// </summary>
+      
         public override ExecutionStatus OnUpdate()
         {
             var children = GetChildren();
@@ -69,8 +60,7 @@ namespace ArcaneOnyx.BehaviorTree
                     callOnEnter = true;
                     return ExecutionStatus.Failure;
                 }
-
-                // Running — the child owns the rest of this frame.
+             
                 return result;
             }
 

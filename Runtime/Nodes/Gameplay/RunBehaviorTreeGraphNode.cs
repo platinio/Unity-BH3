@@ -32,15 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
         public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
-
-        /// <summary>
-        /// Whether the branch has already been instantiated, without instantiating it.
-        /// <para>
-        /// <see cref="BehaviorTreeGraphAssetInstance"/> clones on first read, so a tool that merely wants to
-        /// look inside a running tree would clone an asset per call site just by asking. Inspection code tests
-        /// this first and skips what has not been entered yet.
-        /// </para>
-        /// </summary>
+      
         public bool HasBehaviorTreeGraphInstance => behaviorTreeGraphAssetInstance != null;
        
         public void SetBehaviorTreeGraphAsset(BehaviorTreeGraphAsset asset)
@@ -103,21 +95,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// Rebuilds the remembered contract from the sub-tree's own required and optional declarations.
-        /// <para>
-        /// Deliberately explicit rather than automatic. Ports are matched by key, so silently redeclaring them
-        /// when a branch changes would drop every connection whose name no longer exists, at every call site
-        /// at once, with nothing said. Refreshing on request keeps that a decision someone makes and can see
-        /// the result of; <see cref="DescribeContractDrift"/> is how they find out it is needed.
-        /// </para>
         /// </summary>
         public void RefreshParameters()
         {
             parameters = ReadContract();
-
-            // Define() re-runs Definition(), which is what actually builds the ports; PortsChanged() only
-            // announces that they moved. Connections are re-resolved by key, so anything feeding a port whose
-            // name survived stays wired, and anything feeding a name that did not is dropped — the change
-            // DescribeContractDrift warns about before it happens.
+           
             Define();
             PortsChanged();
         }
@@ -283,21 +265,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// Exits the branch's own nodes, the way <see cref="OnEnter"/> and <see cref="OnUpdate"/> reach into it.
-        /// <para>
-        /// Without this the cascade stops at the sub-tree boundary. A branch that ends on its own is fine — its
-        /// containers exit their children on the way out — but one killed from outside never runs
-        /// <see cref="ContainerNode.OnExit"/> at all: a guard returns Failure from the guard walk before
-        /// <see cref="OnUpdate"/> is reached, so the inner graph is not ticked and every node inside is left
-        /// with <see cref="GraphCore.BaseGraphNode.IsRunning"/> true and its exit never run. Anything acquired
-        /// on enter and released on exit leaks, and the recorder shows a branch that entered and never left.
-        /// </para>
-        /// <para>
-        /// Every node is told rather than only the running ones, because
-        /// <see cref="GraphCore.BaseGraphNode.OnNodeExit"/> already returns early for a node that never started.
-        /// Same blanket call <see cref="ContainerNode.OnExit"/> makes on its children, for the same reason.
-        /// <see cref="HasBehaviorTreeGraphInstance"/> is read first so exiting a branch that was never entered
-        /// does not clone the asset just to find nothing to do.
-        /// </para>
         /// </summary>
         public override void OnExit()
         {
@@ -325,11 +292,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// Opens a scope around the instance this node runs and hands that one to the sub-tree, so the branch
         /// gets its own variables while still seeing the caller's through the parent link.
-        /// <para>
-        /// The instance is cloned per node, so two call sites running the same branch asset hold two separate
-        /// scopes and cannot overwrite one another. The sub-tree's optional declarations seed it, which is
-        /// what lets a branch ship a usable default instead of demanding the agent declare everything.
-        /// </para>
         /// </summary>
         public override void SetVariableScope(BehaviorTreeVariableScope scope)
         {

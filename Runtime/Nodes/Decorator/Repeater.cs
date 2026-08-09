@@ -12,14 +12,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string Description => "Force child execution and doesnt return";
 
-        /// <summary>
-        /// Restarts the child every time it completes and never reports completion itself.
-        /// <para>
-        /// One iteration per tick is deliberate, not the single-tick-descent bug the composites had: a
-        /// repeater whose child finishes instantly would spin forever if it restarted within the same frame.
-        /// The frame boundary is what bounds the loop, so it stays.
-        /// </para>
-        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count <= 0) return ExecutionStatus.Success;

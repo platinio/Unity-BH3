@@ -26,11 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             var children = GetChildren();
-
-            // A Selector is an OR over its children, so an empty one is an empty OR: Failure. Reporting
-            // Success would tell the parent this branch handled the situation when it did nothing at all,
-            // hiding a mis-authored tree behind a green result. Matches ParallelSelector, and mirrors
-            // Sequence, which is an AND and so succeeds when empty.
+      
             while (currentExecutingChildIndex < children.Count)
             {
                 var task = children[currentExecutingChildIndex];
