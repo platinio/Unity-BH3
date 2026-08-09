@@ -325,6 +325,42 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void ANodeThatHasNotStartedYetIsNotSaidToHaveNeverRun()
+        {
+            // Explaining at a scrubbed tick, "nothing about this node is in the recording" is a claim about the
+            // whole recording that the recording contradicts two ticks later. The distinction only became
+            // reachable when the why panel started following the scrubber.
+            var recording = new RecordingBuilder()
+                .At(0).Enter(Parent)
+                .At(2).Enter(Branch)
+                .At(40).Exit(Branch, ExecutionStatus.Success)
+                .Build();
+
+            var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, null, 1);
+
+            StringAssert.Contains("Has not run yet as of tick 1", explanation.Headline);
+            StringAssert.Contains("tick 2", explanation.Headline,
+                "Where to scrub to is the most useful thing this answer can carry.");
+
+            Assert.IsFalse(explanation.Headline.Contains("Never ran"),
+                "It ran at tick 2. Saying 'never' from tick 1 is the panel contradicting its own recording.");
+        }
+
+        [Test]
+        public void ANodeWithNothingAnywhereInTheRecordingStillSaysNeverRan()
+        {
+            var recording = new RecordingBuilder()
+                .At(0).Enter(Parent)
+                .At(40).Exit(Parent, ExecutionStatus.Success)
+                .Build();
+
+            var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, null, 1);
+
+            StringAssert.Contains("Never ran", explanation.Headline,
+                "Looking forward must not soften the answer when there is genuinely nothing to find.");
+        }
+
+        [Test]
         public void AClippedRecordingRefusesToClaimTheNodeNeverRan()
         {
             var recording = new RecordingBuilder()
