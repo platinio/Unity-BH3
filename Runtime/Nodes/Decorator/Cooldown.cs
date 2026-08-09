@@ -37,11 +37,19 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             if (IsCoolingDown) return;
-            cooldownEndTime = Time.time + (float) Duration.GetValue();
-            
+
             base.OnEnter();
         }
 
+        /// <summary>
+        /// Starts the cooldown when the child <em>finishes</em>, not when it starts.
+        /// <para>
+        /// Charging it on enter measured the gap between two activations rather than the rest between them, so
+        /// a branch that ran longer than Duration came off cooldown while it was still running and could
+        /// re-fire on the very next tick — never actually gated. "Runs the child, then blocks it for Duration
+        /// seconds" is what this node advertises, and the timer has to start at "then" for that to hold.
+        /// </para>
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
@@ -52,6 +60,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
             task.OnNodeExit();
+            cooldownEndTime = Time.time + (float) Duration.GetValue();
 
             return result;
         }
