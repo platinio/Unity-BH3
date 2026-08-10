@@ -33,6 +33,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeBreakpoints.Clear();
             BehaviorTreeBreakpoints.GloballyEnabled = true;
 
+            // The editor's own updater sets this from whatever agent is on screen, so a test run inside the
+            // editor would otherwise inherit a filter pointing at nothing in this fixture.
+            BehaviorTreeBreakpoints.AgentFilter = null;
+
             // Never the developer's real file. A suite that wipes the breakpoints someone had armed is a suite
             // that damages the thing it is checking.
             breakpointFile = Path.Combine(Path.GetTempPath(), $"bh3-breakpoints-{Guid.NewGuid():N}.json");
@@ -50,6 +54,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeBreakpoints.Hit -= Record;
             BehaviorTreeBreakpoints.Clear();
             BehaviorTreeBreakpoints.GloballyEnabled = true;
+            BehaviorTreeBreakpoints.AgentFilter = null;
 
             if (File.Exists(breakpointFile)) File.Delete(breakpointFile);
 
@@ -614,6 +619,49 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         #endregion
 
         #region Coupling to the recorder
+
+        [Test]
+        public void TheAgentFilterNarrowsBreakpointsToOneAgent()
+        {
+            // A breakpoint is armed on a node, and a node belongs to a tree that forty agents may be running.
+            // Without the filter, arming one stops the editor for whichever agent reaches it first.
+            var other = new BehaviorTreeFlightRecorder("OtherAgent", "TestTree");
+
+            var mine = BoundNode();
+            var theirs = new ScriptedNode(ExecutionStatus.Success);
+            theirs.SetFlightRecorder(other);
+
+            // Same guid on both, which is the case that matters: one tree, two agents.
+            BehaviorTreeBreakpoints.SetNode(mine.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.SetNode(theirs.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            BehaviorTreeBreakpoints.AgentFilter = recorder;
+
+            theirs.OnNodeEnter();
+            Assert.IsEmpty(hits, "The other agent is not the one being debugged.");
+
+            mine.OnNodeEnter();
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreEqual("TestAgent", hits[0].AgentName);
+        }
+
+        [Test]
+        public void NoAgentFilterMeansEveryAgentFires()
+        {
+            // Null is "the debugger could not say which agent is meant", and then filtering to nothing would
+            // make breakpoints silently stop working whenever no tree happened to be open.
+            var other = new BehaviorTreeFlightRecorder("OtherAgent", "TestTree");
+
+            var theirs = new ScriptedNode(ExecutionStatus.Success);
+            theirs.SetFlightRecorder(other);
+
+            BehaviorTreeBreakpoints.SetNode(theirs.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.AgentFilter = null;
+
+            theirs.OnNodeEnter();
+
+            Assert.AreEqual(1, hits.Count);
+        }
 
         [Test]
         public void NothingFiresWhileTheAgentIsNotRecording()

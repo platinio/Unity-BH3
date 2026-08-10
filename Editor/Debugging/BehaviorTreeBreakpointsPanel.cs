@@ -39,7 +39,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Which row has its extra controls open. Only one at a time — the sidebar is a narrow column.</summary>
         private BehaviorTreeBreakpoint expanded;
 
+        /// <summary>
+        /// The fill behind the row the editor stopped on. The same amber as the canvas ring
+        /// (<see cref="BehaviorTreeBreakpointGizmos"/>), because they are two views of one fact and a reader
+        /// should not have to learn that twice — the ringed node and the filled row are the same colour on
+        /// purpose. Alpha is low enough that the text on top stays readable in both editor skins.
+        /// </summary>
+        private static readonly Color StoppedFill = new(1.0f, 0.65f, 0.1f, 0.28f);
+
         private GUIStyle detail;
+        private GUIStyle rowLabel;
+        private GUIStyle stoppedLabel;
         private GUIStyle warning;
 
         // Qualified because Unity.VisualScripting has an IGraphContext of its own and both usings are in scope
@@ -162,11 +172,31 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             var stopped = BehaviorTreeBreakpointResponder.Current;
+            var line = new Rect(x, y, width, Line());
 
-            EditorGUI.LabelField(
-                new Rect(x, y, width, Line()),
-                stopped.HasValue ? $"Stopped: {stopped.Value.Describe()}" : "Running.",
-                detail);
+            if (stopped.HasValue)
+            {
+                // Says which agent and which tick, which the row below cannot: the row identifies the
+                // breakpoint, this identifies the moment. With several agents on one tree they are different
+                // questions.
+                EditorGUI.DrawRect(line, StoppedFill);
+                EditorGUI.LabelField(line, $"▶ {stopped.Value.Describe()}", stoppedLabel);
+            }
+            else
+            {
+                // Which agent, not just "running". A breakpoint that did not fire because a different zombie
+                // tripped it is the most confusing thing this feature can do, and the only cure is saying up
+                // front whose events are being watched. Not a picker — it follows whatever the window is
+                // already pointing at.
+                var agent = BehaviorTreeBreakpointResponder.FilteredTo;
+
+                EditorGUI.LabelField(
+                    line,
+                    agent != null
+                        ? $"Watching {agent.name}. Breakpoints fire for this agent only."
+                        : "No agent resolved — breakpoints fire for any agent running these trees.",
+                    detail);
+            }
 
             return y + Line() + RowSpacing;
         }
@@ -197,9 +227,27 @@ namespace ArcaneOnyx.BehaviorTree
             return y;
         }
 
+        /// <summary>Whether the editor is stopped on this one right now.</summary>
+        private static bool IsStopped(BehaviorTreeBreakpoint breakpoint)
+        {
+            var stopped = BehaviorTreeBreakpointResponder.Current;
+
+            return stopped.HasValue && ReferenceEquals(stopped.Value.Breakpoint, breakpoint);
+        }
+
         private float DrawRow(float x, float y, float width, BehaviorTreeBreakpoint breakpoint)
         {
             var row = new Rect(x, y, width, Line());
+            var stopped = IsStopped(breakpoint);
+
+            // The whole row is repainted, not just the text. With six breakpoints armed and half of them
+            // conditional, working out which one stopped the editor meant reading every row and comparing hit
+            // counts — and a variable breakpoint often rings no node on the canvas either, because its writer
+            // is a sensor rather than something on screen. A filled row is the one thing you cannot miss.
+            if (stopped)
+            {
+                EditorGUI.DrawRect(new Rect(row.x - 2.0f, row.y - 1.0f, row.width + 4.0f, row.height + 2.0f), StoppedFill);
+            }
 
             var toggle = new Rect(row.x, row.y, ToggleWidth, row.height);
             var remove = new Rect(row.xMax - ButtonWidth, row.y, ButtonWidth, row.height);
@@ -210,21 +258,23 @@ namespace ArcaneOnyx.BehaviorTree
             var enabled = GUI.Toggle(toggle, breakpoint.Enabled, GUIContent.none);
             if (enabled != breakpoint.Enabled) BehaviorTreeBreakpointStore.SetEnabled(breakpoint, enabled);
 
-            var text = breakpoint.Describe();
-            var tooltip = string.IsNullOrEmpty(breakpoint.TreeName) ? text : $"{text}\nin {breakpoint.TreeName}";
+            var text = stopped ? $"▶  {breakpoint.Describe()}" : breakpoint.Describe();
+            var tooltip = string.IsNullOrEmpty(breakpoint.TreeName)
+                ? breakpoint.Describe()
+                : $"{breakpoint.Describe()}\nin {breakpoint.TreeName}";
 
             using (new EditorGUI.DisabledScope(!breakpoint.Enabled))
             {
                 // The label is the fold: clicking it opens the operator and hit-count controls, which are only
                 // wanted occasionally and would otherwise take three rows on every breakpoint in a column
                 // narrow enough to be a sidebar.
-                if (GUI.Button(label, new GUIContent(text, tooltip), detail))
+                if (GUI.Button(label, new GUIContent(text, tooltip), stopped ? stoppedLabel : rowLabel))
                 {
                     expanded = ReferenceEquals(expanded, breakpoint) ? null : breakpoint;
                 }
             }
 
-            GUI.Label(hits, HitsLabel(breakpoint), detail);
+            GUI.Label(hits, HitsLabel(breakpoint), stopped ? stoppedLabel : detail);
 
             using (new EditorGUI.DisabledScope(!CanSelect(breakpoint)))
             {
@@ -382,12 +432,27 @@ namespace ArcaneOnyx.BehaviorTree
             return null;
         }
 
+        /// <summary>
+        /// Sized off <see cref="EditorStyles.label"/> rather than <c>miniLabel</c>, which is 9pt and was too
+        /// small to scan — this panel is read while the editor is stopped and you are trying to work out what
+        /// happened, not glanced at.
+        /// </summary>
         private void EnsureStyles()
         {
-            detail ??= new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleLeft };
-            warning ??= new GUIStyle(EditorStyles.miniLabel)
+            if (detail != null) return;
+
+            detail = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleLeft, fontSize = 12 };
+
+            rowLabel = new GUIStyle(detail) { alignment = TextAnchor.MiddleLeft };
+
+            // Bold as well as filled, so the stopped row survives a screenshot, a colour-blind reader and a
+            // theme that renders the fill weaker than it does here.
+            stoppedLabel = new GUIStyle(rowLabel) { fontStyle = FontStyle.Bold };
+
+            warning = new GUIStyle(EditorStyles.label)
             {
                 wordWrap = true,
+                fontSize = 11,
                 normal = { textColor = new Color(0.9f, 0.6f, 0.15f) },
             };
         }

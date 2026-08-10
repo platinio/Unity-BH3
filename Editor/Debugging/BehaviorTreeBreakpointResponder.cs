@@ -40,10 +40,22 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private static bool broken;
 
+        /// <summary>
+        /// How often the agent filter is re-resolved. Resolution can walk the scene in its last fallback, so
+        /// it does not belong on every editor frame; a quarter of a second is far faster than anyone can
+        /// change what they are looking at.
+        /// </summary>
+        private const double ResolveInterval = 0.25;
+
+        private static double nextResolve;
+
         static BehaviorTreeBreakpointResponder()
         {
             BehaviorTreeBreakpoints.Hit -= OnHit;
             BehaviorTreeBreakpoints.Hit += OnHit;
+
+            EditorApplication.update -= TrackDebugTarget;
+            EditorApplication.update += TrackDebugTarget;
 
             EditorApplication.pauseStateChanged += state =>
             {
@@ -66,6 +78,33 @@ namespace ArcaneOnyx.BehaviorTree
         public static bool IsStoppedOn(BehaviorTreeNode node)
         {
             return node != null && Current.HasValue && Current.Value.SubjectGuid == node.guid;
+        }
+
+        /// <summary>The agent breakpoints are currently narrowed to, or null when they fire for any.</summary>
+        public static BehaviorTreeMachine FilteredTo { get; private set; }
+
+        /// <summary>
+        /// Keeps <see cref="BehaviorTreeBreakpoints.AgentFilter"/> pointed at whichever agent the debugging
+        /// panels are about.
+        ///
+        /// <para>
+        /// Pushed from here rather than pulled by the panels, because a breakpoint fires while the tree ticks
+        /// and nothing guarantees a panel was drawn that frame — a filter that only updated on repaint would
+        /// be stale exactly when it is consulted. It is deliberately not a control: the agent comes from
+        /// <see cref="BehaviorTreeDebugTarget"/>, the same resolution the canvas ghosting, the why-inspector
+        /// and the variable watch all use, so the editor cannot stop for one agent while describing another.
+        /// </para>
+        /// </summary>
+        private static void TrackDebugTarget()
+        {
+            if (EditorApplication.timeSinceStartup < nextResolve) return;
+
+            nextResolve = EditorApplication.timeSinceStartup + ResolveInterval;
+
+            var machine = BehaviorTreeDebugTarget.Resolve(GraphWindow.activeContext, out _);
+
+            FilteredTo = machine;
+            BehaviorTreeBreakpoints.AgentFilter = machine != null ? machine.FlightRecorder : null;
         }
 
         private static void OnHit(BehaviorTreeBreakpointHit hit)

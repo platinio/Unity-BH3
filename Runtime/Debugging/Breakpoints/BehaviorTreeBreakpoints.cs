@@ -54,6 +54,32 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public static IReadOnlyList<BehaviorTreeBreakpoint> All => all;
 
         /// <summary>
+        /// The one agent breakpoints may fire for, or null to fire for any.
+        ///
+        /// <para>
+        /// A breakpoint is armed on a node, and a node belongs to a tree that forty zombies may be running.
+        /// Without this, arming one stops the editor for whichever zombie reaches it first, which is rarely the
+        /// one being debugged. Unreal has the same split and solves it the same way — a Blueprint breakpoint
+        /// lives on the asset and the editor carries a debug-object filter that narrows it to one instance.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Set from <see cref="BehaviorTreeDebugTarget"/>, never from a control of its own.</b> The debugger
+        /// already resolves which agent every panel is about — canvas reference, then hierarchy selection, then
+        /// the only agent recording — and a second way to choose would let the breakpoints answer for one agent
+        /// while the ghosted canvas and the why-inspector describe another. That is the failure the shared
+        /// resolution exists to prevent, and it is worse here than elsewhere: the editor would stop, and every
+        /// panel would be describing a different agent than the one that stopped it.
+        /// </para>
+        ///
+        /// <para>
+        /// Null means the debugger could not say which agent is meant, and then every agent is fair game —
+        /// filtering to nothing would make breakpoints silently stop working whenever no tree was open.
+        /// </para>
+        /// </summary>
+        public static IBehaviorTreeRecording AgentFilter { get; set; }
+
+        /// <summary>
         /// Raised when one fires, before the tree carries on. The runtime raises; the editor decides what a
         /// hit means — pausing, selecting, scrubbing — so nothing here needs an editor type and the store
         /// stays testable without a scene.
@@ -289,6 +315,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             // The hot path, and the reason it is safe to check on every event: no breakpoints means one
             // integer compare and a return, before anything is read off the event.
             if (all.Count == 0 || !GloballyEnabled) return;
+
+            // Before matching, so a scene full of agents running the same tree costs one reference compare
+            // each rather than a dictionary lookup each.
+            if (AgentFilter != null && !ReferenceEquals(recording, AgentFilter)) return;
 
             var breakpoint = MatchOf(recorded, writtenValue);
             if (breakpoint == null) return;
