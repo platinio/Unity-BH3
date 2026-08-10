@@ -367,6 +367,25 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void AWriteRemembersTheCallSiteItWasMadeFrom()
+        {
+            // An Object write made from inside a branch is filed under the agent, so the scope no longer says
+            // which tree the writer lives in. Without this the panel cannot offer to go to the writing node —
+            // it would only be able to look on the canvas that happens to be open, which is almost never the
+            // branch's own asset.
+            var recording = new RecordingBuilder()
+                .CallSite(4, 0, "Engage")
+                .At(10).Write("lastEngageAlert", "0", "3", VariableKind.Object, callSite: 4, writer: Writer)
+                .Build();
+
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object), "lastEngageAlert");
+
+            Assert.AreEqual(VariableKind.Object, ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object).Kind);
+            Assert.AreEqual(4, row.Latest.CallSiteId,
+                "The agent scope hides which branch wrote this; the write itself has to carry it.");
+        }
+
+        [Test]
         public void AnExternalWriterKeepsItsNameAndIsNotLocatable()
         {
             var recording = new RecordingBuilder()

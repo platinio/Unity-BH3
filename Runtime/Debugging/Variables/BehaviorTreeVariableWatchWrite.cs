@@ -19,6 +19,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>Order within the tick. Two writes to one key on one tick are told apart by this alone.</summary>
         public readonly int Sequence;
 
+        /// <summary>
+        /// Which running tree the write was made from — not which store it landed in.
+        ///
+        /// <para>
+        /// Kept even though the scope already groups by store, because it is the only way to find the writer:
+        /// a node that writes agent state from inside a branch is filed under <c>agent</c>, and its guid then
+        /// belongs to an asset nothing else on the row names. This is what lets a reader be taken to it.
+        /// </para>
+        /// </summary>
+        public readonly int CallSiteId;
+
         public readonly string OldValue;
 
         public readonly string NewValue;
@@ -33,10 +44,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly string WriterName;
 
         public BehaviorTreeVariableWatchWrite(
-            int tick, int sequence, string oldValue, string newValue, Guid writerGuid, string writerName)
+            int tick,
+            int sequence,
+            int callSiteId,
+            string oldValue,
+            string newValue,
+            Guid writerGuid,
+            string writerName)
         {
             Tick = tick;
             Sequence = sequence;
+            CallSiteId = callSiteId;
             OldValue = oldValue;
             NewValue = newValue;
             WriterGuid = writerGuid;
