@@ -280,7 +280,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 key: key,
                 oldValue: BehaviorTreeEvent.Describe(oldValue),
                 newValue: BehaviorTreeEvent.Describe(newValue),
-                variableKind: variableKind);
+                variableKind: variableKind,
+                writtenValue: newValue);
         }
 
         /// <summary>
@@ -313,7 +314,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 oldValue: BehaviorTreeEvent.Describe(oldValue),
                 newValue: BehaviorTreeEvent.Describe(newValue),
                 variableKind: variableKind,
-                writer: string.IsNullOrEmpty(writerName) ? "(external)" : writerName);
+                writer: string.IsNullOrEmpty(writerName) ? "(external)" : writerName,
+                writtenValue: newValue);
         }
 
         private void Add(
@@ -327,7 +329,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string oldValue = null,
             string newValue = null,
             VariableKind variableKind = VariableKind.Flow,
-            string writer = null)
+            string writer = null,
+            object writtenValue = null)
         {
             var recorded = BehaviorTreeEvent.Create(
                 kind, Tick, sequence++, UnityEngine.Time.frameCount, UnityEngine.Time.time,
@@ -342,7 +345,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             //
             // After the ring and never before. A hit pauses the editor and parks the scrubber on this tick, so
             // the event that caused it has to already be in the recording the reader is about to look at.
-            BehaviorTreeBreakpoints.Evaluate(this, recorded);
+            //
+            // writtenValue is the live object on a variable write, and null on everything else. It is handed
+            // to the matcher and never to the ring, which is the distinction that lets `ammo < 5` compare
+            // numbers while the recording still keeps only strings — a reference held in the ring would go on
+            // mutating after the event was recorded.
+            BehaviorTreeBreakpoints.Evaluate(this, recorded, writtenValue);
         }
 
         #endregion

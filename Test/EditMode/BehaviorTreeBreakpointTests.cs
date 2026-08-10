@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
@@ -338,6 +339,214 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void EqualsComparesNumbersAsNumbersRatherThanAsRenderedText()
+        {
+            // The reason the typed value is threaded through to the matcher at all. Comparing renderings works
+            // for "0" and breaks the moment a float is involved.
+            var writer = BoundNode();
+            BehaviorTreeBreakpoints.SetVariable("speed", "3.5", BehaviorTreeVariableCompare.Equals);
+
+            recorder.VariableWrite(writer, "speed", VariableKind.Object, 0.0f, 3.5f);
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void ANumberIsMatchedWhicheverCultureTheDesignerTypedItIn()
+        {
+            // The watch panel renders values in the editor's culture, which is what someone copies from. Both
+            // that rendering and the invariant form have to work, or the breakpoint silently never fires on
+            // any machine whose decimal separator is a comma.
+            var previous = CultureInfo.CurrentCulture;
+
+            try
+            {
+                CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+
+                var writer = BoundNode();
+                BehaviorTreeBreakpoints.SetVariable("speed", "3,5", BehaviorTreeVariableCompare.Equals);
+
+                recorder.VariableWrite(writer, "speed", VariableKind.Object, 0.0f, 3.5f);
+
+                Assert.AreEqual(1, hits.Count, "A comma-decimal machine renders 3.5 as \"3,5\".");
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = previous;
+            }
+        }
+
+        [Test]
+        public void ABooleanMatchesWhateverCaseTheDesignerTyped()
+        {
+            // bool.ToString() is "True", so an ordinal compare against what anyone actually types never fires.
+            var writer = BoundNode();
+            BehaviorTreeBreakpoints.SetVariable("hasTarget", "true", BehaviorTreeVariableCompare.Equals);
+
+            recorder.VariableWrite(writer, "hasTarget", VariableKind.Object, false, true);
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void NotEqualsFiresOnEverythingElse()
+        {
+            var writer = BoundNode();
+            BehaviorTreeBreakpoints.SetVariable("ammo", "0", BehaviorTreeVariableCompare.NotEquals);
+
+            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 3, 2);
+            Assert.AreEqual(1, hits.Count);
+
+            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 2, 0);
+            Assert.AreEqual(1, hits.Count, "Landing on the excluded value must not fire.");
+        }
+
+        [TestCase(BehaviorTreeVariableCompare.LessThan, 4, true)]
+        [TestCase(BehaviorTreeVariableCompare.LessThan, 5, false)]
+        [TestCase(BehaviorTreeVariableCompare.LessOrEqual, 5, true)]
+        [TestCase(BehaviorTreeVariableCompare.GreaterThan, 6, true)]
+        [TestCase(BehaviorTreeVariableCompare.GreaterThan, 5, false)]
+        [TestCase(BehaviorTreeVariableCompare.GreaterOrEqual, 5, true)]
+        public void OrderingOperatorsCompareNumerically(
+            BehaviorTreeVariableCompare compare, int written, bool shouldFire)
+        {
+            var writer = BoundNode();
+            BehaviorTreeBreakpoints.SetVariable("hp", "5", compare);
+
+            recorder.VariableWrite(writer, "hp", VariableKind.Object, 100, written);
+
+            Assert.AreEqual(shouldFire ? 1 : 0, hits.Count);
+        }
+
+        [Test]
+        public void AnOrderingOperatorOnANonNumberSaysSoRatherThanFiringOrGoingQuiet()
+        {
+            // The failure this component exists to remove, applied to itself: a breakpoint that cannot match
+            // must not be indistinguishable from a breakpoint the program never reached.
+            var writer = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetVariable("target", "5", BehaviorTreeVariableCompare.LessThan);
+
+            recorder.VariableWrite(writer, "target", VariableKind.Object, null, "Zombie");
+
+            Assert.IsEmpty(hits, "'Zombie' is not a number, so nothing should fire.");
+            Assert.IsNotNull(breakpoint.Diagnostic, "…but it has to say why.");
+            StringAssert.Contains("not a number", breakpoint.Diagnostic);
+        }
+
+        [Test]
+        public void ContainsMatchesPartOfARenderedValue()
+        {
+            var writer = BoundNode();
+            BehaviorTreeBreakpoints.SetVariable("state", "Attack", BehaviorTreeVariableCompare.Contains);
+
+            recorder.VariableWrite(writer, "state", VariableKind.Object, "Idle", "AttackMelee");
+
+            Assert.AreEqual(1, hits.Count);
+
+            recorder.VariableWrite(writer, "state", VariableKind.Object, "AttackMelee", "Flee");
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void AnEmptyExpectedValueIsAnyWriteWhateverOperatorWasAskedFor()
+        {
+            // An operator with nothing to compare against cannot mean anything, and silently keeping it would
+            // produce a breakpoint whose description reads "ammo < " .
+            var writer = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetVariable("ammo", string.Empty, BehaviorTreeVariableCompare.LessThan);
+
+            Assert.AreEqual(BehaviorTreeVariableCompare.Changed, breakpoint.Compare);
+
+            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 3, 2);
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        #endregion
+
+        #region Break on the Nth hit
+
+        [Test]
+        public void BreakOnHitSkipsTheEarlierMatchesButStillCountsThem()
+        {
+            var node = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 3);
+
+            node.OnNodeEnter();
+            node.OnNodeEnter();
+
+            Assert.IsEmpty(hits, "The first two matches were asked to be skipped.");
+            Assert.AreEqual(2, breakpoint.MatchCount, "…but they are counted, or the row looks broken.");
+            Assert.AreEqual(0, breakpoint.HitCount);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreEqual(3, breakpoint.MatchCount);
+            Assert.AreEqual(1, breakpoint.HitCount);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(2, hits.Count, "Nth and after, not only the Nth.");
+        }
+
+        [Test]
+        public void BreakOnHitAppliesToAGuardToo()
+        {
+            // The oscillating guard is the motivating case: it is the one that produces dozens of identical
+            // hits, and it is a guard rather than a variable.
+            var owner = BoundNode();
+            var guard = new BooleanConditionalExecution();
+
+            var breakpoint = BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.EitherWay);
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 4);
+
+            for (int i = 0; i < 6; i++)
+            {
+                recorder.BeginTick();
+                recorder.GuardEval(owner, guard, i % 2 == 0);
+            }
+
+            Assert.AreEqual(3, hits.Count, "Six flips, the first three skipped.");
+        }
+
+        [Test]
+        public void AZeroOrNegativeBreakOnHitReadsAsTheFirst()
+        {
+            var node = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 0);
+            Assert.AreEqual(1, breakpoint.BreakOnHit);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void ResetClearsTheMatchCountAndTheDiagnostic()
+        {
+            var writer = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetVariable("target", "5", BehaviorTreeVariableCompare.LessThan);
+
+            recorder.VariableWrite(writer, "target", VariableKind.Object, null, "Zombie");
+            Assert.IsNotNull(breakpoint.Diagnostic);
+
+            BehaviorTreeBreakpoints.ResetHitCounts();
+
+            Assert.IsNull(breakpoint.Diagnostic, "It describes a run that is over.");
+            Assert.AreEqual(0, breakpoint.MatchCount);
+        }
+
+        #endregion
+
+        #region Variable breakpoints, continued
+
+        [Test]
         public void AWriteFromOutsideTheTreeStillFires()
         {
             // Facts come from sensors rather than from branches (Finding 5), so the commonest variable worth
@@ -405,6 +614,53 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.OnNodeEnter();
 
             Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void ReadingARecordingBackNeverFiresABreakpoint()
+        {
+            // Scrubbing the timeline while the editor is paused must not trip anything. In practice it cannot:
+            // breakpoints are evaluated inside the recorder, the recorder is only written to while the tree
+            // ticks, and the tree only ticks from Update — which Unity does not run while paused. But that is
+            // three separate facts holding hands, and the one this test can actually pin is the load-bearing
+            // one: replaying a recording is a pure read. A future scrubbing path that re-pulled a port or
+            // re-entered the recorder would break it silently, and the symptom would be an editor that pauses
+            // while you are studying why it paused.
+            var node = BoundNode(ExecutionStatus.Running);
+            var guard = new BooleanConditionalExecution();
+            var writer = BoundNode();
+
+            // Produce a recording worth replaying, with breakpoints armed the whole time.
+            BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.All);
+            BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.EitherWay);
+            BehaviorTreeBreakpoints.SetVariable("ammo");
+
+            for (int tick = 0; tick < 5; tick++)
+            {
+                recorder.BeginTick();
+                node.OnNodeEnter();
+                recorder.GuardEval(node, guard, tick % 2 == 0);
+                recorder.VariableWrite(writer, "ammo", VariableKind.Object, tick, tick + 1);
+                node.OnNodeExit();
+            }
+
+            var duringTheRun = hits.Count;
+            Assert.Greater(duringTheRun, 0, "The recording has to be worth replaying for this to prove anything.");
+
+            hits.Clear();
+
+            // Everything the scrubber and the panels do to a recording, with nothing running.
+            var timeline = BehaviorTreeTimeline.Build(recorder);
+
+            foreach (var changeTick in timeline.ChangeTicks)
+            {
+                BehaviorTreeTreeState.At(recorder, timeline, changeTick);
+            }
+
+            BehaviorTreeVariableWatch.At(recorder, -1);
+            BehaviorTreeExplainer.Explain(recorder, BehaviorTreeCallSite.RootId, node.guid, null, -1);
+
+            Assert.IsEmpty(hits, "Replaying a recording is a read. Nothing about it may fire a breakpoint.");
         }
 
         [Test]
@@ -523,6 +779,52 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(2, BehaviorTreeBreakpoints.All.Count);
             Assert.IsNotNull(BehaviorTreeBreakpoints.ForNode(good));
             Assert.IsNotNull(BehaviorTreeBreakpoints.ForVariable("ammo"));
+        }
+
+        [Test]
+        public void TheOperatorAndTheHitCountSurviveTheRoundTrip()
+        {
+            var guid = Guid.NewGuid();
+
+            BehaviorTreeBreakpoints.SetVariable("hp", "5", BehaviorTreeVariableCompare.LessThan);
+            BehaviorTreeBreakpoints.SetBreakOnHit(BehaviorTreeBreakpoints.SetNode(guid, BehaviorTreeNodeBreakEvents.Enter), 7);
+
+            BehaviorTreeBreakpointStore.Save();
+            BehaviorTreeBreakpointStore.Load();
+
+            var variable = BehaviorTreeBreakpoints.ForVariable("hp");
+            Assert.AreEqual(BehaviorTreeVariableCompare.LessThan, variable.Compare);
+            Assert.AreEqual("5", variable.ExpectedValue);
+
+            Assert.AreEqual(7, BehaviorTreeBreakpoints.ForNode(guid).BreakOnHit);
+        }
+
+        [Test]
+        public void AVersionOneFileKeepsMeaningWhatItMeant()
+        {
+            // Written before `compare` existed. Reading a missing operator as the enum's default — Changed —
+            // would turn "break when ammo is 0" into "break on every ammo write", which is a breakpoint that
+            // fires constantly rather than one that does not fire: the loud failure, not the quiet one, but a
+            // wrong answer either way.
+            File.WriteAllText(breakpointFile, @"{
+    ""version"": 1,
+    ""breakpoints"": [
+        { ""kind"": ""Variable"", ""variableKey"": ""ammo"", ""expectedValue"": ""0"", ""enabled"": true },
+        { ""kind"": ""Variable"", ""variableKey"": ""alertLevel"", ""expectedValue"": """", ""enabled"": true }
+    ]
+}");
+
+            BehaviorTreeBreakpointStore.Load();
+
+            var withValue = BehaviorTreeBreakpoints.ForVariable("ammo");
+            Assert.AreEqual(BehaviorTreeVariableCompare.Equals, withValue.Compare);
+            Assert.AreEqual("0", withValue.ExpectedValue);
+            Assert.AreEqual(1, withValue.BreakOnHit, "No breakOnHit in the file reads as the first hit.");
+
+            Assert.AreEqual(
+                BehaviorTreeVariableCompare.Changed,
+                BehaviorTreeBreakpoints.ForVariable("alertLevel").Compare,
+                "No value means any write, which is what it meant before the operator existed.");
         }
 
         [Test]

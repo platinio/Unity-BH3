@@ -34,8 +34,13 @@ namespace ArcaneOnyx.BehaviorTree
 
         private string newVariableKey = string.Empty;
         private string newVariableValue = string.Empty;
+        private BehaviorTreeVariableCompare newVariableCompare = BehaviorTreeVariableCompare.Equals;
+
+        /// <summary>Which row has its extra controls open. Only one at a time — the sidebar is a narrow column.</summary>
+        private BehaviorTreeBreakpoint expanded;
 
         private GUIStyle detail;
+        private GUIStyle warning;
 
         // Qualified because Unity.VisualScripting has an IGraphContext of its own and both usings are in scope
         // here — the same collision family as BREAK-1's port types and Finding 26's node names.
@@ -79,9 +84,26 @@ namespace ArcaneOnyx.BehaviorTree
             var height = (Padding * 2.0f) + ((Line() + RowSpacing) * 4.0f);
 
             height += RecordingIsOff ? HelpHeight(inner) + RowSpacing : 0.0f;
-            height += BehaviorTreeBreakpoints.All.Count == 0
-                ? HelpHeight(inner)
-                : (Line() + RowSpacing) * BehaviorTreeBreakpoints.All.Count;
+
+            if (BehaviorTreeBreakpoints.All.Count == 0) return height + HelpHeight(inner);
+
+            foreach (var breakpoint in BehaviorTreeBreakpoints.All)
+            {
+                height += Line() + RowSpacing;
+
+                if (breakpoint.Diagnostic != null) height += Line() + RowSpacing;
+
+                if (!ReferenceEquals(expanded, breakpoint)) continue;
+
+                // the hit-count row, plus the operator row and its numeric-only hint for a variable
+                height += Line() + RowSpacing;
+
+                if (breakpoint.Kind != BehaviorTreeBreakpointKind.Variable) continue;
+
+                height += Line() + RowSpacing;
+
+                if (BehaviorTreeBreakpoint.IsOrdering(breakpoint.Compare)) height += Line() + RowSpacing;
+            }
 
             return height;
         }
@@ -193,10 +215,16 @@ namespace ArcaneOnyx.BehaviorTree
 
             using (new EditorGUI.DisabledScope(!breakpoint.Enabled))
             {
-                GUI.Label(label, new GUIContent(text, tooltip), detail);
+                // The label is the fold: clicking it opens the operator and hit-count controls, which are only
+                // wanted occasionally and would otherwise take three rows on every breakpoint in a column
+                // narrow enough to be a sidebar.
+                if (GUI.Button(label, new GUIContent(text, tooltip), detail))
+                {
+                    expanded = ReferenceEquals(expanded, breakpoint) ? null : breakpoint;
+                }
             }
 
-            GUI.Label(hits, breakpoint.HitCount == 0 ? "—" : $"{breakpoint.HitCount}×", detail);
+            GUI.Label(hits, HitsLabel(breakpoint), detail);
 
             using (new EditorGUI.DisabledScope(!CanSelect(breakpoint)))
             {
@@ -208,11 +236,86 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (GUI.Button(remove, new GUIContent("×", "Remove this breakpoint"), EditorStyles.miniButton))
             {
+                if (ReferenceEquals(expanded, breakpoint)) expanded = null;
+
                 BehaviorTreeBreakpointStore.Remove(breakpoint);
+                return y + row.height + RowSpacing;
             }
 
-            return y + row.height + RowSpacing;
+            y += row.height + RowSpacing;
+
+            if (breakpoint.Diagnostic != null)
+            {
+                var note = new Rect(x + IndentWidth(), y, width - IndentWidth(), Line());
+                GUI.Label(note, new GUIContent($"⚠ {breakpoint.Diagnostic}", breakpoint.Diagnostic), warning);
+                y += Line() + RowSpacing;
+            }
+
+            if (ReferenceEquals(expanded, breakpoint)) y = DrawRowControls(x + IndentWidth(), y, width - IndentWidth(), breakpoint);
+
+            return y;
         }
+
+        /// <summary>
+        /// Matches and fires shown separately once they can differ.
+        ///
+        /// <para>
+        /// "0×" beside a breakpoint that has matched twelve times looks exactly like one that does not work.
+        /// The gap is the whole point of a hit-count condition, so it has to be visible while it is being
+        /// counted down.
+        /// </para>
+        /// </summary>
+        private static string HitsLabel(BehaviorTreeBreakpoint breakpoint)
+        {
+            if (breakpoint.HitCount > 0) return $"{breakpoint.HitCount}×";
+
+            return breakpoint.MatchCount > 0 ? $"0/{breakpoint.MatchCount}" : "—";
+        }
+
+        /// <summary>The per-row controls: the operator and its operand for a variable, and the hit count for any kind.</summary>
+        private float DrawRowControls(float x, float y, float width, BehaviorTreeBreakpoint breakpoint)
+        {
+            if (breakpoint.Kind == BehaviorTreeBreakpointKind.Variable)
+            {
+                var row = new Rect(x, y, width, Line());
+                var operatorWidth = Mathf.Min(110.0f, width * 0.45f);
+
+                var compare = (BehaviorTreeVariableCompare)EditorGUI.EnumPopup(
+                    new Rect(row.x, row.y, operatorWidth, row.height), breakpoint.Compare);
+
+                var valueRect = new Rect(row.x + operatorWidth + 4.0f, row.y, Mathf.Max(30.0f, width - operatorWidth - 4.0f), row.height);
+
+                // Disabled rather than hidden for Changed: the field vanishing as you pick "any write" reads
+                // as the panel losing what you typed.
+                using (new EditorGUI.DisabledScope(compare == BehaviorTreeVariableCompare.Changed))
+                {
+                    var value = EditorGUI.TextField(valueRect, breakpoint.ExpectedValue ?? string.Empty);
+
+                    if (compare != breakpoint.Compare || value != (breakpoint.ExpectedValue ?? string.Empty))
+                    {
+                        BehaviorTreeBreakpointStore.SetVariable(breakpoint.VariableKey, value, compare);
+                    }
+                }
+
+                y += Line() + RowSpacing;
+
+                if (BehaviorTreeBreakpoint.IsOrdering(compare))
+                {
+                    var hint = new Rect(x, y, width, Line());
+                    GUI.Label(hint, "Ordering compares numbers only.", detail);
+                    y += Line() + RowSpacing;
+                }
+            }
+
+            var hitRow = new Rect(x, y, width, Line());
+            var occurrence = EditorGUI.IntField(hitRow, "Break on hit #", breakpoint.BreakOnHit);
+
+            if (occurrence != breakpoint.BreakOnHit) BehaviorTreeBreakpointStore.SetBreakOnHit(breakpoint, occurrence);
+
+            return y + Line() + RowSpacing;
+        }
+
+        private static float IndentWidth() => 14.0f;
 
         /// <summary>
         /// The row that arms a variable breakpoint, since there is nothing on the canvas to right-click for
@@ -225,19 +328,30 @@ namespace ArcaneOnyx.BehaviorTree
 
             var row = new Rect(x, y, width, Line());
             var addWidth = 44.0f;
-            var fieldWidth = Mathf.Max(40.0f, (row.width - addWidth - 8.0f) / 2.0f);
+            var operatorWidth = Mathf.Min(96.0f, width * 0.3f);
+            var fieldWidth = Mathf.Max(30.0f, (row.width - addWidth - operatorWidth - 12.0f) / 2.0f);
 
-            newVariableKey = EditorGUI.TextField(new Rect(row.x, row.y, fieldWidth, row.height), newVariableKey);
+            newVariableKey = EditorGUI.TextField(
+                new Rect(row.x, row.y, fieldWidth, row.height), newVariableKey);
 
-            newVariableValue = EditorGUI.TextField(
-                new Rect(row.x + fieldWidth + 4.0f, row.y, fieldWidth, row.height), newVariableValue);
+            newVariableCompare = (BehaviorTreeVariableCompare)EditorGUI.EnumPopup(
+                new Rect(row.x + fieldWidth + 4.0f, row.y, operatorWidth, row.height), newVariableCompare);
+
+            using (new EditorGUI.DisabledScope(newVariableCompare == BehaviorTreeVariableCompare.Changed))
+            {
+                newVariableValue = EditorGUI.TextField(
+                    new Rect(row.x + fieldWidth + operatorWidth + 8.0f, row.y, fieldWidth, row.height),
+                    newVariableValue);
+            }
 
             using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(newVariableKey)))
             {
                 if (GUI.Button(
                         new Rect(row.xMax - addWidth, row.y, addWidth, row.height), "Add", EditorStyles.miniButton))
                 {
-                    BehaviorTreeBreakpointStore.SetVariable(newVariableKey.Trim(), newVariableValue.Trim());
+                    BehaviorTreeBreakpointStore.SetVariable(
+                        newVariableKey.Trim(), newVariableValue.Trim(), newVariableCompare);
+
                     newVariableKey = string.Empty;
                     newVariableValue = string.Empty;
                     GUI.FocusControl(null);
@@ -270,7 +384,12 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void EnsureStyles()
         {
-            detail ??= new GUIStyle(EditorStyles.miniLabel);
+            detail ??= new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleLeft };
+            warning ??= new GUIStyle(EditorStyles.miniLabel)
+            {
+                wordWrap = true,
+                normal = { textColor = new Color(0.9f, 0.6f, 0.15f) },
+            };
         }
 
         private static float Line() => EditorGUIUtility.singleLineHeight;

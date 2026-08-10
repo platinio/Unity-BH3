@@ -29,7 +29,11 @@ namespace ArcaneOnyx.BehaviorTree
     [InitializeOnLoad]
     public static class BehaviorTreeBreakpointStore
     {
-        private const int Version = 1;
+        /// <summary>
+        /// 2 added <c>compare</c> and <c>breakOnHit</c>. Version 1 files still load: a missing operator reads
+        /// as equality when a value was given and "any write" when none was, which is what those files meant.
+        /// </summary>
+        private const int Version = 2;
         private const string FileName = "BH3Breakpoints.json";
 
         static BehaviorTreeBreakpointStore()
@@ -124,15 +128,25 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>Arms or edits the breakpoint on a variable. Null expected value means any write.</summary>
-        public static BehaviorTreeBreakpoint SetVariable(string key, string expectedValue = null)
+        public static BehaviorTreeBreakpoint SetVariable(
+            string key,
+            string expectedValue = null,
+            BehaviorTreeVariableCompare compare = BehaviorTreeVariableCompare.Equals)
         {
-            var breakpoint = BehaviorTreeBreakpoints.SetVariable(key, expectedValue);
+            var breakpoint = BehaviorTreeBreakpoints.SetVariable(key, expectedValue, compare);
 
             if (breakpoint != null) BehaviorTreeBreakpoints.Describe(breakpoint, key, null);
 
             Save();
 
             return breakpoint;
+        }
+
+        /// <summary>Sets which matching occurrence stops the editor, 1-based.</summary>
+        public static void SetBreakOnHit(BehaviorTreeBreakpoint breakpoint, int occurrence)
+        {
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, occurrence);
+            Save();
         }
 
         public static void Remove(BehaviorTreeBreakpoint breakpoint)
@@ -216,6 +230,8 @@ namespace ArcaneOnyx.BehaviorTree
                     events = breakpoint.Events.ToString(),
                     guardBreakOn = breakpoint.GuardBreakOn.ToString(),
                     expectedValue = breakpoint.ExpectedValue,
+                    compare = breakpoint.Compare.ToString(),
+                    breakOnHit = breakpoint.BreakOnHit,
                     enabled = breakpoint.Enabled,
                     label = breakpoint.Label,
                     treeName = breakpoint.TreeName,
@@ -281,6 +297,10 @@ namespace ArcaneOnyx.BehaviorTree
                 BehaviorTreeBreakpoints.Add(breakpoint);
                 BehaviorTreeBreakpoints.Describe(breakpoint, entry.label, entry.treeName);
                 BehaviorTreeBreakpoints.SetEnabled(breakpoint, entry.enabled);
+
+                // Absent in a version-1 file, where it reads as 0 and clamps to "the first one" — which is what
+                // every breakpoint written before this field existed meant.
+                BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, entry.breakOnHit);
             }
         }
 
@@ -300,9 +320,16 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (kind == BehaviorTreeBreakpointKind.Variable)
             {
-                return string.IsNullOrEmpty(entry.variableKey)
-                    ? null
-                    : BehaviorTreeBreakpoint.ForVariable(entry.variableKey, entry.expectedValue);
+                if (string.IsNullOrEmpty(entry.variableKey)) return null;
+
+                // A version-1 file has no `compare`, and every one of those meant exactly this: any write when
+                // no value was given, equality when one was. Reading the absent field as Changed regardless
+                // would silently turn "break when ammo is 0" into "break on every ammo write".
+                var compare = Enum.TryParse<BehaviorTreeVariableCompare>(entry.compare, out var parsed)
+                    ? parsed
+                    : BehaviorTreeVariableCompare.Equals;
+
+                return BehaviorTreeBreakpoint.ForVariable(entry.variableKey, entry.expectedValue, compare);
             }
 
             if (!Guid.TryParse(entry.target, out var target) || target == Guid.Empty) return null;
@@ -336,6 +363,8 @@ namespace ArcaneOnyx.BehaviorTree
             public string events;
             public string guardBreakOn;
             public string expectedValue;
+            public string compare;
+            public int breakOnHit;
             public bool enabled;
             public string label;
             public string treeName;

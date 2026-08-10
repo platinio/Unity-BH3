@@ -96,11 +96,6 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
-
-                // Repeated rather than inherited: this override replaces the base's whole body and never calls
-                // it, so a guard would otherwise be the one node type that could be given a breakpoint from the
-                // right-click menu and never show a dot for it.
-                BehaviorTreeBreakpointGizmos.Draw(position, element);
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
@@ -46,14 +47,21 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// A variable breakpoint. <paramref name="expectedValue"/> null or empty means any write; otherwise
-        /// only a write whose new value matches — see <see cref="ExpectedValue"/> for what "matches" means.
+        /// A variable breakpoint. An empty <paramref name="expectedValue"/> forces
+        /// <see cref="BehaviorTreeVariableCompare.Changed"/>, since every other operator needs something to
+        /// compare against and an operator with no operand is a breakpoint that can only confuse.
         /// </summary>
-        public static BehaviorTreeBreakpoint ForVariable(string key, string expectedValue = null)
+        public static BehaviorTreeBreakpoint ForVariable(
+            string key,
+            string expectedValue = null,
+            BehaviorTreeVariableCompare compare = BehaviorTreeVariableCompare.Equals)
         {
+            var value = string.IsNullOrEmpty(expectedValue) ? null : expectedValue;
+
             return new BehaviorTreeBreakpoint(BehaviorTreeBreakpointKind.Variable, Guid.Empty, key)
             {
-                ExpectedValue = string.IsNullOrEmpty(expectedValue) ? null : expectedValue,
+                ExpectedValue = value,
+                Compare = value == null ? BehaviorTreeVariableCompare.Changed : compare,
             };
         }
 
@@ -72,19 +80,44 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public BehaviorTreeGuardBreakOn GuardBreakOn { get; internal set; } = BehaviorTreeGuardBreakOn.EitherWay;
 
         /// <summary>
-        /// The value a write must land on, or null for any write.
+        /// The text the write is tested against, or null for any write.
         ///
         /// <para>
-        /// Compared against <see cref="BehaviorTreeEvent.NewValue"/>, which is
-        /// <see cref="BehaviorTreeEvent.Describe"/>'s output: <c>ToString()</c> capped at 64 characters. So
-        /// this matches what the recording says the value was, not the object itself — which is the honest
-        /// contract, since the recorder never keeps the object. For primitives, strings and vectors that is
-        /// exactly what a designer typed; for a <c>List&lt;T&gt;</c> it is a truncated type name and matching
-        /// on it is not useful. Ordinal, case-sensitive, because "True" and "true" are different renderings
-        /// and silently conflating them would make a breakpoint fire on a value the reader did not ask for.
+        /// Kept as text because that is what a designer types, and interpreted according to
+        /// <see cref="Compare"/> and the type of the value actually written — see
+        /// <see cref="MatchesWrite"/>. Numbers are compared numerically against the live value rather than
+        /// against its rendering, so <c>ammo &lt; 5</c> works and <c>3.5</c> is not defeated by a machine whose
+        /// culture renders it "3,5".
         /// </para>
         /// </summary>
         public string ExpectedValue { get; internal set; }
+
+        /// <summary>How <see cref="ExpectedValue"/> is tested. Only meaningful on a variable breakpoint.</summary>
+        public BehaviorTreeVariableCompare Compare { get; internal set; } = BehaviorTreeVariableCompare.Changed;
+
+        /// <summary>
+        /// Which matching occurrence actually stops the editor, 1-based. 1 means the first.
+        ///
+        /// <para>
+        /// The answer to an oscillating guard, which is the classic behaviour tree bug and the one this whole
+        /// debugger was specified to catch: a branch that enters and aborts every few ticks produces dozens of
+        /// identical hits, and the interesting one is rarely the first. Setting this to 30 gets you there
+        /// without pressing Play twenty-nine times. Every code debugger has this beside its conditional
+        /// breakpoints for the same reason; it applies to all three kinds here, not only to variables.
+        /// </para>
+        /// </summary>
+        public int BreakOnHit { get; internal set; } = 1;
+
+        /// <summary>
+        /// Why this has not been firing, when the reason is knowable. Null when there is nothing to say.
+        ///
+        /// <para>
+        /// Set when an ordering operator meets a value that is not a number — the one way a well-formed
+        /// breakpoint can be silently inert. A tool that exists to replace guessing must not itself require
+        /// guessing about why it said nothing, so the panel shows this on the row.
+        /// </para>
+        /// </summary>
+        public string Diagnostic { get; internal set; }
 
         /// <summary>
         /// Whether this fires. Disabling rather than deleting is the point of the panel's checkbox: an
@@ -113,6 +146,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         public int HitCount { get; internal set; }
 
+        /// <summary>
+        /// How many times the condition has held, whether or not it fired. Differs from
+        /// <see cref="HitCount"/> only while <see cref="BreakOnHit"/> is still being counted up to, and that
+        /// gap is the whole point of showing both: "matched 12, fired 0" says the breakpoint is working and
+        /// you asked to skip past this, where a bare "0" would look like it is broken.
+        /// </summary>
+        public int MatchCount { get; internal set; }
+
         /// <summary>Whether this breakpoint should fire for a node event of the given kind.</summary>
         public bool Matches(BehaviorTreeNodeBreakEvents moment)
         {
@@ -132,12 +173,141 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             };
         }
 
-        /// <summary>Whether this breakpoint should fire for a write landing on <paramref name="newValue"/>.</summary>
-        public bool MatchesWrite(string newValue)
+        /// <summary>
+        /// Whether this breakpoint should fire for a write.
+        ///
+        /// <para>
+        /// Takes both the live object and its rendering, and prefers the object. That is what makes the
+        /// numeric operators possible at all, and it costs nothing: the value arrives at
+        /// <c>GameplayNode.SaveVariable</c> already typed as <c>object</c>, so it is boxed either way, and it
+        /// is passed straight through to here without the event ring ever holding a reference to it. The ring
+        /// must keep strings — a reference kept there would go on mutating after the event was recorded, and
+        /// the export would then show the value at export time rather than at write time — but a breakpoint is
+        /// evaluated synchronously at the write, where the real value is still in hand.
+        /// </para>
+        ///
+        /// <para>
+        /// Three ladders, in order. Numbers compare numerically, which is what fixes both a culture that
+        /// renders 3.5 as "3,5" and the impossibility of ordering rendered text. Booleans parse
+        /// case-insensitively, so a designer typing <c>true</c> matches a value whose <c>ToString()</c> is
+        /// "True" — that was a silent never-fires. Everything else falls back to the rendering, which is what
+        /// the panel shows and therefore what someone is copying from.
+        /// </para>
+        /// </summary>
+        public bool MatchesWrite(object value, string rendered)
         {
             if (Kind != BehaviorTreeBreakpointKind.Variable) return false;
+            if (Compare == BehaviorTreeVariableCompare.Changed || ExpectedValue == null) return true;
 
-            return ExpectedValue == null || string.Equals(ExpectedValue, newValue, StringComparison.Ordinal);
+            if (IsOrdering(Compare)) return MatchesOrdering(value, rendered);
+
+            if (TryAsNumber(value, rendered, out var number) && TryParseNumber(ExpectedValue, out var expected))
+            {
+                return Compare switch
+                {
+                    BehaviorTreeVariableCompare.Equals => number.Equals(expected),
+                    BehaviorTreeVariableCompare.NotEquals => !number.Equals(expected),
+                    _ => ContainsText(rendered),
+                };
+            }
+
+            if (value is bool actualBool && bool.TryParse(ExpectedValue, out var expectedBool))
+            {
+                return Compare switch
+                {
+                    BehaviorTreeVariableCompare.Equals => actualBool == expectedBool,
+                    BehaviorTreeVariableCompare.NotEquals => actualBool != expectedBool,
+                    _ => ContainsText(rendered),
+                };
+            }
+
+            return Compare switch
+            {
+                BehaviorTreeVariableCompare.Equals => string.Equals(ExpectedValue, rendered, StringComparison.Ordinal),
+                BehaviorTreeVariableCompare.NotEquals => !string.Equals(ExpectedValue, rendered, StringComparison.Ordinal),
+                _ => ContainsText(rendered),
+            };
+        }
+
+        /// <summary>
+        /// The ordering operators, which are numeric only. A value that is not a number does not match and
+        /// leaves <see cref="Diagnostic"/> explaining why, rather than making this look like a breakpoint the
+        /// program never reached.
+        /// </summary>
+        private bool MatchesOrdering(object value, string rendered)
+        {
+            if (!TryParseNumber(ExpectedValue, out var expected))
+            {
+                Diagnostic ??= $"'{ExpectedValue}' is not a number, so {Compare} can never match.";
+                return false;
+            }
+
+            if (!TryAsNumber(value, rendered, out var number))
+            {
+                Diagnostic ??= $"{VariableKey} held {rendered}, which is not a number, so {Compare} cannot apply.";
+                return false;
+            }
+
+            return Compare switch
+            {
+                BehaviorTreeVariableCompare.LessThan => number < expected,
+                BehaviorTreeVariableCompare.LessOrEqual => number <= expected,
+                BehaviorTreeVariableCompare.GreaterThan => number > expected,
+                _ => number >= expected,
+            };
+        }
+
+        private bool ContainsText(string rendered)
+        {
+            return rendered != null && ExpectedValue != null &&
+                   rendered.IndexOf(ExpectedValue, StringComparison.Ordinal) >= 0;
+        }
+
+        public static bool IsOrdering(BehaviorTreeVariableCompare compare)
+        {
+            return compare is BehaviorTreeVariableCompare.LessThan
+                or BehaviorTreeVariableCompare.LessOrEqual
+                or BehaviorTreeVariableCompare.GreaterThan
+                or BehaviorTreeVariableCompare.GreaterOrEqual;
+        }
+
+        /// <summary>
+        /// The written value as a number, if it is one. Strings are parsed too, because a Visual Scripting
+        /// variable is loosely typed and a value that reads as a number to the person watching it should
+        /// behave like one.
+        /// </summary>
+        public static bool TryAsNumber(object value, string rendered, out double number)
+        {
+            switch (value)
+            {
+                case byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+                    number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                    return true;
+                case string text:
+                    return TryParseNumber(text, out number);
+                case null:
+                    return TryParseNumber(rendered, out number);
+                default:
+                    number = 0.0;
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Parses what the designer typed. Invariant first, then the editor's own culture, so both "3.5" and
+        /// a comma-decimal machine's "3,5" work — the value in the watch panel is rendered in the current
+        /// culture and is exactly what someone copies from.
+        /// </summary>
+        public static bool TryParseNumber(string text, out double number)
+        {
+            if (!string.IsNullOrEmpty(text))
+            {
+                if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out number)) return true;
+                if (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out number)) return true;
+            }
+
+            number = 0.0;
+            return false;
         }
 
         /// <summary>
@@ -150,11 +320,31 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 ? Kind == BehaviorTreeBreakpointKind.Variable ? VariableKey : TargetGuid.ToString()
                 : Label;
 
-            return Kind switch
+            var what = Kind switch
             {
                 BehaviorTreeBreakpointKind.Node => $"{subject} [{Events}]",
                 BehaviorTreeBreakpointKind.Guard => $"{subject} [{GuardBreakOn}]",
-                _ => ExpectedValue == null ? $"{subject} [any write]" : $"{subject} == {ExpectedValue}",
+                _ => Compare == BehaviorTreeVariableCompare.Changed || ExpectedValue == null
+                    ? $"{subject} [any write]"
+                    : $"{subject} {Symbol(Compare)} {ExpectedValue}",
+            };
+
+            return BreakOnHit > 1 ? $"{what}, from hit #{BreakOnHit}" : what;
+        }
+
+        /// <summary>The operator as a designer would write it, for the row and the log line.</summary>
+        public static string Symbol(BehaviorTreeVariableCompare compare)
+        {
+            return compare switch
+            {
+                BehaviorTreeVariableCompare.Equals => "==",
+                BehaviorTreeVariableCompare.NotEquals => "!=",
+                BehaviorTreeVariableCompare.LessThan => "<",
+                BehaviorTreeVariableCompare.LessOrEqual => "<=",
+                BehaviorTreeVariableCompare.GreaterThan => ">",
+                BehaviorTreeVariableCompare.GreaterOrEqual => ">=",
+                BehaviorTreeVariableCompare.Contains => "contains",
+                _ => "changed",
             };
         }
     }

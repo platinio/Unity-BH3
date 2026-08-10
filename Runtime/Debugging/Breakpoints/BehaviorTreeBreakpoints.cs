@@ -109,19 +109,43 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// Arms or edits the breakpoint on a variable. <paramref name="expectedValue"/> null means any write.
+        /// Arms or edits the breakpoint on a variable. An empty <paramref name="expectedValue"/> means any
+        /// write, whatever operator was asked for — an operator with nothing to compare against cannot mean
+        /// anything.
         /// </summary>
-        public static BehaviorTreeBreakpoint SetVariable(string key, string expectedValue = null)
+        public static BehaviorTreeBreakpoint SetVariable(
+            string key,
+            string expectedValue = null,
+            BehaviorTreeVariableCompare compare = BehaviorTreeVariableCompare.Equals)
         {
             if (string.IsNullOrEmpty(key)) return null;
 
+            var value = string.IsNullOrEmpty(expectedValue) ? null : expectedValue;
+
             if (variables.TryGetValue(key, out var existing))
             {
-                existing.ExpectedValue = string.IsNullOrEmpty(expectedValue) ? null : expectedValue;
+                existing.ExpectedValue = value;
+                existing.Compare = value == null ? BehaviorTreeVariableCompare.Changed : compare;
+
+                // The old complaint was about the old operator and the old operand. Keeping it would leave a
+                // stale explanation on a breakpoint that has just been given a reason to work.
+                existing.Diagnostic = null;
+
                 return existing;
             }
 
-            return Add(BehaviorTreeBreakpoint.ForVariable(key, expectedValue));
+            return Add(BehaviorTreeBreakpoint.ForVariable(key, expectedValue, compare));
+        }
+
+        /// <summary>
+        /// Sets which matching occurrence stops the editor, 1-based. Clamped rather than rejected: a zero from
+        /// a hand-edited file should read as "the first one".
+        /// </summary>
+        public static void SetBreakOnHit(BehaviorTreeBreakpoint breakpoint, int occurrence)
+        {
+            if (breakpoint == null) return;
+
+            breakpoint.BreakOnHit = occurrence < 1 ? 1 : occurrence;
         }
 
         /// <summary>
@@ -191,6 +215,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             foreach (var breakpoint in all)
             {
                 breakpoint.HitCount = 0;
+                breakpoint.MatchCount = 0;
+
+                // Cleared with the counters, not kept. It describes what a value turned out to be in a run that
+                // is over, and leaving it up would blame the new run for the old one's types.
+                breakpoint.Diagnostic = null;
             }
         }
 
@@ -254,14 +283,22 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// call it from gameplay code: it would report a hit for something the tree did not do.
         /// </para>
         /// </summary>
-        public static void Evaluate(IBehaviorTreeRecording recording, in BehaviorTreeEvent recorded)
+        public static void Evaluate(
+            IBehaviorTreeRecording recording, in BehaviorTreeEvent recorded, object writtenValue = null)
         {
             // The hot path, and the reason it is safe to check on every event: no breakpoints means one
             // integer compare and a return, before anything is read off the event.
             if (all.Count == 0 || !GloballyEnabled) return;
 
-            var breakpoint = MatchOf(recorded);
+            var breakpoint = MatchOf(recorded, writtenValue);
             if (breakpoint == null) return;
+
+            breakpoint.MatchCount++;
+
+            // Matching and firing are different things, and both are counted. Skipping to the thirtieth flip
+            // of an oscillating guard is the reason this exists; showing "matched 12, fired 0" is what stops
+            // that looking like a breakpoint that does not work.
+            if (breakpoint.MatchCount < breakpoint.BreakOnHit) return;
 
             breakpoint.HitCount++;
 
@@ -273,7 +310,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// The breakpoint this event trips, or null. Separated from <see cref="Evaluate"/> so a test can ask
         /// what would fire without a subscriber and without a hit count moving.
         /// </summary>
-        public static BehaviorTreeBreakpoint MatchOf(in BehaviorTreeEvent recorded)
+        public static BehaviorTreeBreakpoint MatchOf(in BehaviorTreeEvent recorded, object writtenValue = null)
         {
             switch (recorded.Kind)
             {
@@ -295,10 +332,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     return guard != null && guard.Enabled && guard.MatchesGuard(recorded.Flag) ? guard : null;
                 }
 
+                // The one kind given the live value as well as its rendering. The ring still only ever holds
+                // the string; this is the object as it was at the instant of the write, handed straight
+                // through so numbers can be compared as numbers.
                 case BehaviorTreeEventKind.VariableWrite:
                 {
                     var variable = ForVariable(recorded.Key);
-                    return variable != null && variable.Enabled && variable.MatchesWrite(recorded.NewValue)
+                    return variable != null && variable.Enabled && variable.MatchesWrite(writtenValue, recorded.NewValue)
                         ? variable
                         : null;
                 }

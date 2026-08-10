@@ -240,12 +240,35 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
-
-                // Last, so the dot and the stopped-on ring sit above the node box and its status icon rather
-                // than behind them. Not drawn in a sub-tree preview: those nodes are a read-only picture of
-                // another asset, and a breakpoint dot there would invite a right-click that goes nowhere.
-                if (!previewPorts) BehaviorTreeBreakpointGizmos.Draw(p, element);
             }
+        }
+
+        /// <summary>
+        /// The breakpoint dot and the stopped-on ring.
+        ///
+        /// <para>
+        /// In the overlay pass rather than in <see cref="DrawForeground(Vector2,bool,bool)"/>, which is what
+        /// makes it correct on every node instead of on most of them. Two things were wrong with drawing it in
+        /// the foreground. A guard's widget takes its owner's <c>zIndex</c> plus one, so a dot drawn in the
+        /// owner's foreground landed <em>underneath</em> the conditional executions stacked above it — and
+        /// those sit exactly where the dot goes. And both <see cref="ConditionalExecutionWidget"/> and
+        /// <see cref="RunBehaviorTreeNodeElementWidget"/> replace the foreground body without calling base, so
+        /// a sub-tree node never drew a dot at all.
+        /// </para>
+        ///
+        /// <para>
+        /// The canvas runs <c>DrawWidgetsOverlay</c> after <em>every</em> widget's foreground, so one override
+        /// here covers all three paths and nothing has to be repeated in a subclass. Any future canvas marker
+        /// belongs here for the same reason.
+        /// </para>
+        /// </summary>
+        public override void DrawOverlay()
+        {
+            base.DrawOverlay();
+
+            if (!e.IsRepaint || !element.IsVisible) return;
+
+            BehaviorTreeBreakpointGizmos.Draw(position, element);
         }
 
         public static Texture2D outsideTexture;

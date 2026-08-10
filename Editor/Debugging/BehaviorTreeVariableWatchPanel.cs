@@ -339,17 +339,26 @@ namespace ArcaneOnyx.BehaviorTree
 
             menu.AddItem(
                 new GUIContent($"Break on any write to {row.Key}"),
-                armed != null && armed.ExpectedValue == null,
+                armed != null && armed.Compare == BehaviorTreeVariableCompare.Changed,
                 () => BehaviorTreeBreakpointStore.SetVariable(row.Key));
 
             var value = row.Value;
+            var usable = !string.IsNullOrEmpty(value) && value.Length < BehaviorTreeEvent.MaxValueLength;
 
-            if (!string.IsNullOrEmpty(value) && value.Length < BehaviorTreeEvent.MaxValueLength)
+            if (usable)
             {
-                menu.AddItem(
-                    new GUIContent($"Break when {row.Key} is written {value}"),
-                    armed != null && armed.ExpectedValue == value,
-                    () => BehaviorTreeBreakpointStore.SetVariable(row.Key, value));
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.Equals);
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.NotEquals);
+
+                // Ordering is offered only when the value in front of the reader is a number, because that is
+                // the only case where it can ever match. A greyed-out "<" beside a GameObject says why it is
+                // not on offer; an enabled one would arm a breakpoint that quietly never fires.
+                var numeric = BehaviorTreeBreakpoint.TryParseNumber(value, out _);
+
+                AddOrderingItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.LessThan, numeric);
+                AddOrderingItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.GreaterThan, numeric);
+
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.Contains);
             }
 
             menu.AddSeparator(string.Empty);
@@ -359,6 +368,40 @@ namespace ArcaneOnyx.BehaviorTree
 
             menu.ShowAsContext();
             e.Use();
+        }
+
+        private static void AddCompareItem(
+            GenericMenu menu,
+            BehaviorTreeBreakpoint armed,
+            string key,
+            string value,
+            BehaviorTreeVariableCompare compare)
+        {
+            var on = armed != null && armed.Compare == compare && armed.ExpectedValue == value;
+
+            menu.AddItem(
+                new GUIContent($"Break when {key} {BehaviorTreeBreakpoint.Symbol(compare)} {value}"),
+                on,
+                () => BehaviorTreeBreakpointStore.SetVariable(key, value, compare));
+        }
+
+        private static void AddOrderingItem(
+            GenericMenu menu,
+            BehaviorTreeBreakpoint armed,
+            string key,
+            string value,
+            BehaviorTreeVariableCompare compare,
+            bool numeric)
+        {
+            var label = new GUIContent($"Break when {key} {BehaviorTreeBreakpoint.Symbol(compare)} {value}");
+
+            if (!numeric)
+            {
+                menu.AddDisabledItem(label);
+                return;
+            }
+
+            AddCompareItem(menu, armed, key, value, compare);
         }
 
         private void DrawHistory(float x, ref float y, float width, BehaviorTreeVariableWatchRow row)
