@@ -449,6 +449,25 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void ContainsOnANumberStillMatchesButWarnsThatItIsMatchingText()
+        {
+            // The mirror of the ordering case, and the more dangerous one. Ordering on a string cannot match,
+            // which is at least quiet; contains on a number matches *more* than it looks like it should, and a
+            // breakpoint that fires too often is harder to spot than one that never fires.
+            var writer = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetVariable("alertLevel", "1", BehaviorTreeVariableCompare.Contains);
+
+            recorder.VariableWrite(writer, "alertLevel", VariableKind.Object, 0, 1);
+            Assert.AreEqual(1, hits.Count);
+
+            recorder.VariableWrite(writer, "alertLevel", VariableKind.Object, 9, 10);
+            Assert.AreEqual(2, hits.Count, "10 contains the text \"1\", which is the trap.");
+
+            Assert.IsNotNull(breakpoint.Diagnostic);
+            StringAssert.Contains("matches its text", breakpoint.Diagnostic);
+        }
+
+        [Test]
         public void AnEmptyExpectedValueIsAnyWriteWhateverOperatorWasAskedFor()
         {
             // An operator with nothing to compare against cannot mean anything, and silently keeping it would

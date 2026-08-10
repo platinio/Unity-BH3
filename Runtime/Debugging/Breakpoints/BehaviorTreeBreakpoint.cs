@@ -201,6 +201,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             if (IsOrdering(Compare)) return MatchesOrdering(value, rendered);
 
+            // Contains on a number is legal and almost never meant. It matches the rendered text, so "1" also
+            // matches 10, 21 and 100 — a breakpoint that fires more often than the reader expects rather than
+            // less, which is the harder kind to notice. Said once, and matching carries on unchanged: unlike
+            // ordering, there is a defined answer here and refusing to give it would be the bigger surprise.
+            if (Compare == BehaviorTreeVariableCompare.Contains && TryAsNumber(value, rendered, out _))
+            {
+                Diagnostic ??=
+                    $"{VariableKey} is a number, and 'contains' matches its text — \"{ExpectedValue}\" also " +
+                    "matches any number containing it. Use == to test a value.";
+            }
+
             if (TryAsNumber(value, rendered, out var number) && TryParseNumber(ExpectedValue, out var expected))
             {
                 return Compare switch
