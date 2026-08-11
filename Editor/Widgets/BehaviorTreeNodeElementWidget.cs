@@ -243,6 +243,34 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// The breakpoint dot and the stopped-on ring.
+        ///
+        /// <para>
+        /// In the overlay pass rather than in <see cref="DrawForeground(Vector2,bool,bool)"/>, which is what
+        /// makes it correct on every node instead of on most of them. Two things were wrong with drawing it in
+        /// the foreground. A guard's widget takes its owner's <c>zIndex</c> plus one, so a dot drawn in the
+        /// owner's foreground landed <em>underneath</em> the conditional executions stacked above it — and
+        /// those sit exactly where the dot goes. And both <see cref="ConditionalExecutionWidget"/> and
+        /// <see cref="RunBehaviorTreeNodeElementWidget"/> replace the foreground body without calling base, so
+        /// a sub-tree node never drew a dot at all.
+        /// </para>
+        ///
+        /// <para>
+        /// The canvas runs <c>DrawWidgetsOverlay</c> after <em>every</em> widget's foreground, so one override
+        /// here covers all three paths and nothing has to be repeated in a subclass. Any future canvas marker
+        /// belongs here for the same reason.
+        /// </para>
+        /// </summary>
+        public override void DrawOverlay()
+        {
+            base.DrawOverlay();
+
+            if (!e.IsRepaint || !element.IsVisible) return;
+
+            BehaviorTreeBreakpointGizmos.Draw(position, element);
+        }
+
         public static Texture2D outsideTexture;
         
         protected virtual void DrawOutsideBox(Rect p)
@@ -574,6 +602,11 @@ namespace ArcaneOnyx.BehaviorTree
                     yield return dropdownOption;
                 }
 
+                foreach (var breakpointOption in BreakpointOptions())
+                {
+                    yield return breakpointOption;
+                }
+
                 if (selection.Count == 1)
                 {
                     var bNode = selection.First() as BehaviorTreeNode;
@@ -602,6 +635,102 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
         }
+
+        /// <summary>
+        /// The Breakpoint submenu for this node.
+        ///
+        /// <para>
+        /// A guard gets a different set from an ordinary node, because the two have different lives: a node
+        /// enters, exits, is aborted or is refused entry, while a guard only ever changes its mind. Offering a
+        /// node's four moments on a <see cref="ConditionalExecution"/> would list three that can never fire —
+        /// guards are pulled by their owner rather than entered, so they emit no lifecycle events at all.
+        /// </para>
+        ///
+        /// <para>
+        /// Ticks are drawn into the labels rather than by the dropdown, which has no notion of a checked item.
+        /// </para>
+        /// </summary>
+        private IEnumerable<DropdownOption> BreakpointOptions()
+        {
+            if (element == null || !element.IsVisible) yield break;
+
+            if (element is ConditionalExecution guard)
+            {
+                var armed = Debugging.BehaviorTreeBreakpoints.ForGuard(guard.guid);
+
+                foreach (var option in GuardOptions(guard, armed)) yield return option;
+
+                if (armed != null)
+                {
+                    foreach (var option in SharedOptions(armed)) yield return option;
+                }
+
+                yield break;
+            }
+
+            var onNode = Debugging.BehaviorTreeBreakpoints.ForNode(element.guid);
+
+            yield return NodeMomentOption(onNode, Debugging.BehaviorTreeNodeBreakEvents.Enter, "Break on Enter");
+            yield return NodeMomentOption(onNode, Debugging.BehaviorTreeNodeBreakEvents.Exit, "Break on Exit");
+            yield return NodeMomentOption(onNode, Debugging.BehaviorTreeNodeBreakEvents.Aborted, "Break on Abort");
+            yield return NodeMomentOption(onNode, Debugging.BehaviorTreeNodeBreakEvents.Skipped, "Break on Skip");
+
+            if (onNode != null)
+            {
+                foreach (var option in SharedOptions(onNode)) yield return option;
+            }
+        }
+
+        private DropdownOption NodeMomentOption(
+            Debugging.BehaviorTreeBreakpoint armed, Debugging.BehaviorTreeNodeBreakEvents moment, string label)
+        {
+            var node = element;
+            var isOn = armed != null && (armed.Events & moment) != 0;
+
+            return new DropdownOption(
+                (Action)(() => BehaviorTreeBreakpointStore.ToggleNodeEvent(node, moment, context)),
+                $"Breakpoint/{Tick(isOn)}{label}");
+        }
+
+        private IEnumerable<DropdownOption> GuardOptions(
+            ConditionalExecution guard, Debugging.BehaviorTreeBreakpoint armed)
+        {
+            yield return GuardOption(guard, armed, Debugging.BehaviorTreeGuardBreakOn.EitherWay, "Break when it changes");
+            yield return GuardOption(guard, armed, Debugging.BehaviorTreeGuardBreakOn.BecameTrue, "Break when it becomes true");
+            yield return GuardOption(guard, armed, Debugging.BehaviorTreeGuardBreakOn.BecameFalse, "Break when it becomes false");
+        }
+
+        private DropdownOption GuardOption(
+            ConditionalExecution guard,
+            Debugging.BehaviorTreeBreakpoint armed,
+            Debugging.BehaviorTreeGuardBreakOn breakOn,
+            string label)
+        {
+            // The three directions are one setting rather than a mask, so choosing the one already chosen
+            // disarms it — otherwise the only way off a guard breakpoint would be Remove.
+            var isOn = armed != null && armed.GuardBreakOn == breakOn;
+
+            return new DropdownOption(
+                (Action)(() =>
+                {
+                    if (isOn) BehaviorTreeBreakpointStore.Remove(armed);
+                    else BehaviorTreeBreakpointStore.SetGuard(guard, breakOn, context);
+                }),
+                $"Breakpoint/{Tick(isOn)}{label}");
+        }
+
+        private static IEnumerable<DropdownOption> SharedOptions(Debugging.BehaviorTreeBreakpoint armed)
+        {
+            yield return new DropdownOption(
+                (Action)(() => BehaviorTreeBreakpointStore.SetEnabled(armed, !armed.Enabled)),
+                $"Breakpoint/{Tick(armed.Enabled)}Enabled");
+
+            yield return new DropdownOption(
+                (Action)(() => BehaviorTreeBreakpointStore.Remove(armed)),
+                "Breakpoint/Remove Breakpoint");
+        }
+
+        private static string Tick(bool on) => on ? "✔ " : "     ";
 
         public IEnumerable<Type> GetEnumerableOfType(Type t)
         {

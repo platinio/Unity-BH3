@@ -374,9 +374,104 @@ namespace ArcaneOnyx.BehaviorTree
                 BehaviorTreeTimelinePanel.RequestScrub(row.LastWriteTick);
             }
 
+            HandleBreakpointMenu(rect, row);
+
             y += Line() + RowSpacing;
 
             if (isExpanded) DrawHistory(x + IndentWidth, ref y, width - IndentWidth, row, recording);
+        }
+
+        /// <summary>
+        /// Right-click a row to break the next time that variable is written.
+        ///
+        /// <para>
+        /// This is where a variable breakpoint belongs, and it is the reason Component 6 was built on top of
+        /// this panel rather than beside it. A node and a guard can be pointed at on a canvas; a variable can
+        /// only be pointed at here, and the value offered — "break when it is written <em>this</em> again" —
+        /// is the row's own current value, which is exactly the thing someone staring at a table of variables
+        /// wants to stop on. Typing it by hand into the breakpoints panel is the fallback, not the path.
+        /// </para>
+        ///
+        /// <para>
+        /// The match is against the recorded rendering of the value, capped at 64 characters like everything
+        /// else the recorder keeps, so the offer is only made when the row's value is short enough to still be
+        /// whole. Offering it on a truncated value would arm a breakpoint that silently never fires.
+        /// </para>
+        /// </summary>
+        private void HandleBreakpointMenu(Rect rect, BehaviorTreeVariableWatchRow row)
+        {
+            var e = Event.current;
+
+            if (e.type != EventType.ContextClick || !rect.Contains(e.mousePosition)) return;
+
+            var armed = BehaviorTreeBreakpoints.ForVariable(row.Key);
+            var menu = new GenericMenu();
+
+            menu.AddItem(
+                new GUIContent($"Break on any write to {row.Key}"),
+                armed != null && armed.Compare == BehaviorTreeVariableCompare.Changed,
+                () => BehaviorTreeBreakpointStore.SetVariable(row.Key));
+
+            var value = row.Value;
+            var usable = !string.IsNullOrEmpty(value) && value.Length < BehaviorTreeEvent.MaxValueLength;
+
+            if (usable)
+            {
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.Equals);
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.NotEquals);
+
+                // Ordering is offered only when the value in front of the reader is a number, because that is
+                // the only case where it can ever match. A greyed-out "<" beside a GameObject says why it is
+                // not on offer; an enabled one would arm a breakpoint that quietly never fires.
+                var numeric = BehaviorTreeBreakpoint.TryParseNumber(value, out _);
+
+                AddOrderingItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.LessThan, numeric);
+                AddOrderingItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.GreaterThan, numeric);
+
+                AddCompareItem(menu, armed, row.Key, value, BehaviorTreeVariableCompare.Contains);
+            }
+
+            menu.AddSeparator(string.Empty);
+
+            if (armed == null) menu.AddDisabledItem(new GUIContent("Remove breakpoint"));
+            else menu.AddItem(new GUIContent("Remove breakpoint"), false, () => BehaviorTreeBreakpointStore.Remove(armed));
+
+            menu.ShowAsContext();
+            e.Use();
+        }
+
+        private static void AddCompareItem(
+            GenericMenu menu,
+            BehaviorTreeBreakpoint armed,
+            string key,
+            string value,
+            BehaviorTreeVariableCompare compare)
+        {
+            var on = armed != null && armed.Compare == compare && armed.ExpectedValue == value;
+
+            menu.AddItem(
+                new GUIContent($"Break when {key} {BehaviorTreeBreakpoint.Symbol(compare)} {value}"),
+                on,
+                () => BehaviorTreeBreakpointStore.SetVariable(key, value, compare));
+        }
+
+        private static void AddOrderingItem(
+            GenericMenu menu,
+            BehaviorTreeBreakpoint armed,
+            string key,
+            string value,
+            BehaviorTreeVariableCompare compare,
+            bool numeric)
+        {
+            var label = new GUIContent($"Break when {key} {BehaviorTreeBreakpoint.Symbol(compare)} {value}");
+
+            if (!numeric)
+            {
+                menu.AddDisabledItem(label);
+                return;
+            }
+
+            AddCompareItem(menu, armed, key, value, compare);
         }
 
         private void DrawHistory(

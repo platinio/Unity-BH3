@@ -1,0 +1,36 @@
+using System;
+
+namespace ArcaneOnyx.BehaviorTree.Debugging
+{
+    /// <summary>
+    /// Which moments in a node's life should stop the editor. A mask rather than four breakpoints so the panel
+    /// shows one row per node, and so arming a second moment on a node you already broke on is an edit rather
+    /// than a duplicate.
+    ///
+    /// <para>
+    /// <see cref="Skipped"/> is not in the spec's list, which reads "enters / exits / aborts". It is here
+    /// because the recorder already emits it as a distinct event and Finding 3 is explicit that skipped and
+    /// aborted are different things worded differently — "this branch never started" is the question a
+    /// designer most often wants to stop on, and without the flag it is the one case they cannot.
+    /// </para>
+    /// </summary>
+    [Flags]
+    public enum BehaviorTreeNodeBreakEvents
+    {
+        None = 0,
+
+        /// <summary>The node started.</summary>
+        Enter = 1 << 0,
+
+        /// <summary>The node stopped, whatever it ended on.</summary>
+        Exit = 1 << 1,
+
+        /// <summary>A guard turned false mid-run and killed the node.</summary>
+        Aborted = 1 << 2,
+
+        /// <summary>A guard was false as the node was about to start, so it never ran.</summary>
+        Skipped = 1 << 3,
+
+        All = Enter | Exit | Aborted | Skipped,
+    }
+}
