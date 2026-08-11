@@ -1,0 +1,22 @@
+# Table of contents
+
+* [Behavior Trees — BH3](../README.md)
+
+## Guides
+
+* [Getting Started](getting-started.md)
+* [The Graph Editor](editor-guide.md)
+* [Ports and Wiring](ports-and-wiring.md)
+* [Sub-Behavior Trees](sub-behavior-trees.md)
+* [Best Practices](best-practices.md)
+
+## Reference
+
+* [Node Reference](node-reference.md)
+* [API Reference](api-reference.md)
+* [Custom Nodes](custom-nodes.md)
+* [Authoring From Code](authoring-from-code.md)
+
+## Debugging
+
+* [The Why Panel](why-panel.md)

@@ -222,7 +222,7 @@ flip rather than a proven cause. Treat that difference seriously.
 **Unity's built-in `Set Variable` unit is invisible — use `Set BT Variable` instead.** Unity's unit cannot
 be observed from outside, so a variable written by one inside a script graph appears in no recording and
 the panel cannot name it as the writer. BH3 ships a replacement that records: see
-[Writing variables from a script graph](#writing-variables-from-a-script-graph).
+[Reading and writing variables from a script graph](#reading-and-writing-variables-from-a-script-graph).
 
 **Ticks are not frames.** A tick is one update of *that agent's* tree, counted from when it started. Two
 agents' tick numbers don't line up with each other.
@@ -268,3 +268,11 @@ everything off.
 `Assets/ArcaneOnyx/BH3Demos/WhyInspector/` is a small scene built to be read with this panel. It reproduces
 the classic bug — a guard reading a variable a sensor flickers — so you can see every part of the panel
 answer a question you already know the answer to. Its README walks through it in about two minutes.
+
+---
+
+## See also
+
+- [The Graph Editor](editor-guide.md) — the window the panel lives in
+- [Sub-Behavior Trees](sub-behavior-trees.md) — why a shared branch needs the call-site picker
+- [Best Practices](best-practices.md#prefer-conditional-executions-over-condition-nodes-for-interruptions) — guards, the thing most explanations end up being about
