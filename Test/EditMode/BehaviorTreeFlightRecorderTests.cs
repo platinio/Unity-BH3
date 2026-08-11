@@ -72,7 +72,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private Sequence GuardedSequence(
             BehaviorTreeGraph graph,
             bool guardStartsTrue,
-            out BooleanConditionalExecution guard,
+            out BooleanReactiveGuard guard,
             out ScriptedNode child)
         {
             var sequence = AddNode<Sequence>(graph);
@@ -83,7 +83,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, child);
 
-            guard = AddNode<BooleanConditionalExecution>(graph);
+            guard = AddNode<BooleanReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(guardStartsTrue);
 

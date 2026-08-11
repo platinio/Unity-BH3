@@ -164,14 +164,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             SetPrivateField(read, "VariableKind", VariableKind.Object);
             key.Value.ValidlyConnectTo(read.Key);
 
-            var attackConditional = Add<BooleanConditionalExecution>(graph, -900.0f, 250.0f);
+            var attackConditional = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
             attackConditional.UpdateOwner(attackNode);
             read.Value.ValidlyConnectTo(attackConditional.Value);
 
             var not = Add<Not>(graph, 600.0f, 0.0f);
             read.Value.ValidlyConnectTo(not.Value);
 
-            var idleConditional = Add<BooleanConditionalExecution>(graph, 900.0f, 250.0f);
+            var idleConditional = Add<BooleanReactiveGuard>(graph, 900.0f, 250.0f);
             idleConditional.UpdateOwner(idleNode);
             not.Result.ValidlyConnectTo(idleConditional.Value);
 

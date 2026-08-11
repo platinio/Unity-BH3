@@ -88,7 +88,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// Entry -> Selector -> Run Behavior Tree Graph(branch), with an optional guard on the run node.
         /// Awoken, entered, and ticked once, so the sub-tree is genuinely mid-run when the test acts.
         /// </summary>
-        private BehaviorTreeGraphAsset RunningHost(out RunBehaviorTreeGraphNode runNode, out CountingGuard guard, bool guarded)
+        private BehaviorTreeGraphAsset RunningHost(out RunBehaviorTreeGraphNode runNode, out CountingReactiveGuard guard, bool guarded)
         {
             var host = NewTree("Host");
             var selector = Add<Selector>(host);
@@ -103,7 +103,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             if (guarded)
             {
-                guard = Add<CountingGuard>(host, 200.0f, 300.0f);
+                guard = Add<CountingReactiveGuard>(host, 200.0f, 300.0f);
                 guard.UpdateOwner(runNode);
             }
 

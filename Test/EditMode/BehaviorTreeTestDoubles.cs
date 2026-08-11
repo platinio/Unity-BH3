@@ -77,6 +77,28 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     }
 
     /// <summary>
+    /// <see cref="CountingGuard"/>'s reactive twin — the one to reach for whenever a test needs a guard that
+    /// keeps watching. A plain <see cref="ConditionalExecution"/> is evaluated at entry and never again, so
+    /// any fixture about aborting, re-evaluation, or per-tick cost has to use this one or it is measuring
+    /// the doorman and calling it the watchman.
+    /// </summary>
+    internal sealed class CountingReactiveGuard : ReactiveGuard
+    {
+        public int Evaluations { get; private set; }
+
+        /// <summary>What <see cref="Evaluate"/> answers. Settable so a test can flip the guard mid-run.</summary>
+        public bool Result { get; set; } = true;
+
+        public override string NodeName => "Counting Test Reactive Guard";
+
+        public override bool Evaluate()
+        {
+            Evaluations++;
+            return Result;
+        }
+    }
+
+    /// <summary>
     /// A leaf that never finishes, and counts its own entries and exits.
     /// <para>
     /// Exists alongside <see cref="ScriptedNode"/> for the sub-tree fixtures specifically. A sub-tree is

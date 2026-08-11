@@ -602,7 +602,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             toChild.SetupTransition(sequence, child, 0);
             graph.Transitions.Add(toChild);
 
-            var guard = new BooleanConditionalExecution { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
+            var guard = new BooleanReactiveGuard { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
