@@ -501,6 +501,54 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             public void BindVariables() => Variables = GetComponent<Variables>();
         }
 
+        /// <summary>
+        /// The component path a sensor uses, end to end: written through <see cref="AgentVariableWriter"/>,
+        /// recorded by name, and read back off the watch.
+        ///
+        /// <para>
+        /// Worth its own test because the writer is what makes an out-of-tree write attributable at all. A
+        /// sensor that wrote to <c>Variables</c> directly would set the same value and be invisible here.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ASensorWritingThroughTheWriterIsAttributedByName()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            var agent = new UnityEngine.GameObject("Zombie");
+
+            try
+            {
+                var machine = agent.AddComponent<BindableMachine>();
+                machine.BindVariables();
+                machine.SetFlightRecorder(recorder);
+
+                var sensor = agent.AddComponent<FakeSensor>();
+                var writer = AgentVariableWriter.On(agent);
+
+                Assert.IsTrue(writer.Write(sensor, "hasTarget", true), "The first write changes the value.");
+                Assert.IsFalse(writer.Write(sensor, "hasTarget", true),
+                    "An unchanged value is dropped, or a fact recomputed every frame fills the buffer with 'still true'.");
+                Assert.IsTrue(writer.Write(sensor, "hasTarget", false));
+
+                var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recorder), VariableKind.Object), "hasTarget");
+
+                Assert.AreEqual("False", row.Value);
+                Assert.AreEqual(2, row.WriteCount, "The duplicate must not appear as a third write.");
+                Assert.AreEqual(nameof(FakeSensor), row.Latest.WriterName,
+                    "The caller names itself, so several components sharing one writer stay distinguishable.");
+                Assert.IsFalse(row.Latest.HasLocatableWriter, "A sensor is not a node on any canvas.");
+                Assert.AreEqual(false, writer.Read("hasTarget"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(agent);
+                BehaviorTreeFlightRecorders.Reset();
+            }
+        }
+
+        /// <summary>Stands in for a perception component. Derives from nothing in particular, which is the point.</summary>
+        private sealed class FakeSensor : UnityEngine.MonoBehaviour { }
+
         /// <summary>A <see cref="GameplayNode"/> exposing its protected write so a test can make one.</summary>
         private sealed class WritingNode : GameplayNode
         {
