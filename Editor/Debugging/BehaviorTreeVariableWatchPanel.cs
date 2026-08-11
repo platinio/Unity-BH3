@@ -43,6 +43,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Below this, a row drops the writer rather than clipping both it and the value.</summary>
         private const float WriterColumnMinWidth = 260.0f;
 
+        /// <summary>The filter box is taller than a row — it is typed into, not just read.</summary>
+        private const float FilterHeight = 22.0f;
+
+        private const float ClearButtonWidth = 22.0f;
+
+        /// <summary>Named so the placeholder can tell focused-and-empty from unfocused-and-empty.</summary>
+        private const string FilterControlName = "BehaviorTreeVariableWatchFilter";
+
         /// <summary>Expanded rows, keyed by scope and variable so two scopes' copies fold independently.</summary>
         private readonly HashSet<string> expanded = new();
 
@@ -56,6 +64,9 @@ namespace ArcaneOnyx.BehaviorTree
         private GUIStyle valueStyle;
         private GUIStyle writerStyle;
         private GUIStyle scopeStyle;
+        private GUIStyle helpStyle;
+        private GUIStyle filterStyle;
+        private GUIStyle placeholderStyle;
 
         public BehaviorTreeVariableWatchPanel(GraphCore.IGraphContext context)
         {
@@ -90,9 +101,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (recording == null)
             {
-                DrawHelp(x, ref y, width, Application.isPlaying
-                    ? "No agent is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
-                    : "Enter play mode, or open a recording in the Timeline panel.");
+                DrawHelp(x, ref y, width, NoRecordingMessage());
                 return;
             }
 
@@ -103,9 +112,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (current.IsEmpty)
             {
-                DrawHelp(x, ref y, width, recording.EventCount == 0
-                    ? "Nothing recorded yet."
-                    : "No variable writes recorded at or before this tick.");
+                DrawHelp(x, ref y, width, EmptyMessage(recording));
                 return;
             }
 
@@ -113,10 +120,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             for (int i = 0; i < current.Scopes.Count; i++)
             {
-                shown += DrawScope(x, ref y, width, current.Scopes[i]);
+                shown += DrawScope(x, ref y, width, current.Scopes[i], recording);
             }
 
-            if (shown == 0) DrawHelp(x, ref y, width, $"No variable matches “{filter}”.");
+            if (shown == 0) DrawHelp(x, ref y, width, NoMatchMessage());
         }
 
         public float GetHeight(float width)
@@ -126,12 +133,12 @@ namespace ArcaneOnyx.BehaviorTree
             var recording = CurrentRecording();
             var inner = width - Padding * 2.0f;
 
-            if (recording == null) return Padding * 2.0f + HelpHeight(inner);
+            if (recording == null) return Padding * 2.0f + HelpHeight(NoRecordingMessage(), inner);
 
-            var height = Padding * 2.0f + (Line() + RowSpacing) * 2.0f;
+            var height = Padding * 2.0f + Line() + FilterHeight + RowSpacing * 2.0f;
             var current = WatchFor(recording);
 
-            if (current.IsEmpty) return height + HelpHeight(inner);
+            if (current.IsEmpty) return height + HelpHeight(EmptyMessage(recording), inner);
 
             var shown = 0;
 
@@ -152,7 +159,7 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
 
-            return shown == 0 ? height + HelpHeight(inner) : height;
+            return shown == 0 ? height + HelpHeight(NoMatchMessage(), inner) : height;
         }
 
         #region Source
@@ -234,15 +241,77 @@ namespace ArcaneOnyx.BehaviorTree
             return y + Line() + RowSpacing;
         }
 
+        /// <summary>
+        /// The filter box. Taller and larger than a toolbar search field, and it says what it is when empty —
+        /// an unlabelled search box in a panel of unlabelled columns is a control you have to experiment with
+        /// to understand.
+        /// </summary>
         private float DrawFilter(float x, float y, float width)
         {
-            filter = EditorGUI.TextField(new Rect(x, y, width, Line()), filter, EditorStyles.toolbarSearchField);
+            var clearWidth = string.IsNullOrEmpty(filter) ? 0.0f : ClearButtonWidth;
+            var field = new Rect(x, y, width - clearWidth, FilterHeight);
 
-            return y + Line() + RowSpacing;
+            GUI.SetNextControlName(FilterControlName);
+            filter = EditorGUI.TextField(field, filter, filterStyle);
+
+            if (string.IsNullOrEmpty(filter) && GUI.GetNameOfFocusedControl() != FilterControlName)
+            {
+                // Drawn over the empty field rather than as a separate label, so it disappears the moment
+                // there is real text to read.
+                var hint = new Rect(field.x + 4.0f, field.y, field.width - 4.0f, field.height);
+                GUI.Label(hint, "Filter variables by name…", placeholderStyle);
+            }
+
+            if (clearWidth > 0.0f &&
+                GUI.Button(new Rect(field.xMax, y, clearWidth, FilterHeight), "✕", EditorStyles.miniButton))
+            {
+                filter = string.Empty;
+                GUI.FocusControl(null);
+            }
+
+            return y + FilterHeight + RowSpacing;
+        }
+
+        /// <summary>
+        /// Why the table is empty, worded so the reader can act on it.
+        ///
+        /// <para>
+        /// "No variable writes recorded" is true and useless when the reason is that the debugger is pointed
+        /// at a different agent from the one doing the writing — a scene with a second agent makes an empty
+        /// table look like a broken panel, and the filter box above it look broken with it. So when other
+        /// agents are recording, say so and say how to switch.
+        /// </para>
+        /// </summary>
+        private static string NoRecordingMessage()
+        {
+            return Application.isPlaying
+                ? "No agent is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
+                : "Enter play mode, or open a recording in the Timeline panel.";
+        }
+
+        private string NoMatchMessage() => $"No variable matches “{filter}”.";
+
+        private static string EmptyMessage(IBehaviorTreeRecording recording)
+        {
+            var reason = recording.EventCount == 0
+                ? $"{recording.AgentName} has recorded nothing yet."
+                : $"{recording.AgentName} recorded no variable writes at or before this tick.";
+
+            // Counted, never scanned: asking every recorder whether it holds a write would walk every ring on
+            // every repaint, and the count alone is enough to point somewhere.
+            var others = BehaviorTreeFlightRecorders.Active.Count - 1;
+
+            if (others <= 0) return reason;
+
+            return reason
+                   + (others == 1 ? " 1 other agent is" : $" {others} other agents are")
+                   + " recording — select it in the hierarchy to switch the debugger to it.";
         }
 
         /// <summary>Draws one store and its rows. Returns how many rows survived the filter.</summary>
-        private int DrawScope(float x, ref float y, float width, BehaviorTreeVariableWatchScope scope)
+        private int DrawScope(
+            float x, ref float y, float width, BehaviorTreeVariableWatchScope scope,
+            IBehaviorTreeRecording recording)
         {
             var matched = MatchCount(scope);
             if (matched == 0) return 0;
@@ -258,14 +327,15 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 if (!Matches(row)) continue;
 
-                DrawRow(x + IndentWidth, ref y, width - IndentWidth, scope, row);
+                DrawRow(x + IndentWidth, ref y, width - IndentWidth, scope, row, recording);
             }
 
             return matched;
         }
 
         private void DrawRow(
-            float x, ref float y, float width, BehaviorTreeVariableWatchScope scope, BehaviorTreeVariableWatchRow row)
+            float x, ref float y, float width, BehaviorTreeVariableWatchScope scope,
+            BehaviorTreeVariableWatchRow row, IBehaviorTreeRecording recording)
         {
             var rect = new Rect(x, y, width, Line());
             var isExpanded = IsExpanded(scope, row);
@@ -308,7 +378,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             y += Line() + RowSpacing;
 
-            if (isExpanded) DrawHistory(x + IndentWidth, ref y, width - IndentWidth, row);
+            if (isExpanded) DrawHistory(x + IndentWidth, ref y, width - IndentWidth, row, recording);
         }
 
         /// <summary>
@@ -404,7 +474,9 @@ namespace ArcaneOnyx.BehaviorTree
             AddCompareItem(menu, armed, key, value, compare);
         }
 
-        private void DrawHistory(float x, ref float y, float width, BehaviorTreeVariableWatchRow row)
+        private void DrawHistory(
+            float x, ref float y, float width, BehaviorTreeVariableWatchRow row,
+            IBehaviorTreeRecording recording)
         {
             for (int i = 0; i < row.History.Count; i++)
             {
@@ -420,11 +492,15 @@ namespace ArcaneOnyx.BehaviorTree
                     $"@{write.Tick}  {write.OldValue} → {write.NewValue}   by {write.WriterName}",
                     writerStyle);
 
-                using (new EditorGUI.DisabledScope(!CanSelect(write)))
+                var target = TargetFor(write, recording);
+
+                using (new EditorGUI.DisabledScope(!target.CanFollow))
                 {
-                    if (GUI.Button(select, new GUIContent("→", "Select the writing node on the canvas"), EditorStyles.miniButton))
+                    // The tooltip carries the reason even while disabled, so "why is this grey" is answerable
+                    // by hovering rather than by reading the source.
+                    if (GUI.Button(select, new GUIContent("→", target.Tooltip), EditorStyles.miniButton))
                     {
-                        SelectWriter(write);
+                        Follow(target);
                     }
                 }
 
@@ -448,24 +524,48 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void DrawHelp(float x, ref float y, float width, string message)
         {
-            var height = HelpHeight(width);
+            var height = HelpHeight(message, width);
 
-            EditorGUI.LabelField(new Rect(x, y, width, height), message, EditorStyles.wordWrappedMiniLabel);
+            EditorGUI.LabelField(new Rect(x, y, width, height), message, helpStyle);
             y += height;
         }
 
+        /// <summary>
+        /// Sizes are set here rather than inherited from <see cref="EditorStyles"/> because the defaults this
+        /// panel would otherwise take — <c>miniLabel</c> for the secondary text — are small enough to be
+        /// genuinely hard to read in a table you scan rather than glance at.
+        /// </summary>
         private void EnsureStyles()
         {
             if (valueStyle != null) return;
 
-            valueStyle = new GUIStyle(EditorStyles.label) { fontSize = 11 };
-            writerStyle = new GUIStyle(EditorStyles.miniLabel);
-            scopeStyle = new GUIStyle(EditorStyles.miniLabel) { fontStyle = FontStyle.Bold };
+            valueStyle = new GUIStyle(EditorStyles.label) { fontSize = 12 };
+            writerStyle = new GUIStyle(EditorStyles.miniLabel) { fontSize = 11 };
+            scopeStyle = new GUIStyle(EditorStyles.miniLabel) { fontSize = 12, fontStyle = FontStyle.Bold };
+            helpStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { fontSize = 11 };
+            filterStyle = new GUIStyle(EditorStyles.textField) { fontSize = 12 };
+            placeholderStyle = new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                fontStyle = FontStyle.Italic,
+                normal = { textColor = new Color(0.5f, 0.5f, 0.5f, 0.9f) },
+            };
         }
 
-        private static float Line() => EditorGUIUtility.singleLineHeight;
+        /// <summary>
+        /// Row height. Two points above <see cref="EditorGUIUtility.singleLineHeight"/> so the larger text has
+        /// somewhere to sit — at the default height a 12pt row reads as cramped.
+        /// </summary>
+        private static float Line() => EditorGUIUtility.singleLineHeight + 2.0f;
 
-        private static float HelpHeight(float width) => Line() * 2.0f;
+        /// <summary>
+        /// Measured rather than assumed: these messages name an agent and explain how to switch to another,
+        /// so a fixed two lines clips them at exactly the width a sidebar tends to be.
+        /// </summary>
+        private float HelpHeight(string message, float width)
+        {
+            return Mathf.Max(Line(), helpStyle.CalcHeight(new GUIContent(message), Mathf.Max(1.0f, width)));
+        }
 
         private float HistoryHeight(BehaviorTreeVariableWatchRow row)
         {
@@ -519,22 +619,155 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Writer
 
-        private bool CanSelect(in BehaviorTreeVariableWatchWrite write)
+        /// <summary>
+        /// Where the → button would take you, and what to say about it.
+        ///
+        /// <para>
+        /// Almost every writer worth chasing is <em>not</em> on the open canvas. A sensor is not a node at
+        /// all, and a node that writes agent state usually does so from inside a branch, whose asset is a
+        /// different canvas — so a button that only selected within the current graph was disabled in exactly
+        /// the cases it existed for. It now opens the writer's own asset first.
+        /// </para>
+        /// </summary>
+        private readonly struct WriterTarget
         {
-            return write.HasLocatableWriter && FindOnCanvas(write.WriterGuid) != null;
+            public readonly BehaviorTreeGraphAsset Asset;
+            public readonly Guid Guid;
+            public readonly string Tooltip;
+
+            private WriterTarget(BehaviorTreeGraphAsset asset, Guid guid, string tooltip)
+            {
+                Asset = asset;
+                Guid = guid;
+                Tooltip = tooltip;
+            }
+
+            public bool CanFollow => Guid != Guid.Empty;
+
+            public static WriterTarget None(string why) => new(null, Guid.Empty, why);
+
+            public static WriterTarget OnCanvas(Guid guid, string name) =>
+                new(null, guid, $"Select '{name}' on this canvas");
+
+            public static WriterTarget InAsset(BehaviorTreeGraphAsset asset, Guid guid, string name) =>
+                new(asset, guid, $"Open {asset.name} and select '{name}'");
         }
 
-        private void SelectWriter(in BehaviorTreeVariableWatchWrite write)
+        private WriterTarget TargetFor(in BehaviorTreeVariableWatchWrite write, IBehaviorTreeRecording recording)
         {
-            var node = FindOnCanvas(write.WriterGuid);
-            if (node == null) return;
+            if (!write.HasLocatableWriter)
+            {
+                return WriterTarget.None(
+                    $"{write.WriterName} wrote this from outside the tree — there is no node to select.");
+            }
 
-            context.selection.Select(node);
+            if (FindIn(context?.graph as BehaviorTreeGraph, write.WriterGuid) != null)
+            {
+                return WriterTarget.OnCanvas(write.WriterGuid, write.WriterName);
+            }
+
+            var asset = AssetForCallSite(write.CallSiteId, recording);
+
+            if (asset == null || FindIn(asset.graph, write.WriterGuid) == null)
+            {
+                return WriterTarget.None(
+                    $"'{write.WriterName}' is not on this canvas, and the branch it ran in could not be resolved "
+                    + "to an asset.");
+            }
+
+            return WriterTarget.InAsset(asset, write.WriterGuid, write.WriterName);
         }
 
-        private BehaviorTreeNode FindOnCanvas(Guid guid)
+        private void Follow(in WriterTarget target)
         {
-            if (context?.graph is not BehaviorTreeGraph graph) return null;
+            if (!target.CanFollow) return;
+
+            if (target.Asset == null)
+            {
+                Select(context, FindIn(context?.graph as BehaviorTreeGraph, target.Guid));
+                return;
+            }
+
+            // Opening swaps the window's context, and with it this panel's, so the selection has to be made
+            // against whichever context the window ends up on rather than the one captured here.
+            AssetDatabase.OpenAsset(target.Asset);
+
+            var window = GraphCore.GraphWindow.active;
+            var opened = window?.context;
+
+            Select(opened, FindIn(opened?.graph as BehaviorTreeGraph, target.Guid));
+        }
+
+        private static void Select(GraphCore.IGraphContext target, BehaviorTreeNode node)
+        {
+            if (target == null || node == null) return;
+
+            target.selection.Select(node);
+        }
+
+        /// <summary>
+        /// The asset a call site was running, resolved exactly where possible.
+        ///
+        /// <para>
+        /// The call site's <c>RunNodeGuid</c> names the <c>RunBehaviorTreeGraphNode</c> that pushed it, and
+        /// when that node is on the open canvas it holds the asset reference itself — no guessing. Only when
+        /// it is not (a branch nested two deep, say) does this fall back to matching the recorded asset
+        /// <i>name</i>, and an ambiguous name resolves to nothing rather than to the wrong tree.
+        /// </para>
+        /// </summary>
+        private BehaviorTreeGraphAsset AssetForCallSite(int callSiteId, IBehaviorTreeRecording recording)
+        {
+            if (recording == null || callSiteId == BehaviorTreeCallSite.RootId) return null;
+
+            var callSites = recording.CallSites;
+            BehaviorTreeCallSite? found = null;
+
+            for (int i = 0; i < callSites.Count; i++)
+            {
+                if (callSites[i].Id != callSiteId) continue;
+
+                found = callSites[i];
+                break;
+            }
+
+            if (found == null) return null;
+
+            if (FindIn(context?.graph as BehaviorTreeGraph, found.Value.RunNodeGuid) is RunBehaviorTreeGraphNode run &&
+                run.BehaviorTreeGraphAsset != null)
+            {
+                return run.BehaviorTreeGraphAsset;
+            }
+
+            return AssetNamed(found.Value.AssetName);
+        }
+
+        private static BehaviorTreeGraphAsset AssetNamed(string assetName)
+        {
+            if (string.IsNullOrEmpty(assetName)) return null;
+
+            var guids = AssetDatabase.FindAssets($"\"{assetName}\" t:{nameof(BehaviorTreeGraphAsset)}");
+            BehaviorTreeGraphAsset match = null;
+
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var candidate = AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(path);
+
+                if (candidate == null || candidate.name != assetName) continue;
+
+                // A second exact match means the name does not identify a tree. Better to offer nothing than
+                // to open someone else's Attack.
+                if (match != null) return null;
+
+                match = candidate;
+            }
+
+            return match;
+        }
+
+        private static BehaviorTreeNode FindIn(BehaviorTreeGraph graph, Guid guid)
+        {
+            if (graph == null || guid == Guid.Empty) return null;
 
             foreach (var node in graph.Nodes)
             {

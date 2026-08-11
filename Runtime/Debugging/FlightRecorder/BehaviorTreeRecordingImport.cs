@@ -190,11 +190,15 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     oldValue = item["from"].AsString("null");
                     newValue = item["to"].AsString("null");
 
-                    // Absent in recordings exported before the scope was recorded, so those fall back to
-                    // Object rather than to the enum's own default: Flow means "not a variable write" here,
-                    // and importing every old write as that would put them in no scope at all.
-                    variableKind = Enum.TryParse<Unity.VisualScripting.VariableKind>(
-                        item["scope"].AsString(), out var parsedKind)
+                    // "scope" was this property's name briefly, so it is still read: a recording exported in
+                    // that window should not silently regroup. Absent altogether — a recording from before
+                    // the kind was recorded at all — falls back to Object rather than to the enum's own
+                    // default, because Flow means "not a variable write" here and would put every old write
+                    // in a scope of its own.
+                    var storedKind = item["variableKind"].AsString();
+                    if (string.IsNullOrEmpty(storedKind)) storedKind = item["scope"].AsString();
+
+                    variableKind = Enum.TryParse<Unity.VisualScripting.VariableKind>(storedKind, out var parsedKind)
                         ? parsedKind
                         : Unity.VisualScripting.VariableKind.Object;
 

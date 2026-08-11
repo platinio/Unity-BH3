@@ -295,6 +295,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 history.Insert(0, new BehaviorTreeVariableWatchWrite(
                     recorded.Tick,
                     recorded.Sequence,
+                    recorded.CallSiteId,
                     recorded.OldValue ?? "null",
                     recorded.NewValue ?? "null",
                     recorded.RelatedGuid,
