@@ -21,18 +21,31 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public static class BehaviorTreePriorityBadge
     {
-        private const float BadgeSize = 16.0f;
+        /// <summary>
+        /// Big enough to read at the zoom levels a graph is actually edited at. The number is the whole point
+        /// of the badge, so it loses to nothing else on the node.
+        /// </summary>
+        private const float BadgeSize = 26.0f;
 
         /// <summary>Ordinary priority. Muted, because the number is reference information, not an alert.</summary>
-        private static readonly Color BadgeColor = new(0.22f, 0.24f, 0.28f, 0.92f);
+        private static readonly Color BadgeColor = new(0.20f, 0.22f, 0.26f, 0.96f);
 
         /// <summary>
         /// This child sits in a different place left-to-right than its priority says. Amber rather than red:
         /// it is legal and sometimes deliberate, but it is always worth knowing.
         /// </summary>
-        private static readonly Color DisagreeingColor = new(0.85f, 0.6f, 0.1f, 0.95f);
+        private static readonly Color DisagreeingColor = new(0.85f, 0.6f, 0.1f, 0.97f);
 
-        private static readonly Color TextColor = new(0.92f, 0.93f, 0.95f, 1.0f);
+        private static readonly Color TextColor = new(0.96f, 0.97f, 0.98f, 1.0f);
+
+        /// <summary>A thin dark ring so the badge reads against a light node header as well as a dark one.</summary>
+        private static readonly Color OutlineColor = new(0.06f, 0.07f, 0.09f, 0.9f);
+
+        /// <summary>
+        /// Refilled on every call rather than allocated. This runs for every node on every repaint, so a list
+        /// per node per frame is the real cost here — not the scan, which is a handful of comparisons.
+        /// </summary>
+        private static readonly List<BehaviorTreeTransition> Siblings = new();
 
         private static GUIStyle labelStyle;
 
@@ -51,24 +64,40 @@ namespace ArcaneOnyx.BehaviorTree
             var parent = ParentOf(node);
             if (parent is not ContainerNode) return;
 
-            var byPriority = node.graph.ChildrenInPriorityOrder(parent);
-            if (byPriority.Count < 2) return;
+            node.graph.ChildTransitionsInPriorityOrder(parent, Siblings);
+            if (Siblings.Count < 2) return;
 
-            int priority = byPriority.IndexOf(node);
+            int priority = -1;
+            bool layoutAgrees = true;
+
+            for (int index = 0; index < Siblings.Count; index++)
+            {
+                if (Siblings[index].destination == node) priority = index;
+
+                if (index > 0 &&
+                    Siblings[index].destination.Position.x < Siblings[index - 1].destination.Position.x)
+                {
+                    layoutAgrees = false;
+                }
+            }
+
             if (priority < 0) return;
 
             var badge = new Rect(
-                nodeRect.xMax - (BadgeSize * 0.65f),
-                nodeRect.y - (BadgeSize * 0.35f),
+                nodeRect.xMax - (BadgeSize * 0.6f),
+                nodeRect.y - (BadgeSize * 0.4f),
                 BadgeSize,
                 BadgeSize);
 
-            var color = LayoutAgreesWithPriority(byPriority) ? BadgeColor : DisagreeingColor;
-
             var previousColor = GUI.color;
 
-            GUI.color = color;
-            GUI.DrawTexture(badge, Texture2D.whiteTexture);
+            // Ring first, disc on top of it, so the outline reads as a border rather than a halo.
+            GUI.color = OutlineColor;
+            GUI.DrawTexture(badge, Disc());
+
+            GUI.color = layoutAgrees ? BadgeColor : DisagreeingColor;
+            GUI.DrawTexture(Shrink(badge, 2.0f), Disc());
+
             GUI.color = previousColor;
 
             GUI.Label(badge, (priority + 1).ToString(), LabelStyle());
@@ -91,22 +120,9 @@ namespace ArcaneOnyx.BehaviorTree
             return null;
         }
 
-        /// <summary>
-        /// Whether reading these children left to right gives the same order as their priorities.
-        /// <para>
-        /// They are already in priority order, so the question is only whether that sequence also happens to
-        /// ascend in x. A tree generated from code, or one edited outside the canvas, can easily have correct
-        /// priorities that read wrong on screen, and that mismatch is what the amber badge reports.
-        /// </para>
-        /// </summary>
-        private static bool LayoutAgreesWithPriority(List<BehaviorTreeNode> byPriority)
+        private static Rect Shrink(Rect rect, float by)
         {
-            for (int index = 1; index < byPriority.Count; index++)
-            {
-                if (byPriority[index].Position.x < byPriority[index - 1].Position.x) return false;
-            }
-
-            return true;
+            return new Rect(rect.x + by, rect.y + by, rect.width - (by * 2.0f), rect.height - (by * 2.0f));
         }
 
         private static GUIStyle LabelStyle()
@@ -116,13 +132,55 @@ namespace ArcaneOnyx.BehaviorTree
             labelStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = 10,
+                fontSize = 13,
                 fontStyle = FontStyle.Bold,
             };
 
             labelStyle.normal.textColor = TextColor;
 
             return labelStyle;
+        }
+
+        /// <summary>
+        /// A white disc with a soft edge, built once and tinted by the caller. White so that
+        /// <see cref="GUI.color"/> multiplies to exactly the colour asked for.
+        /// </summary>
+        private static Texture2D disc;
+
+        private static Texture2D Disc()
+        {
+            if (disc != null) return disc;
+
+            const int size = 64;
+            const float radius = size * 0.5f;
+
+            disc = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            var pixels = new Color32[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    var distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(radius, radius));
+
+                    // One pixel of falloff at the rim, or the circle has stair-stepped edges that read as a
+                    // sloppy square at the zoom levels a graph canvas actually sits at.
+                    var alpha = Mathf.Clamp01(radius - distance);
+
+                    pixels[(y * size) + x] = new Color(1.0f, 1.0f, 1.0f, alpha);
+                }
+            }
+
+            disc.SetPixels32(pixels);
+            disc.Apply();
+
+            return disc;
         }
     }
 }
