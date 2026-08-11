@@ -43,6 +43,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Below this, a row drops the writer rather than clipping both it and the value.</summary>
         private const float WriterColumnMinWidth = 260.0f;
 
+        /// <summary>The filter box is taller than a row — it is typed into, not just read.</summary>
+        private const float FilterHeight = 22.0f;
+
+        private const float ClearButtonWidth = 22.0f;
+
+        /// <summary>Named so the placeholder can tell focused-and-empty from unfocused-and-empty.</summary>
+        private const string FilterControlName = "BehaviorTreeVariableWatchFilter";
+
         /// <summary>Expanded rows, keyed by scope and variable so two scopes' copies fold independently.</summary>
         private readonly HashSet<string> expanded = new();
 
@@ -57,6 +65,8 @@ namespace ArcaneOnyx.BehaviorTree
         private GUIStyle writerStyle;
         private GUIStyle scopeStyle;
         private GUIStyle helpStyle;
+        private GUIStyle filterStyle;
+        private GUIStyle placeholderStyle;
 
         public BehaviorTreeVariableWatchPanel(GraphCore.IGraphContext context)
         {
@@ -91,9 +101,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (recording == null)
             {
-                DrawHelp(x, ref y, width, Application.isPlaying
-                    ? "No agent is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
-                    : "Enter play mode, or open a recording in the Timeline panel.");
+                DrawHelp(x, ref y, width, NoRecordingMessage());
                 return;
             }
 
@@ -104,9 +112,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (current.IsEmpty)
             {
-                DrawHelp(x, ref y, width, recording.EventCount == 0
-                    ? "Nothing recorded yet."
-                    : "No variable writes recorded at or before this tick.");
+                DrawHelp(x, ref y, width, EmptyMessage(recording));
                 return;
             }
 
@@ -117,7 +123,7 @@ namespace ArcaneOnyx.BehaviorTree
                 shown += DrawScope(x, ref y, width, current.Scopes[i], recording);
             }
 
-            if (shown == 0) DrawHelp(x, ref y, width, $"No variable matches “{filter}”.");
+            if (shown == 0) DrawHelp(x, ref y, width, NoMatchMessage());
         }
 
         public float GetHeight(float width)
@@ -127,12 +133,12 @@ namespace ArcaneOnyx.BehaviorTree
             var recording = CurrentRecording();
             var inner = width - Padding * 2.0f;
 
-            if (recording == null) return Padding * 2.0f + HelpHeight(inner);
+            if (recording == null) return Padding * 2.0f + HelpHeight(NoRecordingMessage(), inner);
 
-            var height = Padding * 2.0f + (Line() + RowSpacing) * 2.0f;
+            var height = Padding * 2.0f + Line() + FilterHeight + RowSpacing * 2.0f;
             var current = WatchFor(recording);
 
-            if (current.IsEmpty) return height + HelpHeight(inner);
+            if (current.IsEmpty) return height + HelpHeight(EmptyMessage(recording), inner);
 
             var shown = 0;
 
@@ -153,7 +159,7 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
 
-            return shown == 0 ? height + HelpHeight(inner) : height;
+            return shown == 0 ? height + HelpHeight(NoMatchMessage(), inner) : height;
         }
 
         #region Source
@@ -235,11 +241,71 @@ namespace ArcaneOnyx.BehaviorTree
             return y + Line() + RowSpacing;
         }
 
+        /// <summary>
+        /// The filter box. Taller and larger than a toolbar search field, and it says what it is when empty —
+        /// an unlabelled search box in a panel of unlabelled columns is a control you have to experiment with
+        /// to understand.
+        /// </summary>
         private float DrawFilter(float x, float y, float width)
         {
-            filter = EditorGUI.TextField(new Rect(x, y, width, Line()), filter, EditorStyles.toolbarSearchField);
+            var clearWidth = string.IsNullOrEmpty(filter) ? 0.0f : ClearButtonWidth;
+            var field = new Rect(x, y, width - clearWidth, FilterHeight);
 
-            return y + Line() + RowSpacing;
+            GUI.SetNextControlName(FilterControlName);
+            filter = EditorGUI.TextField(field, filter, filterStyle);
+
+            if (string.IsNullOrEmpty(filter) && GUI.GetNameOfFocusedControl() != FilterControlName)
+            {
+                // Drawn over the empty field rather than as a separate label, so it disappears the moment
+                // there is real text to read.
+                var hint = new Rect(field.x + 4.0f, field.y, field.width - 4.0f, field.height);
+                GUI.Label(hint, "Filter variables by name…", placeholderStyle);
+            }
+
+            if (clearWidth > 0.0f &&
+                GUI.Button(new Rect(field.xMax, y, clearWidth, FilterHeight), "✕", EditorStyles.miniButton))
+            {
+                filter = string.Empty;
+                GUI.FocusControl(null);
+            }
+
+            return y + FilterHeight + RowSpacing;
+        }
+
+        /// <summary>
+        /// Why the table is empty, worded so the reader can act on it.
+        ///
+        /// <para>
+        /// "No variable writes recorded" is true and useless when the reason is that the debugger is pointed
+        /// at a different agent from the one doing the writing — a scene with a second agent makes an empty
+        /// table look like a broken panel, and the filter box above it look broken with it. So when other
+        /// agents are recording, say so and say how to switch.
+        /// </para>
+        /// </summary>
+        private static string NoRecordingMessage()
+        {
+            return Application.isPlaying
+                ? "No agent is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
+                : "Enter play mode, or open a recording in the Timeline panel.";
+        }
+
+        private string NoMatchMessage() => $"No variable matches “{filter}”.";
+
+        private static string EmptyMessage(IBehaviorTreeRecording recording)
+        {
+            var reason = recording.EventCount == 0
+                ? $"{recording.AgentName} has recorded nothing yet."
+                : $"{recording.AgentName} recorded no variable writes at or before this tick.";
+
+            // Counted, never scanned: asking every recorder whether it holds a write would walk every ring on
+            // every repaint, and the count alone is enough to point somewhere.
+            var others = BehaviorTreeFlightRecorders.Active.Count - 1;
+
+            if (others <= 0) return reason;
+
+            return reason
+                   + (others == 1 ? " 1 other agent is" : $" {others} other agents are")
+                   + " recording — select it in the hierarchy to switch the debugger to it.";
         }
 
         /// <summary>Draws one store and its rows. Returns how many rows survived the filter.</summary>
@@ -363,7 +429,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void DrawHelp(float x, ref float y, float width, string message)
         {
-            var height = HelpHeight(width);
+            var height = HelpHeight(message, width);
 
             EditorGUI.LabelField(new Rect(x, y, width, height), message, helpStyle);
             y += height;
@@ -382,6 +448,13 @@ namespace ArcaneOnyx.BehaviorTree
             writerStyle = new GUIStyle(EditorStyles.miniLabel) { fontSize = 11 };
             scopeStyle = new GUIStyle(EditorStyles.miniLabel) { fontSize = 12, fontStyle = FontStyle.Bold };
             helpStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { fontSize = 11 };
+            filterStyle = new GUIStyle(EditorStyles.textField) { fontSize = 12 };
+            placeholderStyle = new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                fontStyle = FontStyle.Italic,
+                normal = { textColor = new Color(0.5f, 0.5f, 0.5f, 0.9f) },
+            };
         }
 
         /// <summary>
@@ -390,7 +463,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private static float Line() => EditorGUIUtility.singleLineHeight + 2.0f;
 
-        private static float HelpHeight(float width) => Line() * 2.0f;
+        /// <summary>
+        /// Measured rather than assumed: these messages name an agent and explain how to switch to another,
+        /// so a fixed two lines clips them at exactly the width a sidebar tends to be.
+        /// </summary>
+        private float HelpHeight(string message, float width)
+        {
+            return Mathf.Max(Line(), helpStyle.CalcHeight(new GUIContent(message), Mathf.Max(1.0f, width)));
+        }
 
         private float HistoryHeight(BehaviorTreeVariableWatchRow row)
         {
