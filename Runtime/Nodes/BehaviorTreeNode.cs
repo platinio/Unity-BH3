@@ -452,7 +452,11 @@ namespace ArcaneOnyx.BehaviorTree
         /// make the canvas and the why-panel show a live result for an idle branch, a visible change nobody
         /// asked for.
         /// </param>
-        private ConditionalExecution FirstFailingGuard(bool abortingOnly, bool writeStatus = true)
+        /// <param name="fresh">
+        /// Whether guards must recompute rather than answer from cache. True only at entry — see
+        /// <see cref="ConditionalExecution.Ask"/> for why that asymmetry is worth paying for.
+        /// </param>
+        private ConditionalExecution FirstFailingGuard(bool abortingOnly, bool writeStatus = true, bool fresh = false)
         {
             var guards = Guards;
 
@@ -465,8 +469,8 @@ namespace ArcaneOnyx.BehaviorTree
                 if (abortingOnly && !conditionalExecution.AbortsOwner) continue;
 
                 bool passed = writeStatus
-                    ? conditionalExecution.EvaluateInternal()
-                    : conditionalExecution.Evaluate();
+                    ? conditionalExecution.EvaluateInternal(fresh)
+                    : conditionalExecution.Ask(fresh);
 
                 Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
 
@@ -548,7 +552,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public sealed override void OnNodeEnter()
         {
-            var failed = FirstFailingGuard(abortingOnly: false);
+            var failed = FirstFailingGuard(abortingOnly: false, fresh: true);
 
             if (failed != null)
             {

@@ -50,14 +50,29 @@ namespace ArcaneOnyx.BehaviorTree
             this.owner = owner;
         }
 
-        public bool EvaluateInternal()
+        public bool EvaluateInternal() => EvaluateInternal(fresh: false);
+
+        public bool EvaluateInternal(bool fresh)
         {
-            bool result = Evaluate();
+            bool result = Ask(fresh);
             LastExecutionStatus = result ? ExecutionStatus.Success : ExecutionStatus.Failure;
 
             return result;
         }
-        
+
+        /// <summary>
+        /// The answer, recomputing or not as this guard sees fit. A doorman has nothing to cache and simply
+        /// evaluates; <see cref="ReactiveGuard"/> overrides this with the dirty-flag model.
+        /// </summary>
+        /// <param name="fresh">
+        /// When true the guard must recompute regardless of what it has cached. Entry passes true, and the
+        /// asymmetry is deliberate: a stale <em>false</em> costs latency, but a stale <em>true</em> enters a
+        /// branch whose precondition no longer holds — the animation starts, the token is claimed, and the
+        /// abort has to unwind it. Entries are rare next to ticks, so the extra evaluation buys out a whole
+        /// class of visible glitch.
+        /// </param>
+        public virtual bool Ask(bool fresh) => Evaluate();
+
         public abstract bool Evaluate();
 
         public override void BeforeRemove()

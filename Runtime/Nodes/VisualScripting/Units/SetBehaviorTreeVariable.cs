@@ -127,6 +127,14 @@ namespace ArcaneOnyx.BehaviorTree
                 declarations.Set(key, value);
             }
 
+            // Agent scope is the only one reactive guards watch, so only that kind bumps a version. A Graph
+            // write is per-call-site scratch and a guard watching it would be watching its own noise.
+            if (kind == Unity.VisualScripting.VariableKind.Object)
+            {
+                var machine = MachineOf(flow);
+                if (machine != null) AgentVariableWriter.On(machine.gameObject)?.Bump(key);
+            }
+
             flow.SetValue(output, value);
 
             return assigned;

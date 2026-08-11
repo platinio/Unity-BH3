@@ -47,6 +47,56 @@ namespace ArcaneOnyx.BehaviorTree
         private bool bound;
 
         /// <summary>
+        /// How many times each key has actually changed. The seam <c>OnKeyChanged</c> is built on.
+        ///
+        /// <para>
+        /// A reactive guard needs to know that a fact it depends on has moved, and Unity gives it nothing to
+        /// listen to: <c>VariableDeclarations.OnVariableChanged</c> is internal and carries no name, no old
+        /// value and no new one. The only other observer in the project is the flight recorder, and that is
+        /// <c>[Conditional]</c>-gated — the compiler deletes those call sites in a shipped build, so a guard
+        /// built on it would be event-driven in the editor and permanently clean in a player build. Working
+        /// in the editor and freezing in the build is the worst failure this could have.
+        /// </para>
+        ///
+        /// <para>
+        /// Counters rather than subscriptions, deliberately. A guard caches the version of each key it reads
+        /// and compares; nothing registers, so nothing has to unregister when a branch is aborted, no
+        /// listener outlives the agent, and arming a guard twice cannot leave a live duplicate. The cost of
+        /// asking is a dictionary lookup per key — one or two in practice — against running a flow graph.
+        /// </para>
+        ///
+        /// <para>
+        /// Not <c>[Conditional]</c>, and not gated on anything: this one ships.
+        /// </para>
+        /// </summary>
+        private readonly System.Collections.Generic.Dictionary<string, int> versions = new();
+
+        /// <summary>
+        /// How many times <paramref name="key"/> has changed on this agent. Zero for a key nothing has
+        /// written, which is also the value a guard caches before its first evaluation — so a key that never
+        /// moves never makes a guard look dirty.
+        /// </summary>
+        public int VersionOf(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return 0;
+
+            return versions.TryGetValue(key, out int version) ? version : 0;
+        }
+
+        /// <summary>
+        /// Records that a key changed. Public because the two other BH3 writers that reach agent scope --
+        /// <see cref="GameplayNode"/>'s Set Variable and the Set Behavior Tree Variable unit -- write through
+        /// <c>Variables</c> directly and report here, rather than every fact having to travel through
+        /// <see cref="Write"/>.
+        /// </summary>
+        public void Bump(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+
+            versions[key] = VersionOf(key) + 1;
+        }
+
+        /// <summary>
         /// The writer on this GameObject, adding one if it is missing.
         ///
         /// <para>
@@ -102,6 +152,11 @@ namespace ArcaneOnyx.BehaviorTree
                 machine, string.IsNullOrEmpty(sourceName) ? "(external)" : sourceName, key, previous, value);
 
             declarations.Set(key, value);
+
+            // Only on a real change, which the early-out above already established. A fact recomputed every
+            // frame to the same value must not make a guard that watches it look dirty every frame -- that
+            // would turn the cheapest trigger into the most expensive one.
+            Bump(key);
 
             return true;
         }

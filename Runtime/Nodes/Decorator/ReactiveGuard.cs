@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -66,5 +67,92 @@ namespace ArcaneOnyx.BehaviorTree
             this.abortsOwner = abortsOwner;
             this.preempts = preempts;
         }
+
+        /// <summary>
+        /// When this guard may recompute, OR'd together. Empty means every tick — the behaviour a guard had
+        /// before triggers existed, so an asset authored without them is unchanged.
+        /// </summary>
+        [Serialize, Inspectable]
+        private List<GuardTrigger> triggers = new();
+
+        public IReadOnlyList<GuardTrigger> Triggers => triggers;
+
+        public void AddTrigger(GuardTrigger trigger)
+        {
+            if (trigger == null) return;
+
+            triggers ??= new List<GuardTrigger>();
+            triggers.Add(trigger);
+        }
+
+        public void ClearTriggers() => triggers?.Clear();
+
+        [DoNotSerialize] private bool hasCachedResult;
+        [DoNotSerialize] private bool cachedResult;
+        [DoNotSerialize] private float lastEvaluatedAt = float.NegativeInfinity;
+
+        /// <summary>How many times this guard has actually run its condition. What the cost display reads.</summary>
+        [DoNotSerialize]
+        public int Evaluations { get; private set; }
+
+        /// <summary>
+        /// Recomputes only when something says the answer may have moved, and otherwise hands back what it
+        /// last decided. A guard whose inputs have not changed costs one bool check rather than a graph run.
+        /// </summary>
+        public override bool Ask(bool fresh)
+        {
+            if (!fresh && hasCachedResult && !IsDue()) return cachedResult;
+
+            cachedResult = Evaluate();
+            hasCachedResult = true;
+            Evaluations++;
+            lastEvaluatedAt = Now;
+
+            if (triggers != null)
+            {
+                for (int i = 0; i < triggers.Count; i++)
+                {
+                    triggers[i]?.OnEvaluated(Owner);
+                }
+            }
+
+            return cachedResult;
+        }
+
+        /// <summary>Any trigger claiming the answer may have moved. No triggers means always due.</summary>
+        private bool IsDue()
+        {
+            if (triggers == null || triggers.Count == 0) return true;
+
+            float since = Now - lastEvaluatedAt;
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] != null && triggers[i].IsDue(Owner, since)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Marks every <see cref="BehaviorTree.OnSignal"/> trigger of this name due. The push half of the
+        /// trigger list, for world events that are not agent state.
+        /// </summary>
+        public void RaiseSignal(string signal)
+        {
+            if (triggers == null || string.IsNullOrEmpty(signal)) return;
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is OnSignal onSignal && onSignal.Signal == signal) onSignal.Raise();
+            }
+        }
+
+        /// <summary>
+        /// Play-mode time, and zero outside it. An edit-mode test ticks a tree by hand with no time passing,
+        /// so an interval trigger there is due exactly once — which is what makes the dirty-flag economy
+        /// testable without a running scene.
+        /// </summary>
+        private static float Now => UnityEngine.Application.isPlaying ? UnityEngine.Time.time : 0.0f;
     }
 }

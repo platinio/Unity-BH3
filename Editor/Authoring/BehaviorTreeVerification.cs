@@ -71,6 +71,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 findings.AddRange(ContractDrift(asset, name));
                 findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
+                findings.AddRange(GuardProblems(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -79,6 +80,115 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
 
             return findings;
+        }
+
+        /// <summary>
+        /// What is wrong with this tree's guards. Five checks, all of them about failures that are silent at
+        /// author time and expensive at runtime.
+        /// </summary>
+        private static IEnumerable<string> GuardProblems(BehaviorTreeGraphAsset asset, string name)
+        {
+            var findings = new List<string>();
+            var graph = asset.graph;
+
+            var childOfReactiveComposite = new HashSet<System.Guid>();
+
+            foreach (var node in graph.Nodes)
+            {
+                // Selector is the only composite that reacts today. A Preempts guard anywhere else is
+                // authored intent that silently does nothing.
+                if (node is not Selector) continue;
+
+                foreach (var child in graph.ChildrenInPriorityOrder(node))
+                {
+                    if (child != null) childOfReactiveComposite.Add(child.guid);
+                }
+            }
+
+            foreach (var guard in graph.Nodes.OfType<ConditionalExecution>())
+            {
+                string label = $"{name}: guard '{guard.NodeName}'";
+                var owner = guard.Owner;
+
+                // 1. Impure guard. Tolerable when a guard only ran while its owner ran; not now. A reactive
+                //    guard evaluates on its own schedule, including while unrelated branches execute, so a
+                //    graph that caches what it found before answering would overwrite that value for the
+                //    life of the agent. Warned rather than blocked -- a designer may have a reason.
+                foreach (var writer in WriteUnitsInside(guard))
+                {
+                    findings.Add($"{label} writes a variable ('{writer}'). A guard must only read: it is "
+                                 + "evaluated on its own schedule, including while other branches run.");
+                }
+
+                if (guard is not ReactiveGuard reactive)
+                {
+                    // 2. A conditional that looks like it was relied on for interruption. Its loss of
+                    //    self-abort is the intended breaking change, and this is what makes the migration
+                    //    checkable rather than remembered.
+                    if (owner != null && childOfReactiveComposite.Contains(owner.guid))
+                    {
+                        findings.Add($"{label} is entry-only and gates a Selector branch. If it was there to "
+                                     + "interrupt that branch, it no longer does -- make it a Reactive Guard.");
+                    }
+
+                    continue;
+                }
+
+                // 3. A reactive guard that can never become due watches nothing and re-checks nothing.
+                foreach (var trigger in reactive.Triggers ?? (IReadOnlyList<GuardTrigger>)System.Array.Empty<GuardTrigger>())
+                {
+                    if (trigger is OnKeyChanged keys && (keys.Keys == null || keys.Keys.Count == 0))
+                    {
+                        findings.Add($"{label} watches no keys, so nothing can ever mark it dirty. Derive its "
+                                     + "keys or give it an interval.");
+                    }
+                }
+
+                // 4. No triggers at all means every tick. Legal, and sometimes right, but it is the most
+                //    expensive thing a guard can do and it should be a choice rather than an oversight.
+                if (reactive.Triggers == null || reactive.Triggers.Count == 0)
+                {
+                    findings.Add($"{label} has no triggers, so it re-checks every tick. Add an interval or a "
+                                 + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
+                }
+
+                // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still
+                //    aborts, but its bid is defined and not yet active.
+                if (reactive.Preempts && owner != null && !childOfReactiveComposite.Contains(owner.guid))
+                {
+                    findings.Add($"{label} is set to preempt, but its owner is not a direct child of a "
+                                 + "Selector. Preemption is defined there and not yet active anywhere else.");
+                }
+            }
+
+            return findings;
+        }
+
+        /// <summary>
+        /// Names of write units inside a guard's script graphs. The key-derivation walk already visits every
+        /// unit, so spotting the ones that write is free.
+        /// </summary>
+        private static IEnumerable<string> WriteUnitsInside(ConditionalExecution guard)
+        {
+            var found = new List<string>();
+            var assets = guard.scriptGraphAssets;
+
+            if (assets == null) return found;
+
+            foreach (var scriptGraph in assets)
+            {
+                if (scriptGraph?.graph == null) continue;
+
+                foreach (var element in scriptGraph.graph.units)
+                {
+                    string unit = element?.GetType().Name;
+                    if (string.IsNullOrEmpty(unit)) continue;
+
+                    if (unit.Contains("SetVariable") || unit.Contains("SetBehaviorTreeVariable")) found.Add(unit);
+                }
+            }
+
+            return found;
         }
 
         /// <summary>Runs <see cref="Verify"/> and logs the outcome. Returns true when everything is clean.</summary>

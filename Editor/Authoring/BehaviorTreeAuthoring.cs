@@ -172,26 +172,69 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// behaves as <paramref name="fallback"/> instead of throwing "Variable not found".
         /// </para>
         /// </summary>
-        public static BooleanConditionalExecution GuardOnVariable(
+        /// <summary>Which kind of guard <see cref="GuardOnVariable"/> builds.</summary>
+        public enum GuardKind
+        {
+            /// <summary>Keeps watching: aborts its branch and can preempt a lower-priority one.</summary>
+            Reactive,
+
+            /// <summary>Checks once at entry and stops caring.</summary>
+            Conditional,
+        }
+
+        /// <summary>
+        /// A guard reading an agent variable, with a fallback, negated when <paramref name="expected"/> is false.
+        ///
+        /// <para>
+        /// <b>Defaults to <see cref="GuardKind.Reactive"/>, which is a deliberate divergence from the spec's
+        /// stated default of a plain conditional.</b> Every existing caller of this helper wrote it meaning
+        /// "guard this branch" back when a guard interrupted by definition — so preserving the <em>type</em>
+        /// would silently strip interruption from every code-generated tree in the project, while preserving
+        /// the <em>behaviour</em> keeps them doing what their authors asked for. A caller that wants the
+        /// entry-only doorman is making the rarer and more deliberate choice, and now has to say so.
+        /// </para>
+        /// </summary>
+        public static ConditionalExecution GuardOnVariable(
             BehaviorTreeGraphAsset asset, BehaviorTreeNode owner, string variableName, bool expected, bool fallback,
-            float x, float y)
+            float x, float y, GuardKind kind = GuardKind.Reactive)
         {
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y + 90.0f);
             read.SetScriptGraph(CreateVariableReadGraph(asset, variableName, fallback));
             SetComment(read, (expected ? "" : "not ") + variableName);
 
-            var guard = AddNode<BooleanConditionalExecution>(asset, x, y);
+            ConditionalExecution guard;
+            ArcaneOnyx.BehaviorTree.ValueInput value;
+
+            if (kind == GuardKind.Conditional)
+            {
+                var doorman = AddNode<BooleanConditionalExecution>(asset, x, y);
+                guard = doorman;
+                value = doorman.Value;
+            }
+            else
+            {
+                var watchman = AddNode<BooleanReactiveGuard>(asset, x, y);
+
+                // The key is derivable here without walking anything: this helper was handed the variable
+                // name. Deriving it at the one place that already knows it is cheaper and more reliable than
+                // recovering it from the graph afterwards.
+                watchman.AddTrigger(new OnKeyChanged(variableName));
+
+                guard = watchman;
+                value = watchman.Value;
+            }
+
             guard.UpdateOwner(owner);
 
             if (expected)
             {
-                read.Output.ValidlyConnectTo(guard.Value);
+                read.Output.ValidlyConnectTo(value);
             }
             else
             {
                 var not = AddNode<Not>(asset, x, y + 190.0f);
                 read.Output.ValidlyConnectTo(not.Value);
-                not.Result.ValidlyConnectTo(guard.Value);
+                not.Result.ValidlyConnectTo(value);
             }
 
             return guard;

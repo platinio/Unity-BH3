@@ -29,6 +29,11 @@ namespace ArcaneOnyx.BehaviorTree
                     break;
                 case VariableKind.Object:
                     BehaviorTreeMachine.Variables.declarations.Set(key, value);
+
+                    // Agent scope is what reactive guards watch, so a write here has to bump the key's
+                    // version or an OnKeyChanged guard never notices it moved. Reported rather than routed:
+                    // the write above is the existing behaviour and stays exactly as it was.
+                    AgentVariableWriter.On(gameObject)?.Bump(key);
                     break;
                 case VariableKind.Scene:
                     SceneVariables.Instance(SceneManager.GetActiveScene()).variables.declarations.Set(key, value);

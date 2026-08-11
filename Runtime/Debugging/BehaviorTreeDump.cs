@@ -141,8 +141,68 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 json.Property("name", guard.NodeName);
                 json.Property("type", guard.GetType().Name);
                 json.Property("guid", guard.guid.ToString());
+
+                // What a guard is allowed to do is not readable from its type name alone -- a ReactiveGuard
+                // with AbortsOwner off is a very different thing from one with it on, and telling them apart
+                // is most of what a reader wants from a dump of a reactive tree.
+                json.Property("abortsOwner", guard.AbortsOwner);
+                json.Property("preempts", guard.Preempts);
+
+                if (guard is ReactiveGuard reactive) WriteTriggers(json, reactive);
+
                 WriteInputs(json, guard);
                 json.CloseObject();
+            }
+
+            json.CloseArray();
+        }
+
+        /// <summary>
+        /// When a reactive guard is allowed to recompute.
+        /// <para>
+        /// An empty list is written rather than omitted, because "no triggers" is not the absence of
+        /// information — it means the guard re-checks every tick, which is the single most expensive thing a
+        /// guard can do and the thing a reader most needs to see.
+        /// </para>
+        /// </summary>
+        private static void WriteTriggers(JsonWriter json, ReactiveGuard guard)
+        {
+            json.PropertyName("triggers");
+            json.OpenArray();
+
+            var triggers = guard.Triggers;
+
+            if (triggers != null)
+            {
+                foreach (var trigger in triggers)
+                {
+                    if (trigger == null) continue;
+
+                    json.OpenObject();
+                    json.Property("type", trigger.GetType().Name);
+                    json.Property("when", trigger.Describe());
+
+                    // The derived keys are a cached copy of what the guard's graph reads, so they can drift.
+                    // Dumping the list and whether a human tuned it is what makes that checkable.
+                    if (trigger is OnKeyChanged keyChanged)
+                    {
+                        json.Property("handEdited", keyChanged.HandEdited);
+                        json.PropertyName("keys");
+                        json.OpenArray();
+
+                        if (keyChanged.Keys != null)
+                        {
+                            foreach (var key in keyChanged.Keys)
+                            {
+                                json.Value(key);
+                            }
+                        }
+
+                        json.CloseArray();
+                    }
+
+                    json.CloseObject();
+                }
             }
 
             json.CloseArray();
