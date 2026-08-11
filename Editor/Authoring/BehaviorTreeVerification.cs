@@ -70,6 +70,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 }
 
                 findings.AddRange(ContractDrift(asset, name));
+                findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -116,6 +117,43 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 foreach (var drift in runNode.DescribeContractDrift())
                 {
                     yield return $"{treeName}: sub-tree contract — {drift}";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reports containers whose children read left-to-right in a different order than they run.
+        /// <para>
+        /// Execution order is the serialized transition index, so a layout that contradicts it is legal and
+        /// runs correctly — which is exactly the problem. Anyone reviewing the canvas reads priority the way
+        /// they always have, left to right, and gets the wrong answer with nothing on screen to say so unless
+        /// they notice the badge. A warning rather than an error: generated trees can reasonably lay out
+        /// however they like, and the fix is cosmetic.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> LayoutDisagreeingWithPriority(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            foreach (var node in asset.graph.Nodes)
+            {
+                if (node is not ContainerNode) continue;
+
+                var children = asset.graph.ChildrenInPriorityOrder(node);
+                if (children.Count < 2) continue;
+
+                for (int index = 1; index < children.Count; index++)
+                {
+                    if (children[index].Position.x >= children[index - 1].Position.x) continue;
+
+                    // Carries the x coordinates because sibling branches very often share a node name — three
+                    // Sequences under one Selector is the normal shape — and "runs 'Sequence' before
+                    // 'Sequence'" tells the reader nothing about which two to go and look at.
+                    yield return
+                        $"{treeName}: layout ≠ priority — '{node.NodeName}' runs priority {index} " +
+                        $"('{children[index - 1].NodeName}' at x={children[index - 1].Position.x:0}) before " +
+                        $"priority {index + 1} ('{children[index].NodeName}' at " +
+                        $"x={children[index].Position.x:0}), but lays them out the other way round.";
+
+                    break;
                 }
             }
         }

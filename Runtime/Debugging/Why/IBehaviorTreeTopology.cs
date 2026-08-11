@@ -56,8 +56,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly Guid ParentGuid;
 
         /// <summary>
-        /// Children in execution order — which for a behavior tree is canvas X order, already sorted by
-        /// <c>SortContainerNodesChildren</c> at awake. The index is the priority the designer sees.
+        /// Children in execution order — for a behavior tree, the serialized priority index each transition
+        /// carries. The index in this list is the priority the designer sees.
         /// </summary>
         public readonly IReadOnlyList<Guid> Children;
 

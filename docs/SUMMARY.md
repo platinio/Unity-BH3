@@ -7,6 +7,7 @@
 * [Getting Started](getting-started.md)
 * [The Graph Editor](editor-guide.md)
 * [Ports and Wiring](ports-and-wiring.md)
+* [Execution Order](execution-order.md)
 * [Sub-Behavior Trees](sub-behavior-trees.md)
 * [Best Practices](best-practices.md)
 

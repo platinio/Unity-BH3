@@ -150,16 +150,100 @@ namespace ArcaneOnyx.BehaviorTree
         {
             foreach (var node in Nodes)
             {
-                if (node is ContainerNode containerNode) containerNode.ClearChildren();
-            }
+                if (node is not ContainerNode containerNode) continue;
 
-            foreach (var nodeTransition in Transitions)
-            {
-                if (nodeTransition.source is ContainerNode containerNode)
+                containerNode.ClearChildren();
+
+                foreach (var transition in ChildTransitionsInPriorityOrder(containerNode))
                 {
-                    containerNode.AddChild(nodeTransition.destination);
+                    containerNode.AddChild(transition.destination);
                 }
             }
+        }
+
+        /// <summary>
+        /// A container's outgoing transitions, in the order its children should be tried.
+        /// <para>
+        /// The serialized index is the priority. Canvas position is only the gesture that writes it, so
+        /// tidying a layout no longer changes what the agent does, and a tree generated from code runs in the
+        /// order its <c>Connect</c> calls asked for rather than the order its coordinates imply.
+        /// </para>
+        /// <para>
+        /// Falls back to canvas order when the indices are not a real ordering. Every tree authored before
+        /// this change stored index 0 on every transition — the canvas computed the index by counting edges
+        /// between the same pair of nodes, which is always zero — so trusting those indices would collapse
+        /// every container to a single priority. Reading them as "no order recorded" and using position
+        /// instead is what makes an old asset run exactly as it did.
+        /// </para>
+        /// </summary>
+        public List<BehaviorTreeTransition> ChildTransitionsInPriorityOrder(BehaviorTreeNode parent)
+        {
+            var siblings = new List<BehaviorTreeTransition>();
+
+            foreach (var transition in Transitions)
+            {
+                if (transition.source == parent && transition.destination != null) siblings.Add(transition);
+            }
+
+            if (RecordsAPriorityOrder(siblings))
+            {
+                siblings.Sort((left, right) => left.TransitionIndex.CompareTo(right.TransitionIndex));
+            }
+            else
+            {
+                siblings.Sort((left, right) =>
+                    left.destination.Position.x.CompareTo(right.destination.Position.x));
+            }
+
+            return siblings;
+        }
+
+        /// <summary>
+        /// A node's children in the order they will be tried.
+        /// <para>
+        /// Reads the transitions rather than <see cref="ContainerNode.GetChildren"/>, so it answers on a tree
+        /// that has never been awakened — which is what the dump and the why-panel need, since both run
+        /// against assets nobody has played. Both call this rather than ordering for themselves: priority is
+        /// one rule, and a debugging view that ordered children differently from the runtime would report the
+        /// wrong branch as higher priority.
+        /// </para>
+        /// </summary>
+        public List<BehaviorTreeNode> ChildrenInPriorityOrder(BehaviorTreeNode parent)
+        {
+            var children = new List<BehaviorTreeNode>();
+
+            foreach (var transition in ChildTransitionsInPriorityOrder(parent))
+            {
+                children.Add(transition.destination);
+            }
+
+            return children;
+        }
+
+        /// <summary>
+        /// Whether these transitions carry a genuine ordering — indices forming exactly 0..n-1, each once.
+        /// <para>
+        /// Contiguity is the test rather than "are they all distinct" because a gap means something was
+        /// removed without renumbering, and duplicates mean two children claim one priority. In both cases
+        /// the recorded order is not trustworthy and position is the better answer.
+        /// </para>
+        /// </summary>
+        private static bool RecordsAPriorityOrder(List<BehaviorTreeTransition> siblings)
+        {
+            if (siblings.Count == 0) return false;
+
+            var claimed = new bool[siblings.Count];
+
+            foreach (var transition in siblings)
+            {
+                int index = transition.TransitionIndex;
+
+                if (index < 0 || index >= siblings.Count || claimed[index]) return false;
+
+                claimed[index] = true;
+            }
+
+            return true;
         }
 
         public int CountTransitionsFromNode(BehaviorTreeNode node)

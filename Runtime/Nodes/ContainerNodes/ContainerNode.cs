@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
@@ -41,10 +40,19 @@ namespace ArcaneOnyx.BehaviorTree
             children?.Clear();
         }
 
+        /// <summary>
+        /// Reorders the children after they have been built from the graph's transitions. Does nothing by
+        /// default — <see cref="BehaviorTreeGraph.ConvertTransitionNodesIntoTaskNodeChild"/> already delivers
+        /// them in priority order, and re-sorting by canvas position here is exactly what used to let a
+        /// layout tidy-up change an agent's behaviour.
+        /// <para>
+        /// Kept as a hook because the random composites are not a fixed order at all:
+        /// <see cref="RandomSelector"/> and <see cref="RandomSequence"/> override it to shuffle, and this call
+        /// at awake is what gives them their first shuffle.
+        /// </para>
+        /// </summary>
         public virtual void SortChildren()
         {
-            if (children == null || children.Count == 0) return;
-            children = children.OrderBy(x => x.Position.x).ToList();
         }
 
         public List<BehaviorTreeNode> GetChildren()

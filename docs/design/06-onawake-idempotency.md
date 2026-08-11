@@ -47,3 +47,59 @@ nothing.
 1. Call `OnAwake` twice; assert each owner's guard count equals the authored guard count.
 2. Guard backed by a counting evaluation; two `OnAwake` calls + one tick → evaluation count == 1 per tick.
 3. Remove a guard node from the graph between two `OnAwake` calls; assert the stale guard is gone.
+
+---
+
+# Implemented — 2026-08-11
+
+**Status: done.** Built together with spec 05 on branch `feature/explicit-priority`, as its own commit
+(`425ea9e`) preceding the 05 work. The two specs rewrite the same method, so splitting them across branches
+would have meant rebasing the second onto a changed `OnAwake` for no review benefit.
+
+## What was built
+
+- `Runtime/Graphs/BehaviorTreeGraph.cs` — `AddConditionalExecutionNodes` clears each node's guard list before
+  rebuilding; `ConvertTransitionNodesIntoTaskNodeChild` clears each container's child list before rebuilding.
+- `Runtime/Nodes/BehaviorTreeNode.cs` — new `ClearConditionalExecutions()`.
+- `Runtime/Nodes/ContainerNodes/ContainerNode.cs` — new `ClearChildren()`.
+- `Test/EditMode/BehaviorTreeAwakeIdempotencyTests.cs` — **new**, 6 tests.
+- `Test/EditMode/BehaviorTreeTestDoubles.cs` — new `CountingGuard` double, which spec 09 will also want.
+
+## The second bug this spec did not name
+
+The spec's audit note mentions "child-list bookkeeping" in passing. That turned out to be a real and more
+damaging instance of the same bug: `ConvertTransitionNodesIntoTaskNodeChild` appended to every container's
+child list, so a second `OnAwake` gave each composite **a duplicate of every branch**. For a `Selector` that
+is a duplicated *priority* list — each branch tried twice before the next is reached, and every side effect
+on it performed twice. Fixed in the same commit and covered by two of the six tests.
+
+## Decisions made
+
+- **Clear-then-rebuild, as the spec preferred.** Confirmed against the alternative while writing
+  `AGuardRemovedBetweenAwakesIsNoLongerArmed`: a guid-keyed dedupe passes the count assertions but keeps
+  arming a guard the designer has deleted, which the rebuild drops for free.
+- **Both bugs are invisible in behaviour, so the tests measure counts, not outcomes.** Duplicated guards AND
+  to the same boolean and a duplicated child list still picks the right branch. Asserting on behaviour would
+  have produced tests that passed with the bug present.
+- **Clearing children is safe** because no test mixes direct `AddChild`/`WithChildren` construction with
+  `graph.OnAwake()` — verified across the whole test suite before making the change. The two styles are
+  fully separate: doubles build containers standalone, graph-level tests build them from transitions.
+
+## Verification
+
+Tests were confirmed to fail without the fix, not merely to pass with it. With the two clear calls removed:
+guard count 2 instead of 1, guard evaluations 2 instead of 1, stale guard still armed, child list 4 instead
+of 2, failing branch ticked twice. The sixth test (`AwakingOnceStillArmsGuardsAndChildren`) passes either
+way by design — it is the control that pins single-awake behaviour as unchanged.
+
+EditMode suite: 331 → 337 tests, all passing except one pre-existing unrelated failure
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, in the
+TacticalPositionSelection module).
+
+## Known gaps
+
+- **No PlayMode baseline.** The PlayMode runner wedged before this work started — `test_status` reported a
+  run in flight for ~20 minutes while the Editor sat at 0% CPU — so PlayMode is *unknown*, not green, both
+  before and after. EditMode covers everything in this spec.
+- The spec's suggestion to audit `OnAwake` for other append-style registration found only the two above.
+  `SortContainerNodesChildren` needed nothing, as predicted.

@@ -15,8 +15,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// the canvas. That makes trees impossible to review in a diff and awkward to verify when something is
     /// building them in code. This walks the same relationships the runtime walks and writes them out flat.
     ///
-    /// Children are ordered by canvas X exactly as <c>SortContainerNodesChildren</c> orders them at runtime.
-    /// Anything else would misreport execution order, which is the mistake this is here to catch.
+    /// Children are ordered by <see cref="BehaviorTreeGraph.ChildrenInPriorityOrder"/>, the same rule the
+    /// runtime uses. Anything else would misreport execution order, which is the mistake this is here to catch.
     /// </summary>
     public static class BehaviorTreeDump
     {
@@ -186,12 +186,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static void WriteChildren(JsonWriter json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
         {
-            var children = graph.Transitions
-                .Where(t => t.source == node)
-                .Select(t => t.destination)
-                .Where(child => child != null)
-                .OrderBy(child => child.Position.x)
-                .ToList();
+            var children = graph.ChildrenInPriorityOrder(node);
 
             if (children.Count == 0) return;
 
