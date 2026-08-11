@@ -20,4 +20,5 @@
 ## Debugging
 
 * [The Why Panel](why-panel.md)
+* [The Variable Watch](variable-watch.md)
 * [Breakpoints](breakpoints.md)

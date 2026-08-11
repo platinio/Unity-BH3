@@ -273,6 +273,7 @@ answer a question you already know the answer to. Its README walks through it in
 
 ## See also
 
+- [The Variable Watch](variable-watch.md) — the value behind the explanation: what it was at that tick, and who wrote it
 - [Breakpoints](breakpoints.md) — the other half: stop the editor *when* it happens, rather than asking afterwards
 - [The Graph Editor](editor-guide.md) — the window the panel lives in
 - [Sub-Behavior Trees](sub-behavior-trees.md) — why a shared branch needs the call-site picker

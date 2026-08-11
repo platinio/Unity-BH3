@@ -221,5 +221,6 @@ see what a breakpoint does when you ask it something that cannot be answered. It
 ## See also
 
 - [The Why Panel](why-panel.md) — once it stops, this tells you why
+- [The Variable Watch](variable-watch.md) — and this tells you what the variables were when it stopped
 - [The Graph Editor](editor-guide.md) — the window both panels live in
 - [Best Practices](best-practices.md#prefer-conditional-executions-over-condition-nodes-for-interruptions) — guards, which most breakpoints end up being about

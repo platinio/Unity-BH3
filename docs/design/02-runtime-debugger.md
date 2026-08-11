@@ -512,6 +512,7 @@ live agent and the model is testable without a scene.
 | `BehaviorTreeDebugSession` (Editor) | What the debugger is looking at — recording, playhead, `IsScrubbing` — published by the timeline, read by everyone else. `TickFor(recording)` returns the tick only for its own recording. |
 | `BehaviorTreeVariableWatchPanel` (Editor) | The renderer. Sidebar panel, opens on the **right**. |
 | `IAnchoredSidebarPanelContent` (GraphCore) | Lets a panel state a preferred anchor, applied once when the panel is first created. |
+| `AgentVariableWriter` (`Runtime/Variables/`) | The component a sensor writes through, replacing `AgentFactPublisher`. `Write(this, key, value)` — the caller names itself, so several components can share one writer. |
 
 **`VariableKind` is now recorded on every write** (`BehaviorTreeEvent.VariableKind`, emitted as
 `"variableKind"` in the dump — it was `"scope"` when this was written, see Finding 30). It had to be: `CallSiteId` is where a write came *from*, not where the value lives, so a node
@@ -530,10 +531,20 @@ timeline publishes what it is showing through `BehaviorTreeDebugSession` and the
 to `BehaviorTreeDebugTarget` when the timeline has never been opened. Two independent answers is how one
 panel ends up describing a recording the ghosted canvas is not showing.
 
-**Verified by** `BehaviorTreeVariableWatchTests` (edit mode, 22 tests), including writes driven through a
-real `GameplayNode` and the real recorder so the model and Component 1 cannot drift apart, a JSON round trip,
-and a hand-written legacy recording with no `"scope"` property. Suite is 280 EditMode tests, 279 passing —
-the known TPS failure and nothing else. Demo in `Assets/ArcaneOnyx/BH3Demos/VariableWatch/` — see its README.
+**Verified by** `BehaviorTreeVariableWatchTests` (edit mode, 24 tests), including writes driven through a
+real `GameplayNode` and the real recorder so the model and Component 1 cannot drift apart, a sensor writing
+through `AgentVariableWriter`, a JSON round trip, and a hand-written legacy recording carrying neither
+property. Suite is 282 EditMode tests, 281 passing — the known TPS failure and nothing else. Demo in
+`Assets/ArcaneOnyx/BH3Demos/VariableWatch/` — see its README.
+
+**What the panel had to learn from being used**, all three of which are the same mistake in different
+clothes — the panel knew something the reader could not see:
+
+- A row's `→` was disabled in every case it existed for, until it learned to cross assets (finding 28b).
+- An unlabelled filter box in a table of unlabelled columns is a control you have to experiment with. It now
+  carries a placeholder and a clear button.
+- "No variable writes recorded" is true and useless when the real reason is that the debugger is pointed at
+  a different agent. The empty state now names the agent and says how many others are recording.
 
 ### Findings from building Component 4
 
@@ -552,15 +563,6 @@ qualifying each use.
 documented limit is "`BaseVisualScriptingNode` and `Literal`", but `GetVariable` derives from `Literal` and
 still warns `no field 'comment' on GetVariable`. It writes a private `comment` field that not every Literal
 subclass has. Check for the warning rather than trusting the base class.
-
-**30. Two naming corrections, both worth the churn while only one recording format exists.** The dump wrote
-the variable's store as `"scope"`, which is too generic and does not match the C# field; it is now
-`"variableKind"`, matching Unity's enum and `BehaviorTreeEvent.VariableKind`. It could not simply be `"kind"`
-because the same JSON object already uses that for the *event* kind. The importer reads both, so recordings
-exported in the interim still group correctly. Separately, `AgentFactPublisher` became the
-`AgentVariableWriter` **component**: a base class spends the one inheritance slot a sensor usually needs for
-something else, and attribution now comes from the caller (`Write(this, key, value)`) rather than from the
-writer's own type, so several components can share one writer and stay individually named.
 
 **28b. "Select the writer on the canvas" is disabled in every case it exists for, unless it crosses assets.**
 The why-inspector's rule — only offer the jump when the node is on the open canvas — quietly makes the
@@ -581,6 +583,16 @@ has its `executionIndex` written back into the asset's `_json` at runtime — `0
 there. It is a runtime counter, not authored content, so `git checkout` the tree asset after running a demo
 rather than committing the diff. It reappears on every play session, so it will keep turning up in
 `git status` and is not a sign anything is wrong.
+
+**30. Two naming corrections, both worth the churn while only one recording format exists.** The dump wrote
+the variable's store as `"scope"`, which is too generic and does not match the C# field; it is now
+`"variableKind"`, matching Unity's enum and `BehaviorTreeEvent.VariableKind`. It could not simply be `"kind"`
+because the same JSON object already uses that for the *event* kind. The importer reads both, so recordings
+exported in the interim still group correctly. Separately, `AgentFactPublisher` became the
+`AgentVariableWriter` **component**: a base class spends the one inheritance slot a sensor usually needs for
+something else, and attribution now comes from the caller (`Write(this, key, value)`) rather than from the
+writer's own type, so several components can share one writer and stay individually named.
+
 
 ## Component 5: Guard lane + oscillation detection
 
