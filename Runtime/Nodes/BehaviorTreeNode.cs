@@ -111,6 +111,20 @@ namespace ArcaneOnyx.BehaviorTree
             conditionalExecutions.Add(conditionalExecution);
         }
 
+        /// <summary>
+        /// Drops every guard armed on this node, so <see cref="BehaviorTreeGraph.OnAwake"/> can rebuild the
+        /// list from the graph rather than append to whatever a previous call left behind.
+        /// <para>
+        /// Rebuilding from source is what makes arming idempotent: a guard deleted between two awakes
+        /// disappears, which a dedupe-on-insert scheme would not manage. See
+        /// <see cref="BehaviorTreeGraph.AddConditionalExecutionNodes"/> for why that matters.
+        /// </para>
+        /// </summary>
+        public void ClearConditionalExecutions()
+        {
+            conditionalExecutions.Clear();
+        }
+
         public void Define()
         {
             var preservation = NodePreservation.Preserve(this);

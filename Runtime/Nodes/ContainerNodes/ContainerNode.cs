@@ -27,6 +27,20 @@ namespace ArcaneOnyx.BehaviorTree
             children.Add(child);
         }
 
+        /// <summary>
+        /// Empties the child list so it can be rebuilt from the graph's transitions.
+        /// <para>
+        /// The list is derived data, not authored data — <see cref="BehaviorTreeGraph.OnAwake"/> builds it by
+        /// walking the transitions. Appending to it a second time would give a composite two copies of every
+        /// branch, and for a Selector that is two copies of every <em>priority</em>: each branch tried twice
+        /// before the next is reached.
+        /// </para>
+        /// </summary>
+        public void ClearChildren()
+        {
+            children?.Clear();
+        }
+
         public virtual void SortChildren()
         {
             if (children == null || children.Count == 0) return;

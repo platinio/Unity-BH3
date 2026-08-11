@@ -137,8 +137,22 @@ namespace ArcaneOnyx.BehaviorTree
             return new BehaviorTreeGraph();
         }
 
+        /// <summary>
+        /// Rebuilds every container's child list from the graph's transitions.
+        /// <para>
+        /// Clears first, because this runs from <see cref="OnAwake"/> and <see cref="OnAwake"/> may run more
+        /// than once — a test that awakens a graph the machine also awakens, editor tooling that warms a graph
+        /// for inspection, or a future live-edit path that re-initialises by design. Appending on the second
+        /// call gives every composite a duplicate of each branch.
+        /// </para>
+        /// </summary>
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
+            foreach (var node in Nodes)
+            {
+                if (node is ContainerNode containerNode) containerNode.ClearChildren();
+            }
+
             foreach (var nodeTransition in Transitions)
             {
                 if (nodeTransition.source is ContainerNode containerNode)
@@ -210,12 +224,27 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Arms every guard onto the node it names as its owner.
+        /// <para>
+        /// Clears each owner's list before rebuilding, so calling <see cref="OnAwake"/> twice arms each guard
+        /// once rather than twice. Duplicate guards are semantically masked — an AND of the same predicate
+        /// twice is the same boolean — which is exactly what makes the bug a landmine: nothing looks wrong
+        /// while every guard evaluates twice per tick and any side effect in a guard's graph fires twice.
+        /// </para>
+        /// <para>
+        /// Rebuilt from the graph rather than deduplicated on insert, because only a rebuild drops a guard
+        /// that was deleted between two calls.
+        /// </para>
+        /// </summary>
         private void AddConditionalExecutionNodes()
         {
             List<ConditionalExecution> conditionalExecutions = new();
 
             foreach (var node in Nodes)
             {
+                node.ClearConditionalExecutions();
+
                 if (node is ConditionalExecution conditionalExecution)
                 {
                     conditionalExecutions.Add(conditionalExecution);
@@ -230,7 +259,7 @@ namespace ArcaneOnyx.BehaviorTree
                     {
                         node.AddConditionalExecution(conditionalExecution);
                     }
-                }   
+                }
             }
         }
 
