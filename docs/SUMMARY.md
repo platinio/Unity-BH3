@@ -20,3 +20,4 @@
 ## Debugging
 
 * [The Why Panel](why-panel.md)
+* [Breakpoints](breakpoints.md)
