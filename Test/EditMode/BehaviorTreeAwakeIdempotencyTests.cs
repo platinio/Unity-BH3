@@ -1,3 +1,4 @@
+using System.Reflection;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -180,6 +181,39 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "A failing branch is tried once. Twice means the selector is walking a duplicated list, "
                 + "which also makes every side effect on that branch happen twice.");
             Assert.AreEqual(1, succeeding.UpdateCalls);
+        }
+
+        /// <summary>
+        /// The guard list is <c>[DoNotSerialize]</c>, so a node that comes back from deserialization can
+        /// arrive with it null — its field initialiser never ran. That went unnoticed while arming only
+        /// touched nodes that own a guard; clearing every node's list walks nodes that have none, and threw.
+        /// <para>
+        /// The null state is reproduced directly rather than by round-tripping an asset, because the
+        /// deserializer is what produces it and an edit-mode test has no asset to instantiate.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void AwakingSurvivesANodeWhoseGuardListWasNeverInitialised()
+        {
+            var graph = new BehaviorTreeGraph();
+            var selector = AddNode<Selector>(graph);
+            var leaf = AddLeaf(graph, ExecutionStatus.Success, 0.0f);
+
+            Connect(graph, graph.EntryNode, selector);
+            Connect(graph, selector, leaf);
+
+            foreach (var node in new BehaviorTreeNode[] { selector, leaf, graph.EntryNode })
+            {
+                typeof(BehaviorTreeNode)
+                    .GetField("conditionalExecutions", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .SetValue(node, null);
+            }
+
+            Assert.DoesNotThrow(() => graph.OnAwake(),
+                "A node with no guards must awaken whether or not its guard list exists yet.");
+
+            Assert.IsEmpty(selector.ConditionalExecutions,
+                "and reading the guards of such a node answers empty rather than throwing.");
         }
 
         /// <summary>
