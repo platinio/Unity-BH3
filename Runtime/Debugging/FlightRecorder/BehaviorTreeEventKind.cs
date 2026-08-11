@@ -29,6 +29,19 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         NodeSkipped,
 
         /// <summary>
+        /// A running node was stopped so a higher-priority sibling could take over.
+        /// <see cref="BehaviorTreeEvent.NodeGuid"/> is the victim, <see cref="BehaviorTreeEvent.RelatedGuid"/>
+        /// the guard that made the bid, and <see cref="BehaviorTreeEvent.Key"/> the preemptor's name.
+        /// <para>
+        /// Distinct from <see cref="NodeAborted"/> on purpose. Both stop a running branch, but "your own
+        /// precondition stopped holding" and "something more important wanted the slot" are different
+        /// answers to why a branch ended, and collapsing them would lose the only one that names a cause
+        /// outside the branch itself.
+        /// </para>
+        /// </summary>
+        NodePreempted,
+
+        /// <summary>
         /// A guard's result changed. Recorded on transition only — guards evaluate every tick while their
         /// owner runs, and storing every evaluation would fill the buffer with the answer "still true".
         /// </summary>

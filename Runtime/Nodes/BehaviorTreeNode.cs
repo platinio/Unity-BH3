@@ -121,6 +121,7 @@ namespace ArcaneOnyx.BehaviorTree
         public void AddConditionalExecution(ConditionalExecution conditionalExecution)
         {
             Guards.Add(conditionalExecution);
+            hasPollableGuards = null;
         }
 
         /// <summary>
@@ -135,6 +136,7 @@ namespace ArcaneOnyx.BehaviorTree
         public void ClearConditionalExecutions()
         {
             Guards.Clear();
+            hasPollableGuards = null;
         }
 
         public void Define()
@@ -444,7 +446,13 @@ namespace ArcaneOnyx.BehaviorTree
         /// is the whole of the entry-only change: a plain <see cref="ConditionalExecution"/> reports false
         /// there and so is skipped once its owner is running, while entry still asks every guard.
         /// </param>
-        private ConditionalExecution FirstFailingGuard(bool abortingOnly)
+        /// <param name="writeStatus">
+        /// Whether a guard records its answer in its own <c>LastExecutionStatus</c>. False for the
+        /// preemption poll, which asks guards on nodes that are <em>not</em> running: writing there would
+        /// make the canvas and the why-panel show a live result for an idle branch, a visible change nobody
+        /// asked for.
+        /// </param>
+        private ConditionalExecution FirstFailingGuard(bool abortingOnly, bool writeStatus = true)
         {
             var guards = Guards;
 
@@ -456,10 +464,79 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (abortingOnly && !conditionalExecution.AbortsOwner) continue;
 
-                bool passed = conditionalExecution.EvaluateInternal();
+                bool passed = writeStatus
+                    ? conditionalExecution.EvaluateInternal()
+                    : conditionalExecution.Evaluate();
+
                 Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
 
                 if (!passed) return conditionalExecution;
+            }
+
+            return null;
+        }
+
+        [DoNotSerialize]
+        private bool? hasPollableGuards;
+
+        /// <summary>
+        /// Whether any guard here can bid to take control from a lower-priority sibling.
+        /// <para>
+        /// Cached, because a composite asks this of its higher-priority children on every tick and the
+        /// answer only changes when guards are re-armed — which happens once, in
+        /// <see cref="BehaviorTreeGraph.OnAwake"/>. Both mutators below reset it, so the cache cannot
+        /// outlive the list it summarises. Opt-in is what keeps the default at zero: a selector whose
+        /// children carry no reactive guards pays one bool check per child and nothing else.
+        /// </para>
+        /// </summary>
+        public bool HasPollableGuards
+        {
+            get
+            {
+                if (hasPollableGuards.HasValue) return hasPollableGuards.Value;
+
+                var guards = Guards;
+                bool any = false;
+
+                for (int i = 0; i < guards.Count; i++)
+                {
+                    if (!guards[i].Preempts) continue;
+
+                    any = true;
+                    break;
+                }
+
+                hasPollableGuards = any;
+                return any;
+            }
+        }
+
+        /// <summary>
+        /// Whether every guard here answers true right now — the same question <see cref="OnNodeEnter"/>
+        /// asks, without entering anything.
+        /// <para>
+        /// <b>Every</b> guard, not just the preempting ones, and that is the whole correctness of the poll.
+        /// Suppose Attack carries a reactive <c>targetInRange</c> and a plain <c>hasAttackToken</c>. Polling
+        /// only the reactive one would abort Idle the moment the target came into range, then fail Attack's
+        /// real entry check on the token, fall through, and restart Idle from scratch — killing it for
+        /// nothing, potentially every tick. One poll, one answer: <em>would this child enter right now?</em>
+        /// </para>
+        /// <para>
+        /// Mixing the two kinds on one node is therefore deliberate and useful: the reactive guard is the
+        /// trigger, and the conditional is a veto that participates in the decision without being able to
+        /// fire it.
+        /// </para>
+        /// </summary>
+        public bool WouldEnterNow() => FirstFailingGuard(abortingOnly: false, writeStatus: false) == null;
+
+        /// <summary>The first guard here that claims the right to preempt, or null. Names the bid in a recording.</summary>
+        public ConditionalExecution FirstPreemptingGuard()
+        {
+            var guards = Guards;
+
+            for (int i = 0; i < guards.Count; i++)
+            {
+                if (guards[i].Preempts) return guards[i];
             }
 
             return null;
