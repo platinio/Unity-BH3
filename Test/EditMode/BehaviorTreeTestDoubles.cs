@@ -76,6 +76,30 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    /// <summary>
+    /// A leaf that never finishes, and counts its own entries and exits.
+    /// <para>
+    /// Exists alongside <see cref="ScriptedNode"/> for the sub-tree fixtures specifically. A sub-tree is
+    /// <c>Object.Instantiate</c>d per call site, so the node that actually runs is a <em>clone</em> of the one
+    /// the test authored — and a double whose result comes from a serialized queue would arrive in the clone
+    /// with that queue empty, quietly returning something other than what the test asked for. This one's
+    /// result is structural, so the clone behaves identically to the original by construction.
+    /// </para>
+    /// </summary>
+    internal sealed class AlwaysRunningNode : BehaviorTreeNode
+    {
+        public int EnterCalls { get; private set; }
+        public int ExitCalls { get; private set; }
+
+        public override string NodeName => "Always Running Test Node";
+
+        public override void OnEnter() => EnterCalls++;
+
+        public override void OnExit() => ExitCalls++;
+
+        public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+    }
+
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>
     internal sealed class FixedCondition : Condition
     {
