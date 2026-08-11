@@ -70,11 +70,15 @@ The full walkthrough, with screenshots, is in [Getting Started](docs/getting-sta
 | **[Sub-Behavior Trees](docs/sub-behavior-trees.md)** | Reusing branches, and passing parameters to them |
 | **[Best Practices](docs/best-practices.md)** | Patterns that keep trees reusable and designer-friendly |
 | **[The Why Panel](docs/why-panel.md)** | Click a node, read why it did what it did |
+| **[Breakpoints](docs/breakpoints.md)** | Pause the editor on a node, a variable write, or a guard flip |
 | **[API Reference](docs/api-reference.md)** | Runtime types, lifecycle, and `ExecutionStatus` |
 | **[Authoring From Code](docs/authoring-from-code.md)** | Generating trees programmatically, and the traps in it |
 
 **Debugging:** when a branch doesn't run and you can't see why, open
-**[The Why Panel](docs/why-panel.md)**. It reads back what was actually recorded rather than guessing.
+**[The Why Panel](docs/why-panel.md)**. It reads back what was actually recorded rather than guessing. To
+catch something *in the act* rather than explain it afterwards, arm a
+**[breakpoint](docs/breakpoints.md)** — the editor pauses on the exact frame, with the canvas, the timeline
+and the Why panel all describing that moment.
 
 ---
 

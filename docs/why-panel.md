@@ -273,6 +273,7 @@ answer a question you already know the answer to. Its README walks through it in
 
 ## See also
 
+- [Breakpoints](breakpoints.md) — the other half: stop the editor *when* it happens, rather than asking afterwards
 - [The Graph Editor](editor-guide.md) — the window the panel lives in
 - [Sub-Behavior Trees](sub-behavior-trees.md) — why a shared branch needs the call-site picker
 - [Best Practices](best-practices.md#prefer-conditional-executions-over-condition-nodes-for-interruptions) — guards, the thing most explanations end up being about

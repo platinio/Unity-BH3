@@ -513,8 +513,8 @@ live agent and the model is testable without a scene.
 | `BehaviorTreeVariableWatchPanel` (Editor) | The renderer. Sidebar panel, opens on the **right**. |
 | `IAnchoredSidebarPanelContent` (GraphCore) | Lets a panel state a preferred anchor, applied once when the panel is first created. |
 
-**`VariableKind` is now recorded on every write** (`BehaviorTreeEvent.VariableKind`, emitted as `"scope"` in
-the dump). It had to be: `CallSiteId` is where a write came *from*, not where the value lives, so a node
+**`VariableKind` is now recorded on every write** (`BehaviorTreeEvent.VariableKind`, emitted as
+`"variableKind"` in the dump — it was `"scope"` when this was written, see Finding 30). It had to be: `CallSiteId` is where a write came *from*, not where the value lives, so a node
 inside Combat writing agent state would otherwise be filed as Combat's private scratch. `Flow` is the
 not-applicable slot on every other event kind — BH3 rejects Flow variables outright, so it cannot collide
 with a real write. Recordings exported before this import as `Object` rather than as the enum's default.
@@ -736,21 +736,21 @@ thin for that reason.
 
 ### Findings from building Component 6
 
-**29. The namespace collision family is wider again, and this one bites from inside BH3.** BREAK-1 lists five
+**31. The namespace collision family is wider again, and this one bites from inside BH3.** BREAK-1 lists five
 port types; Finding 26 adds `Sequence`, `SetVariable` and `GetVariable` from outside BH3's namespace.
 `IGraphContext` is ambiguous between `ArcaneOnyx.GraphCore` and `Unity.VisualScripting` **inside**
 `ArcaneOnyx.BehaviorTree` as well, because it is a GraphCore type rather than a BH3 one — so BH3's namespace
 winning does not help. Any editor file with both usings has to write `GraphCore.IGraphContext`, which is what
 the existing panels already do.
 
-**30. `RunBehaviorTreeGraphNode.SetFlightRecorder` instantiates the sub-tree asset.** It reads
+**32. `RunBehaviorTreeGraphNode.SetFlightRecorder` instantiates the sub-tree asset.** It reads
 `BehaviorTreeGraphAssetInstance` to reach the branch's nodes, and that getter `Object.Instantiate`s on first
 access — the exact thing the authoring rules say never to touch while inspecting. Harmless in a scene, but on
 a bare run node with no asset assigned it throws `ArgumentException: The Object you want to instantiate is
 null`. A test does not need it anyway: the recorder does not require a node to hold a reference back to it,
 and `NodeEnter` reads the plain serialized asset rather than the instance.
 
-**31. Canvas decoration belongs in `DrawOverlay`, never in `DrawForeground`.** This was learned twice, the
+**33. Canvas decoration belongs in `DrawOverlay`, never in `DrawForeground`.** This was learned twice, the
 second time from a bug report. There are **three** foreground draw paths on this canvas, not one:
 `BehaviorTreeNodeElementWidget`, and then `ConditionalExecutionWidget` and
 `RunBehaviorTreeNodeElementWidget`, both of which replace the whole body and never call base. So a dot added
@@ -762,11 +762,11 @@ GraphCore runs `DrawWidgetsOverlay` after **every** widget's foreground. One `Dr
 base widget covers all three paths, draws above every guard, needs nothing repeated in a subclass, and is
 strictly less code than the version it replaced. Any future canvas marker goes there.
 
-**32. The dot is not ghosted while scrubbing, and that is a rule rather than an oversight.** Everything else
+**34. The dot is not ghosted while scrubbing, and that is a rule rather than an oversight.** Everything else
 on the canvas dims when the playhead is parked in the past, because it is showing history. A breakpoint is
 armed *now*; fading it would make it a claim about the recording instead of about the tree.
 
-**34. The demo's most useful breakpoints are the two that are wrong.** `stance > 5` and
+**35. The demo's most useful breakpoints are the two that are wrong.** `stance > 5` and
 `alertLevel contains 1` are armed on purpose, because what decides whether a debugger is trusted is not
 whether its happy path works but what it does when asked something that cannot be answered. They also cover
 the two *shapes* of failure, which are not equally dangerous: ordering on a string cannot match and is at
@@ -775,7 +775,7 @@ as 1. **A breakpoint that fires more often than expected is much harder to notic
 fires**, so that one gets the warning even though it behaves exactly as defined. They live on their own
 variables because the store holds one breakpoint per key.
 
-**33. Comparing rendered values instead of real ones fails silently and in the designer's favour twice.**
+**36. Comparing rendered values instead of real ones fails silently and in the designer's favour twice.**
 `bool.ToString()` is `"True"` and `float.ToString()` is culture-dependent, so `true` and `3.5` were both
 breakpoints that could never fire on a value that plainly matched. Neither would have been found by reading
 the code — the string compare is obviously correct until you ask what produced the string. The general rule:
