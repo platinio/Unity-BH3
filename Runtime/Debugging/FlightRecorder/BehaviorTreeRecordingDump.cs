@@ -231,7 +231,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 case BehaviorTreeEventKind.VariableWrite:
                     json.Property("key", recorded.Key ?? "(unnamed)");
-                    json.Property("scope", recorded.VariableKind.ToString());
+                    // Qualified rather than "kind", which this object already uses for the event kind.
+                    json.Property("variableKind", recorded.VariableKind.ToString());
                     json.Property("from", recorded.OldValue ?? "null");
                     json.Property("to", recorded.NewValue ?? "null");
 
