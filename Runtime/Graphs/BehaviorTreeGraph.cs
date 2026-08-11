@@ -140,25 +140,76 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// Rebuilds every container's child list from the graph's transitions.
         /// <para>
-        /// Clears first, because this runs from <see cref="OnAwake"/> and <see cref="OnAwake"/> may run more
-        /// than once — a test that awakens a graph the machine also awakens, editor tooling that warms a graph
-        /// for inspection, or a future live-edit path that re-initialises by design. Appending on the second
-        /// call gives every composite a duplicate of each branch.
+        /// Clears first, because nothing stops <see cref="OnAwake"/> running more than once and appending on
+        /// the second call gives every composite a duplicate of each branch. No production path does today —
+        /// <c>BehaviorTreeMachine.Awake</c> is the only caller — but the authoring docs tell test writers to
+        /// call it by hand, and a second call there would otherwise be a silent doubling.
         /// </para>
         /// </summary>
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
+            var childrenByParent = ChildrenByParentInPriorityOrder();
+
             foreach (var node in Nodes)
             {
                 if (node is not ContainerNode containerNode) continue;
 
                 containerNode.ClearChildren();
 
-                foreach (var transition in ChildTransitionsInPriorityOrder(containerNode))
+                if (!childrenByParent.TryGetValue(containerNode, out var children)) continue;
+
+                foreach (var child in children)
                 {
-                    containerNode.AddChild(transition.destination);
+                    containerNode.AddChild(child);
                 }
             }
+        }
+
+        /// <summary>
+        /// Every parent's children, each list in the order they will be tried.
+        /// <para>
+        /// Buckets the transitions by source in one pass and orders each bucket, rather than scanning the whole
+        /// transition list once per parent. Callers that want the whole graph should use this:
+        /// <see cref="ChildrenInPriorityOrder"/> is O(transitions) per call, so asking it about every node
+        /// makes the walk O(nodes × transitions) — fine for a one-off check on a single container, but not for
+        /// the editor panels, which rebuild their view of a tree every frame while an agent is running.
+        /// </para>
+        /// </summary>
+        public Dictionary<BehaviorTreeNode, List<BehaviorTreeNode>> ChildrenByParentInPriorityOrder()
+        {
+            var transitionsByParent = new Dictionary<BehaviorTreeNode, List<BehaviorTreeTransition>>();
+
+            foreach (var transition in Transitions)
+            {
+                if (transition?.source == null || transition.destination == null) continue;
+
+                if (!transitionsByParent.TryGetValue(transition.source, out var siblings))
+                {
+                    siblings = new List<BehaviorTreeTransition>();
+                    transitionsByParent[transition.source] = siblings;
+                }
+
+                siblings.Add(transition);
+            }
+
+            var childrenByParent =
+                new Dictionary<BehaviorTreeNode, List<BehaviorTreeNode>>(transitionsByParent.Count);
+
+            foreach (var pair in transitionsByParent)
+            {
+                SortIntoPriorityOrder(pair.Value);
+
+                var children = new List<BehaviorTreeNode>(pair.Value.Count);
+
+                foreach (var transition in pair.Value)
+                {
+                    children.Add(transition.destination);
+                }
+
+                childrenByParent[pair.Key] = children;
+            }
+
+            return childrenByParent;
         }
 
         /// <summary>
@@ -180,11 +231,34 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var siblings = new List<BehaviorTreeTransition>();
 
+            ChildTransitionsInPriorityOrder(parent, siblings);
+
+            return siblings;
+        }
+
+        /// <summary>
+        /// The same ordering, filled into a list the caller owns. For anything drawn per node per repaint —
+        /// the canvas priority badge — where allocating a list per node per frame is the actual cost rather
+        /// than the scan.
+        /// </summary>
+        public void ChildTransitionsInPriorityOrder(BehaviorTreeNode parent, List<BehaviorTreeTransition> into)
+        {
+            into.Clear();
+
             foreach (var transition in Transitions)
             {
-                if (transition.source == parent && transition.destination != null) siblings.Add(transition);
+                if (transition?.source == parent && transition.destination != null) into.Add(transition);
             }
 
+            SortIntoPriorityOrder(into);
+        }
+
+        /// <summary>
+        /// Puts one parent's transitions into the order its children will be tried. The single place the
+        /// priority rule is written; everything that needs an ordering goes through here.
+        /// </summary>
+        private static void SortIntoPriorityOrder(List<BehaviorTreeTransition> siblings)
+        {
             if (RecordsAPriorityOrder(siblings))
             {
                 siblings.Sort((left, right) => left.TransitionIndex.CompareTo(right.TransitionIndex));
@@ -194,8 +268,6 @@ namespace ArcaneOnyx.BehaviorTree
                 siblings.Sort((left, right) =>
                     left.destination.Position.x.CompareTo(right.destination.Position.x));
             }
-
-            return siblings;
         }
 
         /// <summary>

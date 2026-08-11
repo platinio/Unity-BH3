@@ -73,12 +73,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             // Ordered by the graph rather than here, so the priority this reports is the priority that runs.
             // A why-panel that numbered branches differently from the runtime would explain the wrong one.
-            foreach (var node in graph.Nodes)
+            //
+            // One call for the whole graph rather than one per node: the panels rebuild their topology every
+            // frame while an agent is running — their cache key includes the recording's tick — so asking per
+            // node would rescan the transition list once per node, every frame.
+            foreach (var pair in graph.ChildrenByParentInPriorityOrder())
             {
-                if (node == null) continue;
-
-                var ordered = graph.ChildrenInPriorityOrder(node);
-                if (ordered.Count > 0) children[node.guid] = ordered;
+                children[pair.Key.guid] = pair.Value;
             }
 
             foreach (var node in graph.Nodes)
