@@ -139,9 +139,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         [Conditional(Editor), Conditional(DevToolsDefine)]
-        public static void VariableWrite(BehaviorTreeNode writer, string key, object oldValue, object newValue)
+        public static void VariableWrite(
+            BehaviorTreeNode writer,
+            string key,
+            Unity.VisualScripting.VariableKind variableKind,
+            object oldValue,
+            object newValue)
         {
-            writer?.FlightRecorder?.VariableWrite(writer, key, oldValue, newValue);
+            writer?.FlightRecorder?.VariableWrite(writer, key, variableKind, oldValue, newValue);
         }
 
         /// <summary>
@@ -186,17 +191,22 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         [Conditional(Editor), Conditional(DevToolsDefine)]
         public static void ScriptGraphVariableWrite(
-            BehaviorTreeMachine machine, string writerName, string key, object oldValue, object newValue)
+            BehaviorTreeMachine machine,
+            string writerName,
+            string key,
+            Unity.VisualScripting.VariableKind variableKind,
+            object oldValue,
+            object newValue)
         {
             var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
 
             if (owner != null)
             {
-                owner.FlightRecorder?.VariableWrite(owner, key, oldValue, newValue);
+                owner.FlightRecorder?.VariableWrite(owner, key, variableKind, oldValue, newValue);
                 return;
             }
 
-            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue);
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, variableKind);
         }
 
         /// <summary>
@@ -210,9 +220,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         [Conditional(Editor), Conditional(DevToolsDefine)]
         public static void ExternalVariableWrite(
-            BehaviorTreeMachine machine, string writerName, string key, object oldValue, object newValue)
+            BehaviorTreeMachine machine,
+            string writerName,
+            string key,
+            object oldValue,
+            object newValue,
+            Unity.VisualScripting.VariableKind variableKind = Unity.VisualScripting.VariableKind.Object)
         {
-            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue);
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, variableKind);
         }
 
         #endregion

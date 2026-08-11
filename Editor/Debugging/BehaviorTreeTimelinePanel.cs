@@ -123,6 +123,7 @@ namespace ArcaneOnyx.BehaviorTree
                     : "Enter play mode to watch an agent, or load an exported recording.", EditorStyles.miniLabel);
 
                 BehaviorTreeScrubOverride.Clear();
+                BehaviorTreeDebugSession.Clear();
                 return;
             }
 
@@ -132,12 +133,19 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 EditorGUI.LabelField(body, "Nothing recorded yet.", EditorStyles.miniLabel);
                 BehaviorTreeScrubOverride.Clear();
+
+                // Published even while empty: the watch should name the same agent and say it has nothing yet,
+                // rather than resolve a different one and look like it found something.
+                BehaviorTreeDebugSession.Publish(recording, recording.Tick, false);
                 return;
             }
 
             EnsureView();
             AdvancePlayback();
             SyncCanvas(recording);
+
+            // After playback and scrubbing have settled, so the tick published is the one being drawn.
+            BehaviorTreeDebugSession.Publish(recording, EffectiveTick, IsScrubbing);
 
             DrawBody(body, recording);
         }

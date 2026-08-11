@@ -165,6 +165,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string oldValue = null;
             string newValue = null;
             string writer = null;
+            var variableKind = Unity.VisualScripting.VariableKind.Flow;
 
             switch (kind)
             {
@@ -188,6 +189,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     key = item["key"].AsString();
                     oldValue = item["from"].AsString("null");
                     newValue = item["to"].AsString("null");
+
+                    // "scope" was this property's name briefly, so it is still read: a recording exported in
+                    // that window should not silently regroup. Absent altogether — a recording from before
+                    // the kind was recorded at all — falls back to Object rather than to the enum's own
+                    // default, because Flow means "not a variable write" here and would put every old write
+                    // in a scope of its own.
+                    var storedKind = item["variableKind"].AsString();
+                    if (string.IsNullOrEmpty(storedKind)) storedKind = item["scope"].AsString();
+
+                    variableKind = Enum.TryParse<Unity.VisualScripting.VariableKind>(storedKind, out var parsedKind)
+                        ? parsedKind
+                        : Unity.VisualScripting.VariableKind.Object;
 
                     // One field carries two things: a node guid when a node wrote it, a plain name when a
                     // sensor did. Which one it is, is exactly whether it parses as a guid.
@@ -216,6 +229,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 key,
                 oldValue,
                 newValue,
+                variableKind,
                 writer);
         }
 

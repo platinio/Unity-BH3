@@ -110,7 +110,7 @@ namespace ArcaneOnyx.BehaviorTree
             // half of what makes a write worth recording. Every argument here is removed by the compiler
             // outside the editor and dev builds, including the lookup and the read.
             Debugging.BehaviorTreeRecorder.ScriptGraphVariableWrite(
-                MachineOf(flow), WriterName, key, ReadCurrent(flow, key), value);
+                MachineOf(flow), WriterName, key, kind, ReadCurrent(flow, key), value);
 
             var declarations = Declarations(flow);
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
@@ -263,8 +264,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             Add(BehaviorTreeEventKind.NodeAborted, CallSiteOf(node), node.guid, relatedGuid: guard?.guid ?? Guid.Empty);
         }
 
-        /// <summary>A variable written by a node in the tree.</summary>
-        public void VariableWrite(BehaviorTreeNode writer, string key, object oldValue, object newValue)
+        /// <summary>
+        /// A variable written by a node in the tree. <paramref name="variableKind"/> is which store it landed
+        /// in, which the call site cannot answer — see <see cref="BehaviorTreeEvent.VariableKind"/>.
+        /// </summary>
+        public void VariableWrite(
+            BehaviorTreeNode writer, string key, VariableKind variableKind, object oldValue, object newValue)
         {
             if (!IsRecording || string.IsNullOrEmpty(key)) return;
 
@@ -274,7 +279,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 relatedGuid: writer?.guid ?? Guid.Empty,
                 key: key,
                 oldValue: BehaviorTreeEvent.Describe(oldValue),
-                newValue: BehaviorTreeEvent.Describe(newValue));
+                newValue: BehaviorTreeEvent.Describe(newValue),
+                variableKind: variableKind);
         }
 
         /// <summary>
@@ -286,8 +292,17 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// "who changed the value that flipped this guard?" — has no answer in the common case. A sensor calls
         /// it with its own name; there is no node guid to give.
         /// </para>
+        /// <para>
+        /// The kind defaults to <see cref="VariableKind.Object"/> because a writer outside the tree has no
+        /// branch scope to write into: agent state is the only store it can reach through the machine.
+        /// </para>
         /// </summary>
-        public void ExternalVariableWrite(string writerName, string key, object oldValue, object newValue)
+        public void ExternalVariableWrite(
+            string writerName,
+            string key,
+            object oldValue,
+            object newValue,
+            VariableKind variableKind = VariableKind.Object)
         {
             if (!IsRecording || string.IsNullOrEmpty(key)) return;
 
@@ -297,6 +312,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 key: key,
                 oldValue: BehaviorTreeEvent.Describe(oldValue),
                 newValue: BehaviorTreeEvent.Describe(newValue),
+                variableKind: variableKind,
                 writer: string.IsNullOrEmpty(writerName) ? "(external)" : writerName);
         }
 
@@ -310,11 +326,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key = null,
             string oldValue = null,
             string newValue = null,
+            VariableKind variableKind = VariableKind.Flow,
             string writer = null)
         {
             ring.Add(BehaviorTreeEvent.Create(
                 kind, Tick, sequence++, UnityEngine.Time.frameCount, UnityEngine.Time.time,
-                callSite, nodeGuid, relatedGuid, status, flag, key, oldValue, newValue, writer));
+                callSite, nodeGuid, relatedGuid, status, flag, key, oldValue, newValue, variableKind, writer));
         }
 
         #endregion
