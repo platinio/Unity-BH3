@@ -137,15 +137,185 @@ namespace ArcaneOnyx.BehaviorTree
             return new BehaviorTreeGraph();
         }
 
+        /// <summary>
+        /// Rebuilds every container's child list from the graph's transitions.
+        /// <para>
+        /// Clears first, because nothing stops <see cref="OnAwake"/> running more than once and appending on
+        /// the second call gives every composite a duplicate of each branch. No production path does today —
+        /// <c>BehaviorTreeMachine.Awake</c> is the only caller — but the authoring docs tell test writers to
+        /// call it by hand, and a second call there would otherwise be a silent doubling.
+        /// </para>
+        /// </summary>
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
-            foreach (var nodeTransition in Transitions)
+            var childrenByParent = ChildrenByParentInPriorityOrder();
+
+            foreach (var node in Nodes)
             {
-                if (nodeTransition.source is ContainerNode containerNode)
+                if (node is not ContainerNode containerNode) continue;
+
+                containerNode.ClearChildren();
+
+                if (!childrenByParent.TryGetValue(containerNode, out var children)) continue;
+
+                foreach (var child in children)
                 {
-                    containerNode.AddChild(nodeTransition.destination);
+                    containerNode.AddChild(child);
                 }
             }
+        }
+
+        /// <summary>
+        /// Every parent's children, each list in the order they will be tried.
+        /// <para>
+        /// Buckets the transitions by source in one pass and orders each bucket, rather than scanning the whole
+        /// transition list once per parent. Callers that want the whole graph should use this:
+        /// <see cref="ChildrenInPriorityOrder"/> is O(transitions) per call, so asking it about every node
+        /// makes the walk O(nodes × transitions) — fine for a one-off check on a single container, but not for
+        /// the editor panels, which rebuild their view of a tree every frame while an agent is running.
+        /// </para>
+        /// </summary>
+        public Dictionary<BehaviorTreeNode, List<BehaviorTreeNode>> ChildrenByParentInPriorityOrder()
+        {
+            var transitionsByParent = new Dictionary<BehaviorTreeNode, List<BehaviorTreeTransition>>();
+
+            foreach (var transition in Transitions)
+            {
+                if (transition?.source == null || transition.destination == null) continue;
+
+                if (!transitionsByParent.TryGetValue(transition.source, out var siblings))
+                {
+                    siblings = new List<BehaviorTreeTransition>();
+                    transitionsByParent[transition.source] = siblings;
+                }
+
+                siblings.Add(transition);
+            }
+
+            var childrenByParent =
+                new Dictionary<BehaviorTreeNode, List<BehaviorTreeNode>>(transitionsByParent.Count);
+
+            foreach (var pair in transitionsByParent)
+            {
+                SortIntoPriorityOrder(pair.Value);
+
+                var children = new List<BehaviorTreeNode>(pair.Value.Count);
+
+                foreach (var transition in pair.Value)
+                {
+                    children.Add(transition.destination);
+                }
+
+                childrenByParent[pair.Key] = children;
+            }
+
+            return childrenByParent;
+        }
+
+        /// <summary>
+        /// A container's outgoing transitions, in the order its children should be tried.
+        /// <para>
+        /// The serialized index is the priority. Canvas position is only the gesture that writes it, so
+        /// tidying a layout no longer changes what the agent does, and a tree generated from code runs in the
+        /// order its <c>Connect</c> calls asked for rather than the order its coordinates imply.
+        /// </para>
+        /// <para>
+        /// Falls back to canvas order when the indices are not a real ordering. Every tree authored before
+        /// this change stored index 0 on every transition — the canvas computed the index by counting edges
+        /// between the same pair of nodes, which is always zero — so trusting those indices would collapse
+        /// every container to a single priority. Reading them as "no order recorded" and using position
+        /// instead is what makes an old asset run exactly as it did.
+        /// </para>
+        /// </summary>
+        public List<BehaviorTreeTransition> ChildTransitionsInPriorityOrder(BehaviorTreeNode parent)
+        {
+            var siblings = new List<BehaviorTreeTransition>();
+
+            ChildTransitionsInPriorityOrder(parent, siblings);
+
+            return siblings;
+        }
+
+        /// <summary>
+        /// The same ordering, filled into a list the caller owns. For anything drawn per node per repaint —
+        /// the canvas priority badge — where allocating a list per node per frame is the actual cost rather
+        /// than the scan.
+        /// </summary>
+        public void ChildTransitionsInPriorityOrder(BehaviorTreeNode parent, List<BehaviorTreeTransition> into)
+        {
+            into.Clear();
+
+            foreach (var transition in Transitions)
+            {
+                if (transition?.source == parent && transition.destination != null) into.Add(transition);
+            }
+
+            SortIntoPriorityOrder(into);
+        }
+
+        /// <summary>
+        /// Puts one parent's transitions into the order its children will be tried. The single place the
+        /// priority rule is written; everything that needs an ordering goes through here.
+        /// </summary>
+        private static void SortIntoPriorityOrder(List<BehaviorTreeTransition> siblings)
+        {
+            if (RecordsAPriorityOrder(siblings))
+            {
+                siblings.Sort((left, right) => left.TransitionIndex.CompareTo(right.TransitionIndex));
+            }
+            else
+            {
+                siblings.Sort((left, right) =>
+                    left.destination.Position.x.CompareTo(right.destination.Position.x));
+            }
+        }
+
+        /// <summary>
+        /// A node's children in the order they will be tried.
+        /// <para>
+        /// Reads the transitions rather than <see cref="ContainerNode.GetChildren"/>, so it answers on a tree
+        /// that has never been awakened — which is what the dump and the why-panel need, since both run
+        /// against assets nobody has played. Both call this rather than ordering for themselves: priority is
+        /// one rule, and a debugging view that ordered children differently from the runtime would report the
+        /// wrong branch as higher priority.
+        /// </para>
+        /// </summary>
+        public List<BehaviorTreeNode> ChildrenInPriorityOrder(BehaviorTreeNode parent)
+        {
+            var children = new List<BehaviorTreeNode>();
+
+            foreach (var transition in ChildTransitionsInPriorityOrder(parent))
+            {
+                children.Add(transition.destination);
+            }
+
+            return children;
+        }
+
+        /// <summary>
+        /// Whether these transitions carry a genuine ordering — indices forming exactly 0..n-1, each once.
+        /// <para>
+        /// Contiguity is the test rather than "are they all distinct" because a gap means something was
+        /// removed without renumbering, and duplicates mean two children claim one priority. In both cases
+        /// the recorded order is not trustworthy and position is the better answer.
+        /// </para>
+        /// </summary>
+        private static bool RecordsAPriorityOrder(List<BehaviorTreeTransition> siblings)
+        {
+            if (siblings.Count == 0) return false;
+
+            var claimed = new bool[siblings.Count];
+
+            foreach (var transition in siblings)
+            {
+                int index = transition.TransitionIndex;
+
+                if (index < 0 || index >= siblings.Count || claimed[index]) return false;
+
+                claimed[index] = true;
+            }
+
+            return true;
         }
 
         public int CountTransitionsFromNode(BehaviorTreeNode node)
@@ -210,12 +380,27 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Arms every guard onto the node it names as its owner.
+        /// <para>
+        /// Clears each owner's list before rebuilding, so calling <see cref="OnAwake"/> twice arms each guard
+        /// once rather than twice. Duplicate guards are semantically masked — an AND of the same predicate
+        /// twice is the same boolean — which is exactly what makes the bug a landmine: nothing looks wrong
+        /// while every guard evaluates twice per tick and any side effect in a guard's graph fires twice.
+        /// </para>
+        /// <para>
+        /// Rebuilt from the graph rather than deduplicated on insert, because only a rebuild drops a guard
+        /// that was deleted between two calls.
+        /// </para>
+        /// </summary>
         private void AddConditionalExecutionNodes()
         {
             List<ConditionalExecution> conditionalExecutions = new();
 
             foreach (var node in Nodes)
             {
+                node.ClearConditionalExecutions();
+
                 if (node is ConditionalExecution conditionalExecution)
                 {
                     conditionalExecutions.Add(conditionalExecution);
@@ -230,7 +415,7 @@ namespace ArcaneOnyx.BehaviorTree
                     {
                         node.AddConditionalExecution(conditionalExecution);
                     }
-                }   
+                }
             }
         }
 

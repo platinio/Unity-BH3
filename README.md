@@ -66,6 +66,7 @@ The full walkthrough, with screenshots, is in [Getting Started](docs/getting-sta
 | **[The Graph Editor](docs/editor-guide.md)** | Window layout, creating and connecting nodes, the inspector |
 | **[Node Reference](docs/node-reference.md)** | Every node that ships, by menu category |
 | **[Ports and Wiring](docs/ports-and-wiring.md)** | How ports work, and feeding them from Visual Scripting |
+| **[Execution Order](docs/execution-order.md)** | Which branch runs first, the priority badges, and reordering |
 | **[Custom Nodes](docs/custom-nodes.md)** | Writing your own actions, conditions and decorators |
 | **[Sub-Behavior Trees](docs/sub-behavior-trees.md)** | Reusing branches, and passing parameters to them |
 | **[Best Practices](docs/best-practices.md)** | Patterns that keep trees reusable and designer-friendly |

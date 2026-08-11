@@ -146,11 +146,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// Parents <paramref name="child"/> under <paramref name="parent"/>. Execution order comes from
-        /// canvas X at runtime, not from the order these calls are made, so lay children out left to right.
+        /// Parents <paramref name="child"/> under <paramref name="parent"/> at a given priority.
+        /// <para>
+        /// <paramref name="index"/> <em>is</em> the execution order — 0 is the branch tried first. Left unset,
+        /// the child takes the next free slot, so making these calls in the order you want the branches tried
+        /// produces the right tree. Canvas position no longer decides execution order; lay children out left
+        /// to right anyway so the picture agrees with the priorities.
+        /// </para>
         /// </summary>
-        public static void Connect(BehaviorTreeGraphAsset asset, BehaviorTreeNode parent, BehaviorTreeNode child, int index = 0)
+        public static void Connect(BehaviorTreeGraphAsset asset, BehaviorTreeNode parent, BehaviorTreeNode child, int index = -1)
         {
+            if (index < 0) index = asset.graph.ChildTransitionsInPriorityOrder(parent).Count;
+
             var transition = new BehaviorTreeTransition();
             transition.SetupTransition(parent, child, index);
             asset.graph.Transitions.Add(transition);

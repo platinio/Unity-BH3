@@ -53,7 +53,19 @@ namespace ArcaneOnyx.BehaviorTree
         public IEnumerable<IPort> validPorts => LinqUtility.Concat<IPort>(validInputs, validOutputs);
 
         [DoNotSerialize]
-        private List<ConditionalExecution> conditionalExecutions = new();
+        private List<ConditionalExecution> conditionalExecutions;
+
+        /// <summary>
+        /// The guards armed on this node, created on first use.
+        /// <para>
+        /// Lazily rather than by field initialiser because the field is <see cref="DoNotSerializeAttribute"/>:
+        /// a node that comes back from deserialization — which is every node in a running tree, since the
+        /// machine instantiates its macro — can arrive with this null, its initialiser never having run. That
+        /// went unnoticed while the only code path touched the list of nodes that <em>own</em> a guard; the
+        /// moment anything walked every node it threw.
+        /// </para>
+        /// </summary>
+        private List<ConditionalExecution> Guards => conditionalExecutions ??= new List<ConditionalExecution>();
 
         [DoNotSerialize] 
         private Dictionary<Guid, int> conditionalExecutionIndexCache = new();
@@ -108,7 +120,21 @@ namespace ArcaneOnyx.BehaviorTree
        
         public void AddConditionalExecution(ConditionalExecution conditionalExecution)
         {
-            conditionalExecutions.Add(conditionalExecution);
+            Guards.Add(conditionalExecution);
+        }
+
+        /// <summary>
+        /// Drops every guard armed on this node, so <see cref="BehaviorTreeGraph.OnAwake"/> can rebuild the
+        /// list from the graph rather than append to whatever a previous call left behind.
+        /// <para>
+        /// Rebuilding from source is what makes arming idempotent: a guard deleted between two awakes
+        /// disappears, which a dedupe-on-insert scheme would not manage. See
+        /// <see cref="BehaviorTreeGraph.AddConditionalExecutionNodes"/> for why that matters.
+        /// </para>
+        /// </summary>
+        public void ClearConditionalExecutions()
+        {
+            Guards.Clear();
         }
 
         public void Define()
@@ -353,7 +379,7 @@ namespace ArcaneOnyx.BehaviorTree
             return component;
         }
         
-        public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => conditionalExecutions;
+        public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => Guards;
         
         public int GetConditionalIndex(ConditionalExecution conditionalExecution)
         {
@@ -405,7 +431,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public sealed override void OnNodeEnter()
         {
-            foreach (var conditionalExecution in conditionalExecutions)
+            foreach (var conditionalExecution in Guards)
             {
                 bool passed = conditionalExecution.EvaluateInternal();
                 Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
@@ -444,7 +470,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public sealed override ExecutionStatus OnUpdateInternal()
         {
-            foreach (var conditionalExecution in conditionalExecutions)
+            foreach (var conditionalExecution in Guards)
             {
                 bool passed = conditionalExecution.EvaluateInternal();
                 Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);

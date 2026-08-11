@@ -269,6 +269,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (!e.IsRepaint || !element.IsVisible) return;
 
             BehaviorTreeBreakpointGizmos.Draw(position, element);
+            BehaviorTreePriorityBadge.Draw(position, element);
         }
 
         public static Texture2D outsideTexture;

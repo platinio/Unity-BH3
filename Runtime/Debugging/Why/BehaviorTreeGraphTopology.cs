@@ -11,7 +11,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// Built from transitions rather than from <see cref="ContainerNode.GetChildren"/> because transitions are
     /// the serialized truth and children are a runtime cache populated at awake — so this works on a tree that
     /// has not been played, which is what lets an explanation of an imported recording be given names.
-    /// Children are ordered by canvas X, which is the priority order the runtime itself sorts into.
+    /// Children are ordered by <see cref="BehaviorTreeGraph.ChildrenInPriorityOrder"/>, the same rule the
+    /// runtime uses.
     /// </para>
     /// </summary>
     public sealed class BehaviorTreeGraphTopology : IBehaviorTreeTopology
@@ -67,14 +68,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 if (transition?.source == null || transition.destination == null) continue;
 
-                if (!children.TryGetValue(transition.source.guid, out var list))
-                {
-                    list = new List<BehaviorTreeNode>();
-                    children[transition.source.guid] = list;
-                }
-
-                list.Add(transition.destination);
                 parents[transition.destination.guid] = transition.source.guid;
+            }
+
+            // Ordered by the graph rather than here, so the priority this reports is the priority that runs.
+            // A why-panel that numbered branches differently from the runtime would explain the wrong one.
+            //
+            // One call for the whole graph rather than one per node: the panels rebuild their topology every
+            // frame while an agent is running — their cache key includes the recording's tick — so asking per
+            // node would rescan the transition list once per node, every frame.
+            foreach (var pair in graph.ChildrenByParentInPriorityOrder())
+            {
+                children[pair.Key.guid] = pair.Value;
             }
 
             foreach (var node in graph.Nodes)
@@ -154,10 +159,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             if (!children.TryGetValue(guid, out var list) || list.Count == 0) return Array.Empty<Guid>();
 
-            // Canvas X is priority — the leftmost child of a Selector is the branch it tries first — so the
-            // index in this list is the priority number a designer sees.
-            list.Sort((left, right) => left.Position.x.CompareTo(right.Position.x));
-
+            // Already in priority order — the index in this list is the priority number a designer sees.
             var guids = new Guid[list.Count];
             for (int i = 0; i < list.Count; i++)
             {

@@ -55,6 +55,27 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    /// <summary>
+    /// A guard that counts how often it was asked. <see cref="BooleanConditionalExecution"/> answers from a
+    /// port and so cannot say how many times it ran — and "how many times did this evaluate" is the whole
+    /// question when the concern is a guard armed onto its owner more than once.
+    /// </summary>
+    internal sealed class CountingGuard : ConditionalExecution
+    {
+        public int Evaluations { get; private set; }
+
+        /// <summary>What <see cref="Evaluate"/> answers. Settable so a test can flip the guard mid-run.</summary>
+        public bool Result { get; set; } = true;
+
+        public override string NodeName => "Counting Test Guard";
+
+        public override bool Evaluate()
+        {
+            Evaluations++;
+            return Result;
+        }
+    }
+
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>
     internal sealed class FixedCondition : Condition
     {
