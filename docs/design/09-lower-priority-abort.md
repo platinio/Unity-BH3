@@ -336,10 +336,15 @@ neighbour.
 
 Blocking — decide before serializing anything:
 
-1. **Suggested-guard mechanics.** Where does a branch declare it (beside required/optional declarations?),
-   what happens on re-drop, and does contract drift apply the way it does for parameters? The
-   `RefreshParameters` / `DescribeContractDrift` pattern is the obvious model, but a guard is not a port
-   and may not want the same "report, never auto-apply" rule.
+1. ~~**Suggested-guard mechanics.**~~ **Resolved — specified in spec 03**, which is what consumes them.
+   Summary: stored on the library **card sidecar**, not on `BehaviorTreeGraphAsset`, because the runtime
+   never reads a suggested guard and keeping the field off the runtime type is what stops it becoming
+   binding. **Contract drift does not apply** — parameters need it because the branch *reads* those values
+   at runtime, whereas a guard is evaluated by the caller on the caller's node and the branch never sees it,
+   so once instantiated there is no copy to go stale. Re-dropping produces a second independent call site.
+   The condition may be a variable read or an arbitrary Visual Scripting graph **referenced** by asset, with
+   the constraint that the graph must be standalone rather than one of the embedded sub-assets
+   `DestroyUnusedScriptGraphAssets` owns.
 2. **Derived-key staleness.** The key list is a cached copy of what the graph reads, so it can drift when
    the graph changes — the same failure `BehaviorTreeGraphParameter` already solves for sub-tree contracts.
    Re-derive on save, on verify, or report drift and require an explicit refresh?
@@ -460,7 +465,7 @@ TacticalPositionSelection ones, unrelated to this work.
   dishonest for a capability like `AbortsOwner`, where the combinations are the point.
 - **`OnSignal` was specified, built, and then cut.** See *Cut: OnSignal* below.
 - **Suggested guards (question 1) deferred to spec 03**, as the tool owner chose — without the library panel
-  there is nothing to drop one from.
+  there is nothing to drop one from. Their mechanics are now specified there rather than left open.
 
 ### One correctness trap worth recording
 
