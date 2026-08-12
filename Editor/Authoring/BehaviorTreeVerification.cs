@@ -137,7 +137,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 // 3. A reactive guard that can never become due watches nothing and re-checks nothing.
                 foreach (var trigger in reactive.Triggers ?? (IReadOnlyList<GuardTrigger>)System.Array.Empty<GuardTrigger>())
                 {
-                    if (trigger is OnKeyChanged keys && (keys.Keys == null || keys.Keys.Count == 0))
+                    if (trigger != null && trigger.Kind == GuardTriggerKind.OnKeyChanged
+                        && (trigger.Keys == null || trigger.Keys.Count == 0))
                     {
                         findings.Add($"{label} watches no keys, so nothing can ever mark it dirty. Derive its "
                                      + "keys or give it an interval.");

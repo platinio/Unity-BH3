@@ -218,7 +218,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 // The key is derivable here without walking anything: this helper was handed the variable
                 // name. Deriving it at the one place that already knows it is cheaper and more reliable than
                 // recovering it from the graph afterwards.
-                watchman.AddTrigger(new OnKeyChanged(variableName));
+                watchman.AddTrigger(GuardTrigger.KeyChanged(variableName));
 
                 guard = watchman;
                 value = watchman.Value;

@@ -73,7 +73,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardWhoseIntervalHasNotElapsedIsNotEvaluated()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new EveryInterval(5.0f));
+            guard.AddTrigger(GuardTrigger.Interval(5.0f));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -97,7 +97,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void EntryAlwaysEvaluatesEvenWhenTheGuardIsClean()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new EveryInterval(5.0f));
+            guard.AddTrigger(GuardTrigger.Interval(5.0f));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -122,7 +122,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ACleanGuardKeepsAnsweringWhatItLastDecided()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new EveryInterval(5.0f));
+            guard.AddTrigger(GuardTrigger.Interval(5.0f));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -138,7 +138,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ASignalMarksTheGuardDirty()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new OnSignal("alarm"));
+            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -159,7 +159,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AWrongSignalDoesNotWakeTheGuard()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new OnSignal("alarm"));
+            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -179,8 +179,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void TriggersCombineAsAnOr()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new EveryInterval(600.0f));
-            guard.AddTrigger(new OnSignal("alarm"));
+            guard.AddTrigger(GuardTrigger.Interval(600.0f));
+            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
             graph.OnAwake();
 
             sequence.OnNodeEnter();
@@ -202,7 +202,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AKeyTriggerWatchingNothingNeverWakesTheGuard()
         {
             var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(new OnKeyChanged());
+            guard.AddTrigger(GuardTrigger.KeyChanged());
             graph.OnAwake();
 
             sequence.OnNodeEnter();

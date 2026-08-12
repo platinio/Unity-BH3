@@ -135,8 +135,8 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Marks every <see cref="BehaviorTree.OnSignal"/> trigger of this name due. The push half of the
-        /// trigger list, for world events that are not agent state.
+        /// Marks every signal trigger of this name due. The push half of the trigger list, for world events
+        /// that are not agent state.
         /// </summary>
         public void RaiseSignal(string signal)
         {
@@ -144,7 +144,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             for (int i = 0; i < triggers.Count; i++)
             {
-                if (triggers[i] is OnSignal onSignal && onSignal.Signal == signal) onSignal.Raise();
+                triggers[i]?.Raise(signal);
             }
         }
 

@@ -452,6 +452,12 @@ TacticalPositionSelection ones, unrelated to this work.
 - **One trigger list, not two** (open question 4). **Purity is a warning, not an error** (question 5).
   **`CanUseConditionalExecutions` gates both kinds**, no separate opt-out (question 6). **Derived-key
   staleness** (question 2) is reported by `bt_verify`, never auto-applied.
+- **A trigger is one concrete type with a kind enum, not a subclass per kind.** The subclass version was
+  tidier to extend and could not be edited: Visual Scripting's reflected inspector has no type picker for an
+  abstract element type, so the trigger list rendered as nothing a designer could add to. This spec requires
+  the list to be "shown on the node and editable", and a schedule nobody can see or change is not a feature.
+  The kinds are mutually exclusive variants of one decision, which is what makes an enum honest here and
+  dishonest for a capability like `AbortsOwner`, where the combinations are the point.
 - **Suggested guards (question 1) deferred to spec 03**, as the tool owner chose — without the library panel
   there is nothing to drop one from.
 

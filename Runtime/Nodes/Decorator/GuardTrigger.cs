@@ -1,158 +1,160 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
+    /// <summary>Which question a <see cref="GuardTrigger"/> asks.</summary>
+    public enum GuardTriggerKind
+    {
+        /// <summary>An agent fact this guard reads has changed value. The default, and the cheapest.</summary>
+        OnKeyChanged,
+
+        /// <summary>A fixed amount of time has passed, for continuous quantities with no "changed" event.</summary>
+        EveryInterval,
+
+        /// <summary>Something raised a named signal — a world event that is not agent state.</summary>
+        OnSignal,
+
+        /// <summary>Always due. The honest escape hatch.</summary>
+        EveryFrame,
+    }
+
     /// <summary>
     /// When a <see cref="ReactiveGuard"/> is allowed to recompute.
     ///
     /// <para>
-    /// <b>A trigger does not cause evaluation. It marks the guard dirty.</b> Nothing outside the machine
-    /// tick ever evaluates a guard: the tick asks, and the guard either recomputes or hands back what it
-    /// last decided. That was chosen over evaluating on an independent timer, which would make whether a
-    /// frame's decision saw a new value depend on Unity's component execution order — intermittent
-    /// one-frame differences that reproduce on one machine and not another. It was also chosen over
-    /// evaluating every due guard at the top of the tick, which is deterministic but pays for guards on
-    /// branches the tree never considers.
+    /// <b>A trigger does not cause evaluation. It marks the guard dirty.</b> Nothing outside the machine tick
+    /// ever evaluates a guard: the tick asks, and the guard either recomputes or hands back what it last
+    /// decided. That was chosen over evaluating on an independent timer, which would make whether a frame's
+    /// decision saw a new value depend on Unity's component execution order — intermittent one-frame
+    /// differences that reproduce on one machine and not another. It was also chosen over evaluating every
+    /// due guard at the top of the tick, which is deterministic but pays for guards on branches the tree
+    /// never considers.
     /// </para>
     ///
     /// <para>
     /// <b>Triggers are declared data, never ports.</b> A trigger's whole job is to be checkable
     /// <em>without</em> running the guard. A trigger fed by a graph would have to be executed every frame to
     /// find out whether the condition graph could be skipped, which costs exactly what it was meant to save.
-    /// The condition stays an arbitrary port; the schedule is declared. That is the axis the whole design
-    /// falls on: evaluated once may be arbitrary, evaluated repeatedly must be declared.
+    /// The condition stays an arbitrary port; the schedule is declared.
     /// </para>
     ///
     /// <para>
-    /// A guard holds a list of these OR'd together, so a new kind is additive — a new subclass and nothing
-    /// else. No change to the guard, the walks, the composites, or any existing asset.
+    /// <b>One concrete type with a kind, rather than a subclass per kind.</b> The subclass version was
+    /// tidier to extend and could not be edited: Visual Scripting's reflected inspector has no type picker
+    /// for an abstract element type, so the trigger list rendered as nothing a designer could add to. A
+    /// schedule nobody can see or change is not a feature. The kinds are mutually exclusive variants of one
+    /// decision — a trigger is exactly one of them — which is what makes an enum honest here and dishonest
+    /// for a capability like <see cref="ReactiveGuard.AbortsOwner"/>, where the combinations are the point.
+    /// Adding a kind is an enum value plus a branch in <see cref="IsDue"/>, and existing assets are
+    /// unaffected.
     /// </para>
     /// </summary>
-    public abstract class GuardTrigger
+    public sealed class GuardTrigger
     {
-        /// <summary>
-        /// Whether this trigger claims the guard's answer may have moved since it last recomputed.
-        /// </summary>
-        /// <param name="owner">The node the guard is armed on, for reaching the agent.</param>
-        /// <param name="secondsSinceEvaluated">Time since the last recompute, or a large value if never.</param>
-        public abstract bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated);
-
-        /// <summary>Called after the guard recomputed, so a trigger can rearm.</summary>
-        public virtual void OnEvaluated(BehaviorTreeNode owner) { }
-
-        /// <summary>What the inspector, the dump and the cost display call this trigger.</summary>
-        public abstract string Describe();
-    }
-
-    /// <summary>
-    /// The honest escape hatch: recompute whenever asked. Identical to <c>EveryInterval(0)</c> and named
-    /// separately so a guard that genuinely needs per-frame cost says so on the canvas.
-    /// </summary>
-    public sealed class EveryFrame : GuardTrigger
-    {
-        public override bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated) => true;
-
-        public override string Describe() => "every frame";
-    }
-
-    /// <summary>
-    /// Recompute at a fixed rate, for continuous quantities that have no meaningful "changed" event —
-    /// a distance, an angle, a resource level.
-    ///
-    /// <para>
-    /// <paramref name="Deviation"/> exists because 200 agents sharing a 0.2s timer land on the same frame
-    /// and produce a spike rather than a load. The phase is randomised per guard instance at construction,
-    /// so agents spread out without anyone configuring it.
-    /// </para>
-    /// </summary>
-    public sealed class EveryInterval : GuardTrigger
-    {
-        [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable]
-        public float Seconds { get; set; } = 0.2f;
-
-        [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable]
-        public float Deviation { get; set; } = 0.0f;
+        [Serialize, Inspectable, InspectorLabel("When")]
+        public GuardTriggerKind Kind { get; set; } = GuardTriggerKind.OnKeyChanged;
 
         /// <summary>
-        /// The interval this instance is actually using, re-rolled after each evaluation. Not serialized:
-        /// it is per-agent scheduling noise, and two agents sharing an asset must not share a phase.
+        /// The agent facts this guard reads. Auto-derived where the authoring path knows them, then editable
+        /// — derivation is right most of the time and silently wrong on a dynamically computed key, so
+        /// showing the list is what makes that visible rather than mysterious.
         /// </summary>
-        [Unity.VisualScripting.DoNotSerialize]
-        private float currentInterval = -1.0f;
-
-        public EveryInterval() { }
-
-        public EveryInterval(float seconds, float deviation = 0.0f)
-        {
-            Seconds = seconds;
-            Deviation = deviation;
-        }
-
-        public override bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated)
-        {
-            if (currentInterval < 0.0f) Reroll();
-
-            return secondsSinceEvaluated >= currentInterval;
-        }
-
-        public override void OnEvaluated(BehaviorTreeNode owner) => Reroll();
-
-        private void Reroll()
-        {
-            currentInterval = Deviation <= 0.0f
-                ? Seconds
-                : Mathf.Max(0.0f, Seconds + Random.Range(-Deviation, Deviation));
-        }
-
-        public override string Describe() =>
-            Deviation > 0.0f ? $"every {Seconds}s ±{Deviation}s" : $"every {Seconds}s";
-    }
-
-    /// <summary>
-    /// Recompute when one of the agent facts this guard reads actually changes.
-    ///
-    /// <para>
-    /// The default, and the cheapest: a guard whose keys have not moved costs one dictionary lookup per key
-    /// instead of a graph run. Backed by <see cref="AgentVariableWriter"/>'s version counters — see there
-    /// for why counters rather than subscriptions, and why the flight recorder could not have been the seam.
-    /// </para>
-    ///
-    /// <para>
-    /// <b>Agent-scope keys only.</b> Those are the facts a branch reacts to; a branch's own Graph-scope
-    /// variables are per-call-site scratch, and a guard watching those would be watching its own noise.
-    /// Anything else uses <see cref="EveryInterval"/>.
-    /// </para>
-    ///
-    /// <para>
-    /// The keys are auto-derived from the guard's graph and then editable, because derivation is right most
-    /// of the time and silently wrong on a dynamically computed key. Showing the list is what makes that
-    /// visible rather than mysterious.
-    /// </para>
-    /// </summary>
-    public sealed class OnKeyChanged : GuardTrigger
-    {
-        [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable]
+        [Serialize, Inspectable, InspectorLabel("Keys")]
         public List<string> Keys { get; set; } = new();
 
         /// <summary>
-        /// Whether a human edited <see cref="Keys"/>. Re-deriving must not silently discard a hand-tuned
-        /// list, and a later reader should be able to tell a tuned list from a derived one.
+        /// Whether a human edited <see cref="Keys"/>. Re-deriving must not silently discard a tuned list, and
+        /// a later reader should be able to tell a tuned list from a derived one.
         /// </summary>
-        [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable]
+        [Serialize, Inspectable, InspectorLabel("Keys Hand Edited")]
         public bool HandEdited { get; set; }
 
-        [Unity.VisualScripting.DoNotSerialize]
-        private readonly Dictionary<string, int> seenVersions = new();
+        [Serialize, Inspectable, InspectorLabel("Seconds")]
+        public float Seconds { get; set; } = 0.2f;
 
-        public OnKeyChanged() { }
+        /// <summary>
+        /// Randomises the interval per guard. 200 agents sharing a 0.2s timer land on the same frame and
+        /// produce a spike rather than a load, so the phase is spread without anyone configuring it.
+        /// </summary>
+        [Serialize, Inspectable, InspectorLabel("Deviation")]
+        public float Deviation { get; set; }
 
-        public OnKeyChanged(params string[] keys)
+        [Serialize, Inspectable, InspectorLabel("Signal")]
+        public string Signal { get; set; }
+
+        [DoNotSerialize] private readonly Dictionary<string, int> seenVersions = new();
+        [DoNotSerialize] private float currentInterval = -1.0f;
+        [DoNotSerialize] private bool raised;
+
+        public GuardTrigger() { }
+
+        public static GuardTrigger KeyChanged(params string[] keys) =>
+            new() { Kind = GuardTriggerKind.OnKeyChanged, Keys = new List<string>(keys) };
+
+        public static GuardTrigger Interval(float seconds, float deviation = 0.0f) =>
+            new() { Kind = GuardTriggerKind.EveryInterval, Seconds = seconds, Deviation = deviation };
+
+        public static GuardTrigger OnSignal(string signal) =>
+            new() { Kind = GuardTriggerKind.OnSignal, Signal = signal };
+
+        public static GuardTrigger EveryFrame() => new() { Kind = GuardTriggerKind.EveryFrame };
+
+        /// <summary>Whether this trigger claims the guard's answer may have moved since it last recomputed.</summary>
+        public bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated)
         {
-            Keys = new List<string>(keys);
+            switch (Kind)
+            {
+                case GuardTriggerKind.EveryFrame:
+                    return true;
+
+                case GuardTriggerKind.EveryInterval:
+                    if (currentInterval < 0.0f) Reroll();
+                    return secondsSinceEvaluated >= currentInterval;
+
+                case GuardTriggerKind.OnSignal:
+                    return raised;
+
+                case GuardTriggerKind.OnKeyChanged:
+                    return AnyKeyMoved(owner);
+
+                default:
+                    return true;
+            }
         }
 
-        public override bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated)
+        /// <summary>Called after the guard recomputed, so the trigger can rearm.</summary>
+        public void OnEvaluated(BehaviorTreeNode owner)
+        {
+            switch (Kind)
+            {
+                case GuardTriggerKind.EveryInterval:
+                    Reroll();
+                    break;
+
+                case GuardTriggerKind.OnSignal:
+                    raised = false;
+                    break;
+
+                case GuardTriggerKind.OnKeyChanged:
+                    RememberVersions(owner);
+                    break;
+            }
+        }
+
+        /// <summary>Marks this trigger due, when it is a signal of this name.</summary>
+        public void Raise(string signal)
+        {
+            if (Kind == GuardTriggerKind.OnSignal && Signal == signal) raised = true;
+        }
+
+        /// <summary>
+        /// A key counts as moved when its version differs from the one seen at the last evaluation. Agent
+        /// scope only: those are the facts branches react to, and a branch's own graph variables are
+        /// per-call-site scratch a guard would only be watching itself write.
+        /// </summary>
+        private bool AnyKeyMoved(BehaviorTreeNode owner)
         {
             // A guard with nothing to watch can never become dirty on its own. Reported by bt_verify rather
             // than quietly treated as every-frame, because a guard that never re-checks is a bug the author
@@ -167,15 +169,13 @@ namespace ArcaneOnyx.BehaviorTree
                 string key = Keys[i];
                 if (string.IsNullOrEmpty(key)) continue;
 
-                int version = writer.VersionOf(key);
-
-                if (!seenVersions.TryGetValue(key, out int seen) || seen != version) return true;
+                if (!seenVersions.TryGetValue(key, out int seen) || seen != writer.VersionOf(key)) return true;
             }
 
             return false;
         }
 
-        public override void OnEvaluated(BehaviorTreeNode owner)
+        private void RememberVersions(BehaviorTreeNode owner)
         {
             if (Keys == null || Keys.Count == 0) return;
 
@@ -191,9 +191,16 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        private void Reroll()
+        {
+            currentInterval = Deviation <= 0.0f
+                ? Seconds
+                : Mathf.Max(0.0f, Seconds + Random.Range(-Deviation, Deviation));
+        }
+
         /// <summary>
-        /// The agent's writer, or null when the guard is running outside a scene — which is the normal case
-        /// in an edit-mode test and must not throw.
+        /// The agent's writer, or null when the guard is running outside a scene — the normal case in an
+        /// edit-mode test. Nothing here may throw into the tree.
         /// </summary>
         private static AgentVariableWriter WriterFor(BehaviorTreeNode owner)
         {
@@ -201,9 +208,6 @@ namespace ArcaneOnyx.BehaviorTree
 
             try
             {
-                // A node resolves its GameObject through the machine, and an edit-mode test ticks a tree
-                // with no machine at all. Nothing here may throw into the tree: a guard that cannot find an
-                // agent simply has no versions to compare, which leaves it clean.
                 var agent = owner.gameObject;
 
                 return agent == null ? null : AgentVariableWriter.On(agent);
@@ -214,38 +218,28 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        public override string Describe() =>
-            Keys == null || Keys.Count == 0 ? "on key changed (none)" : "on " + string.Join(", ", Keys) + " changed";
-    }
+        /// <summary>What the inspector, the dump and the cost display call this trigger.</summary>
+        public string Describe()
+        {
+            switch (Kind)
+            {
+                case GuardTriggerKind.EveryFrame:
+                    return "every frame";
 
-    /// <summary>
-    /// Recompute when something raises a named signal. A push with no value attached, for world events that
-    /// are not agent state — a door opening, an alarm, a wave starting.
-    ///
-    /// <para>
-    /// This is also the escape hatch for "I want logic deciding when to re-check": put the logic in whatever
-    /// raises the signal, where it runs on its own terms rather than in the guard's hot path.
-    /// </para>
-    /// </summary>
-    public sealed class OnSignal : GuardTrigger
-    {
-        [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable]
-        public string Signal { get; set; }
+                case GuardTriggerKind.EveryInterval:
+                    return Deviation > 0.0f ? $"every {Seconds}s ±{Deviation}s" : $"every {Seconds}s";
 
-        [Unity.VisualScripting.DoNotSerialize]
-        private bool raised;
+                case GuardTriggerKind.OnSignal:
+                    return $"on signal '{Signal}'";
 
-        public OnSignal() { }
+                case GuardTriggerKind.OnKeyChanged:
+                    return Keys == null || Keys.Count == 0
+                        ? "on key changed (none)"
+                        : "on " + string.Join(", ", Keys) + " changed";
 
-        public OnSignal(string signal) => Signal = signal;
-
-        /// <summary>Marks this trigger due. Called by <see cref="ReactiveGuard.RaiseSignal"/>.</summary>
-        public void Raise() => raised = true;
-
-        public override bool IsDue(BehaviorTreeNode owner, float secondsSinceEvaluated) => raised;
-
-        public override void OnEvaluated(BehaviorTreeNode owner) => raised = false;
-
-        public override string Describe() => $"on signal '{Signal}'";
+                default:
+                    return Kind.ToString();
+            }
+        }
     }
 }
