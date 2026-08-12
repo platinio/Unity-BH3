@@ -479,6 +479,8 @@ behaviour this feature replaced is visible beside the one that replaced it. Gene
 
 ### Cut: OnSignal
 
+Tracked as [Unity-BH3#12](https://github.com/platinio/Unity-BH3/issues/12).
+
 **Specified in this document, implemented, and then removed — it is not in the shipped trigger set.**
 
 The kind was defined here as "a push with no value attached, for world events that aren't state", and it
@@ -505,6 +507,8 @@ to be set back by whoever raised it. If that turns out to hurt in practice, the 
 design to build, and it should be a fact-shaped one rather than a second channel.
 
 ### Cut: derived keys, and the hand-edited flag with them
+
+Tracked as [Unity-BH3#13](https://github.com/platinio/Unity-BH3/issues/13).
 
 This document specifies that a guard's watched keys are **auto-derived** by walking its graph for literal
 variable keys, then shown and editable, with hand-edits marked so a later re-derivation reports the
