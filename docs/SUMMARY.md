@@ -8,6 +8,7 @@
 * [The Graph Editor](editor-guide.md)
 * [Ports and Wiring](ports-and-wiring.md)
 * [Execution Order](execution-order.md)
+* [Reactive Guards](reactive-guards.md)
 * [Sub-Behavior Trees](sub-behavior-trees.md)
 * [Best Practices](best-practices.md)
 

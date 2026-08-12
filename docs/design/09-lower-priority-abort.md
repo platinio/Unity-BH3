@@ -1,6 +1,9 @@
 # Reactive guards — preemption, scheduling, and the doorman/watchman split
 
-**Status:** design spec for an implementing agent with full access to the BH3 source
+**Status:** **IMPLEMENTED** on `feature/reactive-guards` (BH3 submodule) — see *Implementation notes* at the
+end for what was built, what was decided, and what is still owed.
+
+Originally: design spec for an implementing agent with full access to the BH3 source
 (`Assets/ArcaneOnyx/BH3` submodule). **Supersedes the earlier `AbortScope` enum design** — see
 *What changed and why* at the end for the trail. Everything marked *verified* below was read from the
 current source; everything else is an assumption the implementer must check. Needs its own branch and
@@ -421,3 +424,57 @@ The first draft of this spec put an `AbortScope { Self, LowerPriority, Both }` e
    `AbortsOwner` off, `Both` is the default, and `None` — which BH3 cannot express today and Unreal
    defaults to — is what `ConditionalExecution` becomes. Every cell reachable, none of it a dropdown that
    can be set to a combination nobody tested.
+
+
+## Implementation notes (2026-08-11)
+
+Built on `feature/reactive-guards` in the BH3 submodule, in six commits. EditMode 368 tests / 367 pass and
+PlayMode 7 / 4 pass, matching the pre-change baseline exactly — the four failures are pre-existing
+TacticalPositionSelection ones, unrelated to this work.
+
+### Decisions taken, and where they differ from this spec
+
+- **`ReactiveGuard` is abstract; `BooleanReactiveGuard` supplies the port** and is the only create-menu
+  entry. Mirrors the existing `ConditionalExecution` / `BooleanConditionalExecution` pair, so how a guard
+  gets its boolean stays separate from when it may recompute.
+- **`GuardOnVariable` defaults to `GuardKind.Reactive`, not `Conditional` as this spec states.** Every
+  existing caller wrote it meaning "guard this branch" when a guard interrupted by definition, so preserving
+  the *type* would silently strip interruption from every code-generated tree while preserving the
+  *behaviour* keeps them doing what their authors asked. Its return type widened to `ConditionalExecution`.
+- **`OnKeyChanged` is backed by version counters on `AgentVariableWriter`**, not by subscriptions. That class
+  already computed the change edge — its dedupe reports whether the value really moved, outside the
+  `[Conditional]` recorder call, so it ships in a player build. The recorder could not have been the seam:
+  the compiler deletes its call sites outside the editor, so a guard built on it would have been
+  event-driven in the editor and permanently clean in a build.
+- **Agent-scope keys only** for `OnKeyChanged`. Graph-scope variables are per-call-site scratch.
+- **The poll does not write `LastExecutionStatus`** (open question 3) — it asks guards on nodes that are not
+  running, and writing there would show a live result for an idle branch.
+- **One trigger list, not two** (open question 4). **Purity is a warning, not an error** (question 5).
+  **`CanUseConditionalExecutions` gates both kinds**, no separate opt-out (question 6). **Derived-key
+  staleness** (question 2) is reported by `bt_verify`, never auto-applied.
+- **Suggested guards (question 1) deferred to spec 03**, as the tool owner chose — without the library panel
+  there is nothing to drop one from.
+
+### One correctness trap worth recording
+
+Filtering the `OnUpdateInternal` guard walk unconditionally is wrong. A composite ticks a child on the same
+frame it *declined to enter* it — `Selector` calls `OnNodeEnter()` then `OnUpdateInternal()` in one iteration,
+and a refused entry returns early without stopping the tick. So a node that never started must re-state the
+entry decision in full, or a branch its doorman turned away runs anyway. The filter is
+`abortingOnly: IsRunning`. Caught by `ASelectorSkipsGuardedOffBranchesWithoutSpendingAFrame`.
+
+### Still owed
+
+- **A demo scene** under `BH3Demos/ReactiveGuards/`. Not built.
+- **Editor chrome**: the guard inspector's friendlier trigger editor, the static cost display
+  (`units x 1/interval x agents`), and the canvas affordance marking preemption-capable guards. The trigger
+  list itself already renders through Visual Scripting's reflected inspector, and `ReactiveGuard.Evaluations`
+  is exposed for the cost display to read.
+- **Per-guard evaluation counters in the recorder** — `Evaluations` exists on the guard; nothing surfaces it.
+- **`bt_guard_on_variable --kind`** needs a change in the external `unity mcp` server, whose source is not in
+  this repo. The C# side is complete, and `bt_describe_tree` / `bt_verify` picked up the dump and lint
+  additions with no server change.
+- **Sequence reactivity** — specified here, not built, as this spec intends. `bt_verify` reports a
+  `Preempts` guard outside a Selector as defined but not yet active.
+- The migrated trees all carry **no triggers**, i.e. every-tick evaluation, which is exactly their previous
+  behaviour. `bt_verify` now reports each one so the cost becomes a choice.
