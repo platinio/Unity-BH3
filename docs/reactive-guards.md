@@ -135,6 +135,68 @@ BehaviorTreeAuthoring.GuardOnVariable(asset, taunt, "isElite", true, false, 0f, 
     BehaviorTreeAuthoring.GuardKind.Conditional);
 ```
 
+## Writing a guard in C#
+
+A Visual Scripting condition costs a graph run every time it is evaluated. For something checked per agent
+per frame — a distance, an angle, a cone of vision — you can write the guard in C# instead and pay a method
+call.
+
+`ReactiveGuard` is abstract for exactly this reason: it owns the capabilities, the trigger list, the
+dirty-flag caching and the preemption behaviour, and leaves only *how do I get my boolean* to the subclass.
+`BooleanReactiveGuard` is just the version that reads a port.
+
+```csharp
+[GraphCreateMenu("Add Conditional Execution/Target In Range")]
+public class TargetInRangeGuard : ReactiveGuard
+{
+    [DoNotSerialize]
+    public ValueInput Range { get; private set; }
+
+    public override string NodeName => "Target In Range";
+
+    protected override void Definition()
+    {
+        base.Definition();
+
+        Range = ValueInput<float>(nameof(Range), 2.0f);
+    }
+
+    public override bool Evaluate()
+    {
+        if (!VariableScope.TryGet("target", out var value) || value is not GameObject target) return false;
+
+        float range = (float)Range.GetValue();
+
+        return (target.transform.position - gameObject.transform.position).sqrMagnitude <= range * range;
+    }
+}
+```
+
+Everything else arrives for free: `Aborts Owner` and `Preempts` with their inspector fields, the trigger
+list, entry-always-fresh, the preemption poll, `NodePreempted` in recordings, and the dump.
+
+Note the example does both things at once — `Range` is a port so a designer can tune it, while the distance
+maths is compiled. Mix as suits: declare `ValueInput`s for what should stay wireable, and read
+`gameObject`, `VariableScope` or `GetComponent<T>` directly for what should stay fast.
+
+### If you need your own scheduling
+
+`Ask(bool fresh)` is virtual, so a guard can replace the whole dirty-flag path when its own change detection
+beats the generic one. If you override it, you own honouring `fresh` — entry must recompute, or the guard
+can admit a branch on a precondition that no longer holds.
+
+### Two things the tools cannot check for you
+
+**`bt_verify` cannot see a write in C#.** The impure-guard lint inspects a guard's script graphs for write
+units; compiled code is opaque to it. The rule is unchanged and matters more here, because a reactive guard
+evaluates while completely unrelated branches are running — but for a C# guard it is enforced by review
+rather than by the tool.
+
+**Nothing can derive your watched keys.** A C# guard that reads `hasTarget` directly has to declare that key
+on its own On Key Changed trigger, or a missing one means the guard simply never wakes, silently. In
+practice most C# guards read continuous quantities that have no change event at all, so **Every Interval**
+is usually the right trigger for them.
+
 ## When a plain Conditional Execution is the right answer
 
 Entry-only gating is not a downgrade. It is the correct tool whenever re-evaluation would be wrong or
