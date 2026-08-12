@@ -61,19 +61,16 @@ namespace ArcaneOnyx.BehaviorTree
         public GuardTriggerKind Kind { get; set; } = GuardTriggerKind.OnKeyChanged;
 
         /// <summary>
-        /// The agent facts this guard reads. Auto-derived where the authoring path knows them, then editable
-        /// — derivation is right most of the time and silently wrong on a dynamically computed key, so
-        /// showing the list is what makes that visible rather than mysterious.
+        /// The agent facts this guard reads.
+        /// <para>
+        /// Authored by hand today, and seeded by <c>GuardOnVariable</c> in the one case where the key is
+        /// known without inspecting anything. Deriving them from the guard's graph is not built — see the
+        /// spec's <i>Cut: derived keys</i> note. Until it is, a wrong key here is silent: the guard simply
+        /// never wakes.
+        /// </para>
         /// </summary>
         [Serialize, Inspectable, InspectorLabel("Keys")]
         public List<string> Keys { get; set; } = new();
-
-        /// <summary>
-        /// Whether a human edited <see cref="Keys"/>. Re-deriving must not silently discard a tuned list, and
-        /// a later reader should be able to tell a tuned list from a derived one.
-        /// </summary>
-        [Serialize, Inspectable, InspectorLabel("Keys Hand Edited")]
-        public bool HandEdited { get; set; }
 
         [Serialize, Inspectable, InspectorLabel("Seconds")]
         public float Seconds { get; set; } = 0.2f;

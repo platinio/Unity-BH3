@@ -182,11 +182,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     json.Property("type", trigger.Kind.ToString());
                     json.Property("when", trigger.Describe());
 
-                    // The derived keys are a cached copy of what the guard's graph reads, so they can drift.
-                    // Dumping the list and whether a human tuned it is what makes that checkable.
+                    // The keys are what decides whether this guard ever wakes, so they are worth reading
+                    // in a diff even though nothing derives them yet.
                     if (trigger.Kind == GuardTriggerKind.OnKeyChanged)
                     {
-                        json.Property("handEdited", trigger.HandEdited);
                         json.PropertyName("keys");
                         json.OpenArray();
 

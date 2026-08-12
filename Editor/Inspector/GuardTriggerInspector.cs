@@ -52,7 +52,6 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 case GuardTriggerKind.OnKeyChanged:
                     yield return metadata[nameof(GuardTrigger.Keys)];
-                    yield return metadata[nameof(GuardTrigger.HandEdited)];
                     break;
 
                 case GuardTriggerKind.EveryInterval:

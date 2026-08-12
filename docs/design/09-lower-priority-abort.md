@@ -504,6 +504,25 @@ The one thing genuinely lost is self-consuming semantics: a momentary event mode
 to be set back by whoever raised it. If that turns out to hurt in practice, the signal bus above is the
 design to build, and it should be a fact-shaped one rather than a second channel.
 
+### Cut: derived keys, and the hand-edited flag with them
+
+This document specifies that a guard's watched keys are **auto-derived** by walking its graph for literal
+variable keys, then shown and editable, with hand-edits marked so a later re-derivation reports the
+difference rather than discarding it — the `RefreshParameters` / `DescribeContractDrift` pattern.
+
+**The derivation was never built.** `GuardOnVariable` seeds the key from the variable name it was already
+handed, which is the one case where no walk is needed; for a guard whose condition is an arbitrary Visual
+Scripting graph, a designer types the keys in by hand. So every list is hand-authored, and the
+`HandEdited` flag that existed to protect a tuned list from an automatic one had nothing to protect. It was
+declared, drawn and dumped, and never set or read. Removed.
+
+The machinery is still the obvious one: `GuardTraceCapture` already visits every unit in a guard's graph for
+the why-panel, and this is the same walk with a different collector.
+
+**What that leaves open, and it is the sharpest edge in the feature:** `bt_verify` reports an *empty* key
+list, but nothing can report a *wrong* one. A guard watching a key its graph does not read never wakes, and
+fails silently — no error, no warning, just a branch that stops reacting.
+
 ### Still owed
 
 - **Editor chrome**: the guard inspector's friendlier trigger editor, the static cost display
