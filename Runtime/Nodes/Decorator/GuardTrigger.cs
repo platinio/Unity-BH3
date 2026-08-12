@@ -43,7 +43,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// for an abstract element type, so the trigger list rendered as nothing a designer could add to. A
     /// schedule nobody can see or change is not a feature. The kinds are mutually exclusive variants of one
     /// decision — a trigger is exactly one of them — which is what makes an enum honest here and dishonest
-    /// for a capability like <see cref="ReactiveGuard.AbortsOwner"/>, where the combinations are the point.
+    /// for a capability like <see cref="ReactiveGuard.StopsItsOwnBranch"/>, where the combinations are the point.
     /// Adding a kind is an enum value plus a branch in <see cref="IsDue"/>, and existing assets are
     /// unaffected.
     /// </para>

@@ -39,7 +39,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// outside the branch itself.
         /// </para>
         /// </summary>
-        NodePreempted,
+        NodeTakenOver,
 
         /// <summary>
         /// A guard's result changed. Recorded on transition only — guards evaluate every tick while their

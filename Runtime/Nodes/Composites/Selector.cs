@@ -26,14 +26,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// winner — the first eligible child found is the highest-priority one, with no comparison needed.
         /// </para>
         /// </summary>
-        protected override bool TryReact(out int newChildIndex)
+        protected override bool TryChangeRunningChild(out int newChildIndex)
         {
             newChildIndex = currentExecutingChildIndex;
 
             // Nothing outranks child 0, so there is no scan to run when it is the one executing.
             if (currentExecutingChildIndex <= 0) return false;
 
-            int eligible = FirstEligibleChild(0, currentExecutingChildIndex);
+            int eligible = FirstChildThatWouldEnterNow(0, currentExecutingChildIndex);
             if (eligible < 0) return false;
 
             newChildIndex = eligible;
@@ -54,12 +54,12 @@ namespace ArcaneOnyx.BehaviorTree
             //
             // Skipped on the frame this selector is itself entered (callOnEnter still true), because there
             // is no victim yet: nothing is mid-run to take over from.
-            if (!callOnEnter && TryReact(out int preemptorIndex))
+            if (!callOnEnter && TryChangeRunningChild(out int preemptorIndex))
             {
                 var victim = children[currentExecutingChildIndex];
                 var preemptor = children[preemptorIndex];
 
-                Debugging.BehaviorTreeRecorder.NodePreempted(victim, preemptor, preemptor.FirstPreemptingGuard());
+                Debugging.BehaviorTreeRecorder.NodeTakenOver(victim, preemptor, preemptor.FirstTakeOverGuard());
 
                 // The same call the Failure path below makes, so teardown parity is automatic rather than
                 // a second implementation that has to be kept in step.

@@ -95,7 +95,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in graph.Nodes)
             {
-                // Selector is the only composite that reacts today. A Preempts guard anywhere else is
+                // Selector is the only composite that reacts today. A TakesOverLowerPriority guard anywhere else is
                 // authored intent that silently does nothing.
                 if (node is not Selector) continue;
 
@@ -155,7 +155,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still
                 //    aborts, but its bid is defined and not yet active.
-                if (reactive.Preempts && owner != null && !childOfReactiveComposite.Contains(owner.guid))
+                if (reactive.TakesOverLowerPriority && owner != null && !childOfReactiveComposite.Contains(owner.guid))
                 {
                     findings.Add($"{label} is set to preempt, but its owner is not a direct child of a "
                                  + "Selector. Preemption is defined there and not yet active anywhere else.");

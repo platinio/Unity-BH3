@@ -143,10 +143,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 json.Property("guid", guard.guid.ToString());
 
                 // What a guard is allowed to do is not readable from its type name alone -- a ReactiveGuard
-                // with AbortsOwner off is a very different thing from one with it on, and telling them apart
+                // with StopsItsOwnBranch off is a very different thing from one with it on, and telling them apart
                 // is most of what a reader wants from a dump of a reactive tree.
-                json.Property("abortsOwner", guard.AbortsOwner);
-                json.Property("preempts", guard.Preempts);
+                json.Property("stopsItsOwnBranch", guard.StopsItsOwnBranch);
+                json.Property("takesOverLowerPriority", guard.TakesOverLowerPriority);
 
                 if (guard is ReactiveGuard reactive) WriteTriggers(json, reactive);
 

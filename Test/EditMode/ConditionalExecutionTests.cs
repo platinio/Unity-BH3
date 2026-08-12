@@ -101,7 +101,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
-        /// A reactive guard with <c>AbortsOwner</c> off still gates entry but never interrupts: the
+        /// A reactive guard with <c>StopsItsOwnBranch</c> off still gates entry but never interrupts: the
         /// committed swing. Unreachable with a single flag, which is why capability is two virtuals rather
         /// than one enum.
         /// </summary>

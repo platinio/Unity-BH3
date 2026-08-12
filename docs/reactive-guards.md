@@ -8,8 +8,8 @@ answer.
 | Question | *May I start?* | *Is this still true?* |
 | Evaluated | once, at entry | at entry, and again on a schedule while its owner runs |
 | Gates entry | yes | yes |
-| Aborts its own branch mid-run | no | `Aborts Owner`, default on |
-| Takes over from a lower-priority branch | no | `Preempts`, default on |
+| Aborts its own branch mid-run | no | `Stops Its Own Branch`, default on |
+| Takes over from a lower-priority branch | no | `Takes Over Lower Priority`, default on |
 
 The doorman checks once and stops caring. The watchman keeps looking, and can throw you out — or let someone
 else in ahead of you.
@@ -34,7 +34,7 @@ With reactive guards each branch states only its own precondition, and the fallb
 
 ```
 Selector
-├── Attack   Reactive Guard: targetInRange   (Preempts on, Aborts Owner OFF)
+├── Attack   Reactive Guard: targetInRange   (Takes Over Lower Priority on, Stops Its Own Branch OFF)
 ├── Chase    Reactive Guard: hasTarget       (both on)
 └── Idle     no guard
 ```
@@ -42,9 +42,9 @@ Selector
 When `targetInRange` turns true, Attack takes the slot from Chase **on the same frame**. Idle does not know
 Attack or Chase exist.
 
-## Aborts Owner and Preempts are independent
+## Stops Its Own Branch and Takes Over Lower Priority are independent
 
-Turning `Aborts Owner` off is a real authoring move, not a way to disable the guard. It is the **committed
+Turning `Stops Its Own Branch` off is a real authoring move, not a way to disable the guard. It is the **committed
 swing**: Attack bids for control the moment the target comes into range, but once the animation has started
 it finishes even if the target steps back out. That combination is unreachable with a single switch, which
 is why there are two.
@@ -111,12 +111,12 @@ differently:
   guard as defined but not active.
 - **Parallel Selector** — no reaction. Children already run concurrently, so there is no resume point to move.
 
-A guard set to `Preempts` whose owner is not a direct child of a Selector still gates entry and still aborts
+A guard set to `Takes Over Lower Priority` whose owner is not a direct child of a Selector still gates entry and still aborts
 — it just has nobody to bid against. `bt_verify` says so.
 
 ## Reading what happened
 
-A takeover is recorded as its own event, `NodePreempted`, naming the branch that lost the slot, the guard
+A takeover is recorded as its own event, `NodeTakenOver`, naming the branch that lost the slot, the guard
 that bid, and the branch that took over. It is deliberately distinct from an abort: *"your precondition
 stopped holding"* and *"something more important wanted the slot"* are different answers, and only the second
 names a cause outside the branch itself.
@@ -172,8 +172,8 @@ public class TargetInRangeGuard : ReactiveGuard
 }
 ```
 
-Everything else arrives for free: `Aborts Owner` and `Preempts` with their inspector fields, the trigger
-list, entry-always-fresh, the preemption poll, `NodePreempted` in recordings, and the dump.
+Everything else arrives for free: `Aborts Owner` and `TakesOverLowerPriority` with their inspector fields, the trigger
+list, entry-always-fresh, the preemption poll, `NodeTakenOver` in recordings, and the dump.
 
 Note the example does both things at once — `Range` is a port so a designer can tune it, while the distance
 maths is compiled. Mix as suits: declare `ValueInput`s for what should stay wireable, and read

@@ -27,7 +27,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// there is no resume point to move.</item>
         /// </list>
         /// </summary>
-        protected virtual bool TryReact(out int newChildIndex)
+        protected virtual bool TryChangeRunningChild(out int newChildIndex)
         {
             newChildIndex = currentExecutingChildIndex;
             return false;
@@ -38,13 +38,13 @@ namespace ArcaneOnyx.BehaviorTree
         /// Walked in priority order, so the highest-priority eligible child wins by construction rather than
         /// by comparison.
         /// <para>
-        /// Two gates, cheap one first. <see cref="BehaviorTreeNode.HasPollableGuards"/> is a cached bool and
+        /// Two gates, cheap one first. <see cref="BehaviorTreeNode.HasTakeOverGuard"/> is a cached bool and
         /// excludes every child that never opted in; only what survives that pays for
         /// <see cref="BehaviorTreeNode.WouldEnterNow"/>, which is a full entry-feasibility check and can run
         /// a graph.
         /// </para>
         /// </summary>
-        protected int FirstEligibleChild(int from, int toExclusive)
+        protected int FirstChildThatWouldEnterNow(int from, int toExclusive)
         {
             var children = GetChildren();
 
@@ -54,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var child = children[i];
 
-                if (child == null || !child.HasPollableGuards) continue;
+                if (child == null || !child.HasTakeOverGuard) continue;
                 if (child.WouldEnterNow()) return i;
             }
 

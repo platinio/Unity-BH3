@@ -148,7 +148,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(0, low.EnterCalls, "the lower-priority branch was never in the slot");
             Assert.AreEqual(0, low.ExitCalls, "so there was nothing to evict");
             CollectionAssert.IsEmpty(
-                recorder.Events.Where(e => e.Kind == Debugging.BehaviorTreeEventKind.NodePreempted).ToList(),
+                recorder.Events.Where(e => e.Kind == Debugging.BehaviorTreeEventKind.NodeTakenOver).ToList(),
                 "and nothing may be recorded as a preemption when no branch lost a slot");
         }
 
@@ -218,7 +218,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             selector.OnNodeEnter();
             selector.OnUpdateInternal();
 
-            Assert.IsFalse(high.HasPollableGuards, "a plain conditional cannot bid");
+            Assert.IsFalse(high.HasTakeOverGuard, "a plain conditional cannot bid");
 
             int afterFirstTick = doorman.Evaluations;
             selector.OnUpdateInternal();
@@ -248,9 +248,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             selector.OnUpdateInternal();
 
             var preemption = recorder.Events
-                .FirstOrDefault(e => e.Kind == Debugging.BehaviorTreeEventKind.NodePreempted);
+                .FirstOrDefault(e => e.Kind == Debugging.BehaviorTreeEventKind.NodeTakenOver);
 
-            Assert.IsNotNull(preemption, "a takeover must be recorded as NodePreempted, not as a plain abort");
+            Assert.IsNotNull(preemption, "a takeover must be recorded as NodeTakenOver, not as a plain abort");
             Assert.AreEqual(low.guid, preemption.NodeGuid, "the event is about the branch that lost the slot");
             Assert.AreEqual(bid.guid, preemption.RelatedGuid, "and names the guard that made the bid");
             Assert.AreEqual(high.NodeName, preemption.Key, "and the preemptor, so an explanation can name it");

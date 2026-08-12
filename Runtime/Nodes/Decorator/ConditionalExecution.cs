@@ -37,13 +37,13 @@ namespace ArcaneOnyx.BehaviorTree
         /// it started. A type-based filter would get exactly that case wrong.
         /// </para>
         /// </summary>
-        public virtual bool AbortsOwner => false;
+        public virtual bool StopsItsOwnBranch => false;
 
         /// <summary>
         /// Whether this guard can take control away from a lower-priority sibling that is already running.
         /// False here: a doorman cannot open someone else's door.
         /// </summary>
-        public virtual bool Preempts => false;
+        public virtual bool TakesOverLowerPriority => false;
 
         public void UpdateOwner(BehaviorTreeNode owner)
         {

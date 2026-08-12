@@ -138,12 +138,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             node?.FlightRecorder?.NodeAborted(node, guard);
         }
 
-        /// <summary>A running branch gave way to a higher-priority one. See <see cref="BehaviorTreeEventKind.NodePreempted"/>.</summary>
+        /// <summary>A running branch gave way to a higher-priority one. See <see cref="BehaviorTreeEventKind.NodeTakenOver"/>.</summary>
         [Conditional(Editor), Conditional(DevToolsDefine)]
-        public static void NodePreempted(
+        public static void NodeTakenOver(
             BehaviorTreeNode victim, BehaviorTreeNode preemptor, ConditionalExecution guard)
         {
-            victim?.FlightRecorder?.NodePreempted(victim, preemptor, guard);
+            victim?.FlightRecorder?.NodeTakenOver(victim, preemptor, guard);
         }
 
         [Conditional(Editor), Conditional(DevToolsDefine)]

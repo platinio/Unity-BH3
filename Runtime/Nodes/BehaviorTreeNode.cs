@@ -442,7 +442,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         /// </summary>
         /// <param name="abortingOnly">
-        /// When true, considers only guards that claim <see cref="ConditionalExecution.AbortsOwner"/>. This
+        /// When true, considers only guards that claim <see cref="ConditionalExecution.StopsItsOwnBranch"/>. This
         /// is the whole of the entry-only change: a plain <see cref="ConditionalExecution"/> reports false
         /// there and so is skipped once its owner is running, while entry still asks every guard.
         /// </param>
@@ -466,7 +466,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var conditionalExecution = guards[i];
 
-                if (abortingOnly && !conditionalExecution.AbortsOwner) continue;
+                if (abortingOnly && !conditionalExecution.StopsItsOwnBranch) continue;
 
                 bool passed = writeStatus
                     ? conditionalExecution.EvaluateInternal(fresh)
@@ -493,7 +493,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// children carry no reactive guards pays one bool check per child and nothing else.
         /// </para>
         /// </summary>
-        public bool HasPollableGuards
+        public bool HasTakeOverGuard
         {
             get
             {
@@ -504,7 +504,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 for (int i = 0; i < guards.Count; i++)
                 {
-                    if (!guards[i].Preempts) continue;
+                    if (!guards[i].TakesOverLowerPriority) continue;
 
                     any = true;
                     break;
@@ -534,13 +534,13 @@ namespace ArcaneOnyx.BehaviorTree
         public bool WouldEnterNow() => FirstFailingGuard(abortingOnly: false, writeStatus: false) == null;
 
         /// <summary>The first guard here that claims the right to preempt, or null. Names the bid in a recording.</summary>
-        public ConditionalExecution FirstPreemptingGuard()
+        public ConditionalExecution FirstTakeOverGuard()
         {
             var guards = Guards;
 
             for (int i = 0; i < guards.Count; i++)
             {
-                if (guards[i].Preempts) return guards[i];
+                if (guards[i].TakesOverLowerPriority) return guards[i];
             }
 
             return null;
@@ -586,7 +586,7 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Asks only the guards that claim <see cref="ConditionalExecution.AbortsOwner"/>.
+        /// Asks only the guards that claim <see cref="ConditionalExecution.StopsItsOwnBranch"/>.
         /// <para>
         /// A plain <see cref="ConditionalExecution"/> does not, so it no longer interrupts a branch it
         /// already admitted. That is a deliberate breaking change, and it is what makes the node class

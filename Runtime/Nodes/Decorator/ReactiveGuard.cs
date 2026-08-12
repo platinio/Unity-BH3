@@ -8,13 +8,13 @@ namespace ArcaneOnyx.BehaviorTree
     ///
     /// <para>
     /// Where <see cref="ConditionalExecution"/> is a doorman — it checks once and stops caring — this is a
-    /// watchman. It can throw its owner out mid-run (<see cref="AbortsOwner"/>), and it can let its owner in
-    /// ahead of a lower-priority branch that is already running (<see cref="Preempts"/>). Both default on,
+    /// watchman. It can throw its owner out mid-run (<see cref="StopsItsOwnBranch"/>), and it can let its owner in
+    /// ahead of a lower-priority branch that is already running (<see cref="TakesOverLowerPriority"/>). Both default on,
     /// and they are independent.
     /// </para>
     ///
     /// <para>
-    /// <b>Turning <see cref="AbortsOwner"/> off is a real authoring move, not a way to disable the node.</b>
+    /// <b>Turning <see cref="StopsItsOwnBranch"/> off is a real authoring move, not a way to disable the node.</b>
     /// It is the committed swing: Attack bids for control the moment the target comes into range, but once
     /// the animation has started it finishes even if the target steps back out. That combination —
     /// preempts, does not self-abort — is unreachable with any single flag, which is why these are two.
@@ -46,17 +46,17 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public abstract class ReactiveGuard : ConditionalExecution
     {
-        [Serialize, Inspectable]
+        [Serialize, Inspectable, InspectorLabel("Stops Its Own Branch")]
         protected bool abortsOwner = true;
 
-        [Serialize, Inspectable]
+        [Serialize, Inspectable, InspectorLabel("Takes Over Lower Priority")]
         protected bool preempts = true;
 
         /// <inheritdoc/>
-        public override bool AbortsOwner => abortsOwner;
+        public override bool StopsItsOwnBranch => abortsOwner;
 
         /// <inheritdoc/>
-        public override bool Preempts => preempts;
+        public override bool TakesOverLowerPriority => preempts;
 
         /// <summary>
         /// Sets both capabilities. For authoring code and tests; the designer-facing path is the two
@@ -72,7 +72,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// When this guard may recompute, OR'd together. Empty means every tick — the behaviour a guard had
         /// before triggers existed, so an asset authored without them is unchanged.
         /// </summary>
-        [Serialize, Inspectable]
+        [Serialize, Inspectable, InspectorLabel("Recompute When")]
         protected List<GuardTrigger> triggers = new();
 
         public IReadOnlyList<GuardTrigger> Triggers => triggers;

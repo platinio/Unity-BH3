@@ -94,7 +94,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 e.Kind == BehaviorTreeEventKind.GuardEval && e.NodeGuid == attackGuard);
             Assert.IsTrue(attackGuardFlip.Flag, "Attack's guard is hasTarget, so it goes true.");
 
-            var preemption = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.NodePreempted);
+            var preemption = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.NodeTakenOver);
             Assert.AreEqual(idle, preemption.NodeGuid, "Idle is what lost the slot,");
             Assert.AreEqual(attackGuard, preemption.RelatedGuid,
                 "and the recording names the guard that bid for it -- which belongs to Attack, not to Idle. "

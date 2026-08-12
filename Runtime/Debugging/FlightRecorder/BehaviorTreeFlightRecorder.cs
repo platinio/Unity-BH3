@@ -272,11 +272,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// what lets an explanation read "preempted by 'Attack'" rather than quoting a guid.
         /// </para>
         /// </summary>
-        public void NodePreempted(BehaviorTreeNode victim, BehaviorTreeNode preemptor, ConditionalExecution guard)
+        public void NodeTakenOver(BehaviorTreeNode victim, BehaviorTreeNode preemptor, ConditionalExecution guard)
         {
             if (!IsRecording || victim == null) return;
 
-            Add(BehaviorTreeEventKind.NodePreempted,
+            Add(BehaviorTreeEventKind.NodeTakenOver,
                 CallSiteOf(victim),
                 victim.guid,
                 relatedGuid: guard?.guid ?? Guid.Empty,

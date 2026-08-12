@@ -890,7 +890,7 @@ Everything else on this page is a different component.
 the right sidebar rather than the bottom dock in the end: the dock shows one tab at a time, so a variable
 table docked beside the timeline would hide the scrubber it jumps. Two things it leaves for whoever is next.
 `BehaviorTreeDebugSession` is the seam any further panel should read rather than resolving its own agent, and
-the event schema now carries `VariableKind`, so spec 09's `NodePreempted` and per-guard counters can be added
+the event schema now carries `VariableKind`, so spec 09's `NodeTakenOver` and per-guard counters can be added
 the same way — one field, one dump property, one import fallback.
 
 **Component 5 (guard lane) is closer still.** `BehaviorTreeTimeline` already reads `GuardEval` transitions,
