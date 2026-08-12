@@ -135,20 +135,6 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Marks every signal trigger of this name due. The push half of the trigger list, for world events
-        /// that are not agent state.
-        /// </summary>
-        public void RaiseSignal(string signal)
-        {
-            if (triggers == null || string.IsNullOrEmpty(signal)) return;
-
-            for (int i = 0; i < triggers.Count; i++)
-            {
-                triggers[i]?.Raise(signal);
-            }
-        }
-
-        /// <summary>
         /// Play-mode time, and zero outside it. An edit-mode test ticks a tree by hand with no time passing,
         /// so an interval trigger there is due exactly once — which is what makes the dirty-flag economy
         /// testable without a running scene.

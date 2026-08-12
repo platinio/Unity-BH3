@@ -21,7 +21,7 @@ namespace ArcaneOnyx.BehaviorTree
     ///
     /// <para>
     /// A plain <see cref="ReflectedInspector"/> works but draws all six members at once, so a trigger set to
-    /// <see cref="GuardTriggerKind.OnKeyChanged"/> still shows Seconds, Deviation and Signal — three fields
+    /// <see cref="GuardTriggerKind.OnKeyChanged"/> still shows Seconds and Deviation — fields
     /// that do nothing, crowding the two that matter inside a list row that is already narrow. A trigger is
     /// exactly one kind, so only that kind's fields are drawn. That is also the honest reading of the union:
     /// the other members are not "empty", they are not part of this trigger at all.
@@ -60,17 +60,13 @@ namespace ArcaneOnyx.BehaviorTree
                     yield return metadata[nameof(GuardTrigger.Deviation)];
                     break;
 
-                case GuardTriggerKind.OnSignal:
-                    yield return metadata[nameof(GuardTrigger.Signal)];
-                    break;
-
                 // EveryFrame carries no configuration -- the kind is the whole statement.
             }
         }
 
         protected override float GetHeight(float width, GUIContent label)
         {
-            float height = LudiqGUI.GetInspectorHeight(this, Kind, width);
+            float height = LudiqGUI.GetInspectorHeight(this, Kind, width) + 10;
 
             foreach (var field in FieldsForKind())
             {

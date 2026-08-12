@@ -135,62 +135,20 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void ASignalMarksTheGuardDirty()
-        {
-            var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
-            graph.OnAwake();
-
-            sequence.OnNodeEnter();
-            int afterEntry = guard.Evaluations;
-
-            sequence.OnUpdateInternal();
-            Assert.AreEqual(afterEntry, guard.Evaluations, "nothing raised it, so nothing to recompute");
-
-            guard.RaiseSignal("alarm");
-            sequence.OnUpdateInternal();
-            Assert.AreEqual(afterEntry + 1, guard.Evaluations, "the raise is what made it due");
-
-            sequence.OnUpdateInternal();
-            Assert.AreEqual(afterEntry + 1, guard.Evaluations, "and a signal is consumed, not sticky");
-        }
-
-        [Test]
-        public void AWrongSignalDoesNotWakeTheGuard()
-        {
-            var sequence = Guarded(out var guard, out var graph);
-            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
-            graph.OnAwake();
-
-            sequence.OnNodeEnter();
-            int afterEntry = guard.Evaluations;
-
-            guard.RaiseSignal("doorOpened");
-            sequence.OnUpdateInternal();
-
-            Assert.AreEqual(afterEntry, guard.Evaluations);
-        }
-
-        /// <summary>
-        /// Triggers are OR'd, so a guard watching a key and a slow interval still wakes on either.
-        /// This is what makes a new trigger kind additive rather than a redesign.
-        /// </summary>
-        [Test]
         public void TriggersCombineAsAnOr()
         {
             var sequence = Guarded(out var guard, out var graph);
             guard.AddTrigger(GuardTrigger.Interval(600.0f));
-            guard.AddTrigger(GuardTrigger.OnSignal("alarm"));
+            guard.AddTrigger(GuardTrigger.EveryFrame());
             graph.OnAwake();
 
             sequence.OnNodeEnter();
             int afterEntry = guard.Evaluations;
 
-            guard.RaiseSignal("alarm");
             sequence.OnUpdateInternal();
 
             Assert.AreEqual(afterEntry + 1, guard.Evaluations,
-                "the interval says no and the signal says yes; either one is enough");
+                "the interval says no and every-frame says yes; either one is enough");
         }
 
         /// <summary>

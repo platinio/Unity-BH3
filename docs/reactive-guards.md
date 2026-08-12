@@ -68,7 +68,6 @@ it dirty, and the tick decides.** A guard nothing marked dirty costs one bool ch
 |---|---|
 | **On Key Changed** | the default — an agent fact like `hasTarget`. Free when nothing changed. |
 | **Every Interval** (± deviation) | continuous quantities with no "changed" event: a distance, an angle, a resource level. |
-| **On Signal** | world events that are not agent state — an alarm, a door, a wave starting. |
 | **Every Frame** | the honest escape hatch. Say it out loud rather than leaving the list empty. |
 
 **An empty trigger list means every tick.** That is the most expensive thing a guard can do, so `bt_verify`

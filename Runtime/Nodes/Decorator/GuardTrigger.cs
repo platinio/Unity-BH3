@@ -13,9 +13,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>A fixed amount of time has passed, for continuous quantities with no "changed" event.</summary>
         EveryInterval,
 
-        /// <summary>Something raised a named signal — a world event that is not agent state.</summary>
-        OnSignal,
-
         /// <summary>Always due. The honest escape hatch.</summary>
         EveryFrame,
     }
@@ -88,12 +85,8 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable, InspectorLabel("Deviation")]
         public float Deviation { get; set; }
 
-        [Serialize, Inspectable, InspectorLabel("Signal")]
-        public string Signal { get; set; }
-
         [DoNotSerialize] private readonly Dictionary<string, int> seenVersions = new();
         [DoNotSerialize] private float currentInterval = -1.0f;
-        [DoNotSerialize] private bool raised;
 
         public GuardTrigger() { }
 
@@ -102,9 +95,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public static GuardTrigger Interval(float seconds, float deviation = 0.0f) =>
             new() { Kind = GuardTriggerKind.EveryInterval, Seconds = seconds, Deviation = deviation };
-
-        public static GuardTrigger OnSignal(string signal) =>
-            new() { Kind = GuardTriggerKind.OnSignal, Signal = signal };
 
         public static GuardTrigger EveryFrame() => new() { Kind = GuardTriggerKind.EveryFrame };
 
@@ -119,9 +109,6 @@ namespace ArcaneOnyx.BehaviorTree
                 case GuardTriggerKind.EveryInterval:
                     if (currentInterval < 0.0f) Reroll();
                     return secondsSinceEvaluated >= currentInterval;
-
-                case GuardTriggerKind.OnSignal:
-                    return raised;
 
                 case GuardTriggerKind.OnKeyChanged:
                     return AnyKeyMoved(owner);
@@ -140,20 +127,10 @@ namespace ArcaneOnyx.BehaviorTree
                     Reroll();
                     break;
 
-                case GuardTriggerKind.OnSignal:
-                    raised = false;
-                    break;
-
                 case GuardTriggerKind.OnKeyChanged:
                     RememberVersions(owner);
                     break;
             }
-        }
-
-        /// <summary>Marks this trigger due, when it is a signal of this name.</summary>
-        public void Raise(string signal)
-        {
-            if (Kind == GuardTriggerKind.OnSignal && Signal == signal) raised = true;
         }
 
         /// <summary>
@@ -235,9 +212,6 @@ namespace ArcaneOnyx.BehaviorTree
 
                 case GuardTriggerKind.EveryInterval:
                     return Deviation > 0.0f ? $"every {Seconds}s ±{Deviation}s" : $"every {Seconds}s";
-
-                case GuardTriggerKind.OnSignal:
-                    return $"on signal '{Signal}'";
 
                 case GuardTriggerKind.OnKeyChanged:
                     return Keys == null || Keys.Count == 0
