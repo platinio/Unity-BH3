@@ -47,10 +47,10 @@ namespace ArcaneOnyx.BehaviorTree
     public abstract class ReactiveGuard : ConditionalExecution
     {
         [Serialize, Inspectable]
-        private bool abortsOwner = true;
+        protected bool abortsOwner = true;
 
         [Serialize, Inspectable]
-        private bool preempts = true;
+        protected bool preempts = true;
 
         /// <inheritdoc/>
         public override bool AbortsOwner => abortsOwner;
@@ -73,7 +73,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// before triggers existed, so an asset authored without them is unchanged.
         /// </summary>
         [Serialize, Inspectable]
-        private List<GuardTrigger> triggers = new();
+        protected List<GuardTrigger> triggers = new();
 
         public IReadOnlyList<GuardTrigger> Triggers => triggers;
 

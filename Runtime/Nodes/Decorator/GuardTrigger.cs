@@ -51,6 +51,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// unaffected.
     /// </para>
     /// </summary>
+    /// <remarks>
+    /// <c>[Inspectable]</c> on the class, and <c>[Serializable]</c> for anything Unity-side that reflects
+    /// over it. Neither draws the type on its own — that needs a registered inspector, which is what
+    /// <c>GuardTriggerInspector</c> in the editor assembly is for.
+    /// </remarks>
+    [System.Serializable]
+    [Inspectable]
     public sealed class GuardTrigger
     {
         [Serialize, Inspectable, InspectorLabel("When")]
