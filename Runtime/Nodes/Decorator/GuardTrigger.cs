@@ -85,6 +85,12 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize] private readonly Dictionary<string, int> seenVersions = new();
         [DoNotSerialize] private float currentInterval = -1.0f;
 
+        // Resolving the writer is a component lookup, and this trigger is asked twice per guard evaluation
+        // on the path the whole feature exists to keep cheap. Cached against the agent it was resolved for,
+        // so a pooled node reused on a different agent still re-resolves.
+        [DoNotSerialize] private GameObject cachedAgent;
+        [DoNotSerialize] private AgentVariableWriter cachedWriter;
+
         public GuardTrigger() { }
 
         public static GuardTrigger KeyChanged(params string[] keys) =>
@@ -180,10 +186,17 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// The agent's writer, or null when the guard is running outside a scene — the normal case in an
-        /// edit-mode test. Nothing here may throw into the tree.
+        /// The writer on the agent this guard belongs to, or null when there is none — which includes a
+        /// guard ticked outside a scene, the normal case in an edit-mode test. Nothing here may throw into
+        /// the tree.
+        /// <para>
+        /// <see cref="AgentVariableWriter.Find"/> rather than <c>On</c>: reading versions must never add a
+        /// component to the agent. Nothing has written yet in that case, so every version is zero and the
+        /// guard is correctly clean; the component appears as soon as anything publishes a fact, because
+        /// every write path is get-or-add.
+        /// </para>
         /// </summary>
-        private static AgentVariableWriter WriterFor(BehaviorTreeNode owner)
+        private AgentVariableWriter WriterFor(BehaviorTreeNode owner)
         {
             if (owner == null) return null;
 
@@ -191,7 +204,13 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var agent = owner.gameObject;
 
-                return agent == null ? null : AgentVariableWriter.On(agent);
+                if (agent == null) return null;
+                if (ReferenceEquals(agent, cachedAgent)) return cachedWriter;
+
+                cachedAgent = agent;
+                cachedWriter = AgentVariableWriter.Find(agent);
+
+                return cachedWriter;
             }
             catch (System.Exception)
             {

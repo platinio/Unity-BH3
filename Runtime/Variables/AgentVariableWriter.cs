@@ -84,15 +84,37 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Records that a key changed. Public because the two other BH3 writers that reach agent scope --
-        /// <see cref="GameplayNode"/>'s Set Variable and the Set Behavior Tree Variable unit -- write through
-        /// <c>Variables</c> directly and report here, rather than every fact having to travel through
-        /// <see cref="Write"/>.
+        /// Writes an agent variable and records that it moved, in one call.
+        ///
+        /// <para>
+        /// <b>This is the only way BH3 writes agent scope.</b> The version bump cannot ride on
+        /// <c>VariableDeclarations.Set</c> — that is Unity's type, and its change event is internal and
+        /// carries no name — so it has to happen wherever the set happens. Three call sites each doing
+        /// <c>Set</c> then remembering to bump is a rule the fourth writer will break, and the failure is
+        /// silent: guards watching that key simply stop waking. Putting both halves behind one method is
+        /// what makes forgetting impossible.
+        /// </para>
+        ///
+        /// <para>
+        /// Unconditional, unlike <see cref="Write"/>: callers that already have their own recording and
+        /// their own change semantics use this and keep them.
+        /// </para>
         /// </summary>
-        public void Bump(string key)
+        public void SetAgentVariable(string key, object value)
         {
             if (string.IsNullOrEmpty(key)) return;
 
+            Bind();
+
+            if (variables == null) return;
+
+            variables.declarations.Set(key, value);
+            Bump(key);
+        }
+
+        /// <summary>Records that a key changed. Private, so the bump cannot be issued without the write.</summary>
+        private void Bump(string key)
+        {
             versions[key] = VersionOf(key) + 1;
         }
 
@@ -112,6 +134,18 @@ namespace ArcaneOnyx.BehaviorTree
             return agent.TryGetComponent<AgentVariableWriter>(out var existing)
                 ? existing
                 : agent.AddComponent<AgentVariableWriter>();
+        }
+
+        /// <summary>
+        /// The writer already on this GameObject, or null. Unlike <see cref="On"/> this never adds one, so it
+        /// is safe on the guard evaluation path — a guard asking about versions must not mutate the agent,
+        /// and before anything has written there is nothing to compare against anyway.
+        /// </summary>
+        public static AgentVariableWriter Find(GameObject agent)
+        {
+            if (agent == null) return null;
+
+            return agent.TryGetComponent<AgentVariableWriter>(out var existing) ? existing : null;
         }
 
         /// <summary>
@@ -151,12 +185,10 @@ namespace ArcaneOnyx.BehaviorTree
             Debugging.BehaviorTreeRecorder.ExternalVariableWrite(
                 machine, string.IsNullOrEmpty(sourceName) ? "(external)" : sourceName, key, previous, value);
 
-            declarations.Set(key, value);
-
-            // Only on a real change, which the early-out above already established. A fact recomputed every
+            // Reached only on a real change, which the early-out above established. A fact recomputed every
             // frame to the same value must not make a guard that watches it look dirty every frame -- that
             // would turn the cheapest trigger into the most expensive one.
-            Bump(key);
+            SetAgentVariable(key, value);
 
             return true;
         }
