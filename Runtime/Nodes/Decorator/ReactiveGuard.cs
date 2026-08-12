@@ -75,7 +75,11 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable, InspectorLabel("Recompute When")]
         protected List<GuardTrigger> triggers = new();
 
-        public IReadOnlyList<GuardTrigger> Triggers => triggers;
+        /// <inheritdoc/>
+        public override bool HasRecomputeSchedule => true;
+
+        /// <inheritdoc/>
+        public override IReadOnlyList<GuardTrigger> Triggers => triggers;
 
         public void AddTrigger(GuardTrigger trigger)
         {

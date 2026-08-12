@@ -45,6 +45,30 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public virtual bool TakesOverLowerPriority => false;
 
+        /// <summary>
+        /// Whether this guard recomputes at all after entry. False for a doorman, which is asked once and
+        /// never again.
+        /// <para>
+        /// Distinct from an empty <see cref="Triggers"/> list, which means the opposite: a watchman with no
+        /// triggers recomputes <em>every tick</em>. "No schedule" and "a schedule that never says no" both
+        /// present as an empty list, so the difference has to be stated rather than inferred.
+        /// </para>
+        /// </summary>
+        public virtual bool HasRecomputeSchedule => false;
+
+        /// <summary>
+        /// When this guard is allowed to recompute. Empty for a doorman, which is evaluated at entry and
+        /// never again, so it has no schedule to describe.
+        /// <para>
+        /// Declared here rather than left to a cast, for the same reason
+        /// <see cref="StopsItsOwnBranch"/> is: everything that walks guards filters on capability, never on
+        /// type. A reader that type-tested for <see cref="ReactiveGuard"/> would also have to be revisited
+        /// by any future guard that carries a schedule without being one.
+        /// </para>
+        /// </summary>
+        public virtual System.Collections.Generic.IReadOnlyList<GuardTrigger> Triggers =>
+            System.Array.Empty<GuardTrigger>();
+
         public void UpdateOwner(BehaviorTreeNode owner)
         {
             this.owner = owner;

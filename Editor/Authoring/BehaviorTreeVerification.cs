@@ -120,7 +120,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                                  + "evaluated on its own schedule, including while other branches run.");
                 }
 
-                if (guard is not ReactiveGuard reactive)
+                if (!guard.HasRecomputeSchedule)
                 {
                     // 2. A conditional that looks like it was relied on for interruption. Its loss of
                     //    self-abort is the intended breaking change, and this is what makes the migration
@@ -135,7 +135,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 }
 
                 // 3. A reactive guard that can never become due watches nothing and re-checks nothing.
-                foreach (var trigger in reactive.Triggers ?? (IReadOnlyList<GuardTrigger>)System.Array.Empty<GuardTrigger>())
+                foreach (var trigger in guard.Triggers)
                 {
                     if (trigger != null && trigger.Kind == GuardTriggerKind.OnKeyChanged
                         && (trigger.Keys == null || trigger.Keys.Count == 0))
@@ -147,7 +147,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 // 4. No triggers at all means every tick. Legal, and sometimes right, but it is the most
                 //    expensive thing a guard can do and it should be a choice rather than an oversight.
-                if (reactive.Triggers == null || reactive.Triggers.Count == 0)
+                if (guard.Triggers.Count == 0)
                 {
                     findings.Add($"{label} has no triggers, so it re-checks every tick. Add an interval or a "
                                  + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
@@ -155,7 +155,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still
                 //    aborts, but its bid is defined and not yet active.
-                if (reactive.TakesOverLowerPriority && owner != null && !childOfReactiveComposite.Contains(owner.guid))
+                if (guard.TakesOverLowerPriority && owner != null && !childOfReactiveComposite.Contains(owner.guid))
                 {
                     findings.Add($"{label} is set to preempt, but its owner is not a direct child of a "
                                  + "Selector. Preemption is defined there and not yet active anywhere else.");

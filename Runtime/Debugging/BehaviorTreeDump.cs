@@ -148,7 +148,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 json.Property("stopsItsOwnBranch", guard.StopsItsOwnBranch);
                 json.Property("takesOverLowerPriority", guard.TakesOverLowerPriority);
 
-                if (guard is ReactiveGuard reactive) WriteTriggers(json, reactive);
+                WriteTriggers(json, guard);
 
                 WriteInputs(json, guard);
                 json.CloseObject();
@@ -165,8 +165,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// guard can do and the thing a reader most needs to see.
         /// </para>
         /// </summary>
-        private static void WriteTriggers(JsonWriter json, ReactiveGuard guard)
+        private static void WriteTriggers(JsonWriter json, ConditionalExecution guard)
         {
+            // A doorman has no schedule at all, which is different from a watchman that re-checks every
+            // tick -- so it gets no "triggers" key rather than an empty one.
+            if (!guard.HasRecomputeSchedule) return;
+
             json.PropertyName("triggers");
             json.OpenArray();
 
