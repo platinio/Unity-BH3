@@ -114,6 +114,32 @@ differently:
 A guard set to `Takes Over Lower Priority` whose owner is not a direct child of a Selector still gates entry and still aborts
 — it just has nobody to bid against. `bt_verify` says so.
 
+### Sub-trees are guarded like anything else
+
+A **Run Behavior Tree Graph** node takes guards exactly the way any other node does — only `Entry` refuses
+them. In fact it is the *usual* place to put one: branch in its own asset, guard at the call site, which is
+what keeps the branch reusable. Every guard in the demo and in the authoring skill's Zombie example is on a
+sub-tree call node.
+
+A reactive guard on one does all three things:
+
+- **gates entry** — the branch never starts
+- **`Stops Its Own Branch`** — aborts the sub-tree mid-run, and the abort reaches every node *inside* the
+  instance, not just the call node
+- **`Takes Over Lower Priority`** — makes the call node pollable, so its parent Selector can hand it the slot
+
+What a run node does *not* do is take part in choosing among children — that is a composite's job, and a run
+node has no children in its own graph. So there are two independent layers:
+
+```
+outer Selector      can take the slot away from the whole sub-tree call
+   └── Run Sub-Tree
+         └── inner Selector   preempts among its own children, knowing nothing about the outside
+```
+
+They only meet when the outer one wins, and then the teardown has to cross the boundary — which is why
+aborting a sub-tree exits every node inside it rather than orphaning them mid-run.
+
 ## Reading what happened
 
 A takeover is recorded as its own event, `NodeTakenOver`, naming the branch that lost the slot, the guard

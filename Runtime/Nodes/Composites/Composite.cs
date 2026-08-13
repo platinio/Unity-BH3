@@ -26,6 +26,26 @@ namespace ArcaneOnyx.BehaviorTree
         /// <item><see cref="ParallelSelector"/>: no reaction at all. Children already run concurrently, so
         /// there is no resume point to move.</item>
         /// </list>
+        ///
+        /// <para>
+        /// <b>"Resume" is every frame a branch runs longer than one tick</b>, which is the common case.
+        /// <see cref="Selector.OnUpdate"/> starts its loop at <c>currentExecutingChildIndex</c> rather than at
+        /// zero:
+        /// </para>
+        /// <code>
+        /// frame 1  enter selector -> child0's guard is false, skipped -> child1 returns Running -> index = 1
+        /// frame 2  OnUpdate again -> the loop starts at index 1, callOnEnter false
+        ///          -> ticks child1 WITHOUT re-entering it, and WITHOUT reconsidering child0
+        /// frame 3  the same
+        /// </code>
+        /// <para>
+        /// Two separate reasons that is the right default. <b>Not re-entering</b> the running child, because
+        /// <c>OnEnter</c> is not idempotent — re-entering a <c>WaitTime</c> resets its timer to full, an
+        /// animation restarts, a <c>RandomChance</c> re-rolls, and any multi-frame action would hang forever.
+        /// <b>Not reconsidering</b> the children above it, because until reactive guards existed there was no
+        /// way for one of them to have become eligible in the meantime. That second half is what this hook
+        /// changes, and only for children that opted in by carrying a take-over guard.
+        /// </para>
         /// </summary>
         protected virtual bool TryChangeRunningChild(out int newChildIndex)
         {

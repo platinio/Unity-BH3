@@ -59,6 +59,9 @@ namespace ArcaneOnyx.BehaviorTree
                 var victim = children[currentExecutingChildIndex];
                 var preemptor = children[preemptorIndex];
 
+                // FirstTakeOverGuard() is written inline rather than into a local on purpose: the recorder
+                // facade is [Conditional]-gated, and that removes the call site *including its arguments*, so
+                // outside the editor and dev builds this lookup does not run at all.
                 Debugging.BehaviorTreeRecorder.NodeTakenOver(victim, preemptor, preemptor.FirstTakeOverGuard());
 
                 // The same call the Failure path below makes, so teardown parity is automatic rather than

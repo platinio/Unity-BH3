@@ -63,6 +63,18 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// The agent facts this guard reads.
         /// <para>
+        /// <b>Agent scope only</b> — <c>VariableKind.Object</c>, on the agent's Variables component. Those
+        /// are the facts branches react to. A branch's own <c>Graph</c> variables are per-call-site scratch a
+        /// guard would mostly be watching itself write, and Scene / Application / Saved are global stores
+        /// with no per-agent versioning. For anything outside agent scope the trigger to use is
+        /// <see cref="GuardTriggerKind.EveryInterval"/>.
+        /// </para>
+        /// <para>
+        /// This is the same restriction Unreal has, arrived at from the other direction: there the blackboard
+        /// is the only store a decorator can observe, so anything else has to be copied into it by a Service
+        /// first. <see cref="GuardTriggerKind.EveryInterval"/> is that Service collapsed into the guard.
+        /// </para>
+        /// <para>
         /// Authored by hand today, and seeded by <c>GuardOnVariable</c> in the one case where the key is
         /// known without inspecting anything. Deriving them from the guard's graph is not built — see the
         /// spec's <i>Cut: derived keys</i> note. Until it is, a wrong key here is silent: the guard simply
