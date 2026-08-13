@@ -26,6 +26,15 @@ namespace ArcaneOnyx.BehaviorTree
         {
             ScriptGraphVariable?.SetScriptGraphAsset(asset);
         }
+
+        /// <summary>
+        /// Points this node at a Function — a named, shared, contracted graph — instead of an anonymous
+        /// sub-asset. The counterpart of <see cref="SetScriptGraph"/> for the new seam.
+        /// </summary>
+        public void SetFunction(VisualScriptingExtension.FunctionGraphAsset asset)
+        {
+            ScriptGraphVariable?.SetFunction(asset);
+        }
         
         protected override void Definition()
         {

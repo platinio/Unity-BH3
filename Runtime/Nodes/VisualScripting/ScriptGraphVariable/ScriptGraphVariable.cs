@@ -10,7 +10,102 @@ namespace ArcaneOnyx.BehaviorTree
     {
         [SerializeField] protected ScriptGraphAsset scriptGraphAsset;
 
+        /// <summary>
+        /// The Function this variable reads, when it reads one.
+        /// <para>
+        /// Assigning a Function routes evaluation through <see cref="FunctionEvaluator"/>: ports resolved once,
+        /// a graph reference cached per agent, no reflection and no scans in the call path. Leaving it null
+        /// keeps the legacy <see cref="ScriptGraphAsset"/> path exactly as it was, which is what lets every
+        /// existing tree and sample load and behave identically while the two seams coexist.
+        /// </para>
+        /// </summary>
+        [SerializeField] protected FunctionGraphAsset function;
+
+        [System.NonSerialized] private FunctionBinding binding;
+        [System.NonSerialized] private GameObject boundAgent;
+
         public ScriptGraphAsset ScriptGraphAsset => scriptGraphAsset;
+
+        public FunctionGraphAsset Function => function;
+
+        /// <summary>True when this reads a Function rather than a bare script graph.</summary>
+        public bool ReadsFunction => function != null;
+
+        /// <summary>
+        /// Points this variable at a Function. Mutually exclusive with <see cref="SetScriptGraphAsset"/> in
+        /// practice — the Function wins when both are set, and verification reports the ambiguity.
+        /// </summary>
+        public void SetFunction(FunctionGraphAsset asset)
+        {
+            function = asset;
+            binding = null;
+            boundAgent = null;
+        }
+
+        /// <summary>
+        /// One binding per agent, rebuilt only when the agent changes. The node instance this lives on is
+        /// already per-agent, so the binding's lifetime is the node's and nothing has to reap it.
+        /// </summary>
+        private FunctionBinding BindingFor(GameObject agent)
+        {
+            if (binding == null || boundAgent != agent)
+            {
+                binding = FunctionEvaluator.Bind(function, agent);
+                boundAgent = agent;
+            }
+
+            return binding;
+        }
+
+        private T EvaluateFunction<T>(GameObject agent, VariableDeclarations arguments)
+        {
+            var agentBinding = BindingFor(agent);
+
+            if (arguments != null)
+            {
+                foreach (var declaration in arguments)
+                {
+                    // Silently skipping an argument the Function does not declare is deliberate: these are the
+                    // node's ambient variables, not a call site's argument list, so extras are expected.
+                    if (agentBinding.IndexOfInput(declaration.name) < 0) continue;
+
+                    if (!agentBinding.TrySetArgument(declaration.name, declaration.value, out var argumentError))
+                    {
+                        throw new System.InvalidOperationException(argumentError);
+                    }
+                }
+            }
+
+            if (!agentBinding.TryEvaluate<T>(out var result, out var error))
+            {
+                throw new System.InvalidOperationException(error);
+            }
+
+            return result;
+        }
+
+        private void RunFunction(GameObject agent, VariableDeclarations arguments)
+        {
+            var agentBinding = BindingFor(agent);
+
+            if (arguments != null)
+            {
+                foreach (var declaration in arguments)
+                {
+                    if (agentBinding.IndexOfInput(declaration.name) < 0) continue;
+
+                    if (!agentBinding.TrySetArgument(declaration.name, declaration.value, out var argumentError))
+                    {
+                        throw new System.InvalidOperationException(argumentError);
+                    }
+                }
+            }
+
+            if (!agentBinding.TryRun(out var error))
+            {
+                throw new System.InvalidOperationException(error);
+            }
+        }
 
         /// <summary>
         /// Assigns the graph this variable reads from. Needed to build a node's Visual Scripting graph from
@@ -24,16 +119,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         public T GetValue<T>(Variables input = null)
         {
+            if (ReadsFunction) return EvaluateFunction<T>(null, input == null ? null : input.declarations);
+
             return scriptGraphAsset.GetScriptGraphOutput<T>(input);
         }
-        
+
         public T GetValue<T>(GameObject gameObject, Variables input = null)
         {
+            if (ReadsFunction) return EvaluateFunction<T>(gameObject, input == null ? null : input.declarations);
+
             return scriptGraphAsset.GetScriptGraphOutput<T>(input, gameObject);
         }
-        
+
         public T GetValue<T>(GameObject gameObject, VariableDeclarations variableDeclarations)
         {
+            if (ReadsFunction) return EvaluateFunction<T>(gameObject, variableDeclarations);
+
             Dictionary<string, object> dynamicParameters = new();
 
             foreach (var variableDeclaration in variableDeclarations)
@@ -46,16 +147,34 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void Run(Variables input = null)
         {
+            if (ReadsFunction)
+            {
+                RunFunction(null, input == null ? null : input.declarations);
+                return;
+            }
+
             scriptGraphAsset.Run(input);
         }
-        
+
         public void Run(GameObject gameObject, Variables input = null)
         {
+            if (ReadsFunction)
+            {
+                RunFunction(gameObject, input == null ? null : input.declarations);
+                return;
+            }
+
             scriptGraphAsset.Run(input, gameObject);
         }
-        
+
         public void Run(GameObject gameObject, VariableDeclarations input = null)
         {
+            if (ReadsFunction)
+            {
+                RunFunction(gameObject, input);
+                return;
+            }
+
             scriptGraphAsset.Run(input, gameObject);
         }
 
