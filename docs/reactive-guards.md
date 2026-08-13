@@ -93,7 +93,8 @@ Which write paths a guard can see:
 |---|---|
 | `AgentVariableWriter.Write` — how a sensor should publish | yes |
 | The **Set Variable** *tree node*, Object kind | yes |
-| BH3's **Set Behavior Tree Variable** unit, Object kind | yes |
+| BH3's **Set Behavior Tree Variable** unit, Object kind, targeting an agent | yes |
+| The same unit, Object kind, targeting something that is not an agent | no — see below |
 | Unity's stock **Set Variable** unit | **no** |
 | `Variables.Object(go).Set(...)` from C# | **no** |
 | Any kind other than Object, on any of the above | no — nothing can watch those scopes |
@@ -104,6 +105,22 @@ the key is spelled out; a computed name, or a write from C# or another asset, is
 
 Note that BH3's Set Behavior Tree Variable writes the **script graph's** own variables under its `Graph`
 kind, not the behavior tree branch's scope, despite the name.
+
+### Writing to something that isn't an agent
+
+Set Behavior Tree Variable has an `@object` port, and an unconnected one means *self* — the agent running
+the tree, which BH3 arranges by handing the graph its agent GameObject before the flow starts. That is the
+normal case and it is versioned.
+
+Point that port somewhere else and the write still happens, but **it is not versioned**. A version is only
+ever *read* on a GameObject that runs a behavior tree, because a guard is a node inside one — so recording
+one on a door or a manager is bookkeeping nobody will ever query, and paying for it would attach BH3
+components to whatever you targeted.
+
+Worth knowing this is rarely what you want anyway. A branch is conditional by construction, so anything only
+a branch produces is unreliable by definition; facts should come from something that runs unconditionally,
+which is what a sensor is. A tree reaching over to write another agent's facts is that rule broken with an
+extra step.
 
 ## Guards must be pure
 

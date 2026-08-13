@@ -236,6 +236,53 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
+        /// A version is only ever read on a GameObject that runs a tree, because a guard is a node inside
+        /// one. Writing one anywhere else is storage nobody queries — and since the lookup is get-or-add, it
+        /// would attach BH3 components to whatever the write happened to target. A tree writing a flag on a
+        /// door must not change the door.
+        /// </summary>
+        [Test]
+        public void WritingToSomethingThatIsNotAnAgentVersionsNothingAndAddsNothing()
+        {
+            var door = new GameObject("Door", typeof(Unity.VisualScripting.Variables));
+
+            try
+            {
+                Assert.IsFalse(AgentVariableWriter.SetOn(door, "isOpen", true),
+                    "nothing here can watch the key, so the write is not versioned");
+
+                Assert.IsFalse(door.TryGetComponent<AgentVariableWriter>(out _),
+                    "and the door is left exactly as it was");
+
+                Assert.AreEqual(true, Unity.VisualScripting.Variables.Object(door).Get("isOpen"),
+                    "the write itself still happens -- only the bookkeeping is skipped");
+            }
+            finally
+            {
+                Object.DestroyImmediate(door);
+            }
+        }
+
+        [Test]
+        public void WritingToAnAgentIsVersioned()
+        {
+            var agent = new GameObject("Agent", typeof(Unity.VisualScripting.Variables), typeof(BehaviorTreeMachine));
+
+            try
+            {
+                Assert.IsTrue(AgentVariableWriter.SetOn(agent, "hasTarget", true), "an agent can be watched");
+                Assert.AreEqual(1, AgentVariableWriter.On(agent).VersionOf("hasTarget"));
+
+                Assert.IsFalse(AgentVariableWriter.SetOn(agent, "hasTarget", true), "same value, no change");
+                Assert.AreEqual(1, AgentVariableWriter.On(agent).VersionOf("hasTarget"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(agent);
+            }
+        }
+
+        /// <summary>
         /// A blank key is skipped at evaluation, so storing one would leave a list that looks populated and
         /// can never mark the guard dirty — and would hide the guard from the check for watching nothing.
         /// </summary>

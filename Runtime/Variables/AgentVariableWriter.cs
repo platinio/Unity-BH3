@@ -4,7 +4,15 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
-    /// Writes agent variables on behalf of components that are not nodes, and records who did it.
+    /// The agent's fact store: writes agent variables, records who did it, and counts what changed.
+    ///
+    /// <para>
+    /// <b>Two jobs.</b> It began as the attribution seam for sensors — components outside the graph, which
+    /// have no node guid for a recording to point at. It is now also the <b>version registry</b> reactive
+    /// guards compare against, which is why nodes and Visual Scripting units write through it too even
+    /// though they do their own recording. If those two ever need to come apart, the counters are the half
+    /// to move.
+    /// </para>
     ///
     /// <para>
     /// The values this writes — <c>hasTarget</c>, <c>lastKnownTargetPos</c>, <c>alertLevel</c> — are knowledge
@@ -147,6 +155,38 @@ namespace ArcaneOnyx.BehaviorTree
             return agent.TryGetComponent<AgentVariableWriter>(out var existing)
                 ? existing
                 : agent.AddComponent<AgentVariableWriter>();
+        }
+
+        /// <summary>
+        /// Writes an agent variable on <paramref name="target"/>, versioning it only when something could be
+        /// watching.
+        ///
+        /// <para>
+        /// A version is only ever <em>read</em> on a GameObject that runs a behavior tree, because a reactive
+        /// guard is a node inside one. Recording a version anywhere else is storage nobody will query — and
+        /// since <see cref="On"/> is get-or-add, doing it would attach this component, and a
+        /// <c>Variables</c> with it, to whatever the write happened to target. A tree writing a flag on a
+        /// door has no business changing the door's component list.
+        /// </para>
+        ///
+        /// <para>
+        /// The test is "has a machine right now", so a write that lands before a machine is added at runtime
+        /// is not versioned. Components authored in a scene or prefab are found regardless of Awake order, so
+        /// that only matters if machines are attached dynamically after facts are already being published.
+        /// </para>
+        /// </summary>
+        /// <returns>Whether the value changed <em>and</em> the change was versioned.</returns>
+        public static bool SetOn(GameObject target, string key, object value)
+        {
+            if (target == null || string.IsNullOrEmpty(key)) return false;
+
+            if (!target.TryGetComponent<BehaviorTreeMachine>(out _))
+            {
+                Variables.Object(target).Set(key, value);
+                return false;
+            }
+
+            return On(target).SetAgentVariable(key, value);
         }
 
         /// <summary>
