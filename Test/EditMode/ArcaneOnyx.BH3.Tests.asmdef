@@ -4,6 +4,7 @@
     "references": [
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.BehaviorTree.Editor",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
         "ArcaneOnyx.GraphCore",
         "ArcaneOnyx.UnityExtensions.Runtime",
         "GUID:21b0c8d1703a94250bfac916590cea4f",

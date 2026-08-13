@@ -57,24 +57,52 @@ namespace ArcaneOnyx.BehaviorTree
             return binding;
         }
 
+        /// <summary>
+        /// Stages whichever of the Function's declared inputs the caller has a variable for.
+        /// <para>
+        /// This walks the <em>Function's</em> inputs and pulls each by key, rather than iterating the caller's
+        /// declarations and matching names. Two reasons, both measured rather than assumed:
+        /// <c>VariableDeclarations.GetEnumerator()</c> is declared to return the interface
+        /// <c>IEnumerator&lt;VariableDeclaration&gt;</c>, so a <c>foreach</c> boxes its struct enumerator and
+        /// allocates on every single evaluation; and the loop index here <em>is</em> the input index, so no
+        /// port is looked up by name in the call path — the rule the whole binding plan exists to enforce.
+        /// </para>
+        /// <para>
+        /// The loop is also over the Function's inputs, typically none or a few, rather than over the agent's
+        /// entire declaration set.
+        /// </para>
+        /// </summary>
+        private static void StageArguments(FunctionBinding agentBinding, VariableDeclarations arguments)
+        {
+            if (arguments == null) return;
+
+            var keys = agentBinding.Plan.InputKeys;
+
+            for (var i = 0; i < keys.Length; i++)
+            {
+                var key = keys[i];
+
+                // An input the caller has no variable for is left to the Function's own default. These are
+                // ambient variables, not a call site's argument list, so gaps are expected.
+                if (!arguments.IsDefined(key)) continue;
+
+                if (!agentBinding.TrySetArgument(i, arguments.Get(key), out var argumentError))
+                {
+                    throw new System.InvalidOperationException(argumentError);
+                }
+            }
+        }
+
         private T EvaluateFunction<T>(GameObject agent, VariableDeclarations arguments)
         {
             var agentBinding = BindingFor(agent);
 
-            if (arguments != null)
+            if (!agentBinding.TryPrepare(out var prepareError))
             {
-                foreach (var declaration in arguments)
-                {
-                    // Silently skipping an argument the Function does not declare is deliberate: these are the
-                    // node's ambient variables, not a call site's argument list, so extras are expected.
-                    if (agentBinding.IndexOfInput(declaration.name) < 0) continue;
-
-                    if (!agentBinding.TrySetArgument(declaration.name, declaration.value, out var argumentError))
-                    {
-                        throw new System.InvalidOperationException(argumentError);
-                    }
-                }
+                throw new System.InvalidOperationException(prepareError);
             }
+
+            StageArguments(agentBinding, arguments);
 
             if (!agentBinding.TryEvaluate<T>(out var result, out var error))
             {
@@ -88,18 +116,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var agentBinding = BindingFor(agent);
 
-            if (arguments != null)
+            if (!agentBinding.TryPrepare(out var prepareError))
             {
-                foreach (var declaration in arguments)
-                {
-                    if (agentBinding.IndexOfInput(declaration.name) < 0) continue;
-
-                    if (!agentBinding.TrySetArgument(declaration.name, declaration.value, out var argumentError))
-                    {
-                        throw new System.InvalidOperationException(argumentError);
-                    }
-                }
+                throw new System.InvalidOperationException(prepareError);
             }
+
+            StageArguments(agentBinding, arguments);
 
             if (!agentBinding.TryRun(out var error))
             {
