@@ -28,7 +28,10 @@ namespace ArcaneOnyx.BehaviorTree
                     VariableScope?.Set(key, value);
                     break;
                 case VariableKind.Object:
-                    BehaviorTreeMachine.Variables.declarations.Set(key, value);
+                    // Set and version bump together, so the bump cannot be forgotten here or by the next
+                    // writer added -- see AgentVariableWriter.SetAgentVariable. Get-or-add is right at a
+                    // write site: a fact was just published, so guards need something to read versions from.
+                    AgentVariableWriter.On(gameObject).SetAgentVariable(key, value);
                     break;
                 case VariableKind.Scene:
                     SceneVariables.Instance(SceneManager.GetActiveScene()).variables.declarations.Set(key, value);

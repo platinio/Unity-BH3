@@ -196,7 +196,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, child);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = AddNode<BooleanReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 
@@ -230,7 +230,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardBreakpointFiresOnEitherTransition()
         {
             var owner = BoundNode();
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
 
             BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.EitherWay);
 
@@ -246,7 +246,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void BecameFalseIgnoresTheTransitionToTrue()
         {
             var owner = BoundNode();
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
 
             BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.BecameFalse);
 
@@ -264,7 +264,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // breakpoint on "is false" without the recorder's transition filtering would pause the editor on
             // the frame it was armed and on every frame after it.
             var owner = BoundNode();
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
 
             BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.EitherWay);
 
@@ -285,7 +285,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // against the wrong half of the tree, and would still look like it worked on a tree where the
             // guard happened to be the thing selected.
             var owner = BoundNode();
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
 
             BehaviorTreeBreakpoints.SetGuard(owner.guid, BehaviorTreeGuardBreakOn.EitherWay);
 
@@ -523,7 +523,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // The oscillating guard is the motivating case: it is the one that produces dozens of identical
             // hits, and it is a guard rather than a variable.
             var owner = BoundNode();
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
 
             var breakpoint = BehaviorTreeBreakpoints.SetGuard(guard.guid, BehaviorTreeGuardBreakOn.EitherWay);
             BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 4);
@@ -694,7 +694,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // re-entered the recorder would break it silently, and the symptom would be an editor that pauses
             // while you are studying why it paused.
             var node = BoundNode(ExecutionStatus.Running);
-            var guard = new BooleanConditionalExecution();
+            var guard = new BooleanReactiveGuard();
             var writer = BoundNode();
 
             // Produce a recording worth replaying, with breakpoints armed the whole time.

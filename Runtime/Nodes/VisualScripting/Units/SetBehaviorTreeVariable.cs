@@ -112,19 +112,46 @@ namespace ArcaneOnyx.BehaviorTree
             Debugging.BehaviorTreeRecorder.ScriptGraphVariableWrite(
                 MachineOf(flow), WriterName, key, kind, ReadCurrent(flow, key), value);
 
-            var declarations = Declarations(flow);
-
-            // A write that cannot land has to say so. Silently doing nothing is the worst outcome here: the
-            // graph carries on, the value never changes, and the guard reading it looks like the bug.
-            if (declarations == null)
+            // Object kind writes to whatever the @object port resolves to, which is the machine's own
+            // GameObject by default but need not be -- so the version bump has to land on *that* agent, not
+            // on the one running this graph. Resolved once rather than through Declarations, because the port
+            // may be fed by a graph and reading it twice would run that graph twice.
+            if (kind == Unity.VisualScripting.VariableKind.Object)
             {
-                Debug.LogError(
-                    $"[BH3] Set BT Variable could not resolve a {kind} store for '{key}'. The write did not happen.",
-                    MachineOf(flow));
+                var target = @object != null ? flow.GetValue<GameObject>(@object) : null;
+
+                // A write that cannot land has to say so. Silently doing nothing is the worst outcome here:
+                // the graph carries on, the value never changes, and the guard reading it looks like the bug.
+                if (target == null)
+                {
+                    Debug.LogError(
+                        $"[BH3] Set BT Variable could not resolve a {kind} store for '{key}'. The write did not happen.",
+                        MachineOf(flow));
+                }
+                else
+                {
+                    // Set and version bump together, so a guard watching this key cannot be left asleep by a
+                    // write that forgot to announce itself -- but only when the target actually runs a tree.
+                    // Writing a flag on a door must not attach BH3 components to the door.
+                    AgentVariableWriter.SetOn(target, key, value);
+                }
             }
             else
             {
-                declarations.Set(key, value);
+                // Every other kind is per-call-site or global scratch that no reactive guard can subscribe
+                // to, so it needs no version and writes exactly as it always did.
+                var declarations = Declarations(flow);
+
+                if (declarations == null)
+                {
+                    Debug.LogError(
+                        $"[BH3] Set BT Variable could not resolve a {kind} store for '{key}'. The write did not happen.",
+                        MachineOf(flow));
+                }
+                else
+                {
+                    declarations.Set(key, value);
+                }
             }
 
             flow.SetValue(output, value);

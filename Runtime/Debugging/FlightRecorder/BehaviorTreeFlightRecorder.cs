@@ -265,6 +265,26 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
+        /// A running node stopped because a higher-priority sibling took the slot.
+        /// <para>
+        /// <paramref name="guard"/> goes in <c>RelatedGuid</c> so that field means "the guard responsible"
+        /// across every event that ends a branch, and the preemptor's name goes in <c>Key</c> — which is
+        /// what lets an explanation read "preempted by 'Attack'" rather than quoting a guid.
+        /// </para>
+        /// </summary>
+        public void NodeTakenOver(BehaviorTreeNode victim, BehaviorTreeNode preemptor, ConditionalExecution guard)
+        {
+            if (!IsRecording || victim == null) return;
+
+            Add(BehaviorTreeEventKind.NodeTakenOver,
+                CallSiteOf(victim),
+                victim.guid,
+                relatedGuid: guard?.guid ?? Guid.Empty,
+                key: preemptor != null ? preemptor.NodeName : null,
+                newValue: preemptor != null ? preemptor.guid.ToString() : null);
+        }
+
+        /// <summary>
         /// A variable written by a node in the tree. <paramref name="variableKind"/> is which store it landed
         /// in, which the call site cannot answer — see <see cref="BehaviorTreeEvent.VariableKind"/>.
         /// </summary>

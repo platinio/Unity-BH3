@@ -76,6 +76,52 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    /// <summary>
+    /// <see cref="CountingGuard"/>'s reactive twin — the one to reach for whenever a test needs a guard that
+    /// keeps watching. A plain <see cref="ConditionalExecution"/> is evaluated at entry and never again, so
+    /// any fixture about aborting, re-evaluation, or per-tick cost has to use this one or it is measuring
+    /// the doorman and calling it the watchman.
+    /// </summary>
+    internal sealed class CountingReactiveGuard : ReactiveGuard
+    {
+        public int Evaluations { get; private set; }
+
+        /// <summary>What <see cref="Evaluate"/> answers. Settable so a test can flip the guard mid-run.</summary>
+        public bool Result { get; set; } = true;
+
+        public override string NodeName => "Counting Test Reactive Guard";
+
+        public override bool Evaluate()
+        {
+            Evaluations++;
+            return Result;
+        }
+    }
+
+    /// <summary>
+    /// A leaf that never finishes, and counts its own entries and exits.
+    /// <para>
+    /// Exists alongside <see cref="ScriptedNode"/> for the sub-tree fixtures specifically. A sub-tree is
+    /// <c>Object.Instantiate</c>d per call site, so the node that actually runs is a <em>clone</em> of the one
+    /// the test authored — and a double whose result comes from a serialized queue would arrive in the clone
+    /// with that queue empty, quietly returning something other than what the test asked for. This one's
+    /// result is structural, so the clone behaves identically to the original by construction.
+    /// </para>
+    /// </summary>
+    internal sealed class AlwaysRunningNode : BehaviorTreeNode
+    {
+        public int EnterCalls { get; private set; }
+        public int ExitCalls { get; private set; }
+
+        public override string NodeName => "Always Running Test Node";
+
+        public override void OnEnter() => EnterCalls++;
+
+        public override void OnExit() => ExitCalls++;
+
+        public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+    }
+
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>
     internal sealed class FixedCondition : Condition
     {

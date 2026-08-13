@@ -10,6 +10,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     /// the moment that precondition stops holding the branch dies mid-run. <see cref="LogicNodeTests"/>
     /// covers a guard's own evaluation; these cover the integration — that a guard authored in code is
     /// actually attached to its owner, ANDs with its siblings, and aborts work already in progress.
+    ///
+    /// <para>
+    /// There are two guard kinds and the difference is the point. A <see cref="ConditionalExecution"/> is a
+    /// doorman: evaluated at entry and never again. A <see cref="ReactiveGuard"/> is a watchman: re-checked
+    /// while its owner runs, and able to kill it. Every fixture below that flips a guard mid-run therefore
+    /// uses the reactive kind — the same fixture written with a plain conditional would pass for the wrong
+    /// reason, having never asked the guard a second time.
+    /// </para>
     /// </summary>
     [TestFixture]
     public class ConditionalExecutionTests
@@ -64,13 +72,69 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, sequence.ConditionalExecutions.Count);
         }
 
+        /// <summary>
+        /// The breaking change, stated as a test. A <see cref="ConditionalExecution"/> that admitted a
+        /// branch no longer has any say over it, which is what makes the class usable for the gates it was
+        /// always meant to express — a <c>RandomChance</c> that re-rolled every frame killed its own branch
+        /// within one tick, and an expensive one-shot check could not be afforded per frame at all.
+        /// </summary>
         [Test]
-        public void AGuardTurningFalseAbortsABranchAlreadyRunning()
+        public void AConditionalExecutionDoesNotAbortABranchItAlreadyAdmitted()
         {
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out var child);
 
             var guard = AddNode<BooleanConditionalExecution>(graph);
+            guard.UpdateOwner(sequence);
+            guard.Value.SetDefaultValue(true);
+
+            graph.OnAwake();
+            sequence.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal());
+
+            guard.Value.SetDefaultValue(false);
+
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal(),
+                "the doorman checked once and stopped caring; interrupting is a ReactiveGuard's job");
+            Assert.AreEqual(2, child.UpdateCalls, "and the branch keeps working");
+        }
+
+        /// <summary>
+        /// A reactive guard with <c>StopsItsOwnBranch</c> off still gates entry but never interrupts: the
+        /// committed swing. Unreachable with a single flag, which is why capability is two virtuals rather
+        /// than one enum.
+        /// </summary>
+        [Test]
+        public void AReactiveGuardThatDoesNotAbortLetsItsBranchFinish()
+        {
+            var graph = new BehaviorTreeGraph();
+            var sequence = GuardedSequence(graph, out var child);
+
+            var guard = AddNode<CountingReactiveGuard>(graph);
+            guard.UpdateOwner(sequence);
+            guard.SetCapabilities(abortsOwner: false, preempts: true);
+
+            graph.OnAwake();
+            sequence.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal());
+
+            guard.Result = false;
+
+            Assert.AreEqual(ExecutionStatus.Running, sequence.OnUpdateInternal(),
+                "the swing is committed: it bids for control but finishes what it started");
+            Assert.AreEqual(1, guard.Evaluations,
+                "and it is not even asked while its owner runs — entry evaluated it once, the ticks skipped it");
+        }
+
+        [Test]
+        public void AReactiveGuardTurningFalseAbortsABranchAlreadyRunning()
+        {
+            var graph = new BehaviorTreeGraph();
+            var sequence = GuardedSequence(graph, out var child);
+
+            var guard = AddNode<BooleanReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 
@@ -94,8 +158,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out _);
 
-            var first = AddNode<BooleanConditionalExecution>(graph, -200.0f);
-            var second = AddNode<BooleanConditionalExecution>(graph, 200.0f);
+            var first = AddNode<BooleanReactiveGuard>(graph, -200.0f);
+            var second = AddNode<BooleanReactiveGuard>(graph, 200.0f);
             first.UpdateOwner(sequence);
             second.UpdateOwner(sequence);
             first.Value.SetDefaultValue(true);

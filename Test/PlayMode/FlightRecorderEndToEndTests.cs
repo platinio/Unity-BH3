@@ -87,16 +87,26 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var write = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.VariableWrite);
             Assert.AreEqual("TargetingSensor", write.Writer);
 
-            var idleGuardFlip = recorder.Events.Last(e =>
-                e.Kind == BehaviorTreeEventKind.GuardEval && e.NodeGuid == idleGuard);
-            Assert.IsFalse(idleGuardFlip.Flag, "Idle's guard is Not(hasTarget), so it goes false.");
+            // The branch that takes over is the one whose guard flipped -- not the one that yielded. Idle is
+            // evicted before it is ever asked again, which is the whole point: it no longer has to know that
+            // Attack exists, and in a migrated tree it would carry no guard at all.
+            var attackGuardFlip = recorder.Events.Last(e =>
+                e.Kind == BehaviorTreeEventKind.GuardEval && e.NodeGuid == attackGuard);
+            Assert.IsTrue(attackGuardFlip.Flag, "Attack's guard is hasTarget, so it goes true.");
 
-            var abort = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.NodeAborted);
-            Assert.AreEqual(idle, abort.NodeGuid, "Idle is what got killed,");
-            Assert.AreEqual(idleGuard, abort.RelatedGuid, "and the recording says which guard did it.");
+            var preemption = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.NodeTakenOver);
+            Assert.AreEqual(idle, preemption.NodeGuid, "Idle is what lost the slot,");
+            Assert.AreEqual(attackGuard, preemption.RelatedGuid,
+                "and the recording names the guard that bid for it -- which belongs to Attack, not to Idle. "
+                + "That is the inversion the feature exists for: the branch that wants to take over carries "
+                + "the condition, rather than every branch below it carrying the negation.");
+            Assert.IsNotEmpty(preemption.Key ?? string.Empty, "and names the preemptor, so an explanation can say who took over.");
 
-            Assert.Greater(abort.Tick, tickBeforeSensor, "The abort happened after the sensor wrote.");
-            Assert.LessOrEqual(idleGuardFlip.Tick, abort.Tick, "and the guard flipping is what preceded it.");
+            Assert.IsEmpty(recorder.Events.Where(e => e.Kind == BehaviorTreeEventKind.NodeAborted).ToArray(),
+                "and nothing self-aborted: Idle was taken over, which reads differently to whoever is asking why.");
+
+            Assert.Greater(preemption.Tick, tickBeforeSensor, "The takeover happened after the sensor wrote.");
+            Assert.LessOrEqual(attackGuardFlip.Tick, preemption.Tick, "and the guard flipping is what preceded it.");
 
             Assert.IsTrue(Entered(recorder, attack),
                 "Attack takes over once its precondition holds — which is the behaviour a designer would "
@@ -164,14 +174,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             SetPrivateField(read, "VariableKind", VariableKind.Object);
             key.Value.ValidlyConnectTo(read.Key);
 
-            var attackConditional = Add<BooleanConditionalExecution>(graph, -900.0f, 250.0f);
+            var attackConditional = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
             attackConditional.UpdateOwner(attackNode);
             read.Value.ValidlyConnectTo(attackConditional.Value);
 
             var not = Add<Not>(graph, 600.0f, 0.0f);
             read.Value.ValidlyConnectTo(not.Value);
 
-            var idleConditional = Add<BooleanConditionalExecution>(graph, 900.0f, 250.0f);
+            var idleConditional = Add<BooleanReactiveGuard>(graph, 900.0f, 250.0f);
             idleConditional.UpdateOwner(idleNode);
             not.Result.ValidlyConnectTo(idleConditional.Value);
 

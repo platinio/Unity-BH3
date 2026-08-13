@@ -121,6 +121,7 @@ namespace ArcaneOnyx.BehaviorTree
         public void AddConditionalExecution(ConditionalExecution conditionalExecution)
         {
             Guards.Add(conditionalExecution);
+            hasPollableGuards = null;
         }
 
         /// <summary>
@@ -135,6 +136,7 @@ namespace ArcaneOnyx.BehaviorTree
         public void ClearConditionalExecutions()
         {
             Guards.Clear();
+            hasPollableGuards = null;
         }
 
         public void Define()
@@ -429,20 +431,135 @@ namespace ArcaneOnyx.BehaviorTree
             conditionalExecutionIndexCache.Clear();
         }
 
-        public sealed override void OnNodeEnter()
+        /// <summary>
+        /// Evaluates the guards armed on this node, recording each, and returns the first that answered
+        /// false — or null when every one of them held.
+        /// <para>
+        /// One walk for what used to be two verbatim copies, in <see cref="OnNodeEnter"/> and
+        /// <see cref="OnUpdateInternal"/>. Both are <c>sealed override</c>, so no subclass can intercept
+        /// them and the guard filter has to live inside them; collapsing the copies is what stops that
+        /// filter from being a rule written twice and enforced once.
+        /// </para>
+        /// </summary>
+        /// <param name="abortingOnly">
+        /// When true, considers only guards that claim <see cref="ConditionalExecution.StopsItsOwnBranch"/>. This
+        /// is the whole of the entry-only change: a plain <see cref="ConditionalExecution"/> reports false
+        /// there and so is skipped once its owner is running, while entry still asks every guard.
+        /// </param>
+        /// <param name="writeStatus">
+        /// Whether a guard records its answer in its own <c>LastExecutionStatus</c>. False for the
+        /// preemption poll, which asks guards on nodes that are <em>not</em> running: writing there would
+        /// make the canvas and the why-panel show a live result for an idle branch, a visible change nobody
+        /// asked for.
+        /// </param>
+        /// <param name="fresh">
+        /// Whether guards must recompute rather than answer from cache. True only at entry — see
+        /// <see cref="ConditionalExecution.Ask"/> for why that asymmetry is worth paying for.
+        /// </param>
+        private ConditionalExecution FirstFailingGuard(bool abortingOnly, bool writeStatus = true, bool fresh = false)
         {
-            foreach (var conditionalExecution in Guards)
+            var guards = Guards;
+
+            // Indexed rather than foreach: this runs on every node on every tick, and a guard's evaluation
+            // can reach arbitrary user code, so the list is walked without an enumerator allocation.
+            for (int i = 0; i < guards.Count; i++)
             {
-                bool passed = conditionalExecution.EvaluateInternal();
+                var conditionalExecution = guards[i];
+
+                if (abortingOnly && !conditionalExecution.StopsItsOwnBranch) continue;
+
+                bool passed = writeStatus
+                    ? conditionalExecution.EvaluateInternal(fresh)
+                    : conditionalExecution.Ask(fresh);
+
                 Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
 
-                if (!passed)
+                if (!passed) return conditionalExecution;
+            }
+
+            return null;
+        }
+
+        [DoNotSerialize]
+        private bool? hasPollableGuards;
+
+        /// <summary>
+        /// Whether any guard here can bid to take control from a lower-priority sibling.
+        /// <para>
+        /// Cached, because a composite asks this of its higher-priority children on every tick and the
+        /// answer only changes when guards are re-armed — which happens once, in
+        /// <see cref="BehaviorTreeGraph.OnAwake"/>. Both mutators below reset it, so the cache cannot
+        /// outlive the list it summarises. Opt-in is what keeps the default at zero: a selector whose
+        /// children carry no reactive guards pays one bool check per child and nothing else.
+        /// </para>
+        /// </summary>
+        public bool HasTakeOverGuard
+        {
+            get
+            {
+                if (hasPollableGuards.HasValue) return hasPollableGuards.Value;
+
+                var guards = Guards;
+                bool any = false;
+
+                for (int i = 0; i < guards.Count; i++)
                 {
-                    // Never started, as opposed to started and killed. The two read differently to whoever is
-                    // asking why this branch did not happen, so they are recorded as different events.
-                    Debugging.BehaviorTreeRecorder.NodeSkipped(this, conditionalExecution);
-                    return;
+                    if (!guards[i].TakesOverLowerPriority) continue;
+
+                    any = true;
+                    break;
                 }
+
+                hasPollableGuards = any;
+                return any;
+            }
+        }
+
+        /// <summary>
+        /// Whether every guard here answers true right now — the same question <see cref="OnNodeEnter"/>
+        /// asks, without entering anything.
+        /// <para>
+        /// <b>Every</b> guard, not just the preempting ones, and that is the whole correctness of the poll.
+        /// Suppose Attack carries a reactive <c>targetInRange</c> and a plain <c>hasAttackToken</c>. Polling
+        /// only the reactive one would abort Idle the moment the target came into range, then fail Attack's
+        /// real entry check on the token, fall through, and restart Idle from scratch — killing it for
+        /// nothing, potentially every tick. One poll, one answer: <em>would this child enter right now?</em>
+        /// </para>
+        /// <para>
+        /// Mixing the two kinds on one node is therefore deliberate and useful: the reactive guard is the
+        /// trigger, and the conditional is a veto that participates in the decision without being able to
+        /// fire it.
+        /// </para>
+        /// </summary>
+        public bool WouldEnterNow() => FirstFailingGuard(abortingOnly: false, writeStatus: false) == null;
+
+        /// <summary>The first guard here that claims the right to preempt, or null. Names the bid in a recording.</summary>
+        public ConditionalExecution FirstTakeOverGuard()
+        {
+            var guards = Guards;
+
+            for (int i = 0; i < guards.Count; i++)
+            {
+                if (guards[i].TakesOverLowerPriority) return guards[i];
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Asks <em>every</em> guard, of either kind. Entry is the one walk that is never filtered: a
+        /// doorman that no longer interrupts must still decide entry exactly as it always did.
+        /// </summary>
+        public sealed override void OnNodeEnter()
+        {
+            var failed = FirstFailingGuard(abortingOnly: false, fresh: true);
+
+            if (failed != null)
+            {
+                // Never started, as opposed to started and killed. The two read differently to whoever is
+                // asking why this branch did not happen, so they are recorded as different events.
+                Debugging.BehaviorTreeRecorder.NodeSkipped(this, failed);
+                return;
             }
 
             Debugging.BehaviorTreeRecorder.NodeEnter(this);
@@ -468,27 +585,41 @@ namespace ArcaneOnyx.BehaviorTree
             if (wasRunning) Debugging.BehaviorTreeRecorder.NodeExit(this, LastExecutionStatus);
         }
 
+        /// <summary>
+        /// Asks only the guards that claim <see cref="ConditionalExecution.StopsItsOwnBranch"/>.
+        /// <para>
+        /// A plain <see cref="ConditionalExecution"/> does not, so it no longer interrupts a branch it
+        /// already admitted. That is a deliberate breaking change, and it is what makes the node class
+        /// usable for the things it was always meant to express: a <c>RandomChance</c> gate that re-rolled
+        /// every frame killed its branch within one tick, and an expensive one-shot validation could not be
+        /// afforded at all.
+        /// </para>
+        /// </summary>
         public sealed override ExecutionStatus OnUpdateInternal()
         {
-            foreach (var conditionalExecution in Guards)
+            // Filtered only for a node that is actually running. A composite ticks a child on the same frame
+            // it declined to enter it — Selector calls OnNodeEnter and then OnUpdateInternal in one
+            // iteration, and a refused entry returns early rather than stopping the tick. So for a node that
+            // never started, the entry decision has to be re-stated here in full: ask every guard, or a
+            // branch whose doorman turned it away runs anyway.
+            //
+            // Once the node is running the entry decision is spent, and only a guard that claims the right
+            // to interrupt gets a say.
+            var failed = FirstFailingGuard(abortingOnly: IsRunning);
+
+            if (failed != null)
             {
-                bool passed = conditionalExecution.EvaluateInternal();
-                Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
+                // The guard that did it is named here and nowhere else: by the time the parent composite
+                // sees the Failure, which guard caused it is gone.
+                //
+                // A composite ticks a child on the same frame it declined to enter it, so this also runs
+                // for nodes that never started. Only a node that was running can be aborted; the other
+                // case was already recorded as skipped by OnNodeEnter, and recording it twice would
+                // report every declined branch as though something had interrupted it.
+                if (IsRunning) Debugging.BehaviorTreeRecorder.NodeAborted(this, failed);
 
-                if (!passed)
-                {
-                    // The guard that did it is named here and nowhere else: by the time the parent composite
-                    // sees the Failure, which guard caused it is gone.
-                    //
-                    // A composite ticks a child on the same frame it declined to enter it, so this also runs
-                    // for nodes that never started. Only a node that was running can be aborted; the other
-                    // case was already recorded as skipped by OnNodeEnter, and recording it twice would
-                    // report every declined branch as though something had interrupted it.
-                    if (IsRunning) Debugging.BehaviorTreeRecorder.NodeAborted(this, conditionalExecution);
-
-                    LastExecutionStatus = ExecutionStatus.Failure;
-                    return ExecutionStatus.Failure;
-                }
+                LastExecutionStatus = ExecutionStatus.Failure;
+                return ExecutionStatus.Failure;
             }
 
             return base.OnUpdateInternal();

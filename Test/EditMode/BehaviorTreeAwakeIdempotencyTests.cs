@@ -59,7 +59,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingGuard>(graph);
+            var guard = AddNode<CountingReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -84,7 +84,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingGuard>(graph);
+            var guard = AddNode<CountingReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -114,7 +114,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingGuard>(graph);
+            var guard = AddNode<CountingReactiveGuard>(graph);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -233,7 +233,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, selector, first);
             Connect(graph, selector, second);
 
-            var guard = AddNode<CountingGuard>(graph);
+            var guard = AddNode<CountingReactiveGuard>(graph);
             guard.UpdateOwner(selector);
 
             graph.OnAwake();

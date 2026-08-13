@@ -130,7 +130,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 var last = events[events.Count - 1];
                 var nodes = new List<GuardTraceNode>
                 {
-                    new(last.NodeGuid, "guard", "BooleanConditionalExecution", last.Flag ? "true" : "false", 0, -1, -1),
+                    new(last.NodeGuid, "guard", "BooleanReactiveGuard", last.Flag ? "true" : "false", 0, -1, -1),
                 };
 
                 for (int i = 0; i < chain.Length; i++)
@@ -171,7 +171,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var topology = new StubTopology()
                 .Node(Branch, "Idle")
-                .Node(Guard, "no enemy in range", "BooleanConditionalExecution");
+                .Node(Guard, "no enemy in range", "BooleanReactiveGuard");
 
             var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, topology);
 
@@ -197,7 +197,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var topology = new StubTopology()
                 .Node(Branch, "Idle")
-                .Node(Guard, "no enemy in range", "BooleanConditionalExecution")
+                .Node(Guard, "no enemy in range", "BooleanReactiveGuard")
                 .Node(Sensor, "VisionService")
                 .GuardReads(Guard, "hasTarget");
 
@@ -584,7 +584,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, child);
 
-            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
@@ -607,7 +607,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var explanation = BehaviorTreeExplainer.Explain(recorder, 0, sequence.guid, BehaviorTreeGraphTopology.From(graph));
 
             Assert.AreEqual(BehaviorTreeOutcome.Aborted, explanation.Outcome, TextOf(explanation));
-            StringAssert.Contains("Boolean Conditional Execution", explanation.Headline,
+            StringAssert.Contains("Reactive Guard", explanation.Headline,
                 "Names come from the graph, so a real tree explains with the names on the canvas.");
         }
 
@@ -628,7 +628,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Connect(graph, graph.EntryNode, sequence);
             Connect(graph, sequence, child);
 
-            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(false);
@@ -722,7 +722,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var sequence = new Sequence { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(sequence);
 
-            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
@@ -741,7 +741,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var sequence = new Sequence { Position = new Rect(0.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(sequence);
 
-            var guard = new BooleanConditionalExecution { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
+            var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
             guard.UpdateOwner(sequence);
 
@@ -870,7 +870,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var chain = new List<GuardTraceNode>
             {
-                new(Guard, "not hasTarget", "BooleanConditionalExecution", "false", 0, -1, -1),
+                new(Guard, "not hasTarget", "BooleanReactiveGuard", "false", 0, -1, -1),
                 new(Sibling, "Not", "Not", "False", 1, 0, 0),
             };
 

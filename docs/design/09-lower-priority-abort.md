@@ -1,6 +1,9 @@
 # Reactive guards — preemption, scheduling, and the doorman/watchman split
 
-**Status:** design spec for an implementing agent with full access to the BH3 source
+**Status:** **IMPLEMENTED** on `feature/reactive-guards` (BH3 submodule) — see *Implementation notes* at the
+end for what was built, what was decided, and what is still owed.
+
+Originally: design spec for an implementing agent with full access to the BH3 source
 (`Assets/ArcaneOnyx/BH3` submodule). **Supersedes the earlier `AbortScope` enum design** — see
 *What changed and why* at the end for the trail. Everything marked *verified* below was read from the
 current source; everything else is an assumption the implementer must check. Needs its own branch and
@@ -37,8 +40,8 @@ questions, because the cost model differs and the cost model is the whole point.
 | Evaluated | once, at entry | when a dependency changes or an interval elapses |
 | Condition source | any port — any graph, any cost | any port, but its leaves are declared so it can be subscribed |
 | Gates entry | yes | yes |
-| Aborts its own branch mid-run | **no** (this is the breaking change) | `AbortsOwner`, default true |
-| Preempts a lower-priority sibling | no | `Preempts`, default true |
+| Aborts its own branch mid-run | **no** (this is the breaking change) | `StopsItsOwnBranch`, default true |
+| TakesOverLowerPriority a lower-priority sibling | no | `TakesOverLowerPriority`, default true |
 
 **The doorman and the watchman.** The doorman checks once and stops caring. The watchman keeps looking,
 and can throw you out — or let someone else in ahead of you.
@@ -65,8 +68,8 @@ must not be duplicated: `owner`, `UpdateOwner`, arming in `AddConditionalExecuti
 Two virtuals on the base drive every walk — **filter on capability, never on type**:
 
 ```csharp
-public virtual bool AbortsOwner => false;   // ConditionalExecution: entry-only
-public virtual bool Preempts    => false;
+public virtual bool StopsItsOwnBranch => false;   // ConditionalExecution: entry-only
+public virtual bool TakesOverLowerPriority    => false;
 ```
 
 `ReactiveGuard` overrides both with serialized fields defaulting to true. The entry-only change is then
@@ -78,8 +81,8 @@ The three walks:
 | Walk | Evaluates |
 |---|---|
 | `OnNodeEnter` | **all** guards. Unchanged. |
-| `OnUpdateInternal` | only guards where `AbortsOwner`. |
-| Preemption poll (new) | children with any `Preempts` guard; then **all** guards on the candidate. |
+| `OnUpdateInternal` | only guards where `StopsItsOwnBranch`. |
+| Preemption poll (new) | children with any `TakesOverLowerPriority` guard; then **all** guards on the candidate. |
 
 *Verified:* both `OnNodeEnter` and `OnUpdateInternal` are `sealed override` on `BehaviorTreeNode`, so no
 subclass can intercept them — the filter must live inside those methods. They are also currently
@@ -160,14 +163,14 @@ have a reason — but never silent.
 
 ## The eligibility trap (do not skip this)
 
-The naive poll — "evaluate the `Preempts` guards on higher-priority children; first one that passes wins"
+The naive poll — "evaluate the `TakesOverLowerPriority` guards on higher-priority children; first one that passes wins"
 — has a correctness hole when a child carries a *mix* of guards. Suppose Attack has `targetInRange`
 (`ReactiveGuard`) and `hasAttackToken` (a `ConditionalExecution`). If only the reactive guard is polled:
 `targetInRange` flips true while the token is unavailable → Idle is aborted → Attack's entry check
 (`OnNodeEnter` evaluates **all** guards) fails → the selector falls through and restarts Idle. Idle was
 killed for nothing, losing its state, potentially every tick.
 
-**Rule:** a child is *pollable* iff it has at least one guard with `Preempts`; preemption fires only when
+**Rule:** a child is *pollable* iff it has at least one guard with `TakesOverLowerPriority`; preemption fires only when
 **every** guard on that child evaluates true — the poll is a full entry-feasibility check using the same
 all-guards walk as `OnNodeEnter`. One poll, one answer: "would this child enter right now?" Abort the
 victim only on yes.
@@ -183,14 +186,14 @@ this composite's resume decision?", and each composite answers differently.
 - **Guard/node layer (composite-agnostic):** the capability virtuals, the filtered walks, the shared
   "evaluate all guards, recording each" helper, and a "has pollable guards" query. Nothing here knows what
   a Selector is.
-- **`Composite` base:** a protected reactive hook — `TryReact(out int newChildIndex)` plus the shared scan
+- **`Composite` base:** a protected reactive hook — `TryChangeRunningChild(out int newChildIndex)` plus the shared scan
   utility ("walk these children in order, return the first whose full guard set passes") — default no-op,
   so non-reactive composites pay nothing. *Verified:* `Composite` is currently 11 lines
   (`currentExecutingChildIndex` and an `OnAwake`), so this is genuinely free for the others.
 - **Each composite defines what a guard change means for it:**
   - `Selector` (v1, built now): a higher-priority pollable child becoming fully eligible **takes over**.
   - `Sequence` (**specified, not built in v1**): the inverse. Its earlier children already *succeeded*, so
-    a guard there isn't a takeover bid — it is a sustained requirement. An earlier child's `Preempts`
+    a guard there isn't a takeover bid — it is a sustained requirement. An earlier child's `TakesOverLowerPriority`
     guard flipping **false** while a later child runs aborts the running child and fails the sequence.
     Reuses the same hook and scan. Until then `bt_verify` lints such a guard as "defined but not yet active".
   - `ParallelSelector`: no reaction — children already run concurrently, there is no resume point to move.
@@ -210,7 +213,7 @@ if (!callOnEnter && currentExecutingChildIndex > 0)        // a child is mid-run
         if child[i] is pollable and all its guards pass:    // eligibility rule above
             children[currentExecutingChildIndex].OnNodeExit();  // same call the Failure path makes —
                                                                  // teardown parity is automatic
-            record NodePreempted(victim, preemptor: child[i], guard)
+            record NodeTakenOver(victim, preemptor: child[i], guard)
             currentExecutingChildIndex = i;
             callOnEnter = true;
             break;                                          // fall into the existing loop
@@ -264,7 +267,7 @@ value, not in the guard. The flight recorder's oscillation detection
 
 ## Recorder & tooling surface
 
-- **New recorder event** `NodePreempted(victim, preemptor, guard)` — distinct from `NodeAborted` (own
+- **New recorder event** `NodeTakenOver(victim, preemptor, guard)` — distinct from `NodeAborted` (own
   guard) and `NodeSkipped` (never started). Wire into the why-inspector: *"aborted at tick T: preempted by
   'Attack' (guard targetInRange flipped true because visibleEnemies changed)."*
 - **Coordination with spec 02 (runtime debugger, in progress):** per-guard evaluation counters are wanted,
@@ -272,12 +275,12 @@ value, not in the guard. The flight recorder's oscillation detection
   that dedupes is annoying. Also tell that author the missing sub-tree exits were an upstream bug (fixed,
   below), not a recorder fault.
 - **Editor:** the trigger list on the guard inspector, the derived key list with hand-edits marked, and a
-  canvas affordance distinguishing preemption-capable guards — a `Preempts` guard acts at a distance and
+  canvas affordance distinguishing preemption-capable guards — a `TakesOverLowerPriority` guard acts at a distance and
   that must be visible at a glance.
 - **Dump/CLI:** `BehaviorTreeDump` emits the guard kind, its triggers, and its derived keys;
   `bt_describe_tree` shows them; `bt_guard_on_variable` / `BehaviorTreeAuthoring.GuardOnVariable` gain an
   optional guard-kind parameter (default `ConditionalExecution`, preserving today's authoring).
-- **`bt_verify` lints:** impure guard (writes) · `Preempts` guard whose owner is not the direct child of a
+- **`bt_verify` lints:** impure guard (writes) · `TakesOverLowerPriority` guard whose owner is not the direct child of a
   reactive composite · Sequence-owned reactive guard ("defined but not yet active") · derived-key list
   stale against the graph.
 - **Migration:** five assets in the repo use guards, all samples/demos (`FR_Demo_Sentry`, `Soldier`,
@@ -287,7 +290,7 @@ value, not in the guard. The flight recorder's oscillation detection
   over Condition nodes for interruptions"* — that inverts under this design. `zombie-example.json` ships
   the O(n²) pattern (Idle guarded by `Not(hasTarget)`). Both are the first thing any future agent reads
   before authoring a tree, so stale versions actively cause wrong output. Rewrite to: Attack carries
-  `targetInRange` (`ReactiveGuard`, `AbortsOwner` **off** — the committed swing), Chase carries `hasTarget`
+  `targetInRange` (`ReactiveGuard`, `StopsItsOwnBranch` **off** — the committed swing), Chase carries `hasTarget`
   (`ReactiveGuard`, both on), Idle carries **no guard at all**.
 
 ## Dependencies on other specs
@@ -333,10 +336,15 @@ neighbour.
 
 Blocking — decide before serializing anything:
 
-1. **Suggested-guard mechanics.** Where does a branch declare it (beside required/optional declarations?),
-   what happens on re-drop, and does contract drift apply the way it does for parameters? The
-   `RefreshParameters` / `DescribeContractDrift` pattern is the obvious model, but a guard is not a port
-   and may not want the same "report, never auto-apply" rule.
+1. ~~**Suggested-guard mechanics.**~~ **Resolved — specified in spec 03**, which is what consumes them.
+   Summary: stored on the library **card sidecar**, not on `BehaviorTreeGraphAsset`, because the runtime
+   never reads a suggested guard and keeping the field off the runtime type is what stops it becoming
+   binding. **Contract drift does not apply** — parameters need it because the branch *reads* those values
+   at runtime, whereas a guard is evaluated by the caller on the caller's node and the branch never sees it,
+   so once instantiated there is no copy to go stale. Re-dropping produces a second independent call site.
+   The condition may be a variable read or an arbitrary Visual Scripting graph **referenced** by asset, with
+   the constraint that the graph must be standalone rather than one of the embedded sub-assets
+   `DestroyUnusedScriptGraphAssets` owns.
 2. **Derived-key staleness.** The key list is a cached copy of what the graph reads, so it can drift when
    the graph changes — the same failure `BehaviorTreeGraphParameter` already solves for sub-tree contracts.
    Re-derive on save, on verify, or report drift and require an explicit refresh?
@@ -346,7 +354,7 @@ Blocking — decide before serializing anything:
    better for debugging, but it is a visible change nobody asked for. Pick one deliberately.
 4. **Separate triggers per role?** Watching your own running branch and bidding to take over someone
    else's need not share a rate — continuing a dead behavior for 0.1s is worse than starting a new one
-   0.3s late. A cheaper `Preempts` rate would cut the cost that multiplies across every branch above the
+   0.3s late. A cheaper `TakesOverLowerPriority` rate would cut the cost that multiplies across every branch above the
    running one. One trigger list or two?
 5. **Purity: warn or error?** Recommendation is warn. Confirm.
 6. **Does `CanUseConditionalExecutions`** (*verified*, `BehaviorTreeNode.cs:61`) gate `ReactiveGuard` too,
@@ -368,12 +376,12 @@ Revisit after playtesting, not before:
 
 ## Tests
 
-1. **Basic preemption:** Idle running; Attack's `Preempts` guard flips true → same-frame takeover; victim
-   got `OnNodeExit`; recorder shows `NodePreempted` with the right guard.
+1. **Basic preemption:** Idle running; Attack's `TakesOverLowerPriority` guard flips true → same-frame takeover; victim
+   got `OnNodeExit`; recorder shows `NodeTakenOver` with the right guard.
 2. **Eligibility rule:** preemptor's reactive guard true but a `ConditionalExecution` on the same node
    false → no preemption; victim untouched.
-3. **Committed branch:** a branch whose reactive guard has `AbortsOwner` off keeps running when the guard
-   flips false mid-run; the same graph with `AbortsOwner` on aborts.
+3. **Committed branch:** a branch whose reactive guard has `StopsItsOwnBranch` off keeps running when the guard
+   flips false mid-run; the same graph with `StopsItsOwnBranch` on aborts.
 4. **Entry is always fresh:** a guard marked clean with a stale cached answer still evaluates on entry.
 5. **Dirty-flag economy:** a guard whose keys did not change and whose interval did not elapse is not
    evaluated; its graph unit does not run.
@@ -392,14 +400,14 @@ Revisit after playtesting, not before:
 ## Files touched (expected)
 
 - `Runtime/Nodes/Decorator/ConditionalExecution.cs` — capability virtuals, both `=> false`.
-- `Runtime/Nodes/Decorator/ReactiveGuard.cs` — **new**; triggers, derived keys, `AbortsOwner`, `Preempts`.
+- `Runtime/Nodes/Decorator/ReactiveGuard.cs` — **new**; triggers, derived keys, `StopsItsOwnBranch`, `TakesOverLowerPriority`.
 - `Runtime/Nodes/BehaviorTreeNode.cs` — shared "evaluate all guards, recording each" helper (collapsing the
   existing duplicate); capability filter in the `OnUpdateInternal` walk; "has pollable guards" query.
   **Note both walks are `sealed override`** — the filter cannot be added by subclassing.
 - `Runtime/Nodes/Composites/Composite.cs` — reactive hook + shared scan utility, default no-op.
 - `Runtime/Nodes/Composites/Selector.cs` — implements the hook with the pre-loop scan.
 - `Runtime/Graphs/BehaviorTreeGraph.cs` — idempotent guard arming (spec 06).
-- Recorder — `NodePreempted` event + evaluation counters + oscillation counting.
+- Recorder — `NodeTakenOver` event + evaluation counters + oscillation counting.
 - Editor inspector for guard nodes; `BehaviorTreeDump`; authoring helpers + CLI commands; verify lints.
 - Skill doc + `zombie-example.json` (docs debt above).
 - ~~`Runtime/Nodes/Gameplay/RunBehaviorTreeGraphNode.cs`~~ — **done**, teardown cascade fixed.
@@ -418,6 +426,123 @@ The first draft of this spec put an `AbortScope { Self, LowerPriority, Both }` e
    deliberately hid the repeats. Making cost legible turns per-frame evaluation into a designer's choice
    rather than a hidden tax — and once it is a choice, most of the enum's justification disappears.
 3. **A separate node type collapses the enum.** `Self` is a reactive guard, `LowerPriority` is one with
-   `AbortsOwner` off, `Both` is the default, and `None` — which BH3 cannot express today and Unreal
+   `StopsItsOwnBranch` off, `Both` is the default, and `None` — which BH3 cannot express today and Unreal
    defaults to — is what `ConditionalExecution` becomes. Every cell reachable, none of it a dropdown that
    can be set to a combination nobody tested.
+
+
+## Implementation notes (2026-08-11)
+
+Built on `feature/reactive-guards` in the BH3 submodule, in six commits. EditMode 368 tests / 367 pass and
+PlayMode 7 / 4 pass, matching the pre-change baseline exactly — the four failures are pre-existing
+TacticalPositionSelection ones, unrelated to this work.
+
+### Decisions taken, and where they differ from this spec
+
+- **`ReactiveGuard` is abstract; `BooleanReactiveGuard` supplies the port** and is the only create-menu
+  entry. Mirrors the existing `ConditionalExecution` / `BooleanConditionalExecution` pair, so how a guard
+  gets its boolean stays separate from when it may recompute.
+- **`GuardOnVariable` defaults to `GuardKind.Reactive`, not `Conditional` as this spec states.** Every
+  existing caller wrote it meaning "guard this branch" when a guard interrupted by definition, so preserving
+  the *type* would silently strip interruption from every code-generated tree while preserving the
+  *behaviour* keeps them doing what their authors asked. Its return type widened to `ConditionalExecution`.
+- **`OnKeyChanged` is backed by version counters on `AgentVariableWriter`**, not by subscriptions. That class
+  already computed the change edge — its dedupe reports whether the value really moved, outside the
+  `[Conditional]` recorder call, so it ships in a player build. The recorder could not have been the seam:
+  the compiler deletes its call sites outside the editor, so a guard built on it would have been
+  event-driven in the editor and permanently clean in a build.
+- **Agent-scope keys only** for `OnKeyChanged`. Graph-scope variables are per-call-site scratch.
+- **The poll does not write `LastExecutionStatus`** (open question 3) — it asks guards on nodes that are not
+  running, and writing there would show a live result for an idle branch.
+- **One trigger list, not two** (open question 4). **Purity is a warning, not an error** (question 5).
+  **`CanUseConditionalExecutions` gates both kinds**, no separate opt-out (question 6). **Derived-key
+  staleness** (question 2) is reported by `bt_verify`, never auto-applied.
+- **A trigger is one concrete type with a kind enum, not a subclass per kind.** The subclass version was
+  tidier to extend and could not be edited: Visual Scripting's reflected inspector has no type picker for an
+  abstract element type, so the trigger list rendered as nothing a designer could add to. This spec requires
+  the list to be "shown on the node and editable", and a schedule nobody can see or change is not a feature.
+  The kinds are mutually exclusive variants of one decision, which is what makes an enum honest here and
+  dishonest for a capability like `StopsItsOwnBranch`, where the combinations are the point.
+- **`OnSignal` was specified, built, and then cut.** See *Cut: OnSignal* below.
+- **Suggested guards (question 1) deferred to spec 03**, as the tool owner chose — without the library panel
+  there is nothing to drop one from. Their mechanics are now specified there rather than left open.
+
+### One correctness trap worth recording
+
+Filtering the `OnUpdateInternal` guard walk unconditionally is wrong. A composite ticks a child on the same
+frame it *declined to enter* it — `Selector` calls `OnNodeEnter()` then `OnUpdateInternal()` in one iteration,
+and a refused entry returns early without stopping the tick. So a node that never started must re-state the
+entry decision in full, or a branch its doorman turned away runs anyway. The filter is
+`abortingOnly: IsRunning`. Caught by `ASelectorSkipsGuardedOffBranchesWithoutSpendingAFrame`.
+
+### Demo
+
+`BH3Demos/ReactiveGuards/` — three agents on the same fact cycle, differing only in their guards:
+preemption, the committed swing, and a doorman-guarded agent that stays in Idle for the whole run so the
+behaviour this feature replaced is visible beside the one that replaced it. Generated by
+**Tools -> BH3 -> Reactive Guards -> Build demo scene**; trees and scene are both regenerable.
+
+### Cut: OnSignal
+
+Tracked as [Unity-BH3#12](https://github.com/platinio/Unity-BH3/issues/12).
+
+**Specified in this document, implemented, and then removed — it is not in the shipped trigger set.**
+
+The kind was defined here as "a push with no value attached, for world events that aren't state", and it
+was built that way: `ReactiveGuard.RaiseSignal(name)`. What the design never answered is **who calls it**.
+A guard is a node inside a per-agent, per-call-site graph instance, and nothing outside the tree holds a
+reference to one. The only callers that ever existed were the unit tests, which worked solely because they
+had constructed the guard themselves. It was an API that looked usable and had no reachable call path.
+
+Two ways it could have been rescued, both rejected:
+
+- **A per-agent signal bus** (`AgentSignals.On(agent).Raise("alarm")`, counters compared the way
+  `OnKeyChanged` compares versions). Workable, roughly forty lines — but it is a second dispatch mechanism
+  for something the first one already covers.
+- **`BehaviorTreeMachine.RaiseSignal(name)`** walking its graph and forwarding. Cheaper, but an O(nodes)
+  walk per raise, and it gives the machine a job that belongs to a fact-publishing seam.
+
+**A signal is a fact nobody reads.** Anything a signal would announce can be published as an agent fact
+through `AgentVariableWriter`, which `OnKeyChanged` already wakes on — and unlike a signal, a fact appears
+in the flight recorder and the variable watch. An invisible wake-up reason is precisely what the recorder
+work exists to eliminate.
+
+The one thing genuinely lost is self-consuming semantics: a momentary event modelled as a boolean fact has
+to be set back by whoever raised it. If that turns out to hurt in practice, the signal bus above is the
+design to build, and it should be a fact-shaped one rather than a second channel.
+
+### Cut: derived keys, and the hand-edited flag with them
+
+Tracked as [Unity-BH3#13](https://github.com/platinio/Unity-BH3/issues/13).
+
+This document specifies that a guard's watched keys are **auto-derived** by walking its graph for literal
+variable keys, then shown and editable, with hand-edits marked so a later re-derivation reports the
+difference rather than discarding it — the `RefreshParameters` / `DescribeContractDrift` pattern.
+
+**The derivation was never built.** `GuardOnVariable` seeds the key from the variable name it was already
+handed, which is the one case where no walk is needed; for a guard whose condition is an arbitrary Visual
+Scripting graph, a designer types the keys in by hand. So every list is hand-authored, and the
+`HandEdited` flag that existed to protect a tuned list from an automatic one had nothing to protect. It was
+declared, drawn and dumped, and never set or read. Removed.
+
+The machinery is still the obvious one: `GuardTraceCapture` already visits every unit in a guard's graph for
+the why-panel, and this is the same walk with a different collector.
+
+**What that leaves open, and it is the sharpest edge in the feature:** `bt_verify` reports an *empty* key
+list, but nothing can report a *wrong* one. A guard watching a key its graph does not read never wakes, and
+fails silently — no error, no warning, just a branch that stops reacting.
+
+### Still owed
+
+- **Editor chrome**: the guard inspector's friendlier trigger editor, the static cost display
+  (`units x 1/interval x agents`), and the canvas affordance marking preemption-capable guards. The trigger
+  list itself already renders through Visual Scripting's reflected inspector, and `ReactiveGuard.Evaluations`
+  is exposed for the cost display to read.
+- **Per-guard evaluation counters in the recorder** — `Evaluations` exists on the guard; nothing surfaces it.
+- **`bt_guard_on_variable --kind`** needs a change in the external `unity mcp` server, whose source is not in
+  this repo. The C# side is complete, and `bt_describe_tree` / `bt_verify` picked up the dump and lint
+  additions with no server change.
+- **Sequence reactivity** — specified here, not built, as this spec intends. `bt_verify` reports a
+  `TakesOverLowerPriority` guard outside a Selector as defined but not yet active.
+- The migrated trees all carry **no triggers**, i.e. every-tick evaluation, which is exactly their previous
+  behaviour. `bt_verify` now reports each one so the cost becomes a choice.

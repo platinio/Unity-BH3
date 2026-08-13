@@ -141,8 +141,71 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 json.Property("name", guard.NodeName);
                 json.Property("type", guard.GetType().Name);
                 json.Property("guid", guard.guid.ToString());
+
+                // What a guard is allowed to do is not readable from its type name alone -- a ReactiveGuard
+                // with StopsItsOwnBranch off is a very different thing from one with it on, and telling them apart
+                // is most of what a reader wants from a dump of a reactive tree.
+                json.Property("stopsItsOwnBranch", guard.StopsItsOwnBranch);
+                json.Property("takesOverLowerPriority", guard.TakesOverLowerPriority);
+
+                WriteTriggers(json, guard);
+
                 WriteInputs(json, guard);
                 json.CloseObject();
+            }
+
+            json.CloseArray();
+        }
+
+        /// <summary>
+        /// When a reactive guard is allowed to recompute.
+        /// <para>
+        /// An empty list is written rather than omitted, because "no triggers" is not the absence of
+        /// information — it means the guard re-checks every tick, which is the single most expensive thing a
+        /// guard can do and the thing a reader most needs to see.
+        /// </para>
+        /// </summary>
+        private static void WriteTriggers(JsonWriter json, ConditionalExecution guard)
+        {
+            // A doorman has no schedule at all, which is different from a watchman that re-checks every
+            // tick -- so it gets no "triggers" key rather than an empty one.
+            if (!guard.HasRecomputeSchedule) return;
+
+            json.PropertyName("triggers");
+            json.OpenArray();
+
+            var triggers = guard.Triggers;
+
+            if (triggers != null)
+            {
+                foreach (var trigger in triggers)
+                {
+                    if (trigger == null) continue;
+
+                    json.OpenObject();
+                    json.Property("type", trigger.Kind.ToString());
+                    json.Property("when", trigger.Describe());
+
+                    // The keys are what decides whether this guard ever wakes, so they are worth reading
+                    // in a diff even though nothing derives them yet.
+                    if (trigger.Kind == GuardTriggerKind.OnKeyChanged)
+                    {
+                        json.PropertyName("keys");
+                        json.OpenArray();
+
+                        if (trigger.Keys != null)
+                        {
+                            foreach (var key in trigger.Keys)
+                            {
+                                json.Value(key);
+                            }
+                        }
+
+                        json.CloseArray();
+                    }
+
+                    json.CloseObject();
+                }
             }
 
             json.CloseArray();
