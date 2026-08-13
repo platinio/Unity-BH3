@@ -96,20 +96,33 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         ///
         /// <para>
-        /// Unconditional, unlike <see cref="Write"/>: callers that already have their own recording and
-        /// their own change semantics use this and keep them.
+        /// <b>The version counts changes, not writes.</b> A tree node that writes <c>hasTarget = true</c>
+        /// every frame must not make every guard watching it recompute every frame — that turns the cheapest
+        /// trigger into the most expensive one, which is the whole thing the counter exists to avoid. The
+        /// write still happens either way; only the bump is conditional.
+        /// </para>
+        /// <para>
+        /// Comparison is by <see cref="object.Equals(object, object)"/>, so an object <em>mutated in place</em>
+        /// compares equal to itself and does not bump. Watch a scalar fact rather than a container.
         /// </para>
         /// </summary>
-        public void SetAgentVariable(string key, object value)
+        /// <returns>Whether the value actually changed.</returns>
+        public bool SetAgentVariable(string key, object value)
         {
-            if (string.IsNullOrEmpty(key)) return;
+            if (string.IsNullOrEmpty(key)) return false;
 
             Bind();
 
-            if (variables == null) return;
+            if (variables == null) return false;
 
-            variables.declarations.Set(key, value);
-            Bump(key);
+            var declarations = variables.declarations;
+            bool changed = !declarations.IsDefined(key) || !Equals(declarations.Get(key), value);
+
+            declarations.Set(key, value);
+
+            if (changed) Bump(key);
+
+            return changed;
         }
 
         /// <summary>Records that a key changed. Private, so the bump cannot be issued without the write.</summary>
@@ -185,9 +198,8 @@ namespace ArcaneOnyx.BehaviorTree
             Debugging.BehaviorTreeRecorder.ExternalVariableWrite(
                 machine, string.IsNullOrEmpty(sourceName) ? "(external)" : sourceName, key, previous, value);
 
-            // Reached only on a real change, which the early-out above established. A fact recomputed every
-            // frame to the same value must not make a guard that watches it look dirty every frame -- that
-            // would turn the cheapest trigger into the most expensive one.
+            // Reached only on a real change, which the early-out above established -- so the compare inside
+            // SetAgentVariable agrees and the version moves.
             SetAgentVariable(key, value);
 
             return true;

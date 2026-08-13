@@ -198,6 +198,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             BehaviorTreeGraphAsset asset, BehaviorTreeNode owner, string variableName, bool expected, bool fallback,
             float x, float y, GuardKind kind = GuardKind.Reactive)
         {
+            // A blank name produces a guard that reads nothing and, as a reactive guard, watches nothing --
+            // so it never wakes and never reports, which is the worst failure this feature has. Refused here
+            // rather than left for someone to find in play mode.
+            if (string.IsNullOrWhiteSpace(variableName))
+            {
+                throw new System.ArgumentException(
+                    "A guard needs a variable name to read; a blank one can never become true or wake.",
+                    nameof(variableName));
+            }
+
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y + 90.0f);
             read.SetScriptGraph(CreateVariableReadGraph(asset, variableName, fallback));
             SetComment(read, (expected ? "" : "not ") + variableName);

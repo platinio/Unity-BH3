@@ -203,5 +203,68 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 Object.DestroyImmediate(agent);
             }
         }
+
+        /// <summary>
+        /// The counter means "changed", not "was written". A tree node that writes the same value every frame
+        /// would otherwise make every guard watching that key recompute every frame, which turns the cheapest
+        /// trigger into the most expensive one — the exact cost the counter exists to avoid.
+        /// </summary>
+        [Test]
+        public void RewritingTheSameValueDoesNotMoveTheVersion()
+        {
+            var agent = new GameObject("Agent", typeof(Unity.VisualScripting.Variables));
+
+            try
+            {
+                var writer = AgentVariableWriter.On(agent);
+
+                Assert.IsTrue(writer.SetAgentVariable("hasTarget", true), "first write is a change");
+                Assert.AreEqual(1, writer.VersionOf("hasTarget"));
+
+                Assert.IsFalse(writer.SetAgentVariable("hasTarget", true), "same value again is not");
+                Assert.IsFalse(writer.SetAgentVariable("hasTarget", true));
+                Assert.AreEqual(1, writer.VersionOf("hasTarget"),
+                    "so a fact republished every frame costs its watchers nothing");
+
+                Assert.IsTrue(writer.SetAgentVariable("hasTarget", false));
+                Assert.AreEqual(2, writer.VersionOf("hasTarget"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(agent);
+            }
+        }
+
+        /// <summary>
+        /// A blank key is skipped at evaluation, so storing one would leave a list that looks populated and
+        /// can never mark the guard dirty — and would hide the guard from the check for watching nothing.
+        /// </summary>
+        [Test]
+        public void BlankKeysAreNotStored()
+        {
+            var trigger = GuardTrigger.KeyChanged("hasTarget", "", null, "   ", "inRange");
+
+            CollectionAssert.AreEqual(new[] { "hasTarget", "inRange" }, trigger.Keys);
+            Assert.AreEqual(2, trigger.UsableKeyCount());
+
+            Assert.IsEmpty(GuardTrigger.KeyChanged("", null).Keys,
+                "a trigger built entirely from blanks watches nothing, and says so");
+            Assert.AreEqual(0, GuardTrigger.KeyChanged((string[])null).UsableKeyCount());
+        }
+
+        /// <summary>
+        /// Hand-authored blanks reach the list without going through the factory, so the count has to be of
+        /// keys that could actually wake the guard rather than of entries present.
+        /// </summary>
+        [Test]
+        public void AListOfBlanksCountsAsWatchingNothing()
+        {
+            var trigger = GuardTrigger.KeyChanged();
+            trigger.Keys.Add("");
+            trigger.Keys.Add("  ");
+
+            Assert.AreEqual(2, trigger.Keys.Count);
+            Assert.AreEqual(0, trigger.UsableKeyCount(), "which is what bt_verify reports on");
+        }
     }
 }

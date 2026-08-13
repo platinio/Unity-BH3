@@ -93,8 +93,40 @@ namespace ArcaneOnyx.BehaviorTree
 
         public GuardTrigger() { }
 
-        public static GuardTrigger KeyChanged(params string[] keys) =>
-            new() { Kind = GuardTriggerKind.OnKeyChanged, Keys = new List<string>(keys) };
+        /// <summary>
+        /// Watches the named agent facts. Blank names are dropped rather than stored: a blank is skipped at
+        /// evaluation, so keeping one would leave a non-empty list that can never mark the guard dirty --
+        /// and would hide it from the bt_verify check for a guard that watches nothing.
+        /// </summary>
+        public static GuardTrigger KeyChanged(params string[] keys)
+        {
+            var usable = new List<string>();
+
+            if (keys != null)
+            {
+                foreach (var key in keys)
+                {
+                    if (!string.IsNullOrWhiteSpace(key)) usable.Add(key);
+                }
+            }
+
+            return new GuardTrigger { Kind = GuardTriggerKind.OnKeyChanged, Keys = usable };
+        }
+
+        /// <summary>How many of <see cref="Keys"/> could actually wake this guard. Blanks do not count.</summary>
+        public int UsableKeyCount()
+        {
+            if (Keys == null) return 0;
+
+            int count = 0;
+
+            foreach (var key in Keys)
+            {
+                if (!string.IsNullOrWhiteSpace(key)) count++;
+            }
+
+            return count;
+        }
 
         public static GuardTrigger Interval(float seconds, float deviation = 0.0f) =>
             new() { Kind = GuardTriggerKind.EveryInterval, Seconds = seconds, Deviation = deviation };
