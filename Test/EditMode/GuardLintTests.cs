@@ -1,0 +1,176 @@
+using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+
+namespace ArcaneOnyx.BehaviorTree.Tests
+{
+    /// <summary>
+    /// The guard lints in <see cref="BehaviorTreeVerification"/>.
+    ///
+    /// <para>
+    /// Every failure they report is silent at runtime — a guard that never wakes, or one that no longer
+    /// interrupts — so the lint is the only thing standing between an author and a branch that quietly stops
+    /// reacting. A lint that cannot fail is worth nothing, which is what these are for.
+    /// </para>
+    /// </summary>
+    [TestFixture]
+    public class GuardLintTests
+    {
+        private const string Folder = "Assets/__GuardLintTests";
+
+        private string treePath;
+
+        [SetUp]
+        public void SetUp()
+        {
+            if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "__GuardLintTests");
+
+            treePath = $"{Folder}/Tree.asset";
+        }
+
+        [TearDown]
+        public void TearDown() => AssetDatabase.DeleteAsset(Folder);
+
+        /// <summary>Entry -> Selector -> a guarded WaitTime, which is the shape every lint is about.</summary>
+        private BehaviorTreeGraphAsset GuardedTree(out ConditionalExecution guard, BehaviorTreeAuthoring.GuardKind kind)
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(treePath);
+
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(asset, 0.0f, 160.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, selector);
+
+            var branch = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 360.0f);
+            BehaviorTreeAuthoring.FeedFloat(asset, branch.Time, 1.0f, 0.0f, 540.0f);
+            BehaviorTreeAuthoring.Connect(asset, selector, branch, 0);
+
+            guard = BehaviorTreeAuthoring.GuardOnVariable(asset, branch, "hasTarget", true, false, 0.0f, 260.0f, kind);
+
+            BehaviorTreeAuthoring.Save(asset);
+
+            return asset;
+        }
+
+        private static bool Reports(System.Collections.Generic.List<string> findings, string fragment) =>
+            findings.Any(finding => finding.Contains(fragment));
+
+        [Test]
+        public void AGuardBuiltByTheHelperIsClean()
+        {
+            GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Reactive);
+
+            var findings = BehaviorTreeVerification.Verify(treePath);
+
+            Assert.IsFalse(Reports(findings, "watches no keys"),
+                "GuardOnVariable seeds the key it was handed, so the default path must not trip its own lint");
+            Assert.IsFalse(Reports(findings, "has no triggers"));
+        }
+
+        /// <summary>
+        /// A conditional still gating a Selector branch is the migration case: it used to interrupt and
+        /// silently no longer does.
+        /// </summary>
+        [Test]
+        public void AnEntryOnlyGuardOnASelectorBranchIsReported()
+        {
+            GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Conditional);
+
+            Assert.IsTrue(Reports(BehaviorTreeVerification.Verify(treePath), "is entry-only and gates a Selector branch"));
+        }
+
+        [Test]
+        public void AGuardWithNoTriggersIsReported()
+        {
+            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive);
+            ((ReactiveGuard)guard).ClearTriggers();
+            BehaviorTreeAuthoring.Save(guard.graph.Nodes.Any() ? AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(treePath) : null);
+
+            Assert.IsTrue(Reports(BehaviorTreeVerification.Verify(treePath), "has no triggers"));
+        }
+
+        /// <summary>
+        /// A key list of blanks looks populated and can never mark the guard dirty, so the check has to count
+        /// keys that could actually wake it rather than entries present.
+        /// </summary>
+        [Test]
+        public void AKeyTriggerOfBlanksIsReportedAsWatchingNothing()
+        {
+            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive);
+
+            var reactive = (ReactiveGuard)guard;
+            reactive.ClearTriggers();
+
+            var blank = GuardTrigger.KeyChanged();
+            blank.Keys.Add("   ");
+            reactive.AddTrigger(blank);
+
+            BehaviorTreeAuthoring.Save(AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(treePath));
+
+            Assert.IsTrue(Reports(BehaviorTreeVerification.Verify(treePath), "watches no keys"));
+        }
+
+        [Test]
+        public void ABlankVariableNameIsRefusedAtAuthoringTime()
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(treePath);
+            var branch = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 360.0f);
+
+            Assert.Throws<System.ArgumentException>(
+                () => BehaviorTreeAuthoring.GuardOnVariable(asset, branch, "  ", true, false, 0.0f, 260.0f),
+                "a guard that reads nothing can never become true, and as a reactive guard never wakes either");
+        }
+
+        /// <summary>
+        /// The one a designer hits by accident: the fuzzy finder offers Unity's Set Variable first, and a
+        /// fact written with it can never bump a version, so the guard watching that key sleeps forever with
+        /// no error anywhere.
+        /// </summary>
+        [Test]
+        public void AWatchedKeyWrittenByTheStockUnitIsReported()
+        {
+            var asset = GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Reactive);
+
+            var writerNode = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(asset, 400.0f, 360.0f);
+            writerNode.SetScriptGraph(StockWriteGraph(asset, "hasTarget"));
+
+            BehaviorTreeAuthoring.Save(asset);
+
+            Assert.IsTrue(
+                Reports(BehaviorTreeVerification.Verify(treePath), "stock Set Variable unit"),
+                "the key the guard watches is written by a unit that cannot wake it");
+        }
+
+        [Test]
+        public void AStockWriteToAKeyNobodyWatchesIsNotReported()
+        {
+            var asset = GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Reactive);
+
+            var writerNode = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(asset, 400.0f, 360.0f);
+            writerNode.SetScriptGraph(StockWriteGraph(asset, "somethingElse"));
+
+            BehaviorTreeAuthoring.Save(asset);
+
+            Assert.IsFalse(
+                Reports(BehaviorTreeVerification.Verify(treePath), "stock Set Variable unit"),
+                "a stock write is only a problem when a guard is relying on seeing it");
+        }
+
+        /// <summary>A script graph containing one stock Set Variable writing <paramref name="key"/>.</summary>
+        private static Unity.VisualScripting.ScriptGraphAsset StockWriteGraph(BehaviorTreeGraphAsset owner, string key)
+        {
+            var graphAsset = ScriptableObject.CreateInstance<Unity.VisualScripting.ScriptGraphAsset>();
+            graphAsset.name = "StockWrite";
+
+            var stock = new Unity.VisualScripting.SetVariable { kind = Unity.VisualScripting.VariableKind.Object };
+            graphAsset.graph.units.Add(stock);
+
+            // The key as an inline value on the port, which is how a designer types it in.
+            stock.name.SetDefaultValue(key);
+
+            AssetDatabase.AddObjectToAsset(graphAsset, owner);
+
+            return graphAsset;
+        }
+    }
+}

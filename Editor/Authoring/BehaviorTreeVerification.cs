@@ -72,6 +72,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(ContractDrift(asset, name));
                 findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
                 findings.AddRange(GuardProblems(asset, name));
+                findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -165,6 +166,106 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
 
             return findings;
+        }
+
+        /// <summary>
+        /// Keys a guard watches that something in this tree writes with Unity's stock <c>Set Variable</c>
+        /// unit, which cannot bump a version — so the guard never wakes.
+        ///
+        /// <para>
+        /// This is the silent failure the whole <c>OnKeyChanged</c> trigger rests on avoiding. A guard
+        /// watching a key nothing observable ever writes is indistinguishable, at runtime, from a guard whose
+        /// condition is simply false: no error, no warning, the branch just stops reacting. BH3's Set
+        /// Behavior Tree Variable unit reports its writes; Unity's built-in one is the one a designer finds
+        /// first in the fuzzy finder and cannot be hooked.
+        /// </para>
+        ///
+        /// <para>
+        /// Only writes <em>inside this tree</em> are visible here. A stock write from C# or from another
+        /// asset is beyond reach and stays a documentation rule.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> WatchedKeysWrittenUnobservably(BehaviorTreeGraphAsset asset, string name)
+        {
+            var watched = WatchedKeys(asset);
+            if (watched.Count == 0) return System.Array.Empty<string>();
+
+            var findings = new List<string>();
+
+            foreach (var node in asset.graph.Nodes)
+            {
+                var scriptGraphs = node?.scriptGraphAssets;
+                if (scriptGraphs == null) continue;
+
+                foreach (var scriptGraph in scriptGraphs)
+                {
+                    if (scriptGraph?.graph == null) continue;
+
+                    foreach (var unit in scriptGraph.graph.units)
+                    {
+                        // The stock unit specifically. BH3's own writes through AgentVariableWriter and is
+                        // fine, and it is not a subclass of this one, so an exact type test is right.
+                        if (unit is not Unity.VisualScripting.SetVariable stock) continue;
+                        if (stock.kind != Unity.VisualScripting.VariableKind.Object) continue;
+
+                        string key = LiteralKeyOf(stock);
+
+                        if (key == null || !watched.Contains(key)) continue;
+
+                        findings.Add(
+                            $"{name}: '{key}' is watched by a Reactive Guard but written by Unity's stock Set "
+                            + $"Variable unit in '{scriptGraph.name}', which cannot wake it. Use Set Behavior "
+                            + "Tree Variable, or write it through AgentVariableWriter.");
+                    }
+                }
+            }
+
+            return findings;
+        }
+
+        /// <summary>Every agent key some reactive guard in this tree is watching.</summary>
+        private static HashSet<string> WatchedKeys(BehaviorTreeGraphAsset asset)
+        {
+            var keys = new HashSet<string>();
+
+            foreach (var guard in asset.graph.Nodes.OfType<ConditionalExecution>())
+            {
+                foreach (var trigger in guard.Triggers)
+                {
+                    if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged || trigger.Keys == null) continue;
+
+                    foreach (var key in trigger.Keys)
+                    {
+                        if (!string.IsNullOrWhiteSpace(key)) keys.Add(key);
+                    }
+                }
+            }
+
+            return keys;
+        }
+
+        /// <summary>
+        /// The key a stock Set Variable writes, when it is knowable without running anything — an inline
+        /// value on the port, or a literal wired into it. Null when the name is computed, which this check
+        /// cannot and should not guess at.
+        /// </summary>
+        private static string LiteralKeyOf(Unity.VisualScripting.SetVariable stock)
+        {
+            var port = stock.name;
+            if (port == null) return null;
+
+            var connection = port.connection;
+
+            if (connection?.source?.unit is Unity.VisualScripting.Literal literal)
+            {
+                return literal.value as string;
+            }
+
+            if (connection != null) return null;
+
+            return stock.defaultValues != null && stock.defaultValues.TryGetValue(port.key, out var inline)
+                ? inline as string
+                : null;
         }
 
         /// <summary>

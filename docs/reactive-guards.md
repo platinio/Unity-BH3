@@ -84,9 +84,26 @@ Entries are rare next to ticks, so the extra evaluation is a rounding error agai
 Agent-scope variables only — the facts branches react to. A branch's own graph variables are per-call-site
 scratch, and a guard watching those would be watching its own noise. Use an interval for anything else.
 
-A key only counts as changed when its **value** actually moved. Publish facts through `AgentVariableWriter`,
-or from a tree through Set Variable / Set Behavior Tree Variable. Unity's stock **Set Variable** unit cannot
-be observed, so a fact written that way will never wake a guard — `bt_verify` flags it.
+A key only counts as changed when its **value** actually moved — a fact republished every frame to the same
+value costs its watchers nothing.
+
+Which write paths a guard can see:
+
+| Path | Wakes a guard? |
+|---|---|
+| `AgentVariableWriter.Write` — how a sensor should publish | yes |
+| The **Set Variable** *tree node*, Object kind | yes |
+| BH3's **Set Behavior Tree Variable** unit, Object kind | yes |
+| Unity's stock **Set Variable** unit | **no** |
+| `Variables.Object(go).Set(...)` from C# | **no** |
+| Any kind other than Object, on any of the above | no — nothing can watch those scopes |
+
+The stock unit is the one the fuzzy finder offers first and it cannot be hooked, so a fact written with it
+leaves the guard asleep with no error anywhere. `bt_verify` reports it when the write is inside the tree and
+the key is spelled out; a computed name, or a write from C# or another asset, is beyond its reach.
+
+Note that BH3's Set Behavior Tree Variable writes the **script graph's** own variables under its `Graph`
+kind, not the behavior tree branch's scope, despite the name.
 
 ## Guards must be pure
 
