@@ -319,3 +319,94 @@ Revisit after use, not before:
 5. A TPS query Function with a misdeclared output is refused at verify with a named error.
 6. Every existing tree, sample, and TPS query item in the repo loads and behaves identically before
    migration begins.
+
+***
+
+## Implementation status — foundation landed 2026-08-12
+
+**Scope of this pass, agreed with the tool owner: foundation, then review.** The asset, the evaluation
+seam, BH3's consumption of it, the `fn_` commands and docs. Deliberately **not** in this pass: deleting
+`ParameterizedGraphAsset` or `RunnableScriptGraph`, migrating the TPS query item, or repository-removal
+steps 2 and 3. Nothing is deleted yet, so acceptance criterion 6 holds by construction — the two seams
+coexist and the legacy path is untouched.
+
+Branch `feature/function-graphs` in the superproject and all three submodules.
+Commits: VisualScriptingExtension `0a0fe1a`, BH3 `c1b8135`. TacticalPositionSelection unchanged so far.
+
+### Spikes — all four resolved
+
+1. **Standalone evaluates identically.** Confirmed. A Function created on disk read each of two agents'
+   own variables correctly; asset ownership does not affect variable resolution.
+2. **Per-agent cached `GraphReference` is safe.** Confirmed over 400 interleaved evaluations across two
+   agents on one asset: zero cross-contamination, references stayed valid, and a variable written *after*
+   caching was still observed — a live binding, not a snapshot. **Open question 2 is locked on the
+   recommended option.** Reflection happens once at bind time; the call path has none.
+3. **The zero-allocation claim survives — and is stronger than the spec expected.** The spec anticipated
+   weakening "zero" to "zero from our layer" if `Flow`'s dictionaries allocated per run. They do not.
+   Pooled `Flow`, graph interpretation, and value reads (boxed *and* generic) are all allocation-free.
+   **The only allocating operation in an evaluation is looking a port up by string key.** So the contract
+   keeps the word "zero", now conditional on something testable: the binding plan must hold direct port
+   references, and no call-path code may look a port up by name. This promotes the binding plan from an
+   optimization to the mechanism the contract rests on.
+4. **Contract-copy necessity.** Confirmed from source without an Editor run — `BehaviorTreeGraphParameter`
+   already documents the exact import-order failure. Symmetry holds; Functions get a caller-side copy.
+
+### Decisions taken while implementing
+
+- **The per-agent cache is owned by the caller, not a global static.** A global cache keyed by agent would
+  hold destroyed GameObjects alive and need a reaper. A `FunctionBinding` held by the node dies when the
+  node does, which also makes reentrancy structural rather than a rule to remember.
+- **Plan invalidation is editor-time, not per-call.** Re-hashing the graph each evaluation would reintroduce
+  the O(units) walk the plan exists to remove. Assets cannot change in a player build.
+- **A Function declares exactly one `ScriptGraphOutput`.** Supporting several means per-call "which output
+  fired" state, which is precisely the `static executionOrder` reentrancy bug being removed. A second output
+  unit is now a named error. The legacy path still supports multiple, and is untouched.
+- **`fn_` commands live in BH3's editor assembly**, per this spec's own *Files touched* list, and because
+  that is where the pipeline command surface already is.
+- **Flavor classification stays generic in VisualScriptingExtension.** The module exposes `ResultType`;
+  classifying a query flavor by naming a TPS type would reverse the dependency arrow this spec locks.
+
+### Corrections to this spec
+
+- **The *Files touched* list omits a caller.** BH3's own `ScriptGraphVariable` base class calls
+  `ScriptGraphVariableExtension` directly — a second real consumer of the execution seam, independent of
+  `RunnableScriptGraph`. Re-pointing `VisualScriptGraphVariable` alone would have left half the callers on
+  the reflection path. It has been re-pointed too.
+- Both consumer-census claims **hold**: `ParameterizedGraphAsset` has zero real consumers,
+  `RunnableScriptGraph` exactly one. The `CreateRunnableScriptGraphVariable` hits are the predicted name
+  coincidence.
+- The citation `BehaviorTreeAuthoring.cs:289` has drifted to **299**. Re-verify line numbers rather than
+  trusting them.
+
+### Two defects found in the old seam, beyond those the spec lists
+
+- `ScriptGraphOutput.executionIndex` is `[Serialize]`, so **per-call execution bookkeeping is written into
+  the asset** — transient state persisted to disk, dirtying assets simply by running.
+- The `Run` paths in `ScriptGraphVariableExtension` never `Dispose()` their `Flow`, while the
+  `GetScriptGraphOutput` paths do, so pooled flows are not returned on that path.
+
+Both die with the old seam; neither was fixed in place, since that code is scheduled for removal.
+
+### Test state
+
+385 → 400 tests. EditMode is 393 total, 392 passing, with the **single pre-existing** failure
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`) unchanged. No new
+failures. The 15 new tests cover spec tests 2, 4, 5 and 6 plus the contract and hash invariants.
+
+**Note for anyone writing the remaining perf tests:** `GC.GetAllocatedBytesForCurrentThread()` returns 0
+always on this Mono runtime and `GC.GetTotalMemory` is too coarse — both produce a test that passes
+vacuously forever. Only `Is.Not.AllocatingGCMemory()` works, and it needs a known-allocating control beside
+it. This cost two wrong measurements before it was caught.
+
+### Still open
+
+- Verify lints: orphan detection (report-only), purity, watched-keys mismatch, Function drift.
+- `fn_extract` (embedded → project asset) and `bt_set_value` learning to connect a Function.
+- Demo scene.
+- Open questions 1 and 3 remain untouched, as both belong to the deletion/migration pass.
+
+### Unrelated finding worth scheduling
+
+VisualScriptingExtension's editor assembly definition is named **`"NewAssembly"`**, not
+`ArcaneOnyx.VisualScriptingExtension.Editor`. Renaming it changes every by-name reference to it, so it was
+left alone rather than folded into this feature.
