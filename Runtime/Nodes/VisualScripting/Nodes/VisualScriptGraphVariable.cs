@@ -15,6 +15,10 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Output { get; private set; }
 
+        /// <summary>The embedded graph this node reads, or null when it reads a Function.</summary>
+        [DoNotSerialize]
+        public ScriptGraphAsset EmbeddedScriptGraph => ScriptGraphVariable?.ScriptGraphAsset;
+
         /// <summary>The Function this node reads, or null when it reads an embedded graph.</summary>
         [DoNotSerialize]
         public VisualScriptingExtension.FunctionGraphAsset Function => ScriptGraphVariable?.Function;

@@ -74,7 +74,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(GuardProblems(asset, name));
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
-                findings.AddRange(OrphanedScriptGraphSubAssets(asset, name));
+                findings.AddRange(OrphanedScriptGraphSubAssets(asset, path, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -360,6 +360,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     continue;
                 }
 
+                // A missing result is not a resolve failure — the plan is perfectly usable for a Function run
+                // for its control flow. It is only wrong for a Function something reads a value out of, which
+                // is what a Script Graph Variable node does, so the check belongs here rather than in Resolve.
+                // This is the "spelled exactly" failure: it used to surface when the graph ran and nowhere else.
+                if (function.ResultType == null)
+                {
+                    yield return
+                        $"{treeName}: Function '{function.name}' declares no " +
+                        $"'{ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset.ResultKey}' output, so the " +
+                        "node reading it has nothing to read.";
+                }
+
                 foreach (var problem in PurityAndWatchedKeys(function)) yield return $"{treeName}: {problem}";
             }
         }
@@ -432,10 +444,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// orphans visible while the existing deleter is still the one acting on them.
         /// </para>
         /// </summary>
-        private static IEnumerable<string> OrphanedScriptGraphSubAssets(BehaviorTreeGraphAsset asset, string treeName)
+        private static IEnumerable<string> OrphanedScriptGraphSubAssets(
+            BehaviorTreeGraphAsset asset,
+            string assetPath,
+            string treeName)
         {
-            var path = AssetDatabase.GetAssetPath(asset);
-            if (string.IsNullOrEmpty(path)) yield break;
+            // The path is passed in rather than read off the asset: Reload hands back an Instantiate clone so
+            // that what is inspected is what survives serialization, and a clone has no asset path. Deriving
+            // it here returned empty and this lint silently reported nothing — which a test caught only
+            // because it asserted on the finding rather than on the method running.
+            if (string.IsNullOrEmpty(assetPath)) yield break;
+
+            var path = assetPath;
 
             var referenced = new HashSet<Unity.VisualScripting.ScriptGraphAsset>();
 

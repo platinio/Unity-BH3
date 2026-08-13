@@ -398,12 +398,124 @@ always on this Mono runtime and `GC.GetTotalMemory` is too coarse — both produ
 vacuously forever. Only `Is.Not.AllocatingGCMemory()` works, and it needs a known-allocating control beside
 it. This cost two wrong measurements before it was caught.
 
-### Still open
+### What shipped in this pass
 
-- Verify lints: orphan detection (report-only), purity, watched-keys mismatch, Function drift.
-- `fn_extract` (embedded → project asset) and `bt_set_value` learning to connect a Function.
-- Demo scene.
-- Open questions 1 and 3 remain untouched, as both belong to the deletion/migration pass.
+| Area | State |
+|---|---|
+| `FunctionGraphAsset`, contract types, binding plan, evaluation seam | done, in VisualScriptingExtension |
+| VisualScriptingExtension test assembly (its first) | done, 15 tests |
+| BH3 `ScriptGraphVariable` + `VisualScriptGraphVariable` on the seam | done, legacy path untouched |
+| `fn_create` / `fn_list` / `fn_describe` / `fn_set_metadata` / `fn_extract` | done |
+| Verify lints: contract, purity, watched keys, ambiguity, orphans (report-only) | done, 11 tests |
+| Demo scene | done, verified on Play with a game-view capture |
+| Docs in both modules, registered in their indexes | done |
+
+**409 EditMode tests, 408 passing.** The single failure is pre-existing and unrelated
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`). PlayMode unchanged at
+7/4/3, also pre-existing. Baseline before the work was 378/377/1.
+
+***
+
+## Context for whoever picks this up next
+
+**Where things live.** The asset, contract types, binding plan and evaluator are in
+`Modules/VisualScriptingExtension/Runtime/Function/`. Everything BH3-facing — the `fn_` commands, the verify
+lints, the import postprocessor — is in `BH3/Editor/Authoring/`, in namespace
+`ArcaneOnyx.BehaviorTree.Authoring`. The demo is in the **superproject** at `BH3Demos/FunctionGraphs/`.
+
+**The one rule that is not negotiable.** Nothing in the evaluation call path may look a port up by string
+key. That is not a style preference: measurement showed pooled `Flow`, graph interpretation and value reads
+are all allocation-free, and keyed port lookup is the *only* allocating operation. `FunctionBindingPlan`
+exists to resolve ports once; indices are the currency afterwards. Two tests pin this, each with a
+known-allocating control case beside the real assertion.
+
+**Instruments that lie here.** `GC.GetAllocatedBytesForCurrentThread()` returns 0 always on this Mono
+runtime, and `GC.GetTotalMemory` is too coarse to see one evaluation. Both produce a test that passes
+vacuously forever. Use `UnityEngine.TestTools.Constraints.Is.Not.AllocatingGCMemory()` and always keep a
+control that must fail.
+
+**Traps that cost time in this pass, in order of how much:**
+
+- `BehaviorTreeVerification.Reload` returns `Object.Instantiate(onDisk)` — a **clone with no asset path**.
+  Any lint needing the path must be handed it, not derive it from the asset. A lint that derived it
+  silently reported nothing.
+- Inside `ArcaneOnyx.BehaviorTree.*`, `ValueInputDefinition` / `ValueOutputDefinition` resolve to BH3's own
+  types, not Visual Scripting's. Qualify them. (Authoring skill, BREAK-1.)
+- `FunctionGraphAuthoring.cs` deliberately does **not** `using Unity.VisualScripting` for that reason, so
+  extension methods from that namespace must be called as plain statics.
+- `save_all` on a freshly launched Editor sitting on an *Untitled* scene raises a modal `Save Scene` dialog
+  and blocks the whole pipeline. The precaution and the hazard are the same call.
+- Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
+  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit it.
+
+***
+
+## Remaining work, in order
+
+Each step is independently pickup-able. They are ordered because later ones depend on earlier ones, and the
+repository-removal steps are ordered for a safety reason stated in *Locked decisions* 6: **there must never
+be two things deleting graphs at once.**
+
+### Step 1 — `bt_set_value` learns to connect a Function
+
+Small, self-contained, no dependencies. `bt_set_value` can currently give a port a literal; it should also
+accept a Function asset path and wire it to a value port. Follow the existing resolve-by-asset-path pattern
+in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
+
+### Step 2 — Contract copies on the caller, and drift reporting for Function callers
+
+`FunctionParameter` and `FunctionParameter.DescribeDrift` exist and are tested, but **no BH3 node stores a
+contract copy yet**, so the drift lint currently has nothing to check on a node. Give
+`VisualScriptGraphVariable` a serialized `List<FunctionParameter>`, declare its ports from that copy (never
+from the live asset — see spike 4), and add `RefreshParameters` / `DescribeContractDrift` mirroring
+`RunBehaviorTreeGraphNode`. Then hang the drift lint off the existing loop in `BehaviorTreeVerification`.
+This is what makes acceptance criterion 2 fully true.
+
+### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
+
+Its single serialized `RunnableScriptGraph` field moves to a Function reference plus arguments. Recommended
+mechanics, per this spec: an editor migration utility that rewrites existing query items in place, **plus a
+verify report naming any unmigrated item**, so hand-authored items in downstream projects are caught rather
+than silently broken. `TacticalPositionSelectionAuthoring.SetGeneratorScriptGraph` is the touch point; it
+reaches the field through `SerializedObject` because both are private. Note the port-key constants there
+(`Result`, `_Evaluator`) — a query Function must match them, and the contract lint should say so by name.
+TacticalPositionSelection is already branched (`feature/function-graphs`) and currently unchanged.
+
+### Step 4 — Delete `ParameterizedGraphAsset` and `RunnableScriptGraph`
+
+Only after step 3. `ParameterizedGraphAsset` has **zero** consumers (verified twice) — delete it, its
+drawer and its helper outright. `RunnableScriptGraph` has exactly one consumer, which step 3 removes.
+`ScriptGraphVariableExtension` goes with them. Neither is wrapped or deprecated: locked decision 10.
+
+Two defects die with that code and should not be fixed in place: `ScriptGraphOutput.executionIndex` is
+`[Serialize]`, so per-call bookkeeping is persisted into the asset, and the `Run` paths never `Dispose()`
+their `Flow`.
+
+### Step 5 — Move deletion to save time (repository removal, step 2 of 3)
+
+Orphan detection already ships **report-only** and is tested. Now move actual deletion from the per-OnGUI
+canvas sweep to a save-time structural cleanup: enumerate the tree's own script-graph sub-assets, diff
+against what its elements reference, destroy orphans. At this point the canvas sweep becomes report-only.
+**Never both deleting at once.**
+
+### Step 6 — Remove the repository (repository removal, step 3 of 3)
+
+Delete `ScriptGraphAssetsRepository`, its `.asset`, `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, and
+the canvas sweep. Acceptance criterion 3 becomes checkable: editing unrelated trees produces no shared-file
+merge conflicts.
+
+### Step 7 — Open question 3
+
+Do new embedded one-offs become embedded `FunctionGraphAsset`s, or stay raw `ScriptGraphAsset`s?
+Recommended: new ones are Functions; existing raw ones keep working with a verify nudge
+("promote available"). `fn_extract` already provides the promotion path.
+
+### Not scheduled
+
+Tier 2 compilation. The v1 registry seam (`FunctionEvaluator.TryGetCompiled`) and the graph hash ship and
+always miss, so the emitter can land behind an existing interface. Do not start it before the profiler asks.
+The `NewAssembly` asmdef rename in VisualScriptingExtension is also unscheduled — it changes every by-name
+reference, so it wants its own change.
 
 ### Unrelated finding worth scheduling
 

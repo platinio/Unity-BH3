@@ -177,6 +177,114 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return DescribeContract(asset);
         }
 
+        /// <summary>
+        /// Promotes a node's embedded one-off graph into a shared project asset and re-points the node at it.
+        /// <para>
+        /// This is the bridge the whole design rests on: embedding stays legal for a three-unit read, and the
+        /// moment one is worth sharing it becomes a Function without being rebuilt by hand. The graph is
+        /// cloned rather than moved, because the embedded sub-asset is owned structurally by the tree and
+        /// deleting it here would make this the second thing in the project that deletes graphs — the one
+        /// situation the repository-removal sequence exists to avoid. The now-unreferenced sub-asset is left
+        /// for <c>bt_verify</c> to report as an orphan.
+        /// </para>
+        /// </summary>
+        public static FunctionGraphAsset ExtractToProjectAsset(
+            BehaviorTreeGraphAsset tree,
+            VisualScriptGraphVariable node,
+            string path)
+        {
+            if (tree == null) throw new ArgumentException("No tree given.");
+            if (node == null) throw new ArgumentException("No node given.");
+
+            var embedded = node.EmbeddedScriptGraph;
+            if (embedded == null)
+            {
+                throw new ArgumentException(
+                    node.Function != null
+                        ? $"Node '{node.NodeName}' already reads the Function '{node.Function.name}'."
+                        : $"Node '{node.NodeName}' has no embedded graph to extract.");
+            }
+
+            var normalized = NormalizePath(path);
+            if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalized) != null)
+            {
+                throw new ArgumentException($"'{normalized}' already exists. Pick a path that is free.");
+            }
+
+            var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            // Called as a plain static rather than as an extension: this file deliberately does not import
+            // Unity.VisualScripting, because that namespace collides with several ArcaneOnyx.BehaviorTree
+            // type names and importing it here would make the collisions resolve silently the wrong way.
+            function.graph = Unity.VisualScripting.Cloning.CloneViaFakeSerialization(embedded.graph);
+
+            AssetDatabase.CreateAsset(function, normalized);
+
+            // The Function wins over an embedded graph at runtime, so leaving both assigned would leave an
+            // editable-but-dead graph on the node — which bt_verify reports, and which nobody wants to see
+            // reported by the command that supposedly did the migration.
+            node.SetScriptGraph(null);
+            node.SetFunction(function);
+
+            EditorUtility.SetDirty(function);
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            FunctionEvaluator.Invalidate(function);
+
+            return function;
+        }
+
+        private static BehaviorTreeGraphAsset ResolveTreeAsset(string path, out string normalized)
+        {
+            normalized = NormalizePath(path);
+            var tree = AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(normalized);
+
+            if (tree == null) throw new ArgumentException($"No behavior tree asset at '{normalized}'.");
+
+            return tree;
+        }
+
+        [CliCommand("fn_extract",
+            "Promote a node's embedded one-off graph into a shared Function asset and re-point the node at " +
+            "it. The graph is copied, not moved: the tree still owns the original sub-asset, which bt_verify " +
+            "then reports as an orphan rather than this command deleting it.")]
+        public static object ExtractFunctionCommand(
+            [CliArg("tree", "Asset path of the behavior tree holding the node.", Required = true)] string tree,
+            [CliArg("node", "Guid of the Script Graph Variable node. Run bt_describe_tree to list them.", Required = true)] string node,
+            [CliArg("path", "Asset path for the new Function, e.g. Assets/AI/Functions/HasTarget.asset.", Required = true)] string path)
+        {
+            var treeAsset = ResolveTreeAsset(tree, out var normalizedTree);
+
+            if (!Guid.TryParse(node, out var parsed))
+            {
+                throw new ArgumentException($"'{node}' is not a guid. Run bt_describe_tree to list them.");
+            }
+
+            var target = treeAsset.graph.Nodes.FirstOrDefault(n => n.guid == parsed);
+            if (target == null) throw new ArgumentException($"The tree has no node with guid '{node}'.");
+
+            if (target is not VisualScriptGraphVariable variableNode)
+            {
+                throw new ArgumentException(
+                    $"Node '{node}' is a {target.GetType().Name}, which holds no embedded graph to extract.");
+            }
+
+            var extractedFrom = variableNode.EmbeddedScriptGraph?.name;
+            var function = ExtractToProjectAsset(treeAsset, variableNode, path);
+
+            return new
+            {
+                tree = normalizedTree,
+                node = node,
+                extractedFrom = extractedFrom,
+                function = AssetDatabase.GetAssetPath(function),
+                contract = DescribeContract(function),
+                note = "The original sub-asset is still stored in the tree and is now unreferenced; " +
+                       "bt_verify reports it as an orphan."
+            };
+        }
+
         [CliCommand("fn_set_metadata",
             "Set the asset-level metadata a graph cannot express: purity, watched keys and description. " +
             "Watched keys are what a reactive guard whose condition is this Function inherits.")]
