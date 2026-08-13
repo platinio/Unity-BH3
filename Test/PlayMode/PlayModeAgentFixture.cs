@@ -158,10 +158,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             return node;
         }
 
-        protected static bool Entered(BehaviorTreeFlightRecorder recorder, Guid node) =>
-            recorder.Events.Any(e => e.Kind == BehaviorTreeEventKind.NodeEnter && e.NodeGuid == node);
+        protected static bool Entered(BehaviorTreeFlightRecorder recorder, Guid node)
+        {
+            AssertNothingDropped(recorder);
 
-        protected static int EnterCount(BehaviorTreeFlightRecorder recorder, Guid node) =>
-            recorder.Events.Count(e => e.Kind == BehaviorTreeEventKind.NodeEnter && e.NodeGuid == node);
+            return recorder.Events.Any(e => e.Kind == BehaviorTreeEventKind.NodeEnter && e.NodeGuid == node);
+        }
+
+        protected static int EnterCount(BehaviorTreeFlightRecorder recorder, Guid node)
+        {
+            AssertNothingDropped(recorder);
+
+            return recorder.Events.Count(e => e.Kind == BehaviorTreeEventKind.NodeEnter && e.NodeGuid == node);
+        }
+
+        protected static int ExitCount(BehaviorTreeFlightRecorder recorder, Guid node)
+        {
+            AssertNothingDropped(recorder);
+
+            return recorder.Events.Count(e => e.Kind == BehaviorTreeEventKind.NodeExit && e.NodeGuid == node);
+        }
+
+        /// <summary>
+        /// Every question this fixture asks the recording is asked of a <em>bounded ring</em>. Once it is
+        /// full the oldest event is overwritten and only <c>Dropped</c> says so, which would turn each helper
+        /// above into a silent under-count: <see cref="Entered"/> would answer false about something that
+        /// happened, and a test asserting a count had not grown would pass while the count was being eaten
+        /// from the other end.
+        /// <para>
+        /// A test that overruns the buffer is a test that needs a bigger buffer or a shorter run, and it
+        /// should say so rather than quietly measure the wrong thing.
+        /// </para>
+        /// </summary>
+        private static void AssertNothingDropped(BehaviorTreeFlightRecorder recorder)
+        {
+            Assert.AreEqual(0, recorder.Dropped,
+                $"The recording overflowed its ring and lost {recorder.Dropped} events, so anything counted "
+                + "from it is a lower bound rather than an answer. Shorten the run or raise the capacity.");
+        }
     }
 }
