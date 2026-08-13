@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using ArcaneOnyx.BehaviorTree.Debugging;
@@ -178,6 +179,42 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             return recorder.Events.Count(e => e.Kind == BehaviorTreeEventKind.NodeExit && e.NodeGuid == node);
         }
+
+        /// <summary>
+        /// A position in the recording, so a later assertion can ask what happened <em>since</em> it rather
+        /// than what happened at all. Whole-tree tests move through phases and mostly need "in this phase",
+        /// which is otherwise unanswerable once a branch has been entered more than once.
+        /// </summary>
+        protected static int Mark(BehaviorTreeFlightRecorder recorder)
+        {
+            AssertNothingDropped(recorder);
+
+            return recorder.EventCount;
+        }
+
+        /// <summary>Everything recorded after <paramref name="mark"/>. Valid only while nothing was dropped.</summary>
+        protected static IEnumerable<BehaviorTreeEvent> EventsSince(BehaviorTreeFlightRecorder recorder, int mark)
+        {
+            AssertNothingDropped(recorder);
+
+            return recorder.Events.Skip(mark);
+        }
+
+        protected static bool EnteredSince(BehaviorTreeFlightRecorder recorder, int mark, Guid node) =>
+            EventsSince(recorder, mark).Any(e => e.Kind == BehaviorTreeEventKind.NodeEnter && e.NodeGuid == node);
+
+        protected static bool TakenOverSince(BehaviorTreeFlightRecorder recorder, int mark, Guid node) =>
+            EventsSince(recorder, mark).Any(e => e.Kind == BehaviorTreeEventKind.NodeTakenOver && e.NodeGuid == node);
+
+        protected static bool AbortedSince(BehaviorTreeFlightRecorder recorder, int mark, Guid node) =>
+            EventsSince(recorder, mark).Any(e => e.Kind == BehaviorTreeEventKind.NodeAborted && e.NodeGuid == node);
+
+        /// <summary>
+        /// Publishes an agent fact the way a sensor does — through the writer, so the version moves and any
+        /// guard scheduled on the key is allowed to recompute.
+        /// </summary>
+        protected static void PublishFact(BehaviorTreeMachine machine, string key, object value) =>
+            AgentVariableWriter.SetOn(machine.gameObject, key, value);
 
         /// <summary>
         /// Every question this fixture asks the recording is asked of a <em>bounded ring</em>. Once it is
