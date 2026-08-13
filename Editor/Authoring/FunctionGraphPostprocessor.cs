@@ -1,7 +1,7 @@
 using ArcaneOnyx.VisualScriptingExtension;
 using UnityEditor;
 
-namespace ArcaneOnyx.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree.Authoring
 {
     /// <summary>
     /// Drops cached binding plans when a Function is imported.

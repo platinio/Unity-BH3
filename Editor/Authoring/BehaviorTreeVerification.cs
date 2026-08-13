@@ -73,6 +73,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
                 findings.AddRange(GuardProblems(asset, name));
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
+                findings.AddRange(FunctionProblems(asset, name));
+                findings.AddRange(OrphanedScriptGraphSubAssets(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -249,7 +251,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// value on the port, or a literal wired into it. Null when the name is computed, which this check
         /// cannot and should not guess at.
         /// </summary>
-        private static string LiteralKeyOf(Unity.VisualScripting.SetVariable stock)
+        // Typed to the shared base rather than SetVariable: reading a variable's key and writing one are the
+        // same lookup, and Function lints need it for GetVariable too.
+        private static string LiteralKeyOf(Unity.VisualScripting.UnifiedVariableUnit stock)
         {
             var port = stock.name;
             if (port == null) return null;
@@ -322,6 +326,141 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// still passing a value the branch no longer reads.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// What is wrong with the Functions this tree reads.
+        /// <para>
+        /// Every one of these used to be a runtime surprise or nothing at all. A query graph whose output key
+        /// was misspelled failed when it ran and nowhere else; a guard condition that wrote had no way to be
+        /// noticed; a watched-key list that was simply wrong produced a guard that never woke, silently. The
+        /// point of a declared contract is that all of them become a name and a line here.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> FunctionProblems(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            var reported = new HashSet<ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset>();
+
+            foreach (var node in asset.graph.Nodes)
+            {
+                if (node is not VisualScriptGraphVariable variableNode) continue;
+
+                if (variableNode.HasAmbiguousGraphSource)
+                {
+                    yield return
+                        $"{treeName}: node '{variableNode.NodeName}' has both a Function and an embedded graph " +
+                        "assigned. The Function is what runs, so the embedded graph is editable but dead.";
+                }
+
+                var function = variableNode.Function;
+                if (function == null || !reported.Add(function)) continue;
+
+                var plan = ArcaneOnyx.VisualScriptingExtension.FunctionBindingPlan.Resolve(function);
+                if (!plan.IsUsable)
+                {
+                    yield return $"{treeName}: Function — {plan.Error}";
+                    continue;
+                }
+
+                foreach (var problem in PurityAndWatchedKeys(function)) yield return $"{treeName}: {problem}";
+            }
+        }
+
+        /// <summary>
+        /// Compares what a Function declares against what its graph actually does. Declaration is what callers
+        /// rely on; this walk is what keeps the declaration honest.
+        /// </summary>
+        private static IEnumerable<string> PurityAndWatchedKeys(
+            ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset function)
+        {
+            if (function.graph == null) yield break;
+
+            var readKeys = new HashSet<string>();
+            var writeUnits = new List<string>();
+
+            foreach (var unit in function.graph.units)
+            {
+                switch (unit)
+                {
+                    case Unity.VisualScripting.GetVariable get
+                        when get.kind == Unity.VisualScripting.VariableKind.Object:
+                    {
+                        var key = LiteralKeyOf(get);
+                        if (key != null) readKeys.Add(key);
+                        break;
+                    }
+
+                    case Unity.VisualScripting.SetVariable set
+                        when set.kind == Unity.VisualScripting.VariableKind.Object:
+                        writeUnits.Add(LiteralKeyOf(set) is { } written ? $"SetVariable('{written}')" : "SetVariable");
+                        break;
+                }
+            }
+
+            // Warn rather than error, matching the choice spec 09 already made for guard purity: a Function
+            // that writes is a design smell, not an impossibility, and the author may have meant it.
+            if (function.Pure && writeUnits.Count > 0)
+            {
+                yield return
+                    $"Function '{function.name}' is declared pure but writes: {string.Join(", ", writeUnits)}.";
+            }
+
+            foreach (var declared in function.WatchedKeys)
+            {
+                if (!readKeys.Contains(declared))
+                {
+                    yield return
+                        $"Function '{function.name}' declares watched key '{declared}' but its graph never " +
+                        "reads it.";
+                }
+            }
+
+            foreach (var read in readKeys)
+            {
+                if (!function.WatchedKeys.Contains(read))
+                {
+                    yield return
+                        $"Function '{function.name}' reads '{read}' but does not declare it as a watched key. " +
+                        "A guard inheriting these keys will not wake when it changes.";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Script-graph sub-assets of this tree that nothing in it references any more.
+        /// <para>
+        /// <b>Report only.</b> The canvas sweep still owns deletion, and the sequencing this feature follows is
+        /// that there is never more than one thing deleting graphs at a time. This is step one: make the
+        /// orphans visible while the existing deleter is still the one acting on them.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> OrphanedScriptGraphSubAssets(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            var path = AssetDatabase.GetAssetPath(asset);
+            if (string.IsNullOrEmpty(path)) yield break;
+
+            var referenced = new HashSet<Unity.VisualScripting.ScriptGraphAsset>();
+
+            foreach (var node in asset.graph.Nodes)
+            {
+                var graphs = node?.scriptGraphAssets;
+                if (graphs == null) continue;
+
+                foreach (var graph in graphs)
+                {
+                    if (graph != null) referenced.Add(graph);
+                }
+            }
+
+            foreach (var representation in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+            {
+                if (representation is not Unity.VisualScripting.ScriptGraphAsset subAsset) continue;
+                if (referenced.Contains(subAsset)) continue;
+
+                yield return
+                    $"{treeName}: orphaned sub-asset — script graph '{subAsset.name}' is stored in this tree " +
+                    "but nothing in it references the graph any more.";
+            }
+        }
+
         private static IEnumerable<string> ContractDrift(BehaviorTreeGraphAsset asset, string treeName)
         {
             foreach (var node in asset.graph.Nodes)

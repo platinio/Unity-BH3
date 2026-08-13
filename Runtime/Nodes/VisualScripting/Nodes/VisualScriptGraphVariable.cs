@@ -15,6 +15,21 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Output { get; private set; }
 
+        /// <summary>The Function this node reads, or null when it reads an embedded graph.</summary>
+        [DoNotSerialize]
+        public VisualScriptingExtension.FunctionGraphAsset Function => ScriptGraphVariable?.Function;
+
+        /// <summary>
+        /// True when both a Function and an embedded graph are assigned. The Function wins at runtime, so
+        /// this is not a crash — it is the worse kind of problem, where the graph an author is editing is not
+        /// the one being evaluated. Verification reports it.
+        /// </summary>
+        [DoNotSerialize]
+        public bool HasAmbiguousGraphSource =>
+            ScriptGraphVariable != null &&
+            ScriptGraphVariable.Function != null &&
+            ScriptGraphVariable.ScriptGraphAsset != null;
+
         public override bool DrawInSubTree => false;
 
         /// <summary>

@@ -6,7 +6,7 @@ using Unity.Pipeline.Commands;
 using UnityEditor;
 using UnityEngine;
 
-namespace ArcaneOnyx.BehaviorTree
+namespace ArcaneOnyx.BehaviorTree.Authoring
 {
     /// <summary>
     /// Authoring and inspection for Functions, following the same "ask the project" philosophy as the
