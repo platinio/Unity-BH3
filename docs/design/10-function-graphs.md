@@ -175,6 +175,40 @@ Three tiers, so nobody relitigates which fight we are in:
   - **One piece IS pulled into v1:** the registry lookup and the graph hash — a check that today
     always misses interpretation-ward. Cheap insurance so Tier 2 lands behind an existing interface
     instead of rewriting the evaluator.
+  **What compiles well, and what merely compiles.** Not every Function benefits equally, and the difference
+  is decided by how its data arrives — this is the strongest argument for the "purer alternative" this spec
+  parked, and a better one than purity-as-aesthetics:
+
+  - **Declared inputs become method parameters.** A Function whose data all arrives through its declared
+    inputs compiles to a clean static method — `static bool ShouldRetreat(float threshold, float hp)`.
+    Nothing ambient, nothing looked up.
+  - **Ambient `GetVariable` stays a lookup.** `GetVariable(Object, "hp")` has to emit as
+    `Variables.Object(agent).Get("hp")`: a string-keyed lookup on a component, once per read.
+  - **It cannot be hoisted into a parameter, and that is not an oversight.** The interpreter reads the
+    variable at the moment the unit runs; a hoisted parameter would read once at call time. Any graph that
+    writes a key and reads it back, or reads the same key either side of a write, would then disagree
+    between the compiled and interpreted forms — a build-only divergence, exactly what the mandatory
+    differential testing exists to catch. The emitter must keep ambient reads where they are.
+
+  So ambient variables do **not** block Tier 2; they cap what it buys. The graph-walking, per-port
+  dictionary lookups and boxing all still go, which is most of the cost. Each ambient read simply stays a
+  lookup instead of becoming a parameter.
+
+  **Authoring rule that follows:** a Function fed through declared inputs compiles materially better than
+  one that reads its data off the agent. Identical behaviour today, different generated code later.
+
+  **This is already measurable.** `FunctionGraphAsset.DeriveReadKeys()`, added for watched-key verification,
+  counts exactly the ambient reads — so Tier 2 readiness is computable now and `fn_list` could surface it
+  without new machinery.
+
+  **On the wrapper being deleted:** `ScriptGraphVariableExtension`'s dictionary overload
+  (`GetScriptGraphOutput<T>(asset, Dictionary<string, object>, gameObject)`) was **the declared-inputs
+  path**, not the ambient one, and it is superseded rather than dropped — `TrySetArgument` does the same
+  thing with indices resolved at bind time instead of names matched per call. Nothing is lost by removing
+  it except passing a whole dictionary in one call, which allocated one per evaluation. Worth stating
+  because the overload looks like a capability going away, and it is the *good* half of the old API that
+  the new seam kept.
+
 - **The escape hatch stays cheapest of all:** a C# value node's `ValueOutput` wired directly to a
   guard is a delegate call — no Flow at all. The workflow remains spec 09's: prototype as a Function,
   let the profiler name the hot few, promote those to C# nodes.
