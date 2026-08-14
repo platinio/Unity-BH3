@@ -201,6 +201,16 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             // nothing on the majority of real trees and hedge every sentence it produced.
             CollectFromScriptGraphs(node, keys);
 
+            // A Function reaches nothing above. It is not a ScriptGraphAsset — it derives from Macro<FlowGraph>
+            // directly, because ScriptGraphAsset is sealed — so it can never arrive through
+            // scriptGraphAssets, and this walk was silently blind to every guard whose condition is one.
+            // Widening that seam is not the fix: it is also what the repository sweep enumerates, and a
+            // standalone Function must never be a deletion candidate.
+            if (node is IDeclaresWatchedKeys declarer && declarer.DeclaredWatchedKeys != null)
+            {
+                foreach (var declared in declarer.DeclaredWatchedKeys) Add(keys, declared);
+            }
+
             if (node.valueInputs == null) return;
 
             foreach (var input in node.valueInputs)

@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
         public override string NodeName => comment == string.Empty? "Script Graph Variable" : comment;
@@ -33,6 +34,28 @@ namespace ArcaneOnyx.BehaviorTree
             ScriptGraphVariable != null &&
             ScriptGraphVariable.Function != null &&
             ScriptGraphVariable.ScriptGraphAsset != null;
+
+        /// <summary>
+        /// The keys the referenced Function declares, so a guard fed by this node inherits its schedule.
+        ///
+        /// <para>
+        /// Read live from the asset rather than copied onto this node, deliberately. A copy would need its own
+        /// refresh verb and its own staleness report — a second drift story on top of the one the caller-side
+        /// contract copy genuinely requires — and locked decision 5 of spec 10 says there is only ever one.
+        /// The copy exists there because <c>Definition()</c> drops connections to ports that do not resolve
+        /// during deserialization; nothing about a key list has that problem, so nothing here needs the cure.
+        /// </para>
+        ///
+        /// <para>
+        /// An <b>embedded</b> graph declares nothing and yields nothing: it has no asset-level metadata to
+        /// declare with. That is the honest answer rather than a walk of its units, which would report derived
+        /// keys where every other implementer reports declared ones and quietly make the two mean the same
+        /// thing.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        public IReadOnlyList<string> DeclaredWatchedKeys =>
+            Function != null ? Function.WatchedKeys : Array.Empty<string>();
 
         public override bool DrawInSubTree => false;
 
