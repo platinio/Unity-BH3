@@ -284,6 +284,79 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Object.Destroy(asset);
         }
 
+        /// <summary>
+        /// The pattern actually authored in this project: break out of the loop, fall through to the exit,
+        /// and read the item you stopped on.
+        /// <para>
+        /// This shape was already correct before the capture-at-exit fix, and it is worth a test saying so.
+        /// Because <c>Break</c> genuinely stops the loop, <c>currentItem</c> is not advanced afterwards, so
+        /// pulling <c>Result</c> once the flow finishes reads the item that was current when the break
+        /// happened. It needs only one exit — the loop's own exit — which is why it never ran into the
+        /// multi-exit machinery at all.
+        /// </para>
+        /// <para>
+        /// The contrast with <see cref="EarlyReturnFromALoop_ReturnsTheItemItExitedOn"/> is the point: routing
+        /// to an exit without breaking leaves the loop running, and that is the case that used to return the
+        /// wrong element.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BreakingOutOfALoop_ThenExiting_ReadsTheItemItStoppedOn()
+        {
+            var asset = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = asset.graph;
+
+            var input = new ScriptGraphInput { position = new Vector2(-500.0f, 0.0f) };
+            var exit = new ScriptGraphOutput { position = new Vector2(400.0f, 0.0f) };
+            graph.units.Add(input);
+            graph.units.Add(exit);
+
+            graph.controlInputDefinitions.Add(new Unity.VisualScripting.ControlInputDefinition
+            {
+                key = FunctionGraphAsset.EnterKey, label = FunctionGraphAsset.EnterKey
+            });
+            graph.controlOutputDefinitions.Add(new Unity.VisualScripting.ControlOutputDefinition
+            {
+                key = FunctionGraphAsset.ExitKey, label = FunctionGraphAsset.ExitKey
+            });
+            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = FunctionGraphAsset.ResultKey, label = FunctionGraphAsset.ResultKey, type = typeof(object)
+            });
+            graph.PortDefinitionsChanged();
+
+            var items = new Unity.VisualScripting.Literal(
+                typeof(System.Collections.IEnumerable),
+                new System.Collections.Generic.List<object> { 10.0f, 20.0f, 30.0f })
+            {
+                position = new Vector2(-320.0f, 140.0f)
+            };
+            graph.units.Add(items);
+
+            var loop = new Unity.VisualScripting.ForEach { position = new Vector2(-140.0f, 0.0f) };
+            graph.units.Add(loop);
+            items.output.ValidlyConnectTo(loop.collection);
+
+            var stop = new Unity.VisualScripting.Break { position = new Vector2(120.0f, -120.0f) };
+            graph.units.Add(stop);
+
+            input.controlOutputs[FunctionGraphAsset.EnterKey].ValidlyConnectTo(loop.enter);
+
+            // Break on the first item, then let the loop's own exit carry control out.
+            loop.body.ValidlyConnectTo(stop.enter);
+            loop.exit.ValidlyConnectTo(exit.controlInputs[FunctionGraphAsset.ExitKey]);
+            loop.currentItem.ValidlyConnectTo(exit.valueInputs[FunctionGraphAsset.ResultKey]);
+
+            var binding = FunctionEvaluator.Bind(asset, agentA);
+            yield return null;
+
+            Assert.That(binding.TryEvaluate<object>(out var result, out var error), Is.True, error);
+            Assert.That(System.Convert.ToSingle(result), Is.EqualTo(10.0f),
+                "breaking on the first item should leave currentItem holding it");
+
+            Object.Destroy(asset);
+        }
+
         // There is deliberately no play-mode allocation test here, and the reason is worth keeping.
         //
         // One was written and it was flaky: it passed when this fixture ran alone and failed in the full
