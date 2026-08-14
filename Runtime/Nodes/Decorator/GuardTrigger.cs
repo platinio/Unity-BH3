@@ -239,6 +239,16 @@ namespace ArcaneOnyx.BehaviorTree
         /// guard is correctly clean; the component appears as soon as anything publishes a fact, because
         /// every write path is get-or-add.
         /// </para>
+        /// <para>
+        /// <b>Only a writer that was actually found is cached.</b> Get-or-add means the component routinely
+        /// appears <em>after</em> a guard's first evaluation — a sensor that publishes on first detection
+        /// rather than in <c>Awake</c> is the ordinary case, and entry evaluation happens on the machine's
+        /// first tick. Caching the null resolved before it existed would pin the guard to that answer for the
+        /// life of the agent: the fact moves, the version bumps, and the guard never sees any of it. The cost
+        /// of re-resolving is one <c>TryGetComponent</c>, paid only while no writer exists — and a guard
+        /// watching keys on an agent that never publishes them is the misconfiguration <c>bt_verify</c>
+        /// already reports.
+        /// </para>
         /// </summary>
         private AgentVariableWriter WriterFor(BehaviorTreeNode owner)
         {
@@ -249,7 +259,7 @@ namespace ArcaneOnyx.BehaviorTree
                 var agent = owner.gameObject;
 
                 if (agent == null) return null;
-                if (ReferenceEquals(agent, cachedAgent)) return cachedWriter;
+                if (ReferenceEquals(agent, cachedAgent) && cachedWriter != null) return cachedWriter;
 
                 cachedAgent = agent;
                 cachedWriter = AgentVariableWriter.Find(agent);
