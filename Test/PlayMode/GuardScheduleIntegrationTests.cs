@@ -188,6 +188,86 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
+        /// A guard on a node that is re-entered every frame recomputes every frame, whatever its interval
+        /// says.
+        ///
+        /// <para>
+        /// <b>Characterization, not a requirement.</b> This documents an interaction rather than asserting
+        /// that it is correct, because whether it is correct has not been decided — see
+        /// <see href="https://github.com/platinio/Unity-BH3/issues/16">issue 16</see>. It is here so the
+        /// behaviour is measured rather than discovered later by someone wondering why a guard with a
+        /// ten-second interval is the most expensive thing in their profile.
+        /// </para>
+        ///
+        /// <para>
+        /// The mechanism is a collision between two reasonable rules. Entry always evaluates a guard —
+        /// <c>Ask(fresh: true)</c> skips the <c>IsDue</c> check outright, deliberately, because a stale
+        /// <c>true</c> admits a branch whose precondition no longer holds. And <c>Repeater</c> exits and
+        /// re-enters its child the moment the child completes. Put a guard on a node that completes each
+        /// frame, and the container above sets the guard's evaluation rate — the trigger it declares is
+        /// bypassed entirely, from outside, with nothing local to explain it.
+        /// </para>
+        ///
+        /// <para>
+        /// The contrast with <see cref="AnIntervalTriggerRecomputesWhenTheIntervalElapses"/> is the point:
+        /// same guard, same kind of trigger, and the only difference is whether the owner is re-entered or
+        /// merely polled.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AGuardOnANodeReEnteredEveryFrameIgnoresItsInterval()
+        {
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            // Wait(0) completes on the tick it runs, so the Repeater exits and re-enters it every frame.
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var cycling = Add<WaitTime>(graph, 0.0f, 250.0f);
+            FeedFloat(graph, cycling, cycling.Time, 0.0f);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, cycling);
+
+            var read = ReadAgentVariable(graph, "eligible", -400.0f, 250.0f);
+
+            var guard = Add<BooleanReactiveGuard>(graph, -150.0f, 250.0f);
+            guard.UpdateOwner(cycling);
+            read.Value.ValidlyConnectTo(guard.Value);
+
+            // Ten seconds. Against a 0.05s frame that is 200 frames per fire, so a guard whose schedule were
+            // being honoured would not recompute once across the run below.
+            guard.AddTrigger(GuardTrigger.Interval(10.0f));
+
+            var machine = Spawn(tree, (_, variables) => variables.declarations.Set("eligible", true));
+
+            Time.captureDeltaTime = FrameSeconds;
+
+            var running = RunningNode<ReactiveGuard>(machine);
+
+            for (int frame = 0; frame < 4; frame++)
+            {
+                yield return null;
+            }
+
+            int start = running.Evaluations;
+
+            const int frames = 20;
+
+            for (int frame = 0; frame < frames; frame++)
+            {
+                yield return null;
+            }
+
+            int evaluations = running.Evaluations - start;
+
+            Assert.Greater(evaluations, frames / 2,
+                $"A 10s interval over {frames} frames of 0.05s should schedule zero recomputes; saw "
+                + $"{evaluations}. Entry evaluation is what is being counted, and the Repeater above supplies "
+                + "one entry per frame. Recorded so the cost is visible: if issue 16 is resolved by changing "
+                + "when a Repeater re-enters, this is the test that will say so.");
+        }
+
+        /// <summary>
         /// Entry -> Repeater -> Selector -> [ guarded branch, a branch that runs forever ].
         ///
         /// <para>
