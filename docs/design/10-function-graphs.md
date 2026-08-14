@@ -358,9 +358,12 @@ Commits: VisualScriptingExtension `0a0fe1a`, BH3 `c1b8135`. TacticalPositionSele
   node does, which also makes reentrancy structural rather than a rule to remember.
 - **Plan invalidation is editor-time, not per-call.** Re-hashing the graph each evaluation would reintroduce
   the O(units) walk the plan exists to remove. Assets cannot change in a player build.
-- **A Function declares exactly one `ScriptGraphOutput`.** Supporting several means per-call "which output
-  fired" state, which is precisely the `static executionOrder` reentrancy bug being removed. A second output
-  unit is now a named error. The legacy path still supports multiple, and is untouched.
+- **A Function may have several `ScriptGraphOutput` units** — several `return` statements, including an early
+  return out of a loop. This was briefly restricted to one, wrongly: the reentrancy bug was never the
+  multiplicity, it was that "which output fired" lived in a `static int` shared process-wide and a field on
+  the unit shared by every agent. Moving that state onto the `Flow`, which is pooled per evaluation, makes
+  several exits safe. All exits share the graph's port definitions, so the contract stays single. The
+  restriction was removed on 2026-08-13 after the tool owner pointed out it broke a pattern already in use.
 - **`fn_` commands live in BH3's editor assembly**, per this spec's own *Files touched* list, and because
   that is where the pipeline command surface already is.
 - **Flavor classification stays generic in VisualScriptingExtension.** The module exposes `ResultType`;
