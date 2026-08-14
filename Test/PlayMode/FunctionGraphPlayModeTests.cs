@@ -357,6 +357,124 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Object.Destroy(asset);
         }
 
+        /// <summary>
+        /// Builds a Function with one exit whose <c>Result</c> is wired to <paramref name="wire"/>, evaluated
+        /// against a loop the caller sets up. Single exit on purpose: nothing is captured, so the result is
+        /// read by pulling the port after the flow ends — which makes the value evidence of whether the loop
+        /// actually stopped, rather than evidence of the capture fix.
+        /// </summary>
+        private static FunctionGraphAsset LoopFunction(
+            System.Func<ScriptGraphInput, ScriptGraphOutput, Unity.VisualScripting.FlowGraph, Unity.VisualScripting.ValueOutput> wire)
+        {
+            var asset = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = asset.graph;
+
+            var input = new ScriptGraphInput { position = new Vector2(-500.0f, 0.0f) };
+            var exit = new ScriptGraphOutput { position = new Vector2(500.0f, 0.0f) };
+            graph.units.Add(input);
+            graph.units.Add(exit);
+
+            graph.controlInputDefinitions.Add(new Unity.VisualScripting.ControlInputDefinition
+            {
+                key = FunctionGraphAsset.EnterKey, label = FunctionGraphAsset.EnterKey
+            });
+            graph.controlOutputDefinitions.Add(new Unity.VisualScripting.ControlOutputDefinition
+            {
+                key = FunctionGraphAsset.ExitKey, label = FunctionGraphAsset.ExitKey
+            });
+            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = FunctionGraphAsset.ResultKey, label = FunctionGraphAsset.ResultKey, type = typeof(object)
+            });
+            graph.PortDefinitionsChanged();
+
+            var source = wire(input, exit, graph);
+            source.ValidlyConnectTo(exit.valueInputs[FunctionGraphAsset.ResultKey]);
+
+            return asset;
+        }
+
+        private static Unity.VisualScripting.Literal Items(Unity.VisualScripting.FlowGraph graph, params object[] values)
+        {
+            var literal = new Unity.VisualScripting.Literal(
+                typeof(System.Collections.IEnumerable),
+                new System.Collections.Generic.List<object>(values));
+            graph.units.Add(literal);
+            return literal;
+        }
+
+        /// <summary>
+        /// One exit, reached from inside a loop, with no break node. The loop must stop.
+        /// <para>
+        /// Nothing is captured here — a single-exit Function pulls its result after the flow ends. So a
+        /// result of 10 can only mean the loop genuinely stopped on the first item, and 30 would mean it ran
+        /// to completion with the exit merely ending its own branch.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ReachingAnExitInsideALoop_StopsTheLoop()
+        {
+            var asset = LoopFunction((input, exit, graph) =>
+            {
+                var loop = new Unity.VisualScripting.ForEach { position = new Vector2(-140.0f, 0.0f) };
+                graph.units.Add(loop);
+                Items(graph, 10.0f, 20.0f, 30.0f).output.ValidlyConnectTo(loop.collection);
+
+                input.controlOutputs[FunctionGraphAsset.EnterKey].ValidlyConnectTo(loop.enter);
+                loop.body.ValidlyConnectTo(exit.controlInputs[FunctionGraphAsset.ExitKey]);
+
+                return loop.currentItem;
+            });
+
+            var binding = FunctionEvaluator.Bind(asset, agentA);
+            yield return null;
+
+            Assert.That(binding.TryEvaluate<object>(out var result, out var error), Is.True, error);
+            Assert.That(System.Convert.ToSingle(result), Is.EqualTo(10.0f),
+                "the loop kept iterating after the exit was reached — 30 means it ran to completion");
+
+            Object.Destroy(asset);
+        }
+
+        /// <summary>
+        /// The claim I previously got wrong: that an exit could only unwind one loop level.
+        /// <para>
+        /// Two nested loops, exiting from the inner one. The result is the <b>outer</b> loop's index, which
+        /// discriminates precisely: 0 means both loops stopped, 1 means only the inner one broke and the
+        /// outer carried on to its second iteration. Popping the loop stack until it is empty is what makes
+        /// this 0 at any nesting depth.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ReachingAnExitInsideNestedLoops_UnwindsAllOfThem()
+        {
+            var asset = LoopFunction((input, exit, graph) =>
+            {
+                var outer = new Unity.VisualScripting.ForEach { position = new Vector2(-300.0f, 0.0f) };
+                var inner = new Unity.VisualScripting.ForEach { position = new Vector2(-60.0f, 0.0f) };
+                graph.units.Add(outer);
+                graph.units.Add(inner);
+
+                Items(graph, 1.0f, 2.0f).output.ValidlyConnectTo(outer.collection);
+                Items(graph, 10.0f, 20.0f, 30.0f).output.ValidlyConnectTo(inner.collection);
+
+                input.controlOutputs[FunctionGraphAsset.EnterKey].ValidlyConnectTo(outer.enter);
+                outer.body.ValidlyConnectTo(inner.enter);
+                inner.body.ValidlyConnectTo(exit.controlInputs[FunctionGraphAsset.ExitKey]);
+
+                return outer.currentIndex;
+            });
+
+            var binding = FunctionEvaluator.Bind(asset, agentA);
+            yield return null;
+
+            Assert.That(binding.TryEvaluate<object>(out var result, out var error), Is.True, error);
+            Assert.That(System.Convert.ToInt32(result), Is.EqualTo(0),
+                "the outer loop kept running — 1 means only the inner loop was unwound");
+
+            Object.Destroy(asset);
+        }
+
         // There is deliberately no play-mode allocation test here, and the reason is worth keeping.
         //
         // One was written and it was flaky: it passed when this fixture ran alone and failed in the full
