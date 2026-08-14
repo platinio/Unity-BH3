@@ -235,6 +235,25 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
 10. **`ParameterizedGraphAsset` is deleted** (zero consumers, *verified*) and **`RunnableScriptGraph`
     is removed** once its single consumer (the TPS query item) migrates. Neither is wrapped,
     deprecated, or maintained.
+11. **Tier 2's compilation target is C# codegen, not a flat op array.** Locked 2026-08-13, closing
+    open question 4 ahead of the "revisit after use" schedule, because building multi-exit produced
+    the deciding evidence rather than the profiler:
+    - A Function's control flow is already C#'s control flow. Several exits are several `return`
+      statements; an early return out of a loop is `foreach` + `return`. Those emit directly. In a
+      flat op array the same shapes become branches and jumps, which means an emitter that has to
+      linearise control flow before it can emit anything.
+    - The hard part of Tier 2 was never emission, it is **equivalence** with the interpreter
+      (implicit `ConversionUtility` conversions, null handling, `GetVariable` fallback). C# keeps the
+      generated form readable and steppable, so a divergence found by differential testing can be
+      diffed against the graph by a human. An op array cannot be read that way, which makes the
+      expensive part of the work harder for no gain.
+    - The Tier 2 sketch in this document was already written for C# codegen; this makes that explicit
+      rather than incidental.
+
+    **The cost, stated so it is not discovered later:** this narrows Tier 2's design space before any
+    profiling has been done. If measurement later favours an op array — for instance if C# compile
+    times at build become the bottleneck — reversing this is legitimate, but it is a deliberate
+    reversal of a locked decision, not a free choice.
 
 ## Open questions
 
@@ -256,7 +275,9 @@ Blocking — decide before serializing anything:
 
 Revisit after use, not before:
 
-4. Tier 2 compilation target (flat op array vs C# codegen) — decide when the profiler demands it.
+4. ~~Tier 2 compilation target (flat op array vs C# codegen)~~ — **closed 2026-08-13, see locked
+   decision 11: C# codegen.** Decided ahead of schedule because multi-exit support supplied the
+   evidence: several returns and early exits express directly in C# and awkwardly in an op array.
 5. Attribute for C# nodes to declare watched keys.
 
 ## To prove before building (spikes)
