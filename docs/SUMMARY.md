@@ -10,6 +10,7 @@
 * [Execution Order](execution-order.md)
 * [Reactive Guards](reactive-guards.md)
 * [Sub-Behavior Trees](sub-behavior-trees.md)
+* [Functions](functions.md)
 * [Best Practices](best-practices.md)
 
 ## Reference

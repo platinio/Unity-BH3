@@ -175,6 +175,40 @@ Three tiers, so nobody relitigates which fight we are in:
   - **One piece IS pulled into v1:** the registry lookup and the graph hash — a check that today
     always misses interpretation-ward. Cheap insurance so Tier 2 lands behind an existing interface
     instead of rewriting the evaluator.
+  **What compiles well, and what merely compiles.** Not every Function benefits equally, and the difference
+  is decided by how its data arrives — this is the strongest argument for the "purer alternative" this spec
+  parked, and a better one than purity-as-aesthetics:
+
+  - **Declared inputs become method parameters.** A Function whose data all arrives through its declared
+    inputs compiles to a clean static method — `static bool ShouldRetreat(float threshold, float hp)`.
+    Nothing ambient, nothing looked up.
+  - **Ambient `GetVariable` stays a lookup.** `GetVariable(Object, "hp")` has to emit as
+    `Variables.Object(agent).Get("hp")`: a string-keyed lookup on a component, once per read.
+  - **It cannot be hoisted into a parameter, and that is not an oversight.** The interpreter reads the
+    variable at the moment the unit runs; a hoisted parameter would read once at call time. Any graph that
+    writes a key and reads it back, or reads the same key either side of a write, would then disagree
+    between the compiled and interpreted forms — a build-only divergence, exactly what the mandatory
+    differential testing exists to catch. The emitter must keep ambient reads where they are.
+
+  So ambient variables do **not** block Tier 2; they cap what it buys. The graph-walking, per-port
+  dictionary lookups and boxing all still go, which is most of the cost. Each ambient read simply stays a
+  lookup instead of becoming a parameter.
+
+  **Authoring rule that follows:** a Function fed through declared inputs compiles materially better than
+  one that reads its data off the agent. Identical behaviour today, different generated code later.
+
+  **This is already measurable.** `FunctionGraphAsset.DeriveReadKeys()`, added for watched-key verification,
+  counts exactly the ambient reads — so Tier 2 readiness is computable now and `fn_list` could surface it
+  without new machinery.
+
+  **On the wrapper being deleted:** `ScriptGraphVariableExtension`'s dictionary overload
+  (`GetScriptGraphOutput<T>(asset, Dictionary<string, object>, gameObject)`) was **the declared-inputs
+  path**, not the ambient one, and it is superseded rather than dropped — `TrySetArgument` does the same
+  thing with indices resolved at bind time instead of names matched per call. Nothing is lost by removing
+  it except passing a whole dictionary in one call, which allocated one per evaluation. Worth stating
+  because the overload looks like a capability going away, and it is the *good* half of the old API that
+  the new seam kept.
+
 - **The escape hatch stays cheapest of all:** a C# value node's `ValueOutput` wired directly to a
   guard is a delegate call — no Flow at all. The workflow remains spec 09's: prototype as a Function,
   let the profiler name the hot few, promote those to C# nodes.
@@ -235,6 +269,25 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
 10. **`ParameterizedGraphAsset` is deleted** (zero consumers, *verified*) and **`RunnableScriptGraph`
     is removed** once its single consumer (the TPS query item) migrates. Neither is wrapped,
     deprecated, or maintained.
+11. **Tier 2's compilation target is C# codegen, not a flat op array.** Locked 2026-08-13, closing
+    open question 4 ahead of the "revisit after use" schedule, because building multi-exit produced
+    the deciding evidence rather than the profiler:
+    - A Function's control flow is already C#'s control flow. Several exits are several `return`
+      statements; an early return out of a loop is `foreach` + `return`. Those emit directly. In a
+      flat op array the same shapes become branches and jumps, which means an emitter that has to
+      linearise control flow before it can emit anything.
+    - The hard part of Tier 2 was never emission, it is **equivalence** with the interpreter
+      (implicit `ConversionUtility` conversions, null handling, `GetVariable` fallback). C# keeps the
+      generated form readable and steppable, so a divergence found by differential testing can be
+      diffed against the graph by a human. An op array cannot be read that way, which makes the
+      expensive part of the work harder for no gain.
+    - The Tier 2 sketch in this document was already written for C# codegen; this makes that explicit
+      rather than incidental.
+
+    **The cost, stated so it is not discovered later:** this narrows Tier 2's design space before any
+    profiling has been done. If measurement later favours an op array — for instance if C# compile
+    times at build become the bottleneck — reversing this is legitimate, but it is a deliberate
+    reversal of a locked decision, not a free choice.
 
 ## Open questions
 
@@ -256,7 +309,9 @@ Blocking — decide before serializing anything:
 
 Revisit after use, not before:
 
-4. Tier 2 compilation target (flat op array vs C# codegen) — decide when the profiler demands it.
+4. ~~Tier 2 compilation target (flat op array vs C# codegen)~~ — **closed 2026-08-13, see locked
+   decision 11: C# codegen.** Decided ahead of schedule because multi-exit support supplied the
+   evidence: several returns and early exits express directly in C# and awkwardly in an op array.
 5. Attribute for C# nodes to declare watched keys.
 
 ## To prove before building (spikes)
@@ -319,3 +374,246 @@ Revisit after use, not before:
 5. A TPS query Function with a misdeclared output is refused at verify with a named error.
 6. Every existing tree, sample, and TPS query item in the repo loads and behaves identically before
    migration begins.
+
+***
+
+## Implementation status — foundation landed 2026-08-12
+
+**Scope of this pass, agreed with the tool owner: foundation, then review.** The asset, the evaluation
+seam, BH3's consumption of it, the `fn_` commands and docs. Deliberately **not** in this pass: deleting
+`ParameterizedGraphAsset` or `RunnableScriptGraph`, migrating the TPS query item, or repository-removal
+steps 2 and 3. Nothing is deleted yet, so acceptance criterion 6 holds by construction — the two seams
+coexist and the legacy path is untouched.
+
+Branch `feature/function-graphs` in the superproject and all three submodules.
+Commits: VisualScriptingExtension `0a0fe1a`, BH3 `c1b8135`. TacticalPositionSelection unchanged so far.
+
+### Spikes — all four resolved
+
+1. **Standalone evaluates identically.** Confirmed. A Function created on disk read each of two agents'
+   own variables correctly; asset ownership does not affect variable resolution.
+2. **Per-agent cached `GraphReference` is safe.** Confirmed over 400 interleaved evaluations across two
+   agents on one asset: zero cross-contamination, references stayed valid, and a variable written *after*
+   caching was still observed — a live binding, not a snapshot. **Open question 2 is locked on the
+   recommended option.** Reflection happens once at bind time; the call path has none.
+3. **The zero-allocation claim survives — and is stronger than the spec expected.** The spec anticipated
+   weakening "zero" to "zero from our layer" if `Flow`'s dictionaries allocated per run. They do not.
+   Pooled `Flow`, graph interpretation, and value reads (boxed *and* generic) are all allocation-free.
+   **The only allocating operation in an evaluation is looking a port up by string key.** So the contract
+   keeps the word "zero", now conditional on something testable: the binding plan must hold direct port
+   references, and no call-path code may look a port up by name. This promotes the binding plan from an
+   optimization to the mechanism the contract rests on.
+4. **Contract-copy necessity.** Confirmed from source without an Editor run — `BehaviorTreeGraphParameter`
+   already documents the exact import-order failure. Symmetry holds; Functions get a caller-side copy.
+
+### Decisions taken while implementing
+
+- **The per-agent cache is owned by the caller, not a global static.** A global cache keyed by agent would
+  hold destroyed GameObjects alive and need a reaper. A `FunctionBinding` held by the node dies when the
+  node does, which also makes reentrancy structural rather than a rule to remember.
+- **Plan invalidation is editor-time, not per-call.** Re-hashing the graph each evaluation would reintroduce
+  the O(units) walk the plan exists to remove. Assets cannot change in a player build.
+- **Reaching an exit unwinds every enclosing loop**, so an exit is a real `return` rather than a dead end in
+  one branch, and a Break node is no longer needed to return early from a loop. Visual Scripting tracks
+  loops as a stack and exposes both `BreakLoop()` and `currentLoop`, so draining the stack unwinds any
+  nesting depth in two lines. Output values are captured before the unwind, while the loop context is still
+  intact. Existing graphs that break first are unaffected. This was initially dismissed on the assumption
+  that one call only unwound one level — an assumption made without reading the mechanism.
+- **A Function may have several `ScriptGraphOutput` units** — several `return` statements, including an early
+  return out of a loop. This was briefly restricted to one, wrongly: the reentrancy bug was never the
+  multiplicity, it was that "which output fired" lived in a `static int` shared process-wide and a field on
+  the unit shared by every agent. Moving that state onto the `Flow`, which is pooled per evaluation, makes
+  several exits safe. All exits share the graph's port definitions, so the contract stays single. The
+  restriction was removed on 2026-08-13 after the tool owner pointed out it broke a pattern already in use.
+- **`fn_` commands live in BH3's editor assembly**, per this spec's own *Files touched* list, and because
+  that is where the pipeline command surface already is.
+- **Flavor classification stays generic in VisualScriptingExtension.** The module exposes `ResultType`;
+  classifying a query flavor by naming a TPS type would reverse the dependency arrow this spec locks.
+
+### Corrections to this spec
+
+- **The *Files touched* list omits a caller.** BH3's own `ScriptGraphVariable` base class calls
+  `ScriptGraphVariableExtension` directly — a second real consumer of the execution seam, independent of
+  `RunnableScriptGraph`. Re-pointing `VisualScriptGraphVariable` alone would have left half the callers on
+  the reflection path. It has been re-pointed too.
+- Both consumer-census claims **hold**: `ParameterizedGraphAsset` has zero real consumers,
+  `RunnableScriptGraph` exactly one. The `CreateRunnableScriptGraphVariable` hits are the predicted name
+  coincidence.
+- The citation `BehaviorTreeAuthoring.cs:289` has drifted to **299**. Re-verify line numbers rather than
+  trusting them.
+
+### Two defects found in the old seam, beyond those the spec lists
+
+- `ScriptGraphOutput.executionIndex` is `[Serialize]`, so **per-call execution bookkeeping is written into
+  the asset** — transient state persisted to disk, dirtying assets simply by running.
+- The `Run` paths in `ScriptGraphVariableExtension` never `Dispose()` their `Flow`, while the
+  `GetScriptGraphOutput` paths do, so pooled flows are not returned on that path.
+
+Both die with the old seam; neither was fixed in place, since that code is scheduled for removal.
+
+### Two things that read as done and are not
+
+Both surfaced in PR review, and both are declarations the docs previously described as if they were
+mechanisms:
+
+- **Purity is never enforced.** A Function declared pure can contain a write unit and will execute it.
+  `bt_verify` warns, naming the unit that writes. That warning is the entire mechanism — there is no runtime
+  restriction and none is planned, matching spec 09's choice for guards.
+- **Watched keys are declared and verified, but nothing inherits them.** This spec's promise is that a
+  reactive guard whose condition is a Function picks up its keys so the guard wakes when they change. That
+  wiring does not exist. Today the list is checked against what the graph actually reads, in both
+  directions, and is otherwise unused at runtime. **It belongs to step 2**, alongside the caller-side
+  contract copies, since both are about a caller learning something from the Function it references.
+
+The derivation that backs both checks (`DeriveReadKeys`, `DeriveWrites`) lives on `FunctionGraphAsset`,
+beside the declarations it checks, rather than in whichever module runs the lint.
+
+### Test state
+
+385 → 400 tests. EditMode is 393 total, 392 passing, with the **single pre-existing** failure
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`) unchanged. No new
+failures. The 15 new tests cover spec tests 2, 4, 5 and 6 plus the contract and hash invariants.
+
+**Note for anyone writing the remaining perf tests:** `GC.GetAllocatedBytesForCurrentThread()` returns 0
+always on this Mono runtime and `GC.GetTotalMemory` is too coarse — both produce a test that passes
+vacuously forever. Only `Is.Not.AllocatingGCMemory()` works, and it needs a known-allocating control beside
+it. This cost two wrong measurements before it was caught.
+
+### What shipped in this pass
+
+| Area | State |
+|---|---|
+| `FunctionGraphAsset`, contract types, binding plan, evaluation seam | done, in VisualScriptingExtension |
+| VisualScriptingExtension test assembly (its first) | done, 15 tests |
+| BH3 `ScriptGraphVariable` + `VisualScriptGraphVariable` on the seam | done, legacy path untouched |
+| `fn_create` / `fn_list` / `fn_describe` / `fn_set_metadata` / `fn_extract` | done |
+| Verify lints: contract, purity, watched keys, ambiguity, orphans (report-only) | done, 11 tests |
+| Demo scene | done, verified on Play with a game-view capture |
+| Docs in both modules, registered in their indexes | done |
+
+**409 EditMode tests, 408 passing.** The single failure is pre-existing and unrelated
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`). PlayMode unchanged at
+7/4/3, also pre-existing. Baseline before the work was 378/377/1.
+
+***
+
+## Context for whoever picks this up next
+
+**Where things live.** The asset, contract types, binding plan and evaluator are in
+`Modules/VisualScriptingExtension/Runtime/Function/`. Everything BH3-facing — the `fn_` commands, the verify
+lints, the import postprocessor — is in `BH3/Editor/Authoring/`, in namespace
+`ArcaneOnyx.BehaviorTree.Authoring`. The demo is in the **superproject** at `BH3Demos/FunctionGraphs/`.
+
+**The one rule that is not negotiable.** Nothing in the evaluation call path may look a port up by string
+key. That is not a style preference: measurement showed pooled `Flow`, graph interpretation and value reads
+are all allocation-free, and keyed port lookup is the *only* allocating operation. `FunctionBindingPlan`
+exists to resolve ports once; indices are the currency afterwards. Two tests pin this, each with a
+known-allocating control case beside the real assertion.
+
+**Instruments that lie here.** `GC.GetAllocatedBytesForCurrentThread()` returns 0 always on this Mono
+runtime, and `GC.GetTotalMemory` is too coarse to see one evaluation. Both produce a test that passes
+vacuously forever. Use `UnityEngine.TestTools.Constraints.Is.Not.AllocatingGCMemory()` and always keep a
+control that must fail.
+
+**Traps that cost time in this pass, in order of how much:**
+
+- `BehaviorTreeVerification.Reload` returns `Object.Instantiate(onDisk)` — a **clone with no asset path**.
+  Any lint needing the path must be handed it, not derive it from the asset. A lint that derived it
+  silently reported nothing.
+- Inside `ArcaneOnyx.BehaviorTree.*`, `ValueInputDefinition` / `ValueOutputDefinition` resolve to BH3's own
+  types, not Visual Scripting's. Qualify them. (Authoring skill, BREAK-1.)
+- `FunctionGraphAuthoring.cs` deliberately does **not** `using Unity.VisualScripting` for that reason, so
+  extension methods from that namespace must be called as plain statics.
+- `save_all` on a freshly launched Editor sitting on an *Untitled* scene raises a modal `Save Scene` dialog
+  and blocks the whole pipeline. The precaution and the hazard are the same call.
+- Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
+  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit it.
+
+***
+
+## Remaining work, in order
+
+Each step is independently pickup-able. They are ordered because later ones depend on earlier ones, and the
+repository-removal steps are ordered for a safety reason stated in *Locked decisions* 6: **there must never
+be two things deleting graphs at once.**
+
+### Step 1 — `bt_set_value` learns to connect a Function
+
+Small, self-contained, no dependencies. `bt_set_value` can currently give a port a literal; it should also
+accept a Function asset path and wire it to a value port. Follow the existing resolve-by-asset-path pattern
+in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
+
+### Step 2 — What a caller learns from the Function it references
+
+Two separable pieces, grouped because both are a caller reading something off the Function and remembering
+it. Either can be picked up alone.
+
+**2a — Watched-key inheritance.** A reactive guard whose condition is a Function must pick up that
+Function's declared watched keys, so the guard wakes when they change. **This is the piece that makes the
+watched-keys field do anything at all** — today it is declared, verified against the graph in both
+directions, and consumed by nothing. Hand-added keys on the guard stay legal and are compared against the
+inherited set, per the original design. `FunctionGraphAsset.WatchedKeys` is the source;
+`DeriveReadKeys()` is what keeps it honest.
+
+**2b — Contract copies and drift.** Described below.
+
+
+
+`FunctionParameter` and `FunctionParameter.DescribeDrift` exist and are tested, but **no BH3 node stores a
+contract copy yet**, so the drift lint currently has nothing to check on a node. Give
+`VisualScriptGraphVariable` a serialized `List<FunctionParameter>`, declare its ports from that copy (never
+from the live asset — see spike 4), and add `RefreshParameters` / `DescribeContractDrift` mirroring
+`RunBehaviorTreeGraphNode`. Then hang the drift lint off the existing loop in `BehaviorTreeVerification`.
+This is what makes acceptance criterion 2 fully true.
+
+### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
+
+Its single serialized `RunnableScriptGraph` field moves to a Function reference plus arguments. Recommended
+mechanics, per this spec: an editor migration utility that rewrites existing query items in place, **plus a
+verify report naming any unmigrated item**, so hand-authored items in downstream projects are caught rather
+than silently broken. `TacticalPositionSelectionAuthoring.SetGeneratorScriptGraph` is the touch point; it
+reaches the field through `SerializedObject` because both are private. Note the port-key constants there
+(`Result`, `_Evaluator`) — a query Function must match them, and the contract lint should say so by name.
+TacticalPositionSelection is already branched (`feature/function-graphs`) and currently unchanged.
+
+### Step 4 — Delete `ParameterizedGraphAsset` and `RunnableScriptGraph`
+
+Only after step 3. `ParameterizedGraphAsset` has **zero** consumers (verified twice) — delete it, its
+drawer and its helper outright. `RunnableScriptGraph` has exactly one consumer, which step 3 removes.
+`ScriptGraphVariableExtension` goes with them. Neither is wrapped or deprecated: locked decision 10.
+
+Two defects die with that code and should not be fixed in place: `ScriptGraphOutput.executionIndex` is
+`[Serialize]`, so per-call bookkeeping is persisted into the asset, and the `Run` paths never `Dispose()`
+their `Flow`.
+
+### Step 5 — Move deletion to save time (repository removal, step 2 of 3)
+
+Orphan detection already ships **report-only** and is tested. Now move actual deletion from the per-OnGUI
+canvas sweep to a save-time structural cleanup: enumerate the tree's own script-graph sub-assets, diff
+against what its elements reference, destroy orphans. At this point the canvas sweep becomes report-only.
+**Never both deleting at once.**
+
+### Step 6 — Remove the repository (repository removal, step 3 of 3)
+
+Delete `ScriptGraphAssetsRepository`, its `.asset`, `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, and
+the canvas sweep. Acceptance criterion 3 becomes checkable: editing unrelated trees produces no shared-file
+merge conflicts.
+
+### Step 7 — Open question 3
+
+Do new embedded one-offs become embedded `FunctionGraphAsset`s, or stay raw `ScriptGraphAsset`s?
+Recommended: new ones are Functions; existing raw ones keep working with a verify nudge
+("promote available"). `fn_extract` already provides the promotion path.
+
+### Not scheduled
+
+Tier 2 compilation. The v1 registry seam (`FunctionEvaluator.TryGetCompiled`) and the graph hash ship and
+always miss, so the emitter can land behind an existing interface. Do not start it before the profiler asks.
+The `NewAssembly` asmdef rename in VisualScriptingExtension is also unscheduled — it changes every by-name
+reference, so it wants its own change.
+
+### Unrelated finding worth scheduling
+
+VisualScriptingExtension's editor assembly definition is named **`"NewAssembly"`**, not
+`ArcaneOnyx.VisualScriptingExtension.Editor`. Renaming it changes every by-name reference to it, so it was
+left alone rather than folded into this feature.

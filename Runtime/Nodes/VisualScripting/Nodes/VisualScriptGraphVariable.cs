@@ -15,6 +15,25 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput Output { get; private set; }
 
+        /// <summary>The embedded graph this node reads, or null when it reads a Function.</summary>
+        [DoNotSerialize]
+        public ScriptGraphAsset EmbeddedScriptGraph => ScriptGraphVariable?.ScriptGraphAsset;
+
+        /// <summary>The Function this node reads, or null when it reads an embedded graph.</summary>
+        [DoNotSerialize]
+        public VisualScriptingExtension.FunctionGraphAsset Function => ScriptGraphVariable?.Function;
+
+        /// <summary>
+        /// True when both a Function and an embedded graph are assigned. The Function wins at runtime, so
+        /// this is not a crash — it is the worse kind of problem, where the graph an author is editing is not
+        /// the one being evaluated. Verification reports it.
+        /// </summary>
+        [DoNotSerialize]
+        public bool HasAmbiguousGraphSource =>
+            ScriptGraphVariable != null &&
+            ScriptGraphVariable.Function != null &&
+            ScriptGraphVariable.ScriptGraphAsset != null;
+
         public override bool DrawInSubTree => false;
 
         /// <summary>
@@ -25,6 +44,15 @@ namespace ArcaneOnyx.BehaviorTree
         public void SetScriptGraph(ScriptGraphAsset asset)
         {
             ScriptGraphVariable?.SetScriptGraphAsset(asset);
+        }
+
+        /// <summary>
+        /// Points this node at a Function — a named, shared, contracted graph — instead of an anonymous
+        /// sub-asset. The counterpart of <see cref="SetScriptGraph"/> for the new seam.
+        /// </summary>
+        public void SetFunction(VisualScriptingExtension.FunctionGraphAsset asset)
+        {
+            ScriptGraphVariable?.SetFunction(asset);
         }
         
         protected override void Definition()
