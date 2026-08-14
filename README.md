@@ -32,6 +32,40 @@ Swap the left-hand node for a Visual Scripting graph, a blackboard read, or a li
 node neither knows nor cares. That single seam is what most of the rest of these docs is about — see
 [Ports and Wiring](docs/ports-and-wiring.md).
 
+## The other half of that idea: scope
+
+A port carries a value as far as the branch boundary. **Scope is what holds it on the other side** — the
+nodes inside a branch don't know the caller exists, so they read by name.
+
+```
+[ Float Literal 3 ]──▶ idleTime port on [ Run Behavior Tree ]      the port
+                                  │
+                                  ▼   written into the branch's own scope on enter
+                    [ Get Variable "idleTime" ]  (Graph kind)      the branch reads
+```
+
+Every running tree gets its own scope, and a **Run Behavior Tree** node opens a child scope around the
+instance it runs. A sub-tree asset is instantiated **per call site**, so the same branch used twice holds
+two scopes that cannot collide.
+
+| Rule | What it means |
+|---|---|
+| **Reads walk outward** | A `Get Variable` set to **Graph** looks in the branch's own scope first, then its caller's, out to the root — so a branch still sees anything the agent supplied. |
+| **Writes stay local** | A `Set Variable` set to **Graph** writes only to the branch that ran it. A branch cannot reach its caller's variables, and cannot leak scratch state sideways into a sibling. |
+| **Agent state is Object** | Anything belonging to the whole agent — `hasTarget`, `lastKnownPosition`, an attack cooldown — is **Object** kind, on the agent's `Variables` component. Shared on purpose, and visible in the inspector. |
+
+Those three together are why **you never have to move data between branches by agreeing on a variable
+name**. Values *into* a branch are parameters, passed at the call site; facts about the agent are Object
+scope. Keeping the two apart is what lets the same Patrol run on a Zombie, a Soldier and a Draugr — see
+[Sub-Behavior Trees](docs/sub-behavior-trees.md).
+
+> **On older builds, Graph reads did not do this.** A `Get Variable` set to **Graph** read the *root* tree's
+> variables regardless of which sub-tree it sat in — it never consulted the branch's scope. Two symptoms
+> follow, and both look like something else: a branch throws `Variable not found` reading a parameter its
+> caller definitely passed, and a branch can write a Graph value it is then unable to read back, because
+> writes already went to the branch's own scope. If you see either, you are on a build from before this was
+> fixed.
+
 ---
 
 ## Quick setup

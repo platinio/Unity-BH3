@@ -44,10 +44,29 @@ namespace ArcaneOnyx.BehaviorTree
             return default;
         }
        
+        /// <summary>
+        /// Reads through the scope chain: a node inside a branch sees that branch's values first and its
+        /// caller's underneath, out to the agent.
+        /// <para>
+        /// Going straight to <c>machine.GraphInstance.declarations</c> reads the <em>root</em> tree
+        /// regardless of which sub-tree the node lives in, which breaks the half of parameter passing that
+        /// makes it worth having: a caller's argument is written into the branch's own scope, so a branch
+        /// reading its own parameter found nothing there and threw. It also made the node asymmetric with
+        /// itself, since <c>GameplayNode.SaveVariable</c> writes Graph scope through
+        /// <c>VariableScope</c> — a branch could write a value it could not then read back.
+        /// </para>
+        /// <para>
+        /// The fallback keeps a node with no scope — a graph loaded without one — behaving exactly as it did
+        /// before. <c>Get</c> walks the chain rather than flattening it, because a single read has no reason
+        /// to build a merged collection.
+        /// </para>
+        /// </summary>
         private object GetValueFromGraph(string key, BehaviorTreeMachine machine)
         {
-            var declarations = machine.GraphInstance.declarations;
-            return declarations.Get(key);
+            var scope = VariableScope;
+            if (scope != null) return scope.Get(key);
+
+            return machine.GraphInstance.declarations.Get(key);
         }
         
         private object GetValueFromObject(string key, IGraphMachine machine)

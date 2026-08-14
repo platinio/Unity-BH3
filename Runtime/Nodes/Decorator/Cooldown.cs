@@ -47,6 +47,15 @@ namespace ArcaneOnyx.BehaviorTree
             if (IsCoolingDown) return ExecutionStatus.Failure;
 
             var task = GetChildren()[0];
+
+            // The child's only other entry point is OnEnter, which returns early while recharging -- and the
+            // container above exits and re-enters this decorator every frame, so every entry after the first
+            // one lands mid-recharge and is refused. By the time the cooldown expires nothing is left that
+            // would enter the child, and OnUpdateInternal runs OnUpdate without entering. The child would
+            // then execute carrying whatever state the previous pass left: a Wait would never reset its
+            // timer, an animation node would never re-trigger.
+            if (!task.IsRunning) task.OnNodeEnter();
+
             var result = task.OnUpdateInternal();
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
