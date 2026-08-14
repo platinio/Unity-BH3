@@ -411,6 +411,23 @@ Commits: VisualScriptingExtension `0a0fe1a`, BH3 `c1b8135`. TacticalPositionSele
 
 Both die with the old seam; neither was fixed in place, since that code is scheduled for removal.
 
+### Two things that read as done and are not
+
+Both surfaced in PR review, and both are declarations the docs previously described as if they were
+mechanisms:
+
+- **Purity is never enforced.** A Function declared pure can contain a write unit and will execute it.
+  `bt_verify` warns, naming the unit that writes. That warning is the entire mechanism — there is no runtime
+  restriction and none is planned, matching spec 09's choice for guards.
+- **Watched keys are declared and verified, but nothing inherits them.** This spec's promise is that a
+  reactive guard whose condition is a Function picks up its keys so the guard wakes when they change. That
+  wiring does not exist. Today the list is checked against what the graph actually reads, in both
+  directions, and is otherwise unused at runtime. **It belongs to step 2**, alongside the caller-side
+  contract copies, since both are about a caller learning something from the Function it references.
+
+The derivation that backs both checks (`DeriveReadKeys`, `DeriveWrites`) lives on `FunctionGraphAsset`,
+beside the declarations it checks, rather than in whichever module runs the lint.
+
 ### Test state
 
 385 → 400 tests. EditMode is 393 total, 392 passing, with the **single pre-existing** failure

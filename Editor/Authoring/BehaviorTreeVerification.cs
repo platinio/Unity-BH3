@@ -385,27 +385,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         {
             if (function.graph == null) yield break;
 
-            var readKeys = new HashSet<string>();
-            var writeUnits = new List<string>();
-
-            foreach (var unit in function.graph.units)
-            {
-                switch (unit)
-                {
-                    case Unity.VisualScripting.GetVariable get
-                        when get.kind == Unity.VisualScripting.VariableKind.Object:
-                    {
-                        var key = LiteralKeyOf(get);
-                        if (key != null) readKeys.Add(key);
-                        break;
-                    }
-
-                    case Unity.VisualScripting.SetVariable set
-                        when set.kind == Unity.VisualScripting.VariableKind.Object:
-                        writeUnits.Add(LiteralKeyOf(set) is { } written ? $"SetVariable('{written}')" : "SetVariable");
-                        break;
-                }
-            }
+            // The derivation lives on the asset, beside the declarations it checks, rather than here. Those
+            // are one idea — what the author claims and what the graph does — and splitting them across
+            // modules is how they drift.
+            var readKeys = function.DeriveReadKeys();
+            var writeUnits = function.DeriveWrites();
 
             // Warn rather than error, matching the choice spec 09 already made for guard purity: a Function
             // that writes is a design smell, not an impossibility, and the author may have meant it.
