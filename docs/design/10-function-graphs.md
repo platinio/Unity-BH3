@@ -459,11 +459,9 @@ mechanisms:
 - **Purity is never enforced.** A Function declared pure can contain a write unit and will execute it.
   `bt_verify` warns, naming the unit that writes. That warning is the entire mechanism — there is no runtime
   restriction and none is planned, matching spec 09's choice for guards.
-- **Watched keys are declared and verified, but nothing inherits them.** This spec's promise is that a
-  reactive guard whose condition is a Function picks up its keys so the guard wakes when they change. That
-  wiring does not exist. Today the list is checked against what the graph actually reads, in both
-  directions, and is otherwise unused at runtime. **It belongs to step 2**, alongside the caller-side
-  contract copies, since both are about a caller learning something from the Function it references.
+- ~~**Watched keys are declared and verified, but nothing inherits them.**~~ — **closed 2026-08-14, see
+  *Step 2a landed* below.** A reactive guard now picks up the keys declared by whatever Function its
+  condition reaches. Purity remains as described above: declared, warned about, never enforced.
 
 The derivation that backs both checks (`DeriveReadKeys`, `DeriveWrites`) lives on `FunctionGraphAsset`,
 beside the declarations it checks, rather than in whichever module runs the lint.
@@ -548,14 +546,12 @@ in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
 Two separable pieces, grouped because both are a caller reading something off the Function and remembering
 it. Either can be picked up alone.
 
-**2a — Watched-key inheritance.** A reactive guard whose condition is a Function must pick up that
-Function's declared watched keys, so the guard wakes when they change. **This is the piece that makes the
-watched-keys field do anything at all** — today it is declared, verified against the graph in both
-directions, and consumed by nothing. Hand-added keys on the guard stay legal and are compared against the
-inherited set, per the original design. `FunctionGraphAsset.WatchedKeys` is the source;
-`DeriveReadKeys()` is what keeps it honest.
+**2a — Watched-key inheritance.** ✅ **Done, 2026-08-14** — see *Step 2a landed* below.
 
-**2b — Contract copies and drift.** Described below.
+**2b — Contract copies and drift.** Described below. Still open, and 2a's demo made its absence concrete:
+`IsHurt` declares a required `threshold` input, and because a Script Graph Variable node has no ports, the
+only way to supply it is to declare an agent variable that happens to share the name. Miss it and the
+Function throws `KeyNotFoundException` on its first evaluation, naming the key but not the node.
 
 
 
@@ -617,3 +613,100 @@ reference, so it wants its own change.
 VisualScriptingExtension's editor assembly definition is named **`"NewAssembly"`**, not
 `ArcaneOnyx.VisualScriptingExtension.Editor`. Renaming it changes every by-name reference to it, so it was
 left alone rather than folded into this feature.
+
+***
+
+## Step 2a landed — watched-key inheritance, 2026-08-14
+
+Branch `feature/watched-key-inheritance` in BH3, VisualScriptingExtension and the superproject.
+TacticalPositionSelection is untouched. VisualScriptingExtension carries **documentation only** — the
+`watchedKeys` tooltip and the `WatchedKeys` docstring both asserted that nothing consumed the list, which
+this step makes false in the two places a designer and a maintainer are most likely to read it. No code
+there changed, and the dependency arrow is unchanged: BH3 consumes VSE, never the reverse.
+
+**What a guard now does.** On its first ask it walks backwards through its condition, collects the watched
+keys declared by everything it reaches, and hands them to its On Key Changed triggers. Those keys are then
+scanned alongside the hand-authored ones on every evaluation. Nothing is copied and nothing needs
+refreshing: edit the Function and the next run is correct.
+
+### Decisions taken while implementing
+
+- **The guard's key list was never the guard's.** A guard reads nothing — `Evaluate()` pulls a bool off a
+  port — so a trigger's keys are a *claim* about what the condition reads. That reframing decided everything
+  else: the correct key set is not a thing an author chooses, it is a thing the condition knows.
+- **Declared, not derived.** The walk collects what a node *declares*, never what a walk of its innards
+  finds. An embedded graph therefore contributes nothing, which is deliberate — deriving there would make
+  "declares" and "happens to read" the same word, and a runtime-computed key is invisible to any walk
+  regardless. `DeriveReadKeys()` stays what it was: the check that keeps a declaration honest.
+- **A capability interface, not a type test.** `IDeclaresWatchedKeys` (BH3 runtime) is implemented by
+  `VisualScriptGraphVariable`, returning its Function's keys live. This follows the rule
+  `ConditionalExecution` already states — everything that walks guards filters on capability, never on type
+  — and the second implementer is already specified: open question 5's C# node attribute lands here without
+  touching the walk. It is documented in `reactive-guards.md` as available today.
+- **Resolved once per node instance, not per evaluation.** The walk allocates and runs on the path the whole
+  trigger economy exists to keep cheap. Same editor-time-invalidation reasoning as `FunctionBindingPlan`: a
+  graph cannot change in a player build. **Consequence to know:** rewiring a condition during Play Mode
+  needs a re-enter to be picked up. `AddTrigger` resets the flag so authoring order does not matter.
+- **Seeded at authoring time, inherited at runtime, reported where neither applies.** This was the tool
+  owner's call between three options. `bt_guard_on_function` / `BehaviorTreeAuthoring.GuardOnFunction` seeds
+  a real trigger from the Function's keys — visible and editable in the asset, exactly as `GuardOnVariable`
+  already seeds from a variable name. Inheritance then keeps that trigger correct as the Function evolves.
+- **Inheritance never creates a trigger, and this is the load-bearing constraint.** Creating one would make
+  an existing guard evaluate *less* often than it does today, and less-often is the direction that turns a
+  working guard into a silently stale one — a condition can depend on a raycast or a timer that no key can
+  express, and nothing at runtime can detect that it does. So a guard with no trigger keeps its every-tick
+  behaviour and `bt_verify` names it. Acceptance criterion 6 holds by construction: no existing asset
+  changes behaviour.
+- **A guard condition must be a `bool` Function.** `GuardOnFunction` refuses anything else by name at
+  authoring time rather than letting the cast fail on the first tick.
+
+### Verification changes, including one loosening
+
+- Lint 4 (*no triggers, re-checks every tick*) now names the inherited keys when the condition declares any,
+  and points at `bt_guard_on_function`. This is the safety net for the one path seeding cannot cover: a
+  Function assigned through the inspector runs no authoring code.
+- Lint 3 (*watches no keys*) was **loosened** — it no longer fires when the condition supplies keys, because
+  authoring an empty key trigger and letting the Function fill it is now a legitimate shape. A test pins
+  that it still fires where it always did, so the loosening did not silently delete the lint.
+
+### A defect found and fixed on the way
+
+`BehaviorTreeGraphTopology.Collect` — the why-panel's "which variable did this guard read" walk — was
+**blind to every Function**. `FunctionGraphAsset` derives from `Macro<FlowGraph>` directly (because
+`ScriptGraphAsset` is sealed), so it can never arrive through `node.scriptGraphAssets`, and the panel
+silently fell back to weaker wording for any guard reading one. Fixed by consulting the same capability
+interface. Widening `scriptGraphAssets` would have been the wrong fix twice over: it is also what the
+repository sweep enumerates, and a standalone Function must never become a deletion candidate.
+
+### Known gaps, stated rather than discovered
+
+- **No lint for a hand-typed key the condition does not read.** The original design says hand-added keys are
+  "compared against the inherited set", but that comparison is only meaningful against a *complete*
+  declaration and there is no such thing: an embedded graph declares nothing, so every guard built by
+  `GuardOnVariable` would be reported. Implementing it as specified would produce false positives on most
+  existing content. The valuable half — *the condition declares keys nobody is watching* — cannot occur,
+  since inheritance covers it automatically.
+- **Fan-in through the condition is defensive, not exercised.** The walk is DAG-safe with a visited set,
+  matching the two existing guard walks. But BH3 ships no two-input boolean combinator — AND is expressed by
+  several guards naming one owner — so no stock content can currently build a condition with two Functions
+  in it. Depth is exercised (a `Not` between guard and Function is half of what the authoring helpers
+  produce); breadth is not.
+- **Play-Mode rewiring needs a re-enter**, per the caching decision above.
+
+### Tests
+
+437 EditMode (was 416), 436 passing — the one failure is the same pre-existing
+`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`. PlayMode 49 (was 47), 42
+passing, the same 7 pre-existing failures. 21 new EditMode tests plus 2 new PlayMode tests.
+
+The two PlayMode tests are deliberately a pair, because either alone proves nothing: one asserts the guard
+wakes on the key its Function declares *with a trigger naming no keys of its own*, the other that it stays
+asleep while an undeclared fact is written every frame. Passing both is only possible if inheritance is
+doing specific work rather than making the guard permanently due.
+
+### Demo
+
+`Assets/ArcaneOnyx/BH3Demos/WatchedKeyInheritance/` (superproject), reusing the existing `IsHurt.asset`.
+Three agents, one shared Function, one difference each. Measured on a ~2500-frame run: the inheriting guard
+ran its graph 157 times (6% of frames), the one receiving only undeclared writes ran it **once**, and the
+control with no trigger ran it every frame. No key is typed anywhere in the demo.

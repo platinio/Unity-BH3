@@ -137,13 +137,20 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     continue;
                 }
 
+                // What this guard's condition declares it depends on. Resolved once per guard: the same walk
+                // the guard itself runs, so the report and the runtime agree by construction rather than by
+                // two implementations of the same rule staying in step.
+                var inherited = InheritedWatchedKeys.Resolve(guard);
+
                 // 3. A reactive guard that can never become due watches nothing and re-checks nothing.
                 foreach (var trigger in guard.Triggers)
                 {
                     // Usable keys, not merely present ones: a blank entry is skipped at evaluation, so a
                     // list of blanks is a guard that watches nothing while looking like it watches something.
+                    // Inherited keys count as watched: a trigger authored with none, whose condition is a
+                    // Function, is a legitimate shape now — the keys arrive from the Function at evaluation.
                     if (trigger != null && trigger.Kind == GuardTriggerKind.OnKeyChanged
-                        && trigger.UsableKeyCount() == 0)
+                        && trigger.UsableKeyCount() == 0 && inherited.Length == 0)
                     {
                         findings.Add($"{label} watches no keys, so nothing can ever mark it dirty. Derive its "
                                      + "keys or give it an interval.");
@@ -154,8 +161,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 //    expensive thing a guard can do and it should be a choice rather than an oversight.
                 if (guard.Triggers.Count == 0)
                 {
-                    findings.Add($"{label} has no triggers, so it re-checks every tick. Add an interval or a "
-                                 + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
+                    // A condition that declares its dependencies turns this from advice into an instruction:
+                    // the keys are known, so the fix is exact. This is the one gap the authoring-time seed
+                    // cannot close -- a Function assigned through the inspector runs no authoring code, and
+                    // inheritance deliberately never invents a trigger where none exists, because that would
+                    // make an existing guard evaluate less often than it does today.
+                    findings.Add(inherited.Length > 0
+                        ? $"{label} has no triggers, so it re-checks every tick even though its condition "
+                          + $"declares watched keys ({string.Join(", ", inherited)}). Add a key trigger naming "
+                          + "them, or re-create the guard with bt_guard_on_function, which seeds it."
+                        : $"{label} has no triggers, so it re-checks every tick. Add an interval or a "
+                          + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
                 }
 
                 // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still

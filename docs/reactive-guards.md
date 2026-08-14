@@ -122,6 +122,42 @@ a branch produces is unreliable by definition; facts should come from something 
 which is what a sensor is. A tree reaching over to write another agent's facts is that rule broken with an
 extra step.
 
+### Keys a Function supplies for you
+
+A guard reads nothing. It pulls a boolean off a port, so every key in its trigger is really a *claim* about
+what the thing feeding that port reads — and a wrong claim is silent, because the guard just never wakes.
+
+When the condition reaches a **Function**, that claim has a source. A Function declares the agent facts it
+reads, and a guard whose condition reaches it picks them up automatically:
+
+| | |
+|---|---|
+| **Where they come from** | The Function's declared watched keys, read live off the asset |
+| **When** | Once per node instance, the first time the guard is asked |
+| **What happens to your own keys** | Nothing — the effective set is the union. Hand-typed keys stay legal |
+| **How far it looks** | Backwards through the whole condition, so a `Not` or any chain between the guard and the Function does not hide it |
+
+Live, not copied. Edit the Function to read a new fact and every guard referencing it is correct on the next
+run, with nothing to refresh and nothing to go stale. This is why there is no "refresh keys" command: there
+is no copy to repair.
+
+Hand-typed keys remain worth having for a dependency nothing can derive — a variable name computed at
+runtime, or a C# node doing its own lookup. Those are invisible to any walk, and a declaration is the only
+place they can be stated.
+
+**Inheritance never creates a trigger.** A guard with no trigger recomputes every tick and keeps doing so,
+even when its condition declares keys. That is deliberate: creating one would make an existing guard
+evaluate *less* often than it does today, and a condition can also depend on things no key can express — a
+raycast, a timer — which nothing at runtime can detect. So the schedule is seeded where an author can see
+it, and reported where it is missing:
+
+- `bt_guard_on_function` builds the guard and seeds the trigger from the Function's keys.
+- `bt_verify` names any guard that has no trigger while its condition declares keys, listing them.
+
+An **embedded** graph declares nothing and so supplies nothing. Only a Function has asset-level metadata to
+declare with; walking an embedded graph's units instead would quietly turn "declares" and "happens to read"
+into the same word.
+
 ## Guards must be pure
 
 **A guard may only read.** This was easy to ignore when a guard only ran while its owner ran. It is not now:
@@ -195,6 +231,18 @@ BehaviorTreeAuthoring.GuardOnVariable(asset, taunt, "isElite", true, false, 0f, 
     BehaviorTreeAuthoring.GuardKind.Conditional);
 ```
 
+`GuardOnFunction(...)` is the same thing for a named, shared predicate — and it seeds the trigger from what
+the Function declares rather than from a name you pass in, because the Function already knows:
+
+```csharp
+// wakes on every fact IsHurt declares, without naming any of them here
+BehaviorTreeAuthoring.GuardOnFunction(asset, retreat, isHurt, true, 0f, 340f);
+```
+
+Prefer it over `GuardOnVariable` as soon as the condition is more than a single variable read: one asset
+fixed once lands in every tree that references it, and the schedule follows the fix. It refuses a Function
+whose `Result` is not `bool`, by name, rather than letting the cast fail on the first tick.
+
 ## Writing a guard in C#
 
 A Visual Scripting condition costs a graph run every time it is evaluated. For something checked per agent
@@ -252,10 +300,25 @@ units; compiled code is opaque to it. The rule is unchanged and matters more her
 evaluates while completely unrelated branches are running — but for a C# guard it is enforced by review
 rather than by the tool.
 
-**Nothing can derive your watched keys.** A C# guard that reads `hasTarget` directly has to declare that key
-on its own On Key Changed trigger, or a missing one means the guard simply never wakes, silently. In
-practice most C# guards read continuous quantities that have no change event at all, so **Every Interval**
-is usually the right trigger for them.
+**Nothing can derive a C# guard's watched keys.** A guard that reads `hasTarget` directly inside `Evaluate`
+has to declare that key on its own On Key Changed trigger, or a missing one means the guard simply never
+wakes, silently. Inheritance cannot help here: it walks the nodes *feeding* a guard's port, and a C# guard
+reads its value itself rather than being fed. In practice most C# guards read continuous quantities that
+have no change event at all, so **Every Interval** is usually the right trigger for them.
+
+A C# **value node** feeding a guard is the different case, and it can opt in. Implement
+`IDeclaresWatchedKeys` and return the facts your node reads; a guard fed by it inherits them exactly as it
+would from a Function:
+
+```csharp
+public class TargetDistance : BaseVisualScriptingNode, IDeclaresWatchedKeys
+{
+    public IReadOnlyList<string> DeclaredWatchedKeys => new[] { "targetPosition" };
+}
+```
+
+Declared rather than derived, for the same reason a Function declares: a key your node computes at runtime
+is invisible to any walk, so a declaration is the only place it can be stated at all.
 
 ## When a plain Conditional Execution is the right answer
 

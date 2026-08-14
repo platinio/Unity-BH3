@@ -83,6 +83,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return normalized;
         }
 
+        /// <summary>
+        /// Loads a Function by asset path, normalising the path and failing by name when there is none.
+        /// Exposed for authoring code outside this class that takes a Function path — a guard's condition,
+        /// for instance — so path handling stays in one place rather than being re-guessed per command.
+        /// </summary>
+        public static FunctionGraphAsset ResolveFunction(string path) => ResolveFunction(path, out _);
+
         private static FunctionGraphAsset ResolveFunction(string path, out string normalized)
         {
             normalized = NormalizePath(path);

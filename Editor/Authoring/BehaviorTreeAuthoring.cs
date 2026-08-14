@@ -251,6 +251,93 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
+        /// A guard whose condition is a Function, with its watch schedule seeded from what that Function
+        /// declares — the counterpart of <see cref="GuardOnVariable"/> for a named, shared predicate.
+        ///
+        /// <para>
+        /// <b>Seeding happens here for the same reason it happens there: this is the one place that already
+        /// knows the answer.</b> The Function's declared keys are exactly the facts that can move its result,
+        /// so the trigger they imply is written into the asset now, where an author can see it on the node and
+        /// edit it, rather than conjured at runtime where nobody can find it. A guard that later drifts from
+        /// its Function is repaired without a refresh step — the keys are re-read live on evaluation (see
+        /// <c>InheritedWatchedKeys</c>) — so this seed is a starting schedule, not a copy anybody has to
+        /// maintain.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>A Function declaring no keys gets no trigger, deliberately.</b> That is not an omission to fix
+        /// by guessing an interval: it means the Function claims no agent-fact dependency, so there is no key
+        /// schedule to give it and every-tick remains the only honest default. If the claim is wrong,
+        /// <c>bt_verify</c>'s existing watched-keys lint already catches it by comparing the declaration
+        /// against what the graph actually reads.
+        /// </para>
+        /// </summary>
+        public static ConditionalExecution GuardOnFunction(
+            BehaviorTreeGraphAsset asset, BehaviorTreeNode owner, FunctionGraphAsset function, bool expected,
+            float x, float y, GuardKind kind = GuardKind.Reactive)
+        {
+            if (function == null) throw new ArgumentNullException(nameof(function));
+
+            // Refused at authoring rather than at runtime: a non-boolean Function wired to a guard throws
+            // inside Evaluate on the first tick, which surfaces as a broken tree rather than as the naming
+            // mistake it actually is.
+            if (!function.IsPredicate)
+            {
+                throw new ArgumentException(
+                    $"Function '{function.name}' returns " +
+                    $"{(function.ResultType == null ? "no '" + FunctionGraphAsset.ResultKey + "' output" : function.ResultType.Name)}, " +
+                    "so it cannot be a guard condition. A guard needs a Function whose Result is bool.",
+                    nameof(function));
+            }
+
+            var read = AddNode<VisualScriptGraphVariable>(asset, x, y + 90.0f);
+            read.SetFunction(function);
+            SetComment(read, (expected ? "" : "not ") + function.name);
+
+            ConditionalExecution guard;
+            ArcaneOnyx.BehaviorTree.ValueInput value;
+
+            if (kind == GuardKind.Conditional)
+            {
+                var doorman = AddNode<BooleanConditionalExecution>(asset, x, y);
+                guard = doorman;
+                value = doorman.Value;
+            }
+            else
+            {
+                var watchman = AddNode<BooleanReactiveGuard>(asset, x, y);
+                guard = watchman;
+                value = watchman.Value;
+            }
+
+            guard.UpdateOwner(owner);
+
+            if (expected)
+            {
+                read.Output.ValidlyConnectTo(value);
+            }
+            else
+            {
+                var not = AddNode<Not>(asset, x, y + 190.0f);
+                read.Output.ValidlyConnectTo(not.Value);
+                not.Result.ValidlyConnectTo(value);
+            }
+
+            // Seeded after wiring, and from the walk the guard itself runs rather than from the asset's list
+            // directly. Both matter: before the connection exists there is nothing to walk, and reading the
+            // declaration here instead would put a second implementation of "how a declared key list is
+            // normalised" beside the first, free to disagree about a duplicate or a padded entry. Seeding
+            // through the walk makes the written schedule provably what the runtime would have inherited.
+            if (guard is ReactiveGuard watchmanGuard)
+            {
+                var declared = InheritedWatchedKeys.Resolve(watchmanGuard);
+                if (declared.Length > 0) watchmanGuard.AddTrigger(GuardTrigger.KeyChanged(declared));
+            }
+
+            return guard;
+        }
+
+        /// <summary>
         /// A graph that reads one Object variable off the agent and returns it, falling back when the agent
         /// does not declare it. Stored as a sub-asset of the tree that owns it, and registered so
         /// DestroyUnusedScriptGraphAssets leaves it alone.
@@ -831,6 +918,30 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             var ownerNode = ResolveNode(asset, owner);
 
             var guard = GuardOnVariable(asset, ownerNode, variable, expected, fallback, x, y);
+            Save(asset);
+
+            return DescribeNode(guard);
+        }
+
+        [CliCommand("bt_guard_on_function",
+            "Guard a node on a Function returning bool — a named, shared predicate one fix updates everywhere. " +
+            "The guard's recompute schedule is seeded from the Function's declared watched keys, so it wakes " +
+            "when those facts change instead of re-running every tick. Prefer this over bt_guard_on_variable " +
+            "when the condition is more than a single variable read.")]
+        public static object GuardOnFunctionCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("owner", "Guid of the node the guard protects.", Required = true)] string owner,
+            [CliArg("function", "Asset path of the Function to use as the condition.", Required = true)] string function,
+            [CliArg("expected", "Value the Function must return for the owner to run. false inserts a Not node.")] bool expected = true,
+            [CliArg("x", "Canvas X position for the guard.")] float x = 0f,
+            [CliArg("y", "Canvas Y position for the guard.")] float y = 0f)
+        {
+            var asset = ResolveTree(tree, out _);
+            var ownerNode = ResolveNode(asset, owner);
+
+            var guard = GuardOnFunction(
+                asset, ownerNode, FunctionGraphAuthoring.ResolveFunction(function), expected, x, y);
+
             Save(asset);
 
             return DescribeNode(guard);

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
+using ArcaneOnyx.VisualScriptingExtension;
 using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -34,12 +35,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
     public class ReactiveGuardIntegrationTests
     {
         private GameObject agent;
+        private FunctionGraphAsset function;
 
         [TearDown]
         public void TearDown()
         {
             if (agent != null) Object.DestroyImmediate(agent);
+            if (function != null) Object.DestroyImmediate(function);
 
+            FunctionEvaluator.InvalidateAll();
             BehaviorTreeFlightRecorders.Reset();
             BehaviorTreeFlightRecorders.GloballyEnabled = true;
         }
@@ -154,6 +158,92 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 + "wakes on the version bump.");
         }
 
+        /// <summary>
+        /// A guard whose condition is a Function wakes on the key that Function <em>declares</em> — with a
+        /// trigger that names no keys of its own.
+        ///
+        /// <para>
+        /// The empty key list is the whole test. A trigger with no usable keys watches nothing and can never
+        /// become due, so before inheritance existed this arrangement produced a guard that never woke: the
+        /// silent failure the watched-keys declaration was added to prevent and, until now, did not. If
+        /// inheritance stops working this test fails by Attack never being entered, which is exactly how the
+        /// bug presents in a real tree.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AGuardReadingAFunction_WakesOnTheKeyThatFunctionDeclares()
+        {
+            var tree = BuildFunctionGuardedTree(out var attack, out var idle);
+            var machine = SpawnAgent(tree, hasTarget: false, preAttachWriter: true);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            var recorder = machine.FlightRecorder;
+            var runningGuard = RunningGuard(machine);
+            var trigger = runningGuard.Triggers[0];
+
+            Assert.AreEqual(GuardTriggerKind.OnKeyChanged, trigger.Kind);
+            Assert.AreEqual(0, trigger.UsableKeyCount(),
+                "The authored trigger must name no keys, or this test could pass on a hand-typed key rather "
+                + "than on the inherited one.");
+            CollectionAssert.Contains(trigger.InheritedKeys, "hasTarget",
+                "The guard must have picked the key up from the Function its condition reads.");
+
+            Assert.IsTrue(Entered(recorder, idle), "With no target, Idle is the branch that holds.");
+            Assert.IsFalse(Entered(recorder, attack), "and Attack has not started.");
+
+            Assert.IsTrue(AgentVariableWriter.SetOn(machine.gameObject, "hasTarget", true),
+                "An agent runs a tree, so the write is versioned rather than plain.");
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.IsTrue(Entered(recorder, attack),
+                "The Function declares 'hasTarget', so a guard reading that Function must wake when it moves "
+                + "-- even though nobody typed that key onto the guard.");
+        }
+
+        /// <summary>
+        /// The same guard stays asleep when an unrelated fact moves.
+        ///
+        /// <para>
+        /// Without this, the test above would also pass for a guard that had simply become always-due —
+        /// which is the failure mode of inheriting nothing, since a trigger list that watches nothing is
+        /// indistinguishable from no schedule at all if you only ever check that the guard woke.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AGuardReadingAFunction_StaysAsleepWhenAnUnrelatedFactMoves()
+        {
+            var tree = BuildFunctionGuardedTree(out _, out _);
+            var machine = SpawnAgent(tree, hasTarget: false, preAttachWriter: true);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            var runningGuard = RunningGuard(machine);
+            int before = runningGuard.Evaluations;
+
+            Assert.IsTrue(AgentVariableWriter.SetOn(machine.gameObject, "noise", 1.0f),
+                "The unrelated write must still be versioned, or nothing is being gated.");
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.AreEqual(before, runningGuard.Evaluations,
+                "'noise' is not declared by the Function, so it must not make the guard recompute. A guard "
+                + "that re-runs on every write has inherited nothing and is merely always due.");
+        }
+
         #region Scenario
 
         /// <summary>
@@ -202,6 +292,108 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             attack = attackNode.guid;
             idle = idleNode.guid;
             attackGuard = guard.guid;
+
+            return asset;
+        }
+
+        /// <summary>
+        /// A predicate Function that returns the agent's <c>hasTarget</c> and declares that it reads it.
+        /// <para>
+        /// Built in memory rather than on disk: this assembly is a runtime one and cannot reach
+        /// <c>AssetDatabase</c>. Nothing in the evaluation seam needs a persisted asset — the binding plan
+        /// reads the graph, which exists either way.
+        /// </para>
+        /// </summary>
+        private FunctionGraphAsset HasTargetFunction()
+        {
+            function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = function.graph;
+
+            var input = new ScriptGraphInput { position = new Vector2(-400.0f, 0.0f) };
+            var output = new ScriptGraphOutput { position = new Vector2(400.0f, 0.0f) };
+            graph.units.Add(input);
+            graph.units.Add(output);
+
+            // Fully qualified: inside ArcaneOnyx.BehaviorTree.* these names resolve to BH3's own port
+            // definition types, which are unrelated to Visual Scripting's despite the identical spelling.
+            graph.controlInputDefinitions.Add(new Unity.VisualScripting.ControlInputDefinition
+            {
+                key = FunctionGraphAsset.EnterKey, label = FunctionGraphAsset.EnterKey
+            });
+            graph.controlOutputDefinitions.Add(new Unity.VisualScripting.ControlOutputDefinition
+            {
+                key = FunctionGraphAsset.ExitKey, label = FunctionGraphAsset.ExitKey
+            });
+            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = FunctionGraphAsset.ResultKey,
+                label = FunctionGraphAsset.ResultKey,
+                type = typeof(bool)
+            });
+
+            graph.PortDefinitionsChanged();
+            input.controlOutputs[FunctionGraphAsset.EnterKey]
+                .ValidlyConnectTo(output.controlInputs[FunctionGraphAsset.ExitKey]);
+
+            // A fallback, so an agent that has not declared the key yet reads false instead of throwing --
+            // the same shape CreateVariableReadGraph produces for the non-Function path.
+            var read = new Unity.VisualScripting.GetVariable
+            {
+                kind = VariableKind.Object,
+                specifyFallback = true,
+                position = new Vector2(-160.0f, 0.0f)
+            };
+            graph.units.Add(read);
+            read.name.SetDefaultValue("hasTarget");
+
+            var fallback = new Unity.VisualScripting.Literal(typeof(bool), false)
+            {
+                position = new Vector2(-320.0f, 120.0f)
+            };
+            graph.units.Add(fallback);
+            fallback.output.ValidlyConnectTo(read.fallback);
+
+            read.value.ValidlyConnectTo(output.valueInputs[FunctionGraphAsset.ResultKey]);
+
+            function.SetWatchedKeys(new[] { "hasTarget" });
+
+            return function;
+        }
+
+        /// <summary>
+        /// The <see cref="BuildGuardedTree"/> scenario with one substitution: the guard's condition is a
+        /// Function rather than a bare variable read, and its trigger names <b>no keys at all</b>. Everything
+        /// that makes the guard wake therefore has to arrive from the Function.
+        /// </summary>
+        private BehaviorTreeGraphAsset BuildFunctionGuardedTree(out System.Guid attack, out System.Guid idle)
+        {
+            var asset = ScriptableObject.CreateInstance<BehaviorTreeGraphAsset>();
+            var graph = asset.graph;
+
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var selector = Add<Selector>(graph, 0.0f, 250.0f);
+
+            var attackNode = Add<WaitTime>(graph, -900.0f, 400.0f);
+            var idleNode = Add<WaitTime>(graph, 900.0f, 400.0f);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, selector);
+            Connect(graph, selector, attackNode);
+            Connect(graph, selector, idleNode);
+
+            FeedFloat(graph, attackNode, attackNode.Time, 999.0f);
+            FeedFloat(graph, idleNode, idleNode.Time, 999.0f);
+
+            var read = Add<VisualScriptGraphVariable>(graph, -600.0f, 0.0f);
+            read.SetFunction(HasTargetFunction());
+
+            var guard = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
+            guard.UpdateOwner(attackNode);
+            read.Output.ValidlyConnectTo(guard.Value);
+            guard.AddTrigger(GuardTrigger.KeyChanged());
+
+            attack = attackNode.guid;
+            idle = idleNode.guid;
 
             return asset;
         }

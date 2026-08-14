@@ -75,14 +75,39 @@ namespace ArcaneOnyx.BehaviorTree
         /// first. <see cref="GuardTriggerKind.EveryInterval"/> is that Service collapsed into the guard.
         /// </para>
         /// <para>
-        /// Authored by hand today, and seeded by <c>GuardOnVariable</c> in the one case where the key is
-        /// known without inspecting anything. Deriving them from the guard's graph is not built — see the
-        /// spec's <i>Cut: derived keys</i> note. Until it is, a wrong key here is silent: the guard simply
-        /// never wakes.
+        /// Authored by hand, and seeded by <c>GuardOnVariable</c> and by assigning a Function to a guard's
+        /// condition — the two cases where the key is known without inspecting anything. Keys a condition
+        /// declares are additionally inherited at runtime; see <see cref="InheritedKeys"/>. A hand-typed key
+        /// the condition does not read stays legal (it may be a dependency no walk can see) and is reported by
+        /// <c>bt_verify</c> rather than refused.
         /// </para>
         /// </summary>
         [Serialize, Inspectable, InspectorLabel("Keys")]
         public List<string> Keys { get; set; } = new();
+
+        /// <summary>
+        /// Keys this trigger picked up from the guard's condition, rather than from an author.
+        ///
+        /// <para>
+        /// Not serialized, and that is the point: the Function is the source of truth, so an edit to it lands
+        /// on every guard referencing it with no refresh step and nothing to go stale. A serialized copy would
+        /// need its own repair verb and its own drift report — the second staleness mechanism spec 10's locked
+        /// decision 5 forbids.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        public IReadOnlyList<string> InheritedKeys => inherited;
+
+        [DoNotSerialize] private string[] inherited = System.Array.Empty<string>();
+
+        /// <summary>
+        /// Hands this trigger the keys its guard's condition declares. Called once per node instance when the
+        /// guard resolves its condition, never per evaluation.
+        /// </summary>
+        public void SetInheritedKeys(string[] keys)
+        {
+            inherited = keys ?? System.Array.Empty<string>();
+        }
 
         [Serialize, Inspectable, InspectorLabel("Seconds")]
         public float Seconds { get; set; } = 0.2f;
@@ -190,36 +215,69 @@ namespace ArcaneOnyx.BehaviorTree
             // A guard with nothing to watch can never become dirty on its own. Reported by bt_verify rather
             // than quietly treated as every-frame, because a guard that never re-checks is a bug the author
             // should see, not a default worth guessing at.
-            if (Keys == null || Keys.Count == 0) return false;
+            if (WatchesNothing()) return false;
 
             var writer = WriterFor(owner);
             if (writer == null) return false;
 
-            for (int i = 0; i < Keys.Count; i++)
+            // Both lists are walked by index and neither is copied or concatenated: this runs on the path the
+            // whole trigger economy exists to keep cheap, and merging them into one collection would allocate
+            // on every evaluation to save a loop.
+            if (Keys != null)
             {
-                string key = Keys[i];
-                if (string.IsNullOrEmpty(key)) continue;
+                for (int i = 0; i < Keys.Count; i++)
+                {
+                    if (Moved(writer, Keys[i])) return true;
+                }
+            }
 
-                if (!seenVersions.TryGetValue(key, out int seen) || seen != writer.VersionOf(key)) return true;
+            for (int i = 0; i < inherited.Length; i++)
+            {
+                if (Moved(writer, inherited[i])) return true;
             }
 
             return false;
         }
 
+        /// <summary>
+        /// Whether a key's version differs from the one seen at the last evaluation. A key never seen counts
+        /// as moved, so a guard's first ask always recomputes rather than trusting an empty cache.
+        /// </summary>
+        private bool Moved(AgentVariableWriter writer, string key)
+        {
+            if (string.IsNullOrEmpty(key)) return false;
+
+            return !seenVersions.TryGetValue(key, out int seen) || seen != writer.VersionOf(key);
+        }
+
+        private bool WatchesNothing() => (Keys == null || Keys.Count == 0) && inherited.Length == 0;
+
         private void RememberVersions(BehaviorTreeNode owner)
         {
-            if (Keys == null || Keys.Count == 0) return;
+            if (WatchesNothing()) return;
 
             var writer = WriterFor(owner);
             if (writer == null) return;
 
-            for (int i = 0; i < Keys.Count; i++)
+            if (Keys != null)
             {
-                string key = Keys[i];
-                if (string.IsNullOrEmpty(key)) continue;
-
-                seenVersions[key] = writer.VersionOf(key);
+                for (int i = 0; i < Keys.Count; i++)
+                {
+                    Remember(writer, Keys[i]);
+                }
             }
+
+            for (int i = 0; i < inherited.Length; i++)
+            {
+                Remember(writer, inherited[i]);
+            }
+        }
+
+        private void Remember(AgentVariableWriter writer, string key)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+
+            seenVersions[key] = writer.VersionOf(key);
         }
 
         private void Reroll()
@@ -284,9 +342,19 @@ namespace ArcaneOnyx.BehaviorTree
                     return Deviation > 0.0f ? $"every {Seconds}s ±{Deviation}s" : $"every {Seconds}s";
 
                 case GuardTriggerKind.OnKeyChanged:
-                    return Keys == null || Keys.Count == 0
-                        ? "on key changed (none)"
-                        : "on " + string.Join(", ", Keys) + " changed";
+                {
+                    // Inherited keys are named separately rather than merged into one list. A reader looking
+                    // at a cost display needs to know which keys they can edit here and which arrive from the
+                    // condition — merging them would show a schedule nobody can find the source of.
+                    var authored = Keys != null && Keys.Count > 0 ? string.Join(", ", Keys) : null;
+                    var fromCondition = inherited.Length > 0 ? string.Join(", ", inherited) : null;
+
+                    if (authored == null && fromCondition == null) return "on key changed (none)";
+                    if (authored == null) return "on " + fromCondition + " changed (inherited)";
+                    if (fromCondition == null) return "on " + authored + " changed";
+
+                    return "on " + authored + " changed, plus " + fromCondition + " (inherited)";
+                }
 
                 default:
                     return Kind.ToString();
