@@ -36,11 +36,35 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
     {
         private const float FrameSeconds = 0.05f;
 
-        [TearDown]
-        public void ReleaseTheClock()
+        /// <summary>
+        /// Deliberately not a multiple of <see cref="FrameSeconds"/>. An interval that lands exactly on a
+        /// frame boundary is decided by whether accumulated float time reads as slightly over or slightly
+        /// under, which is the one genuinely fragile thing about timing a guard. At 0.17s the trigger comes
+        /// due on the fourth frame (0.20s elapsed) with most of a frame to spare either side.
+        /// </summary>
+        private const float Interval = 0.17f;
+
+        /// <summary>Frames per fire at the constants above: ceil(0.17 / 0.05).</summary>
+        private const int FramesPerFire = 4;
+
+        private Random.State randomState;
+
+        [SetUp]
+        public void PinTheRandomSequence()
         {
-            // Leaks into every later test in the run if it is not put back.
+            // GuardTrigger.Reroll draws from UnityEngine.Random for the deviation, so a deviated interval is
+            // otherwise a different test every run. Seeding makes the draws reproducible; the state is put
+            // back afterwards so this does not shift the sequence any later test sees.
+            randomState = Random.state;
+            Random.InitState(20260813);
+        }
+
+        [TearDown]
+        public void ReleaseTheClockAndRandom()
+        {
+            // Both leak into every later test in the run if they are not put back.
             Time.captureDeltaTime = 0.0f;
+            Random.state = randomState;
         }
 
         /// <summary>
@@ -50,7 +74,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         [UnityTest]
         public IEnumerator AnIntervalTriggerRecomputesWhenTheIntervalElapses()
         {
-            var machine = SpawnPolledGuard(GuardTrigger.Interval(0.2f));
+            var machine = SpawnPolledGuard(GuardTrigger.Interval(Interval));
 
             Time.captureDeltaTime = FrameSeconds;
 
@@ -64,26 +88,25 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             int start = guard.Evaluations;
 
-            // 20 frames x 0.05s = 1.0s of game time, against a 0.2s interval: about five recomputes.
-            for (int frame = 0; frame < 20; frame++)
+            const int frames = 20;
+
+            for (int frame = 0; frame < frames; frame++)
             {
                 yield return null;
             }
 
             int scheduled = guard.Evaluations - start;
+            const int expected = frames / FramesPerFire;
 
-            Assert.Greater(scheduled, 1,
-                "One second of game time against a 0.2s interval has to recompute several times. If this is "
-                + "zero the trigger never fires at all -- which is exactly what an edit-mode test cannot "
-                + "distinguish from correct behaviour, because there the clock never moves.");
-
-            Assert.Less(scheduled, 20,
-                "and it must not have recomputed on every frame, or the interval is not gating anything and "
-                + "the guard is quietly paying the every-frame cost.");
-
-            Assert.That(scheduled, Is.InRange(3, 8),
-                $"1.0s / 0.2s is about five recomputes; saw {scheduled}. A number far outside that band means "
-                + "the interval is being measured against something other than elapsed game time.");
+            // Exact but for one: the clock is pinned, so this does not depend on how fast the machine is.
+            // The single frame of slack is phase, not noise -- the guard last evaluated somewhere inside the
+            // settle window rather than on the frame counting started, so its cycle can be offset by up to
+            // one frame relative to this loop. Nothing here draws a random number.
+            Assert.That(scheduled, Is.InRange(expected - 1, expected + 1),
+                $"{frames} frames of {FramesPerFire} should fire {expected} times; saw {scheduled}. Zero means "
+                + "the trigger never comes due at all -- which is precisely what an edit-mode test cannot "
+                + $"distinguish from correct behaviour, since there the clock never moves. {frames} means the "
+                + "interval is gating nothing and the guard is paying the every-frame cost silently.");
         }
 
         /// <summary>
@@ -94,7 +117,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         [UnityTest]
         public IEnumerator ADeviatedIntervalStillFiresWithinItsBand()
         {
-            var machine = SpawnPolledGuard(GuardTrigger.Interval(0.2f, 0.1f));
+            const float deviation = 0.08f;
+
+            var machine = SpawnPolledGuard(GuardTrigger.Interval(Interval, deviation));
 
             Time.captureDeltaTime = FrameSeconds;
 
@@ -107,19 +132,27 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             int start = guard.Evaluations;
 
-            for (int frame = 0; frame < 20; frame++)
+            const int frames = 20;
+
+            for (int frame = 0; frame < frames; frame++)
             {
                 yield return null;
             }
 
             int scheduled = guard.Evaluations - start;
 
-            // Each interval is rerolled into 0.2s +/- 0.1s, so 1.0s of game time admits roughly 3 to 10
-            // recomputes depending on the draws. The band is what matters, not the exact count.
-            Assert.That(scheduled, Is.InRange(2, 14),
-                $"A 0.2s +/- 0.1s interval over 1.0s should recompute a handful of times; saw {scheduled}. "
-                + "Near zero means Reroll is inflating the interval, near twenty means it is collapsing it "
-                + "toward every frame -- the two failures the deviation is supposed to be incapable of.");
+            // Reroll draws per fire, so the count is a property of the whole draw sequence rather than of one
+            // number. The seed pinned in SetUp makes that sequence identical every run; the band is derived
+            // from the extremes the deviation permits rather than from any particular draw, so a harmless
+            // change to how Reroll consumes randomness does not turn this red.
+            int fastest = Mathf.CeilToInt(frames / Mathf.Ceil((Interval - deviation) / FrameSeconds));
+            int slowest = frames / Mathf.CeilToInt((Interval + deviation) / FrameSeconds);
+
+            Assert.That(scheduled, Is.InRange(slowest, fastest),
+                $"A {Interval}s +/- {deviation}s interval over {frames} frames admits {slowest} to {fastest} "
+                + $"recomputes; saw {scheduled}. Below that band Reroll is inflating the interval and the "
+                + "guard has stopped reacting; above it, Reroll is collapsing toward zero and the cheapest "
+                + "trigger has quietly become the most expensive one.");
         }
 
         /// <summary>
