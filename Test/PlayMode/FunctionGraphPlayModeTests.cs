@@ -192,6 +192,98 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.That(after, Is.EqualTo(10.0f));
         }
 
+        /// <summary>
+        /// The early-return case: a loop that returns the item it is looking at rather than running to
+        /// completion.
+        /// <para>
+        /// This is the one shape whose soundness was argued rather than measured. <c>Result</c> is
+        /// <em>pulled</em> from the taken exit after the flow has finished, so returning a loop's current
+        /// item only works if that value is still the one captured when the exit ran. If the port is instead
+        /// re-read after the loop has moved on, the Function silently returns the wrong element — and under
+        /// Tier 2, generated C# would return the right one, making it a build-only divergence.
+        /// </para>
+        /// <para>
+        /// The loop walks 10, 20, 30 and exits on the first item. A result of 10 means the captured value
+        /// survives. A result of 30 means it was pulled after the loop had advanced, which would make early
+        /// return unsound for transient values.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EarlyReturnFromALoop_ReturnsTheItemItExitedOn()
+        {
+            var asset = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = asset.graph;
+
+            var input = new ScriptGraphInput { position = new Vector2(-500.0f, 0.0f) };
+            var earlyExit = new ScriptGraphOutput { position = new Vector2(400.0f, -120.0f) };
+            var normalExit = new ScriptGraphOutput { position = new Vector2(400.0f, 160.0f) };
+            graph.units.Add(input);
+            graph.units.Add(earlyExit);
+            graph.units.Add(normalExit);
+
+            graph.controlInputDefinitions.Add(new Unity.VisualScripting.ControlInputDefinition
+            {
+                key = FunctionGraphAsset.EnterKey, label = FunctionGraphAsset.EnterKey
+            });
+            graph.controlOutputDefinitions.Add(new Unity.VisualScripting.ControlOutputDefinition
+            {
+                key = FunctionGraphAsset.ExitKey, label = FunctionGraphAsset.ExitKey
+            });
+            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = FunctionGraphAsset.ResultKey, label = FunctionGraphAsset.ResultKey, type = typeof(object)
+            });
+            graph.PortDefinitionsChanged();
+
+            var items = new Unity.VisualScripting.Literal(
+                typeof(System.Collections.IEnumerable),
+                new System.Collections.Generic.List<object> { 10.0f, 20.0f, 30.0f })
+            {
+                position = new Vector2(-320.0f, 140.0f)
+            };
+            graph.units.Add(items);
+
+            var loop = new Unity.VisualScripting.ForEach { position = new Vector2(-140.0f, 0.0f) };
+            graph.units.Add(loop);
+            items.output.ValidlyConnectTo(loop.collection);
+
+            var missed = new Unity.VisualScripting.Literal(typeof(object), -1.0f)
+            {
+                position = new Vector2(200.0f, 260.0f)
+            };
+            graph.units.Add(missed);
+
+            input.controlOutputs[FunctionGraphAsset.EnterKey].ValidlyConnectTo(loop.enter);
+
+            // Exit on the very first item.
+            loop.body.ValidlyConnectTo(earlyExit.controlInputs[FunctionGraphAsset.ExitKey]);
+            loop.currentItem.ValidlyConnectTo(earlyExit.valueInputs[FunctionGraphAsset.ResultKey]);
+
+            // Reaching here means the loop ran to completion instead.
+            loop.exit.ValidlyConnectTo(normalExit.controlInputs[FunctionGraphAsset.ExitKey]);
+            missed.output.ValidlyConnectTo(normalExit.valueInputs[FunctionGraphAsset.ResultKey]);
+
+            var plan = FunctionBindingPlan.Resolve(asset);
+            Assert.That(plan.IsUsable, Is.True, plan.Error);
+            Assert.That(plan.Exits.Length, Is.EqualTo(2));
+
+            var binding = FunctionEvaluator.Bind(asset, agentA);
+            yield return null;
+
+            Assert.That(binding.TryEvaluate<object>(out var result, out var error), Is.True, error);
+
+            var value = System.Convert.ToSingle(result);
+
+            Assert.That(value, Is.Not.EqualTo(-1.0f),
+                "the loop ran to completion — control never reached the early exit");
+            Assert.That(value, Is.EqualTo(10.0f),
+                "early return did not capture the item it exited on. 30 means Result was pulled after the " +
+                "loop had advanced, which makes early return unsound for transient values and would diverge " +
+                "from generated C# under Tier 2");
+
+            Object.Destroy(asset);
+        }
+
         // There is deliberately no play-mode allocation test here, and the reason is worth keeping.
         //
         // One was written and it was flaky: it passed when this fixture ran alone and failed in the full

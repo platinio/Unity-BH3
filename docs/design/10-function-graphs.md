@@ -503,7 +503,21 @@ Small, self-contained, no dependencies. `bt_set_value` can currently give a port
 accept a Function asset path and wire it to a value port. Follow the existing resolve-by-asset-path pattern
 in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
 
-### Step 2 — Contract copies on the caller, and drift reporting for Function callers
+### Step 2 — What a caller learns from the Function it references
+
+Two separable pieces, grouped because both are a caller reading something off the Function and remembering
+it. Either can be picked up alone.
+
+**2a — Watched-key inheritance.** A reactive guard whose condition is a Function must pick up that
+Function's declared watched keys, so the guard wakes when they change. **This is the piece that makes the
+watched-keys field do anything at all** — today it is declared, verified against the graph in both
+directions, and consumed by nothing. Hand-added keys on the guard stay legal and are compared against the
+inherited set, per the original design. `FunctionGraphAsset.WatchedKeys` is the source;
+`DeriveReadKeys()` is what keeps it honest.
+
+**2b — Contract copies and drift.** Described below.
+
+
 
 `FunctionParameter` and `FunctionParameter.DescribeDrift` exist and are tested, but **no BH3 node stores a
 contract copy yet**, so the drift lint currently has nothing to check on a node. Give
