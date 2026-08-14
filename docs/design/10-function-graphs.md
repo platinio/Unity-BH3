@@ -379,6 +379,12 @@ Commits: VisualScriptingExtension `0a0fe1a`, BH3 `c1b8135`. TacticalPositionSele
   node does, which also makes reentrancy structural rather than a rule to remember.
 - **Plan invalidation is editor-time, not per-call.** Re-hashing the graph each evaluation would reintroduce
   the O(units) walk the plan exists to remove. Assets cannot change in a player build.
+- **Reaching an exit unwinds every enclosing loop**, so an exit is a real `return` rather than a dead end in
+  one branch, and a Break node is no longer needed to return early from a loop. Visual Scripting tracks
+  loops as a stack and exposes both `BreakLoop()` and `currentLoop`, so draining the stack unwinds any
+  nesting depth in two lines. Output values are captured before the unwind, while the loop context is still
+  intact. Existing graphs that break first are unaffected. This was initially dismissed on the assumption
+  that one call only unwound one level — an assumption made without reading the mechanism.
 - **A Function may have several `ScriptGraphOutput` units** — several `return` statements, including an early
   return out of a loop. This was briefly restricted to one, wrongly: the reentrancy bug was never the
   multiplicity, it was that "which output fired" lived in a `static int` shared process-wide and a field on
