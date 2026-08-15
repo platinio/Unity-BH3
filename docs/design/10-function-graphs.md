@@ -707,6 +707,27 @@ doing specific work rather than making the guard permanently due.
 ### Demo
 
 `Assets/ArcaneOnyx/BH3Demos/WatchedKeyInheritance/` (superproject), reusing the existing `IsHurt.asset`.
-Three agents, one shared Function, one difference each. Measured on a ~2500-frame run: the inheriting guard
-ran its graph 157 times (6% of frames), the one receiving only undeclared writes ran it **once**, and the
-control with no trigger ran it every frame. No key is typed anywhere in the demo.
+The tree is a real asset, `HurtOrIdle.asset`, authored through `bt_guard_on_function` — so the seeded
+`on hp changed` trigger is visible on the guard in the canvas, which is the half of this feature a designer
+actually touches. Three agents run that one asset, each clearing or removing something on its own running
+copy.
+
+Measured on a ~1000-frame run: the inheriting guard ran its condition graph 79 times (8% of frames) while
+holding the guarded branch; the agent receiving only undeclared writes ran it **once** and sat on the
+fallback; the control with no trigger ran it every frame. The first and third agree on the decision and
+differ 13× in cost. No key is typed anywhere in the demo.
+
+### Embedded trees got the coverage they never had
+
+Building a tree in code — `CreateInstance`, `graph.Nodes`, `SetupTransition` — is public API used by every
+play-mode fixture, and was entirely untested. `Test/PlayMode/EmbeddedTreeTests.cs` (6 tests) pins it: that
+such a tree runs at all, that guards and literal-fed ports survive the machine's `Instantiate`, and both
+halves of the sibling-priority rule.
+
+**That rule is documented in only one half, and the missing half misleads.** `bt_add_node` says execution
+order is canvas X. `BehaviorTreeGraph.SortIntoPriorityOrder` actually uses **transition indices when they
+form exactly `0..n-1`, each used once**, and falls back to canvas X only when they do not — a gap means
+something was removed without renumbering, a duplicate means two children claim one priority, and neither
+order is trustworthy. So a tree built in code with `CountTransitionsFromNode` has well-defined priority
+regardless of where its nodes sit, which is why the demo's original all-at-origin layout was a readability
+problem and not a correctness one. Both directions now have a test.
