@@ -548,19 +548,8 @@ it. Either can be picked up alone.
 
 **2a — Watched-key inheritance.** ✅ **Done, 2026-08-14** — see *Step 2a landed* below.
 
-**2b — Contract copies and drift.** Described below. Still open, and 2a's demo made its absence concrete:
-`IsHurt` declares a required `threshold` input, and because a Script Graph Variable node has no ports, the
-only way to supply it is to declare an agent variable that happens to share the name. Miss it and the
-Function throws `KeyNotFoundException` on its first evaluation, naming the key but not the node.
-
-
-
-`FunctionParameter` and `FunctionParameter.DescribeDrift` exist and are tested, but **no BH3 node stores a
-contract copy yet**, so the drift lint currently has nothing to check on a node. Give
-`VisualScriptGraphVariable` a serialized `List<FunctionParameter>`, declare its ports from that copy (never
-from the live asset — see spike 4), and add `RefreshParameters` / `DescribeContractDrift` mirroring
-`RunBehaviorTreeGraphNode`. Then hang the drift lint off the existing loop in `BehaviorTreeVerification`.
-This is what makes acceptance criterion 2 fully true.
+**2b — Declared inputs become ports.** Designed 2026-08-14 with the tool owner, not yet built — see
+*Step 2b — Declared inputs become ports* at the end of this document.
 
 ### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
 
@@ -731,3 +720,113 @@ something was removed without renumbering, a duplicate means two children claim 
 order is trustworthy. So a tree built in code with `CountTransitionsFromNode` has well-defined priority
 regardless of where its nodes sit, which is why the demo's original all-at-origin layout was a readability
 problem and not a correctness one. Both directions now have a test.
+
+***
+
+## Step 2b — Declared inputs become ports
+
+**The problem, stated plainly.** A Function declares typed inputs. A `VisualScriptGraphVariable` node has no
+input ports at all, so the only way to supply one is to declare an agent variable that happens to share the
+input's name — `StageArguments` matches by string against the node's flattened variable scope. Nothing about
+that is visible on the node: not the input's existence, not its type, not whether anything is feeding it.
+2a's demo hit it immediately — `IsHurt` declares a required `threshold`, and the Function throws
+`KeyNotFoundException` on its first evaluation, naming the key but not the node.
+
+**Decided: ports replace name matching entirely.** Name matching is invisible to a designer, which is the
+whole objection — a contract nobody can see is not a contract. The window to remove it cleanly is now: it
+applies only to the Function path (`StageArguments`), embedded graphs go through the untouched legacy seam,
+and Functions are days old, so the only content relying on the name coincidence is this feature's own demo.
+That window closes as soon as anyone authors with Functions in earnest.
+
+### The mechanism already exists in this codebase
+
+**Dynamic input ports on a BH3 node are possible, and `RunBehaviorTreeGraphNode` has been doing it all
+along** (`Definition()`). This is worth stating because the variable-matching workaround was written on the
+belief that they were not — the belief is wrong, and the reason it looked true is the third bullet:
+
+- **The non-generic overload.** `ValueInput(Type, string)` and `ValueInput(Type, string, object)`, not
+  `ValueInput<T>(...)`. The port's type comes from data rather than from a compile-time type argument.
+  Reached for with the generic form, this genuinely is impossible.
+- **`RefreshParameters()` → `Define(); PortsChanged();`** rebuilds the ports when the contract changes.
+- **Ports are declared from a serialized copy on the node, never from the referenced asset.** `Definition()`
+  runs *during deserialization*, and connections are resolved by port key — a connection to a key that does
+  not exist yet is dropped **silently**. Declaring ports by reading the Function live therefore loses wiring
+  on any load where the asset is not resolved yet: an import-order failure, so it appears on one machine and
+  not another. This is spike 4, already confirmed, and it is why the copy is not redundant.
+
+So 2b is `RunBehaviorTreeGraphNode`'s pattern applied to `VisualScriptGraphVariable`, and the half that
+usually costs the most already ships and is tested: `FunctionParameter`, `FunctionParameter.ReadContract`
+and `FunctionParameter.DescribeDrift`.
+
+### Defaults are the Function's, overridden at the call site
+
+No new mechanism. A Function's port definition carries `hasDefaultValue` / `defaultValue`, `ReadContract`
+copies them onto the `FunctionParameter`, and the node picks the overload accordingly:
+
+- **Optional** (the Function declares a default) → `ValueInput(type, name, default)`. Safe to leave
+  unconnected.
+- **Required** (no default) → `ValueInput(type, name)`. Leaving it unconnected becomes the unset-port case
+  `bt_verify` already reports — replacing today's `KeyNotFoundException` at first evaluation with a named
+  finding before anything runs.
+
+A call site that wants a different value connects a node or sets an inline value, which is what
+`bt_set_value` already does. The Function states the sensible default once; call sites disagree with it
+explicitly rather than by coincidence of naming.
+
+### Node sizing — decided, and it is an existing defect
+
+**Decided: the editor writes the size when the contract changes.** `ResizeToFitPorts` runs where a contract
+changes — assigning a Function, `RefreshParameters` — and writes `Position`: height from the port count,
+width from the longest port label measured with `GUI.skin`, which only editor code can do. The result is
+serialized like any other layout, so an author can still drag-resize afterwards and it holds until the
+contract changes again.
+
+**Decided: one mechanism, both nodes.** This is not new breakage introduced by 2b — it is live today on
+sub-trees. Nothing in BH3 overrides `StartingSize`, so every node is created at `BaseGraphNode`'s
+`150 × 100`, and a sub-tree node with six parameters is drawn at that size. The canvas does not grow to fit;
+it **squeezes**, and says so:
+
+```csharp
+// clamped so a node with many ports does not spill past its box
+float step = Mathf.Min(size + spacing, (p.height - size) / count);
+```
+
+The number needed is already computed — `BehaviorTreeNodeElementWidget.GetPortSectionHeight()` — and simply
+never reaches `Position`. So the work is plumbing an existing measurement into an existing field, applied to
+both nodes that declare ports from a contract. Two nodes with dynamic ports and only one that sizes
+correctly is the asymmetry that gets copied rather than fixed.
+
+Rejected: overriding `StartingSize` on the node (read only at creation, so it never reacts to a contract
+change, and runtime code cannot measure text), and growing the drawn box at draw time (`Position` is what
+hit-testing and connection routing read, so the drawn box and the stored rect would disagree).
+
+### What this makes true
+
+Acceptance criterion 2 — *"assigning a Function to a guard or variable node grows declared typed ports; a
+missing required input is reported by `bt_verify` and visible on the node"* — is currently false in every
+part. This is what makes it true.
+
+It also makes the spec's own authoring rule followable for the first time: *a Function fed through declared
+inputs compiles materially better than one that reads its data off the agent.* Until a node has ports, there
+is no way to feed a declared input from a call site, so every BH3 Function is pushed into the ambient style
+— the one that caps what Tier 2 can buy.
+
+### Work, in order
+
+1. `VisualScriptGraphVariable`: serialized `List<FunctionParameter>`, ports declared from it in
+   `Definition()`, plus `RefreshParameters` / `DescribeContractDrift` mirroring the sub-tree node.
+2. `StageArguments`: read from the ports instead of from the variable scope. Name matching is deleted, not
+   deprecated — the two coexisting is exactly the "which one wins" ambiguity ports exist to remove.
+3. Drift lint hung off the existing `FunctionProblems` loop in `BehaviorTreeVerification`.
+4. `ResizeToFitPorts` in the editor, applied to `VisualScriptGraphVariable` and `RunBehaviorTreeGraphNode`.
+5. Migrate the step 2a demo, which currently supplies `threshold` through a same-named agent variable and is
+   the one piece of content that relies on the mechanism being removed.
+6. `bt_refresh_sub_tree_ports` gains a Function equivalent, or is generalised to both.
+
+### Open, and worth settling before building
+
+- **What happens to a connection when a refresh removes its port?** The sub-tree node has the same question
+  and answers it by silence — the port disappears and the connection with it. Drift reporting names it
+  first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
+- **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
+  clearly right; discarding a deliberate manual size is less obviously so.
