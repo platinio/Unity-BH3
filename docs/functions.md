@@ -84,7 +84,8 @@ A sub-tree node reports the same shapes against its own contract. Neither used t
 you found out when the tree ran.
 
 This is a **general** mechanism, not a Function one: a node reports itself by implementing
-`IReportsProblems`, and a rule that lives outside the node registers a provider with `NodeProblemCache`. New
+`BehaviorTreeNode.CollectProblems`, and a rule that lives outside the node registers a provider with
+`NodeProblemCache`. New
 checks appear on the canvas without the drawing code being touched.
 
 > **Freshness.** The badge recomputes when the evaluation layer drops its own caches — the same counter, on

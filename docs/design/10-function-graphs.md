@@ -683,6 +683,12 @@ repository sweep enumerates, and a standalone Function must never become a delet
   `GuardOnVariable` would be reported. Implementing it as specified would produce false positives on most
   existing content. The valuable half — *the condition declares keys nobody is watching* — cannot occur,
   since inheritance covers it automatically.
+
+  **Still true on a guard, and spec 11 holds the same line there.** But the reasoning does not carry to the
+  Function itself: a Function's declaration *can* be compared against its own graph, and the case that
+  cannot be derived — a key computed at runtime — is the exception rather than the norm. So the Function
+  inspector does offer to remove a declared key its graph never reads, behind a confirmation naming exactly
+  that exception. The guard still reports nothing in this direction.
 - **Fan-in through the condition is defensive, not exercised.** The walk is DAG-safe with a visited set,
   matching the two existing guard walks. But BH3 ships no two-input boolean combinator — AND is expressed by
   several guards naming one owner — so no stock content can currently build a condition with two Functions
@@ -948,6 +954,21 @@ most (`fn_refresh_ports`, `bt_refresh_sub_tree_ports`) are pipeline commands tha
 the real measurement is attempted and a per-character estimate is used when it is unavailable. That affects
 width only, and only until the next refresh made from the canvas.
 
+### What grew out of this step, and now lives in spec 11
+
+Step 2b's drift lint was reported by `bt_verify` and nowhere else, which the tool owner pointed out is an
+agent surface: a designer never runs it. Making drift visible on the canvas turned into a general mechanism —
+any node reporting what is wrong with it, drawn as a badge — and then pulled in guard scheduling and the
+Function's own inspector.
+
+That is **[spec 11 — node problems](11-node-problems.md)**, implemented on the branch stacked directly on
+this one. It closes Unity-BH3#22 and supersedes two things written below:
+
+- The step 2a note that a wrong watched-key list is *"detectable, not just an empty one"* was true only of
+  `bt_verify`. It is now on the canvas, with the repair attached.
+- Verification's name-based `PortsSafeToLeaveUnset` allowlist is gone; whether an unconnected port is a
+  defect is declared at the port.
+
 ### Known gaps, stated rather than discovered
 
 - **`ContractPortLayout` reads the widgets' own styles** for port spacing and port chrome, rather than
@@ -973,9 +994,13 @@ and its behaviour, and gained only the dropped-connection report and the resize.
 
 ### Tests
 
-**468 EditMode, 467 passing, after merging `main`.** The single failure is the long-standing
+**468 EditMode, 467 passing** at the point step 2b merged `main`. The single failure is the long-standing
 `TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, unrelated to Functions.
 PlayMode unchanged at 56/49/7.
+
+> Later work on the same stack took this to **483 EditMode, 482 passing**, and then added further changes
+> that have not been run against the suite yet. See **spec 11** for what followed; treat the number here as
+> the 2b figure rather than the current one.
 
 25 new EditMode tests — 16 in `BH3/Test/EditMode/FunctionPortTests.cs` and 9 in `NodeProblemTests.cs` —
 plus four rewritten in `FunctionBackedScriptGraphVariableTests.cs`, which exercised the name-matching path

@@ -25,7 +25,10 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
             
-            Target = ValueInput<GameObject>(nameof(Target));
+            // Nothing reads this port -- FaceTarget uses TransformTarget. Marked so it is not reported as a
+            // missing connection, since connecting it would change nothing. The dead port itself is a
+            // separate defect, left alone here because removing a public port is a breaking change.
+            Target = ValueInput<GameObject>(nameof(Target)).SafeToLeaveUnconnected();
             TransformTarget = ValueInput<Transform>(nameof(TransformTarget));
             RotationOffset = ValueInput<Vector3>(nameof(RotationOffset));
             RotationSpeed = ValueInput<float>(nameof(RotationSpeed));

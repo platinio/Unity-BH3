@@ -137,9 +137,65 @@ reads, and a guard whose condition reaches it picks them up automatically:
 | **What happens to your own keys** | Nothing — the effective set is the union. Hand-typed keys stay legal |
 | **How far it looks** | Backwards through the whole condition, so a `Not` or any chain between the guard and the Function does not hide it |
 
-Live, not copied. Edit the Function to read a new fact and every guard referencing it is correct on the next
-run, with nothing to refresh and nothing to go stale. This is why there is no "refresh keys" command: there
-is no copy to repair.
+Live, not copied — **at runtime**. Edit the Function to read a new fact and every guard referencing it wakes
+on it from the next run, with nothing to refresh.
+
+### But the trigger you can see is a copy, and it can lie
+
+Authoring is the other half, and it behaves differently. `bt_guard_on_function` and the save-time seeder
+**write** the declared keys into the trigger's key list, which is serialized — that is what makes the
+schedule visible and editable on the asset instead of invisible machinery. Seeding then never revisits a
+trigger that already exists, because a save that rewrote a schedule you chose would be worse than the
+every-tick default it fixes.
+
+So the written list freezes at the moment it was seeded. Add a key to the Function later and:
+
+- **The guard still wakes on it.** Runtime unions the live declaration in. Behaviour is correct.
+- **The asset says otherwise.** You open the guard, read `hp`, and reasonably conclude it will not wake on
+  `stamina`.
+
+That gap is the whole problem — not a runtime bug, but an asset that describes a guard which no longer
+exists. It is now reported rather than silent:
+
+- **On the canvas**, as an amber badge on the guard, naming the key it fails to mention.
+- **`bt_verify`** reports the same thing.
+- **Refresh Watched Keys**, on the guard's right-click menu or `bt_refresh_guard_keys`, repairs it.
+
+**The repair adds and never removes.** A key in the list that nothing declares might be a deliberate
+hand-typed one naming a fact no walk can see, and seeded and hand-typed keys are byte-identical once
+written — nothing records which was which. Removing them would be the same mistake the seeder avoids by
+refusing to touch an existing trigger. So the direction that is provably wrong gets fixed automatically, and
+the direction that is merely wasteful is left to a human who can tell the two apart.
+
+The one case where a stale key *is* provable: a guard whose condition is **not connected at all** reads its
+own port default forever, so it depends on nothing and every key it lists is dead. That is reported
+unconditionally.
+
+### The sharper one: a fact the Function reads but never declares
+
+Everything above is about the *written-down* list lagging a correct declaration — annoying, but the guard
+still wakes. This one is worse, and it is the easy mistake to make:
+
+> **Adding a Get Variable unit to a Function does not change what the Function declares.**
+
+Inheritance hands a guard the **declaration**. So a fact your graph now reads, but never declared, schedules
+nothing: the guard keeps its old list, never wakes on that fact, and the branch quietly stops firing. Nothing
+throws. Nothing looks broken.
+
+Both the Function-backed node and any guard reading it now say so:
+
+> This guard's condition reads 'stamina' without declaring it, so the guard never wakes on it and its
+> branch can stop firing with nothing to point at.
+
+**Refresh Watched Keys cannot fix this**, and the menu says so rather than pretending — a refresh copies the
+declaration, and the declaration is the thing missing the key. The repair is on the Function:
+
+```bash
+unity command fn_set_metadata --function Assets/AI/Functions/IsHurt.asset --watched_keys hp,stamina
+```
+
+Or edit the Function's watched keys in its inspector. Once declared, every guard reading it wakes on the new
+fact immediately, and any guard whose written-down list now lags will offer a refresh to match.
 
 Hand-typed keys remain worth having for a dependency nothing can derive — a variable name computed at
 runtime, or a C# node doing its own lookup. Those are invisible to any walk, and a declaration is the only

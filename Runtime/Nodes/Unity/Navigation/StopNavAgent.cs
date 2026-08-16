@@ -29,7 +29,8 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void Definition()
         {
             base.Definition();
-            Target = ValueInput<GameObject>(nameof(Target));
+            // Read through GetComponent, which never calls GetValue -- unconnected falls back to the agent.
+            Target = ValueInput<GameObject>(nameof(Target)).SafeToLeaveUnconnected();
         }
 
         public override ExecutionStatus OnUpdate()

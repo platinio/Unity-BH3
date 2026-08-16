@@ -27,7 +27,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
             
-            Target = ValueInput<Object>(nameof(Target));
+            // Read through GetComponent, which never calls GetValue -- unconnected falls back to the agent.
+            Target = ValueInput<Object>(nameof(Target)).SafeToLeaveUnconnected();
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
         

@@ -20,13 +20,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     public static class BehaviorTreeVerification
     {
         /// <summary>
-        /// Port keys that read as unset but never call <c>GetValue()</c> — they resolve through
-        /// <c>GetComponent&lt;T&gt;(ValueInput)</c> and fall back to the machine's own GameObject, so an
-        /// unset one is correct rather than a defect.
-        /// </summary>
-        private static readonly HashSet<string> PortsSafeToLeaveUnset = new() { "Animator", "Target" };
-
-        /// <summary>
         /// Re-imports and re-loads a tree so it is the deserialized object, not the one still in memory.
         /// </summary>
         public static BehaviorTreeGraphAsset Reload(string assetPath)
@@ -64,7 +57,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 string json = BehaviorTreeDump.ToJson(asset);
                 string name = System.IO.Path.GetFileNameWithoutExtension(path);
 
-                foreach (var port in UnsetPortsThatMatter(json))
+                foreach (var port in UnsetPortsThatMatter(asset))
                 {
                     findings.Add($"{name}: port '{port}' is unset and will throw when read.");
                 }
@@ -172,6 +165,25 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                           + "them, or re-create the guard with bt_guard_on_function, which seeds it."
                         : $"{label} has no triggers, so it re-checks every tick. Add an interval or a "
                           + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
+                }
+
+                // 4b. The written-down schedule has fallen behind the condition (Unity-BH3#22). Runtime
+                //     inheritance means the guard does wake on the new key, so this is not a behaviour bug --
+                //     it is the asset describing a guard that no longer exists, which an author reads and
+                //     believes. Only the understating direction is reported; a key the trigger lists that
+                //     nothing declares cannot be told apart from a deliberate hand-typed one.
+                foreach (var trigger in guard.Triggers)
+                {
+                    if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+
+                    foreach (var key in inherited)
+                    {
+                        if (string.IsNullOrWhiteSpace(key) || trigger.Keys.Contains(key)) continue;
+
+                        findings.Add($"{label} does not list '{key}' among its watched keys, but its condition "
+                                     + "declares it. The guard wakes on it at runtime, so the asset understates "
+                                     + "what it watches. Refresh with bt_refresh_guard_keys.");
+                    }
                 }
 
                 // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still
@@ -558,12 +570,37 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
         }
 
-        private static IEnumerable<string> UnsetPortsThatMatter(string json)
+        /// <summary>
+        /// Ports that will throw when read, asked of the ports themselves.
+        ///
+        /// <para>
+        /// This used to scrape <c>"(unset)"</c> out of the dump and drop any port whose <em>name</em> was in
+        /// a hard-coded set of <c>{ "Animator", "Target" }</c>. Matching on name is matching on the wrong
+        /// thing: it exempted every port called <c>Target</c> regardless of how its node read it, so
+        /// <c>FaceTarget.Target</c> and any future node that named a genuinely-required port <c>Target</c>
+        /// were silently excused — while a node reading an <c>Animator</c> through <c>GetValue</c> would have
+        /// been excused too.
+        /// </para>
+        ///
+        /// <para>
+        /// Whether an unconnected port is a defect depends on how the node reads it, which only the node
+        /// knows, so it is now declared at the port — see <c>ValueInput.SafeToLeaveUnconnected</c> — and the
+        /// canvas badge asks the same question through the same property.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> UnsetPortsThatMatter(BehaviorTreeGraphAsset asset)
         {
-            return Regex.Matches(json, "\"([A-Za-z_][A-Za-z0-9_]*)\": \"\\(unset\\)\"")
-                .Select(match => match.Groups[1].Value)
-                .Where(port => !PortsSafeToLeaveUnset.Contains(port))
-                .Distinct();
+            foreach (var node in asset.graph.Nodes)
+            {
+                if (node == null || !node.IsVisible) continue;
+
+                foreach (var port in node.valueInputs)
+                {
+                    if (port == null || !port.IsUnfedRequired) continue;
+
+                    yield return $"{node.NodeName}.{port.key}";
+                }
+            }
         }
 
         private static IEnumerable<string> Occurrences(string json, string pattern, string treeName, string label)

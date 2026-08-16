@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
-    public class RunBehaviorTreeGraphNode : GameplayNode, IReportsProblems
+    public class RunBehaviorTreeGraphNode : GameplayNode
     {
         [Serialize, Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
@@ -214,8 +214,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// invisible-drift problem as the Function node since parameters were added to it, so it reports
         /// through the same capability rather than getting its own answer.
         /// </summary>
-        public void CollectProblems(List<NodeProblem> into)
+        public override void CollectProblems(List<NodeProblem> into)
         {
+            base.CollectProblems(into);
+
             if (behaviorTreeGraphAsset == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
@@ -228,16 +230,7 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Parameters."));
             }
 
-            foreach (var parameter in parameters)
-            {
-                if (parameter?.Name == null || parameter.Optional) continue;
-                if (!parameterPorts.TryGetValue(parameter.Name, out var port)) continue;
-                if (port == null || port.hasValidConnection || port.hasDefaultValue) continue;
-
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Required parameter '{parameter.Name}' has nothing connected.",
-                    $"Connect a value, or make it optional in {behaviorTreeGraphAsset.name}."));
-            }
+            // An unfed required parameter is just an unset port, which the base reports for every node.
         }
 
         public override void OnAwake()

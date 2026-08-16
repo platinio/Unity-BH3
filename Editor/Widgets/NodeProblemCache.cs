@@ -60,7 +60,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Adds a rule that can see something about a node the node cannot see about itself.
         ///
         /// <para>
-        /// Nodes report their own problems through <see cref="IReportsProblems"/>. This is the other half:
+        /// Nodes report their own problems by overriding <c>BehaviorTreeNode.CollectProblems</c>. This is the
+        /// other half:
         /// a lint that lives outside the node — the kind <c>BehaviorTreeVerification</c> owns — contributes
         /// without the node having to know the rule exists, or the rule having to become a property of the
         /// thing it inspects.
@@ -111,20 +112,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             Scratch.Clear();
 
-            if (node is IReportsProblems source)
+            // Every node can answer this — it is a virtual on the base with a do-nothing default, not a
+            // capability some nodes have. A node that throws while describing itself must not take the canvas
+            // down with it: a graph mid-edit is exactly when this is asked and exactly when a half-resolved
+            // reference is likeliest.
+            try
             {
-                // A node that throws while describing itself must not take the canvas down with it: a graph
-                // mid-edit is exactly when this is asked and exactly when a half-resolved reference is
-                // likeliest.
-                try
-                {
-                    source.CollectProblems(Scratch);
-                }
-                catch (Exception exception)
-                {
-                    Scratch.Add(new NodeProblem(NodeProblemSeverity.Error,
-                        $"Could not determine this node's state: {exception.Message}"));
-                }
+                node.CollectProblems(Scratch);
+            }
+            catch (Exception exception)
+            {
+                Scratch.Add(new NodeProblem(NodeProblemSeverity.Error,
+                    $"Could not determine this node's state: {exception.Message}"));
             }
 
             foreach (var provider in Providers)

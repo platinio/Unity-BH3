@@ -6,8 +6,7 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments,
-        IReportsProblems
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
 
@@ -263,14 +262,16 @@ namespace ArcaneOnyx.BehaviorTree
             return drift;
         }
 
-        // ------------------------------------------------------------------ IReportsProblems
+        // ------------------------------------------------------------------ problems
 
         /// <summary>
         /// What is wrong with this node, for the canvas to draw. Everything here is something the node can
         /// see in itself without walking anything: a contract comparison and two null checks.
         /// </summary>
-        public void CollectProblems(List<NodeProblem> into)
+        public override void CollectProblems(List<NodeProblem> into)
         {
+            base.CollectProblems(into);
+
             if (Function == null && EmbeddedScriptGraph == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
@@ -292,17 +293,92 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Ports."));
             }
 
-            // A required port nobody feeds throws on the first evaluation. Naming it here means it is
-            // visible while editing rather than at the moment it breaks.
-            for (var i = 0; i < parameterPorts.Length; i++)
-            {
-                var port = parameterPorts[i];
-                if (port == null || port.hasValidConnection || port.hasDefaultValue) continue;
+            ReportUndeclaredReads(into);
 
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Required input '{parameterNames[i]}' has nothing connected.",
-                    "Connect a value, or give the input a default in the Function."));
+            // An unfed required port is reported by the base for every node, so it is not repeated here.
+        }
+
+        /// <summary>
+        /// A key the Function's graph reads but the Function does not declare.
+        ///
+        /// <para>
+        /// <b>This is the one that silently breaks a guard.</b> Inheritance hands a reactive guard the keys a
+        /// Function <em>declares</em> — never what a walk of its units finds, deliberately, so that "declares"
+        /// and "happens to read" stay different words. The consequence is that adding a Get Variable unit to
+        /// a Function does not make any guard reading it wake on that variable. The guard keeps its old
+        /// schedule, the fact it now depends on never marks it dirty, and the branch simply stops firing with
+        /// nothing anywhere saying why.
+        /// </para>
+        ///
+        /// <para>
+        /// Distinct from the trigger drift reported on the guard itself: there the declaration was right and
+        /// only the written-down copy lagged, so behaviour was correct. Here the declaration is wrong, so
+        /// behaviour is wrong — and refreshing the guard's keys would <em>not</em> help, because it copies
+        /// from the declaration that is missing the key. The fix is on the Function.
+        /// </para>
+        ///
+        /// <para>
+        /// Reported here, on the node holding the reference, because this is where the Function is visible to
+        /// an author. <c>bt_verify</c> has reported it since the foundation pass; a designer does not run it.
+        /// </para>
+        /// </summary>
+        private void ReportUndeclaredReads(List<NodeProblem> into)
+        {
+            foreach (var key in UndeclaredReadKeys)
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                    $"{Function.name} reads '{key}' but does not declare it as a watched key, so a reactive "
+                    + "guard reading this Function will never wake on it.",
+                    "Declare it on the Function: fn_set_metadata --watched_keys."));
             }
+        }
+
+        /// <summary>
+        /// Keys the Function's graph reads that its declaration omits. Derived rather than declared, and so
+        /// only ever used to report — never to schedule anything, which is the distinction
+        /// <see cref="DeclaredWatchedKeys"/> exists to keep.
+        /// </summary>
+        [DoNotSerialize]
+        public IReadOnlyList<string> UndeclaredReadKeys
+        {
+            get
+            {
+                if (Function == null || Function.graph == null) return Array.Empty<string>();
+
+                var read = Function.DeriveReadKeys();
+                if (read == null || read.Count == 0) return Array.Empty<string>();
+
+                var declared = Function.WatchedKeys;
+                List<string> undeclared = null;
+
+                foreach (var key in read)
+                {
+                    if (string.IsNullOrWhiteSpace(key) || IsDeclared(declared, key)) continue;
+
+                    undeclared ??= new List<string>();
+                    undeclared.Add(key);
+                }
+
+                return (IReadOnlyList<string>)undeclared ?? Array.Empty<string>();
+            }
+        }
+
+        /// <summary>
+        /// The Function, which is where this node's watched keys are declared and therefore where an
+        /// incomplete declaration is repaired. Null for an embedded graph, which declares nothing anywhere.
+        /// </summary>
+        [DoNotSerialize]
+        public UnityEngine.Object DeclarationOwner => Function;
+
+        /// <summary>Membership without LINQ, since this runs on the canvas path.</summary>
+        private static bool IsDeclared(IReadOnlyList<string> declared, string key)
+        {
+            for (var i = 0; i < declared.Count; i++)
+            {
+                if (declared[i] == key) return true;
+            }
+
+            return false;
         }
 
         // ------------------------------------------------------------------ IFunctionArguments

@@ -232,6 +232,97 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "the badge must go stale on the same signal the evaluator does, or the two can disagree");
         }
 
+        // ------------------------------------------------------------------ unset ports, for every node
+
+        /// <summary>
+        /// The universal check, on a node that knows nothing about Functions. <c>WaitTime.Time</c> is one of
+        /// the 22 shipped ports that declare no default and throw on first read.
+        /// </summary>
+        [Test]
+        public void AnyNodeWithAnUnfedRequiredPort_IsReported()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Wait.asset");
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait).Select(problem => problem.Summary),
+                Has.Some.Contains("Time"),
+                "a port that throws on first read is a problem on any node, not just contract-driven ones");
+        }
+
+        [Test]
+        public void FeedingThePort_ClearsIt()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Fed.asset");
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+
+            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+            NodeProblemCache.Invalidate();
+
+            Assert.That(NodeProblemCache.For(wait), Is.Empty);
+        }
+
+        /// <summary>
+        /// A port read through <c>GetComponent</c> never calls <c>GetValue</c>, so unconnected is correct and
+        /// must not be reported. Declared at the port rather than inferred from its name.
+        /// </summary>
+        [Test]
+        public void APortDeclaredSafeToLeaveUnconnected_IsNotReported()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Nav.asset");
+            var stop = BehaviorTreeAuthoring.AddNode<StopNavAgent>(tree, 0.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(stop).Select(problem => problem.Summary),
+                Has.None.Contains("Target"),
+                "StopNavAgent reads Target through GetComponent and falls back to the agent");
+        }
+
+        /// <summary>
+        /// The bug the old name-based allowlist had. It excused every port called <c>Target</c>, so a node
+        /// that genuinely required one was silently exempt. Whether unconnected is safe depends on how the
+        /// node reads the port, which is why the answer now lives on the port.
+        /// </summary>
+        [Test]
+        public void SafetyIsPerPort_NotPerPortName()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/SameName.asset");
+            var stop = BehaviorTreeAuthoring.AddNode<StopNavAgent>(tree, 0.0f, 0.0f);
+            var face = BehaviorTreeAuthoring.AddNode<FaceTarget>(tree, 200.0f, 0.0f);
+
+            var safe = stop.valueInputs.First(port => port.key == "Target");
+            var required = face.valueInputs.First(port => port.key == "TransformTarget");
+
+            Assert.That(safe.IsUnfedRequired, Is.False);
+            Assert.That(required.IsUnfedRequired, Is.True,
+                "two ports, one of them safe unconnected and one not -- a name-based rule cannot tell them "
+                + "apart, and the old one exempted both");
+        }
+
+        [Test]
+        public void Verify_ReportsAnUnfedRequiredPortAndNamesTheNode()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/VerifyWait.asset");
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, wait, 0);
+            BehaviorTreeAuthoring.Save(tree);
+
+            var findings = BehaviorTreeVerification.Verify($"{Folder}/VerifyWait.asset");
+
+            Assert.That(findings, Has.Some.Contains("Time"));
+            Assert.That(findings, Has.Some.Contains("unset and will throw"));
+        }
+
+        [Test]
+        public void Verify_DoesNotReportAPortDeclaredSafeToLeaveUnconnected()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/VerifyNav.asset");
+            var stop = BehaviorTreeAuthoring.AddNode<StopNavAgent>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, stop, 0);
+            BehaviorTreeAuthoring.Save(tree);
+
+            Assert.That(BehaviorTreeVerification.Verify($"{Folder}/VerifyNav.asset"),
+                Has.None.Contains("Target"));
+        }
+
         // ------------------------------------------------------------------ extensibility
 
         /// <summary>
@@ -244,7 +335,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Provided.asset");
             var node = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(node), Is.Empty, "a Wait node reports nothing about itself");
+            // Fed, so the node is genuinely clean and anything reported below came from the provider.
+            BehaviorTreeAuthoring.SetValue(tree, node.Time, 1.0f, -200.0f, 0.0f);
+            NodeProblemCache.Invalidate();
+
+            Assert.That(NodeProblemCache.For(node), Is.Empty, "a fed Wait node reports nothing about itself");
 
             System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = candidate => candidate is WaitTime
                 ? new[] { new NodeProblem(NodeProblemSeverity.Warning, "waits are boring") }

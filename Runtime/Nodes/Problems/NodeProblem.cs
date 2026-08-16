@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -39,31 +39,4 @@ namespace ArcaneOnyx.BehaviorTree
         public override string ToString() => Fix == null ? Summary : $"{Summary}  →  {Fix}";
     }
 
-    /// <summary>
-    /// A node that can say what is wrong with it.
-    ///
-    /// <para>
-    /// A capability interface rather than a type test, following the rule <c>ConditionalExecution</c> already
-    /// states and <see cref="IDeclaresWatchedKeys"/> already follows: everything that walks nodes filters on
-    /// capability, never on type. A new node with a new kind of problem implements this and appears on the
-    /// canvas without anything in the drawing layer being touched.
-    /// </para>
-    ///
-    /// <para>
-    /// Implement it for problems a node can see <b>in itself</b>. Problems that only an outside rule can see
-    /// — the kind <c>BehaviorTreeVerification</c> knows about — are contributed by registering a provider
-    /// instead, so a lint does not have to become a property of the thing it inspects.
-    /// </para>
-    ///
-    /// <para>
-    /// <b>Cost matters here.</b> This is read to draw a canvas, so it is cached against an invalidation
-    /// counter rather than called per frame — but an implementation that walks a whole graph will still be
-    /// felt on a large tree every time something is edited. Report what the node already knows.
-    /// </para>
-    /// </summary>
-    public interface IReportsProblems
-    {
-        /// <summary>Adds this node's current problems. Adding nothing means the node is fine.</summary>
-        void CollectProblems(List<NodeProblem> into);
-    }
 }
