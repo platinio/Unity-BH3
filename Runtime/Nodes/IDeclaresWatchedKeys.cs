@@ -21,11 +21,31 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// Expressed as a capability rather than a type test, matching the rule
-    /// <see cref="ConditionalExecution.Triggers"/> already states: everything that walks guards filters on
-    /// capability, never on type. The second implementer is already named — spec 10's open question 5 is an
-    /// attribute letting a C# value node declare its keys the way a Function does, and it lands here without
-    /// touching the walk.
+    /// <b>An interface, and therefore a type test at the call site — deliberately.</b> The obvious
+    /// alternative is a virtual on <see cref="BehaviorTreeNode"/> with an empty default, which would remove
+    /// the test everywhere. It is rejected because this concept is not universal: only a node that produces
+    /// a value from agent state has an answer, and <c>Selector.DeclaredWatchedKeys</c> returning empty is
+    /// noise rather than a default. A member every node carries should mean something for every node.
+    /// </para>
+    ///
+    /// <para>
+    /// That is the line worth holding, and it is the opposite of where node problems land: any node can be
+    /// broken, for any reason, so a problem is asked of the base type and contributed to from several
+    /// sources. The two look alike at the call site and are not the same shape.
+    /// </para>
+    ///
+    /// <para>
+    /// <see cref="ConditionalExecution.Triggers"/> is not a counter-example. Its rule — filter on capability,
+    /// never on type — is stated for a <em>family</em>, and it puts the member on the guard base where every
+    /// member of that family has an answer. There is no equivalent family here: value-producing nodes are
+    /// spread across <c>GameplayNode</c> and <c>BaseVisualScriptingNode</c>, so the only uniform home would
+    /// be the root.
+    /// </para>
+    ///
+    /// <para>
+    /// The second implementer is already named — spec 10's open question 5 is a plain C# value node
+    /// declaring its keys the way a Function does. It lands by implementing this, without touching the walk,
+    /// and that is exactly the case a <c>BaseVisualScriptingNode</c>-scoped member would have excluded.
     /// </para>
     /// </summary>
     public interface IDeclaresWatchedKeys
