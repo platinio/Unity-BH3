@@ -501,18 +501,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void EachExtraPort_CostsARowAndTheGapBeforeIt()
         {
-            var (_, one) = TreeReading(Function("One", new (string, System.Type, object)[]
-            {
-                ("a", typeof(float), 0.0f)
-            }, "a", typeof(float)));
-
+            // Both sizes clear the 100px minimum a node is never drawn below. Comparing against a one-port
+            // node would measure the floor rather than the growth, which is what the first version of this
+            // test did.
             var (_, three) = TreeReading(Function("Three", new (string, System.Type, object)[]
             {
                 ("a", typeof(float), 0.0f), ("b", typeof(float), 0.0f), ("c", typeof(float), 0.0f)
             }, "a", typeof(float)));
 
-            var grew = ContractPortLayout.ResizeToFitPorts(three).height
-                       - ContractPortLayout.ResizeToFitPorts(one).height;
+            var (_, five) = TreeReading(Function("Five", new (string, System.Type, object)[]
+            {
+                ("a", typeof(float), 0.0f), ("b", typeof(float), 0.0f), ("c", typeof(float), 0.0f),
+                ("d", typeof(float), 0.0f), ("e", typeof(float), 0.0f)
+            }, "a", typeof(float)));
+
+            var grew = ContractPortLayout.ResizeToFitPorts(five).height
+                       - ContractPortLayout.ResizeToFitPorts(three).height;
 
             var expected = 2.0f * (UnityEditor.EditorGUIUtility.singleLineHeight
                                    + BehaviorTreeNodeElementWidget.Styles.spaceBetweenPorts);
@@ -529,19 +533,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void TheHeaderAllowance_IsTheWidgetsOwnNumber()
         {
-            var (_, node) = TreeReading(Function("One", new (string, System.Type, object)[]
+            // Three ports rather than one, so the result is the computed height and not the 100px floor.
+            var (_, node) = TreeReading(Function("Three", new (string, System.Type, object)[]
             {
-                ("a", typeof(float), 0.0f)
+                ("a", typeof(float), 0.0f), ("b", typeof(float), 0.0f), ("c", typeof(float), 0.0f)
             }, "a", typeof(float)));
 
             var height = ContractPortLayout.ResizeToFitPorts(node).height;
 
+            var rows = (3.0f * UnityEditor.EditorGUIUtility.singleLineHeight)
+                       + (2.0f * BehaviorTreeNodeElementWidget.Styles.spaceBetweenPorts);
+
             Assert.AreEqual(
-                BehaviorTreeNodeElementWidget.HEADER_AND_FOOTER_HEIGHT
-                + UnityEditor.EditorGUIUtility.singleLineHeight,
+                BehaviorTreeNodeElementWidget.HEADER_AND_FOOTER_HEIGHT + rows,
                 height,
                 0.01f,
-                "one port is the widget's header allowance plus a single row");
+                "a sized node is the widget's own header allowance plus its rows");
         }
     }
 }
