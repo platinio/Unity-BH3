@@ -973,30 +973,32 @@ and its behaviour, and gained only the dropped-connection report and the resize.
 
 ### Tests
 
-**459 EditMode (was 443), 457 passing. PlayMode unchanged at 56/49/7.** The failures are the same in both
-runs before and after, so nothing here introduced one — but see below, because one of the two EditMode
-failures is *not* the pre-existing one the spec documents.
+**468 EditMode, 467 passing, after merging `main`.** The single failure is the long-standing
+`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, unrelated to Functions.
+PlayMode unchanged at 56/49/7.
 
-16 new EditMode tests in `BH3/Test/EditMode/FunctionPortTests.cs`, plus four rewritten in
-`FunctionBackedScriptGraphVariableTests.cs` — those exercised the name-matching path this step deleted, and
-now stage through an `IFunctionArguments` double.
+25 new EditMode tests — 16 in `BH3/Test/EditMode/FunctionPortTests.cs` and 9 in `NodeProblemTests.cs` —
+plus four rewritten in `FunctionBackedScriptGraphVariableTests.cs`, which exercised the name-matching path
+this step deleted and now stage through an `IFunctionArguments` double.
 
-### A pre-existing failure on the base branch, not caused by this work
+### A failure this branch inherited, since fixed upstream
 
+While this work was in progress,
 `WatchedKeyInheritanceTests.AGuardWithNoTriggers_WhoseConditionDeclaresKeys_IsReportedWithThoseKeysNamed`
-**already failed on `feature/watched-key-inheritance`** before this branch was cut, though 2a's own section
-above reports that suite green. It is left alone rather than fixed, because the fix is a design call for 2a's
-author.
+failed on the base branch — 2a's own section above reported that suite green, and it was not. It was left
+alone here rather than fixed, because the fix was a design call for 2a's author. **It is fixed on `main`
+(commit `25ad8c4`) and green after the merge.** Recorded because the *reason* it failed is worth keeping:
 
-The mechanism: `GuardScheduleSeeder` (`OnWillSaveAssets`) re-seeds any guard that has *no* triggers from what
-its condition declares. The test clears the triggers and then saves, so the seeder puts one back, lint 4
-never fires, and the assertion for `"no triggers"` fails. The sibling test passes only because its condition
-is a variable read that declares nothing.
+`GuardScheduleSeeder` (`OnWillSaveAssets`) re-seeds any guard that has no triggers from what its condition
+declares. The test cleared the triggers and then saved — so the seeder put one back, lint 4 never fired, and
+the test was quietly asserting against the seeder rather than the lint. The fix reproduces the situation that
+actually happens instead: a Function gains a watched key *after* the trees referencing it were saved, so
+nothing re-seeds them and the guard is genuinely unscheduled.
 
-The design question underneath it: lint 4's Function branch justifies itself with *"a Function assigned
-through the inspector runs no authoring code"* — but the seeder hooks **save**, and the inspector path saves
-too. So the seeder already closes the gap the lint says it cannot, and the two overlap. Either the lint's
-Function branch is nearly dead code with a misleading message, or the seeder is hooking more than intended.
+The design question underneath it still stands and is not closed by that fix: lint 4's Function branch
+justifies itself with *"a Function assigned through the inspector runs no authoring code"* — but the seeder
+hooks **save**, and the inspector path saves too. The overlap is real; the fixed test just no longer depends
+on it.
 
 ### Demos
 
