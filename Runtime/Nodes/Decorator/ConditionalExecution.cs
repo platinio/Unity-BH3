@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     /// </summary>
     [SpecialNode]
-    public abstract class ConditionalExecution : GameplayNode
+    public abstract class ConditionalExecution : GameplayNode, IReportsProblems
     {
         [Serialize] private BehaviorTreeNode owner;
 
@@ -72,6 +72,99 @@ namespace ArcaneOnyx.BehaviorTree
         public void UpdateOwner(BehaviorTreeNode owner)
         {
             this.owner = owner;
+        }
+
+        /// <summary>
+        /// Where a guard's written-down schedule stops matching what its condition actually depends on
+        /// (Unity-BH3#22).
+        ///
+        /// <para>
+        /// Seeding writes a Function's declared keys into <see cref="GuardTrigger.Keys"/>, which is
+        /// serialized, and <c>SeedMissingGuardTriggers</c> deliberately never revisits a trigger that already
+        /// exists — rewriting a schedule an author chose would be worse than the every-tick default it fixes.
+        /// The consequence is that the list freezes at the moment it was seeded, so a Function that later
+        /// declares another key leaves the asset describing a guard that no longer exists.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>This is not a runtime bug and is not reported as an error.</b> Inheritance unions the live
+        /// declaration in at evaluation time, so the guard does wake on the new key. What is broken is the
+        /// asset as a description: an author reads the trigger and concludes the opposite of what happens.
+        /// </para>
+        /// </summary>
+        public virtual void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
+        {
+            var declared = InheritedWatchedKeys.Resolve(this);
+
+            var watchesKeys = false;
+
+            foreach (var trigger in Triggers)
+            {
+                if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+                if (trigger.UsableKeyCount() > 0) watchesKeys = true;
+            }
+
+            // A guard whose condition is not connected reads the port's own default forever, so it depends on
+            // nothing and every key it lists is provably stale. No false-positive risk here, unlike the
+            // general "watches a key nothing declares" case below.
+            if (watchesKeys && !AnyConditionConnected())
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                    "Nothing is connected to this guard's condition, so it reads its own default and depends "
+                    + "on nothing — but it still watches keys.",
+                    "Connect a condition, or remove the key trigger."));
+            }
+
+            if (declared.Length == 0) return;
+
+            foreach (var trigger in Triggers)
+            {
+                if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+
+                var missing = MissingFrom(trigger, declared);
+                if (missing == null) continue;
+
+                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                    $"This trigger does not list {missing}, which its condition declares. The guard does wake "
+                    + "on it at runtime, so what the asset shows and what runs disagree.",
+                    "Refresh Watched Keys."));
+            }
+        }
+
+        /// <summary>
+        /// Declared keys this trigger has not written down, as a readable list, or null when it has them all.
+        /// <para>
+        /// Only this direction is reported. The reverse — a key the trigger lists that nothing declares —
+        /// cannot be distinguished from a deliberate hand-typed key, because seeded and hand-typed keys are
+        /// byte-identical once written. Reporting it would fire on most existing content, which is why the
+        /// unconnected-condition case above is handled separately: there it is provable.
+        /// </para>
+        /// </summary>
+        private static string MissingFrom(GuardTrigger trigger, string[] declared)
+        {
+            System.Text.StringBuilder missing = null;
+
+            foreach (var key in declared)
+            {
+                if (string.IsNullOrWhiteSpace(key) || trigger.Keys.Contains(key)) continue;
+
+                if (missing == null) missing = new System.Text.StringBuilder();
+                else missing.Append(", ");
+
+                missing.Append('\'').Append(key).Append('\'');
+            }
+
+            return missing?.ToString();
+        }
+
+        private bool AnyConditionConnected()
+        {
+            foreach (var port in valueInputs)
+            {
+                if (port != null && port.hasValidConnection) return true;
+            }
+
+            return false;
         }
 
         public bool EvaluateInternal() => EvaluateInternal(fresh: false);

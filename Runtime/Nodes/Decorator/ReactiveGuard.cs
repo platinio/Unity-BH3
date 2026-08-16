@@ -92,6 +92,48 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void ClearTriggers() => triggers?.Clear();
 
+        /// <summary>
+        /// Writes into this guard's key triggers whatever its condition declares and they do not already
+        /// list. Returns one line per key added, empty when nothing changed.
+        ///
+        /// <para>
+        /// <b>It adds and never removes, deliberately.</b> A key the trigger lists that the condition does
+        /// not declare is indistinguishable from a deliberate hand-typed one — seeded and hand-typed keys are
+        /// byte-identical once serialized — and an author may legitimately be naming a fact written by a C#
+        /// node no walk can see. Removing those would be the exact failure
+        /// <c>SeedMissingGuardTriggers</c> avoids by refusing to touch a trigger that already exists: a save,
+        /// or a refresh, quietly discarding a schedule somebody chose.
+        /// </para>
+        ///
+        /// <para>
+        /// So this closes the direction that is provably wrong — the asset understating what the guard wakes
+        /// on — and leaves the direction that is merely wasteful to a human who can tell the two apart.
+        /// </para>
+        /// </summary>
+        public List<string> RefreshWatchedKeys()
+        {
+            var added = new List<string>();
+            if (triggers == null) return added;
+
+            var declared = InheritedWatchedKeys.Resolve(this);
+            if (declared.Length == 0) return added;
+
+            foreach (var trigger in triggers)
+            {
+                if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+
+                foreach (var key in declared)
+                {
+                    if (string.IsNullOrWhiteSpace(key) || trigger.Keys.Contains(key)) continue;
+
+                    trigger.Keys.Add(key);
+                    added.Add($"'{NodeName}': now watches '{key}', which its condition declares.");
+                }
+            }
+
+            return added;
+        }
+
         [DoNotSerialize] private bool inheritedResolved;
 
         /// <summary>

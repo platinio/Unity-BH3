@@ -1,5 +1,6 @@
 ﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -96,6 +97,63 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
+
+                // This override does not chain to the base, so the badge has to be asked for explicitly --
+                // which is why guards were the one node kind it never appeared on.
+                DrawProblemBadge(offset, position);
+            }
+        }
+
+        /// <summary>
+        /// The repair for a guard whose written-down keys have fallen behind its condition (Unity-BH3#22).
+        ///
+        /// <para>
+        /// Offered on the guard rather than applied on save, for the same reason
+        /// <c>SeedMissingGuardTriggers</c> refuses to touch a trigger that already exists: the list may hold
+        /// hand-typed keys naming a fact no walk can see, and a save that rewrote them would discard a
+        /// schedule somebody chose. The entry reports how many keys it would add, so the decision is informed.
+        /// </para>
+        /// </summary>
+        protected override System.Collections.Generic.IEnumerable<DropdownOption> contextOptions
+        {
+            get
+            {
+                foreach (var dropdownOption in base.contextOptions)
+                {
+                    yield return dropdownOption;
+                }
+
+                if (element is not ReactiveGuard guard) yield break;
+
+                var declared = InheritedWatchedKeys.Resolve(guard);
+                if (declared.Length == 0) yield break;
+
+                var missing = 0;
+
+                foreach (var trigger in guard.Triggers)
+                {
+                    if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+
+                    foreach (var key in declared)
+                    {
+                        if (!string.IsNullOrWhiteSpace(key) && !trigger.Keys.Contains(key)) missing++;
+                    }
+                }
+
+                var label = missing == 0
+                    ? "Refresh Watched Keys (up to date)"
+                    : $"Refresh Watched Keys ({missing} declared by the condition, not listed here)";
+
+                yield return new DropdownOption((System.Action)(() =>
+                {
+                    UndoUtility.RecordEditedObject("Refresh Watched Keys");
+
+                    foreach (var line in guard.RefreshWatchedKeys()) Debug.Log($"[BehaviorTree] {line}");
+
+                    Authoring.NodeProblemCache.Invalidate();
+
+                    GUI.changed = true;
+                }), label);
             }
         }
     }

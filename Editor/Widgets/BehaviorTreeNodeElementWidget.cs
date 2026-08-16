@@ -260,7 +260,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// thing as an error anywhere else in the editor.
         /// </para>
         /// </summary>
-        private void DrawProblemBadge(Vector2 offset, Rect nodeRect)
+        protected void DrawProblemBadge(Vector2 offset, Rect nodeRect)
         {
             if (!Authoring.NodeProblemCache.TryGetWorst(element, out var severity, out var count)) return;
 

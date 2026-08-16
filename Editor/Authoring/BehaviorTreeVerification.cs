@@ -174,6 +174,25 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                           + "key trigger, or an Every Frame trigger to say the cost is deliberate.");
                 }
 
+                // 4b. The written-down schedule has fallen behind the condition (Unity-BH3#22). Runtime
+                //     inheritance means the guard does wake on the new key, so this is not a behaviour bug --
+                //     it is the asset describing a guard that no longer exists, which an author reads and
+                //     believes. Only the understating direction is reported; a key the trigger lists that
+                //     nothing declares cannot be told apart from a deliberate hand-typed one.
+                foreach (var trigger in guard.Triggers)
+                {
+                    if (trigger == null || trigger.Kind != GuardTriggerKind.OnKeyChanged) continue;
+
+                    foreach (var key in inherited)
+                    {
+                        if (string.IsNullOrWhiteSpace(key) || trigger.Keys.Contains(key)) continue;
+
+                        findings.Add($"{label} does not list '{key}' among its watched keys, but its condition "
+                                     + "declares it. The guard wakes on it at runtime, so the asset understates "
+                                     + "what it watches. Refresh with bt_refresh_guard_keys.");
+                    }
+                }
+
                 // 5. Preemption is a Selector contract. Elsewhere the guard still gates entry and still
                 //    aborts, but its bid is defined and not yet active.
                 if (guard.TakesOverLowerPriority && owner != null && !childOfReactiveComposite.Contains(owner.guid))
