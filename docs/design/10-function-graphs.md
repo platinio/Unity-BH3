@@ -543,13 +543,20 @@ in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
 
 ### Step 2 — What a caller learns from the Function it references
 
-Two separable pieces, grouped because both are a caller reading something off the Function and remembering
-it. Either can be picked up alone.
+Three separable pieces, grouped because each is a caller learning something from the Function it references.
+Any can be picked up alone, though 2c is most useful after 2b, since a picker that filters by contract is
+worth more once the contract is visible on the node.
 
 **2a — Watched-key inheritance.** ✅ **Done, 2026-08-14** — see *Step 2a landed* below.
 
 **2b — Declared inputs become ports.** Designed 2026-08-14 with the tool owner, not yet built — see
 *Step 2b — Declared inputs become ports* at the end of this document.
+
+**2c — Picking a Function by contract.** Designed 2026-08-14, not yet built — see *Step 2c — Picking a
+Function by contract* at the end of this document. A dropdown that offers only the Functions that can
+legally fill the port being wired, the way Unreal offers Blueprint functions matching a signature. Today's
+inspector field is a plain object field, so it offers every Function in the project — which makes the UI
+looser than `bt_guard_on_function`, which already refuses a non-boolean condition by name.
 
 ### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
 
@@ -830,3 +837,83 @@ is no way to feed a declared input from a call site, so every BH3 Function is pu
   first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
 - **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
   clearly right; discarding a deliberate manual size is less obviously so.
+
+***
+
+## Step 2c — Picking a Function by contract
+
+Requested by the tool owner 2026-08-14, by analogy with Unreal: you choose a Blueprint function from a
+dropdown that only offers functions matching the signature you are filling. Here the signature is the
+declared contract, and for a guard condition it is *returns `bool`*.
+
+**What is wrong today.** The inspector field added in step 2a is a plain object field, so its picker lists
+every `FunctionGraphAsset` in the project — a query Function, a float Function, a Function with no `Result`
+at all. Assigning one that cannot work is a click away, and the failure arrives later as a cast exception at
+the first tick. Note the asymmetry this creates: `bt_guard_on_function` **refuses** a non-boolean Function
+by name at authoring time, so the CLI is currently stricter than the UI. That is backwards — the UI is where
+the mistake is easiest to make.
+
+### The filter is the target port's type, and it has to be found rather than declared
+
+The obvious implementation — ask the node what type it wants — does not work, and knowing why saves
+somebody an afternoon:
+
+- `VisualScriptGraphVariable.Definition()` builds its graph with `typeof(object)` and declares
+  `ValueOutput<object>`. The node is deliberately untyped, which is what lets one node type serve
+  predicates, floats and queries alike.
+- So the constraint lives **downstream**: it is the type of the `ValueInput` this node's `Output` is
+  connected to. A guard's `Value` is `ValueInput<bool>`, and that is the only thing in the graph that knows
+  `bool` is required.
+
+So the picker resolves its filter by following `Output`'s connections, not by asking the node:
+
+| Node's Output | Offered |
+|---|---|
+| connected to a `bool` port | Functions whose `ResultType` is assignable to `bool` |
+| connected to a `Component` port | Functions returning `Component` **or a subclass** — assignability, matching the rule `FunctionBinding.TrySetArgument` already uses for arguments |
+| connected to several ports | the intersection; empty means the wiring itself is contradictory and should say so |
+| unconnected | everything, grouped by flavor — there is no constraint to apply, and inventing one would stop an author wiring the node up afterwards |
+
+**Assignability rather than exact type is not a detail.** The old seam compared
+`valueOutput.type == parameter.value.GetType()` and so silently never bound a subclass; the evaluation seam
+replaced that with assignability on purpose. A picker that filtered on exact equality would reintroduce the
+same wrongness one layer up, hiding a `Transform` Function from a `Component` port.
+
+### Classification is shared with the library panel, not reimplemented
+
+`FunctionGraphAuthoring.DescribeFlavor` and `FunctionGraphAsset.ResultType` already classify a Function as
+predicate / query / value, and `FindFunctions` already enumerates them. Spec 03's card sections are built
+from the same two things. **The dropdown must read them rather than grow its own rules** — two surfaces that
+disagree about what counts as a predicate is precisely the drift a single derived classification exists to
+prevent.
+
+The two surfaces are complementary, not alternatives, and 2c does not depend on 03 shipping:
+
+- **Spec 03's library panel** — browse and search everything in the project, drag onto a canvas. A
+  discovery surface.
+- **2c's dropdown** — pick, at the port you are filling, from what can legally go there. A completion
+  surface.
+
+### Shape
+
+A searchable dropdown (`AdvancedDropdown`) rather than an `EditorGUI.Popup`: a project with fifty Functions
+is the case this feature exists for, and a flat popup of fifty entries is worse than the object field it
+replaced. Each entry shows the Function's name, its flavor, and its required inputs, so the thing a designer
+is about to owe the node is visible before they choose. Plus **None** to clear, and — worth considering —
+**Create new Function…**, which is the moment an author most often discovers the one they want does not
+exist yet.
+
+### Open, and worth settling before building
+
+- **Reaching the owning node from a `PropertyDrawer`.** The drawer is registered for
+  `BTScriptGraphVariable` and receives a `SerializedProperty`; the existing code gets the variable itself via
+  `property.boxedValue`, but the *node* that owns it — and therefore `Output` and its connections — is not
+  reachable that way. This may force the picker into a node inspector or a canvas-side control instead of a
+  property drawer. **This is the piece to spike first**; everything else here is straightforward, and this
+  one decides where the code lives.
+- **Whether an unconnected node should offer everything or nothing.** Everything is proposed above, on the
+  grounds that authors wire up in whatever order they like. The opposite argument is that a node with no
+  constraint is exactly where a wrong choice is cheapest to make and hardest to notice.
+- **Whether the drawer should also refuse a mismatch already assigned** — for instance a Function that was
+  valid until its `Result` type changed. `bt_verify` reports it, and a picker that silently dropped an
+  existing reference would be worse than one that shows it in error.
