@@ -274,12 +274,16 @@ namespace ArcaneOnyx.BehaviorTree
             var icon = EditorGUIUtility.IconContent(isError ? "console.erroricon.sml" : "console.warnicon.sml");
             if (icon?.image == null) return;
 
-            var badge = new Rect(nodeRect.xMax - 20.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
+            // Top-left. The execution-status icon owns the opposite corner, and on a narrow node -- a guard,
+            // or anything at the default 150 width -- the two corners are close enough that a badge on the
+            // right sat on top of it.
+            var badge = new Rect(nodeRect.x + 2.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
             GUI.DrawTexture(badge, icon.image, ScaleMode.ScaleToFit);
 
             if (count > 1)
             {
-                var countRect = new Rect(badge.xMax - 4.0f, badge.y - 2.0f, 18.0f, 14.0f);
+                // Reads outward from the icon, away from the node, so the number never lands on the title.
+                var countRect = new Rect(badge.xMax - 3.0f, badge.y - 2.0f, 18.0f, 14.0f);
                 GUI.Label(countRect, count.ToString(), Styles.problemCount);
             }
 
