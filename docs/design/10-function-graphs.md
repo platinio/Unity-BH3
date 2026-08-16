@@ -887,8 +887,16 @@ pins it, and it fails if anyone replaces the map with positional staging.
   the only other callers — see the next section, where the reasoning about them was initially wrong.
 - **A required input's default lives on the port, not in the evaluator.** An input nothing stages has no
   value at all and the graph reads it as a missing key — that *is* the `KeyNotFoundException` this step's
-  problem statement cites. A node with ports always stages every declared input, so it cannot happen from
-  one. Pinned by `AnInputNothingStages_FailsRatherThanFallingBackToTheGraphsDefault`.
+  problem statement cites.
+- **The two drift directions are not symmetrical, and only one of them breaks anything.** A call site
+  holding a port for an input the Function has *dropped* is harmless: nothing inside the graph reads it any
+  more, so the argument is skipped. An input the Function declares that the call site has *no port for* is
+  the opposite — nothing supplies it, and the graph throws the bare `KeyNotFoundException` above, naming the
+  key and nothing else, which points at the Function when the thing to fix is the caller's stale copy. That
+  case is now **refused where the argument map is resolved**, naming the Function, the input, the call site
+  and the repair — so it costs nothing per evaluation, and it does not depend on anyone having run
+  `bt_verify` first. `IFunctionArguments.CallSiteName` exists for that message: an unsupplied input is the
+  call site's debt, so the call site is what gets named.
 
 ### The two open questions, settled by the tool owner
 
@@ -965,11 +973,11 @@ and its behaviour, and gained only the dropped-connection report and the resize.
 
 ### Tests
 
-**458 EditMode (was 443), 456 passing. PlayMode unchanged at 56/49/7.** The failures are the same in both
+**459 EditMode (was 443), 457 passing. PlayMode unchanged at 56/49/7.** The failures are the same in both
 runs before and after, so nothing here introduced one — but see below, because one of the two EditMode
 failures is *not* the pre-existing one the spec documents.
 
-15 new EditMode tests in `BH3/Test/EditMode/FunctionPortTests.cs`, plus four rewritten in
+16 new EditMode tests in `BH3/Test/EditMode/FunctionPortTests.cs`, plus four rewritten in
 `FunctionBackedScriptGraphVariableTests.cs` — those exercised the name-matching path this step deleted, and
 now stage through an `IFunctionArguments` double.
 
