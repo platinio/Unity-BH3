@@ -36,10 +36,10 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     {
         /// <summary>
         /// The header allowance <c>BehaviorTreeNodeElementWidget.CachePosition</c> adds above the port
-        /// section. It is a bare literal there rather than a named constant, so this is the one number here
-        /// that genuinely cannot be referenced — everything else below reads the widget's own styles.
+        /// section. Read from the widget rather than copied: this was the one number here that could not be
+        /// referenced, until the widget's bare literal became a named constant.
         /// </summary>
-        private const float HeaderAndFooterHeight = 70.0f;
+        private static float HeaderAndFooterHeight => BehaviorTreeNodeElementWidget.HEADER_AND_FOOTER_HEIGHT;
 
         /// <summary>Read from the widget, not copied: the drawn spacing and the computed size must agree.</summary>
         private static float SpaceBetweenPorts => BehaviorTreeNodeElementWidget.Styles.spaceBetweenPorts;

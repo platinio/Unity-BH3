@@ -491,5 +491,57 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.Greater(resized.height, 100.0f, "three ports do not fit in the default height");
             Assert.AreEqual(resized, node.Position, "the computed size must actually be written to the node");
         }
+
+        /// <summary>
+        /// The gap between port rows has to be counted, not just the rows. The widget draws
+        /// <c>spaceBetweenPorts</c> between every pair, and the height that used to be computed for them
+        /// subtracted one such gap it had never added — so a node's ports drew past its own bottom edge, by
+        /// more the more ports it had.
+        /// </summary>
+        [Test]
+        public void EachExtraPort_CostsARowAndTheGapBeforeIt()
+        {
+            var (_, one) = TreeReading(Function("One", new (string, System.Type, object)[]
+            {
+                ("a", typeof(float), 0.0f)
+            }, "a", typeof(float)));
+
+            var (_, three) = TreeReading(Function("Three", new (string, System.Type, object)[]
+            {
+                ("a", typeof(float), 0.0f), ("b", typeof(float), 0.0f), ("c", typeof(float), 0.0f)
+            }, "a", typeof(float)));
+
+            var grew = ContractPortLayout.ResizeToFitPorts(three).height
+                       - ContractPortLayout.ResizeToFitPorts(one).height;
+
+            var expected = 2.0f * (UnityEditor.EditorGUIUtility.singleLineHeight
+                                   + BehaviorTreeNodeElementWidget.Styles.spaceBetweenPorts);
+
+            Assert.AreEqual(expected, grew, 0.01f,
+                "two extra ports cost two rows and the two gaps drawn before them");
+        }
+
+        /// <summary>
+        /// Sizing a node outside the draw path has to reach the same number the widget reserves when it draws
+        /// one, so the header allowance is read from the widget rather than copied. It was a bare literal in
+        /// both places, with a comment here saying the widget's could not be referenced.
+        /// </summary>
+        [Test]
+        public void TheHeaderAllowance_IsTheWidgetsOwnNumber()
+        {
+            var (_, node) = TreeReading(Function("One", new (string, System.Type, object)[]
+            {
+                ("a", typeof(float), 0.0f)
+            }, "a", typeof(float)));
+
+            var height = ContractPortLayout.ResizeToFitPorts(node).height;
+
+            Assert.AreEqual(
+                BehaviorTreeNodeElementWidget.HEADER_AND_FOOTER_HEIGHT
+                + UnityEditor.EditorGUIUtility.singleLineHeight,
+                height,
+                0.01f,
+                "one port is the widget's header allowance plus a single row");
+        }
     }
 }

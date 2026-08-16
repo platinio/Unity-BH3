@@ -26,13 +26,13 @@ namespace ArcaneOnyx.BehaviorTree
           
             Vector2 sourceCenter = transitionWidget.sourceEdgeCenter;
 
-            int conditionalCount = transitionWidget.element.destination.CountConditionalExection();
-
-            if (conditionalCount > 0)
-            {
-                sourceCenter += Vector2.up * conditionalCount * -ConditionalExecutionWidget.Height;
-                sourceCenter += Vector2.up * (conditionalCount - 1) * -ConditionalExecutionWidget.Separation;
-            }
+            // The guard stack sits between the owner's top edge and where this line has to arrive, and guards
+            // are no longer a fixed height, so the widget is asked rather than the count multiplied. That
+            // also settles a disagreement between this site and GetCloserVerticalNodePosition below, which
+            // counted one Separation more than this one did.
+            var destinationCanvas = ((GraphCore.IWidget)transitionWidget).canvas;
+            sourceCenter += Vector2.up * -ConditionalExecutionWidget.StackHeightAbove(
+                destinationCanvas, transitionWidget.element.destination);
 
             //draw transition first section
             float closerDestPositionY = GetCloserVerticalNodePosition(graph, transitionWidget).y;
@@ -103,14 +103,10 @@ namespace ArcaneOnyx.BehaviorTree
                     {
                         Vector2 destPosition = transition.destination.Position.GetEdgeCenter(transitionWidget.DestinationEdge);
 
-                        int conditionalExecutionCount = transition.destination.CountConditionalExection();
+                        destPosition += new Vector2(0, -ConditionalExecutionWidget.StackHeightAbove(
+                            ((GraphCore.IWidget)transitionWidget).canvas, transition.destination));
 
-                        if (conditionalExecutionCount > 0)
-                        {
-                            destPosition += new Vector2(0, -ConditionalExecutionWidget.Height) * conditionalExecutionCount;
-                            destPosition += new Vector2(0, -ConditionalExecutionWidget.Separation) * (conditionalExecutionCount);
-                        }
-                        
+
                         if (destPosition.y < closerDestinationPosition.y) closerDestinationPosition = destPosition;
                     }
                 }
