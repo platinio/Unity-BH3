@@ -6,7 +6,8 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments,
+        IReportsProblems
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
 
@@ -260,6 +261,48 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             return drift;
+        }
+
+        // ------------------------------------------------------------------ IReportsProblems
+
+        /// <summary>
+        /// What is wrong with this node, for the canvas to draw. Everything here is something the node can
+        /// see in itself without walking anything: a contract comparison and two null checks.
+        /// </summary>
+        public void CollectProblems(List<NodeProblem> into)
+        {
+            if (Function == null && EmbeddedScriptGraph == null)
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Error,
+                    "No Function or graph assigned, so this node has nothing to read."));
+                return;
+            }
+
+            if (HasAmbiguousGraphSource)
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                    "Both a Function and an embedded graph are assigned. The Function is what runs.",
+                    "Clear whichever one is not wanted — the other is editable but dead."));
+            }
+
+            if (Function == null) return;
+
+            foreach (var line in DescribeContractDrift())
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Ports."));
+            }
+
+            // A required port nobody feeds throws on the first evaluation. Naming it here means it is
+            // visible while editing rather than at the moment it breaks.
+            for (var i = 0; i < parameterPorts.Length; i++)
+            {
+                var port = parameterPorts[i];
+                if (port == null || port.hasValidConnection || port.hasDefaultValue) continue;
+
+                into.Add(new NodeProblem(NodeProblemSeverity.Error,
+                    $"Required input '{parameterNames[i]}' has nothing connected.",
+                    "Connect a value, or give the input a default in the Function."));
+            }
         }
 
         // ------------------------------------------------------------------ IFunctionArguments

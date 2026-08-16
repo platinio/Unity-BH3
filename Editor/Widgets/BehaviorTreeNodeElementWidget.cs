@@ -240,7 +240,66 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
+                DrawProblemBadge(offset, p);
             }
+        }
+
+        /// <summary>
+        /// Marks a node that is wrong before anyone runs it.
+        ///
+        /// <para>
+        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
+        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
+        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
+        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
+        /// counter rather than to a timer.
+        /// </para>
+        ///
+        /// <para>
+        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
+        /// thing as an error anywhere else in the editor.
+        /// </para>
+        /// </summary>
+        private void DrawProblemBadge(Vector2 offset, Rect nodeRect)
+        {
+            if (!Authoring.NodeProblemCache.TryGetWorst(element, out var severity, out var count)) return;
+
+            var isError = severity == NodeProblemSeverity.Error;
+            var tint = isError ? new Color(1.0f, 0.28f, 0.28f) : new Color(1.0f, 0.76f, 0.15f);
+
+            // A border rather than a fill: the node's own colour still has to read, and a tinted node looks
+            // like a node type rather than a node in trouble.
+            GraphDrawer.DrawSelectionBox(nodeRect, 2, tint);
+
+            var icon = EditorGUIUtility.IconContent(isError ? "console.erroricon.sml" : "console.warnicon.sml");
+            if (icon?.image == null) return;
+
+            var badge = new Rect(nodeRect.xMax - 20.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
+            GUI.DrawTexture(badge, icon.image, ScaleMode.ScaleToFit);
+
+            if (count > 1)
+            {
+                var countRect = new Rect(badge.xMax - 4.0f, badge.y - 2.0f, 18.0f, 14.0f);
+                GUI.Label(countRect, count.ToString(), Styles.problemCount);
+            }
+
+            // Hovering is how the reader gets from "something is wrong" to "this is wrong and here is the
+            // fix" without leaving the canvas or opening a console.
+            GUI.Label(badge, new GUIContent(string.Empty, DescribeProblems()));
+        }
+
+        private string DescribeProblems()
+        {
+            var problems = Authoring.NodeProblemCache.For(element);
+            var description = new System.Text.StringBuilder();
+
+            foreach (var problem in problems)
+            {
+                if (description.Length > 0) description.AppendLine();
+                description.Append(problem);
+            }
+
+            return description.ToString();
         }
 
         /// <summary>
@@ -784,6 +843,15 @@ namespace ArcaneOnyx.BehaviorTree
             public static readonly float spaceBeforeSubtitle = 0;
 
             public static readonly float invokeFadeDuration = 0.5f;
+
+            /// <summary>The "3" on a node carrying more than one problem.</summary>
+            public static readonly GUIStyle problemCount = new GUIStyle
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = new Color(1.0f, 0.85f, 0.85f) }
+            };
             
             static Styles()
             {

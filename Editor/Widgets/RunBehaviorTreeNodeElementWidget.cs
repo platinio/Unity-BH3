@@ -307,6 +307,10 @@ namespace ArcaneOnyx.BehaviorTree
                     // rather than on the draw path is what keeps an author's own drag from being overwritten.
                     Authoring.ContractPortLayout.ResizeToFitPorts(runNode);
 
+                    // The refresh is the fix for whatever the badge was reporting, so it has to stop
+                    // reporting it now rather than at the next import.
+                    Authoring.NodeProblemCache.Invalidate();
+
                     GUI.changed = true;
                 }), label);
             }

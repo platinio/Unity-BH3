@@ -20,15 +20,27 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
+            var treeChanged = false;
+
             foreach (var path in importedAssets)
             {
                 if (!path.EndsWith(".asset", System.StringComparison.OrdinalIgnoreCase)) continue;
-                if (AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(path) == null) continue;
 
-                // One Function changing is enough to make every plan suspect, and plans are cheap to rebuild.
-                FunctionEvaluator.InvalidateAll();
-                return;
+                if (AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(path) != null)
+                {
+                    // One Function changing is enough to make every plan suspect, and plans are cheap to
+                    // rebuild. Bumping the evaluator's version is also what re-checks the canvas problem
+                    // badges, which invalidate off the same counter so they cannot disagree with it.
+                    FunctionEvaluator.InvalidateAll();
+                    return;
+                }
+
+                // A sub-tree's contract lives on a behavior tree asset, which the evaluator has no opinion
+                // about -- so a caller's drift against it needs its own signal.
+                if (AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(path) != null) treeChanged = true;
             }
+
+            if (treeChanged) NodeProblemCache.Invalidate();
         }
     }
 }

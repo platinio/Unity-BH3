@@ -56,13 +56,41 @@ is an import-order failure and therefore shows up on one machine and not another
 The cost is that the copy can fall behind the Function. That is the better failure, because it can be
 reported:
 
-- `bt_verify` names any node whose copy has drifted, and what changed.
+- **The node marks itself on the canvas** — a red border and an error icon, with the problem and its fix on
+  hover. You see it when you open the tree, not when you press Play.
 - **Refresh Ports** on the node's right-click menu, or `fn_refresh_ports`, rebuilds it.
 - Refreshing removes ports the Function no longer declares, **and the connections feeding them**. Both the
   menu and the command say which connections that cost. There is no undo, so the report is the mitigation.
 
 The node is resized to fit its ports whenever its contract changes — and only then, so a size you set by
 hand survives everything except the next contract change.
+
+### What a node tells you before you press Play
+
+A node that cannot work marks itself: a red border, an error icon in the corner, and — on hover — what is
+wrong and what to do about it. A warning (amber) means it will still do something sensible; an error means
+it will throw or quietly do the wrong thing.
+
+What a Script Graph Variable reports today:
+
+| On the node | Means | Fix |
+|---|---|---|
+| `added: armour : Single` | The Function gained an input this node has never heard of | **Refresh Ports** |
+| `Required input 'threshold' has nothing connected` | The port exists and is empty | Connect a value |
+| `Both a Function and an embedded graph are assigned` | The Function runs; the graph is editable but dead | Clear one |
+| `No Function or graph assigned` | The node has nothing to read | Assign one |
+
+A sub-tree node reports the same shapes against its own contract. Neither used to say anything at all —
+you found out when the tree ran.
+
+This is a **general** mechanism, not a Function one: a node reports itself by implementing
+`IReportsProblems`, and a rule that lives outside the node registers a provider with `NodeProblemCache`. New
+checks appear on the canvas without the drawing code being touched.
+
+> **Freshness.** The badge recomputes when the evaluation layer drops its own caches — the same counter, on
+> purpose, so the badge and the runtime cannot disagree about whether a node is fine. The one lag: a Function
+> edited in the graph window and not yet saved. The evaluator lags identically, so the badge is still honest
+> about what would happen if you pressed Play right now.
 
 > **Before this existed**, a declared input was matched by name against the agent's own variables: you
 > supplied `threshold` by declaring an agent variable called `threshold`. That worked, but nothing about it

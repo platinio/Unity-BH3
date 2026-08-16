@@ -69,6 +69,10 @@ namespace ArcaneOnyx.BehaviorTree
 
                     Authoring.ContractPortLayout.ResizeToFitPorts(variableNode);
 
+                    // The refresh is the fix for whatever the badge was reporting, so it has to stop
+                    // reporting it now rather than at the next import.
+                    Authoring.NodeProblemCache.Invalidate();
+
                     GUI.changed = true;
                 }), label);
             }
