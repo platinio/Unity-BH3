@@ -37,10 +37,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         private GameObject agent;
         private FunctionGraphAsset function;
 
+        /// <summary>
+        /// Agents beyond the first. A cost comparison needs two of them alive at once, seeing the same frames,
+        /// or the two halves are measured against different clocks.
+        /// </summary>
+        private readonly System.Collections.Generic.List<GameObject> extraAgents = new();
+
         [TearDown]
         public void TearDown()
         {
             if (agent != null) Object.DestroyImmediate(agent);
+
+            foreach (var extra in extraAgents)
+            {
+                if (extra != null) Object.DestroyImmediate(extra);
+            }
+
+            extraAgents.Clear();
+
             if (function != null) Object.DestroyImmediate(function);
 
             FunctionEvaluator.InvalidateAll();
@@ -244,6 +258,70 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 + "that re-runs on every write has inherited nothing and is merely always due.");
         }
 
+        /// <summary>
+        /// The demo's headline claim, as an assertion: an inherited schedule reaches the <em>same decision</em>
+        /// as no schedule at all, for a fraction of the graph runs.
+        ///
+        /// <para>
+        /// This is the third variant of the demo scene — the control it compares against — and until now it
+        /// was verified only by reading numbers off a screenshot. That is exactly the kind of claim that rots
+        /// without anyone noticing: inheritance could quietly stop working and the two agents would still
+        /// agree on the branch, because a guard that has become permanently due is <em>correct</em>. It is
+        /// only wrong about cost, and cost is invisible unless something counts it.
+        /// </para>
+        ///
+        /// <para>
+        /// Both agents run the same tree asset and see the same frames, so the comparison is between
+        /// schedules rather than between clocks. The bound is deliberately loose — an order of magnitude,
+        /// not an exact count — because the point is the shape of the difference and a tight number would
+        /// fail on an unrelated timing change without telling anyone anything.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AnInheritedSchedule_ReachesTheSameDecisionForAFractionOfTheGraphRuns()
+        {
+            const int Frames = 40;
+
+            var tree = BuildFunctionGuardedTree(out var attack, out _);
+
+            var scheduled = SpawnAgent(tree, hasTarget: false, preAttachWriter: true);
+            var everyTick = SpawnExtraAgent(tree);
+
+            // The control: same condition, same Function, no schedule at all.
+            RunningGuard(everyTick).ClearTriggers();
+
+            for (var frame = 0; frame < Frames; frame++)
+            {
+                // One state change, halfway, so both agents have something to react to and the counts either
+                // side of it are comparable.
+                if (frame == Frames / 2)
+                {
+                    AgentVariableWriter.SetOn(scheduled.gameObject, "hasTarget", true);
+                    AgentVariableWriter.SetOn(everyTick.gameObject, "hasTarget", true);
+                }
+
+                yield return null;
+            }
+
+            var scheduledRuns = RunningGuard(scheduled).Evaluations;
+            var everyTickRuns = RunningGuard(everyTick).Evaluations;
+
+            Assert.IsTrue(Entered(scheduled.FlightRecorder, attack),
+                "The inheriting guard must reach the same decision -- a cheaper schedule that changes the "
+                + "answer is not an optimisation, it is a bug.");
+            Assert.IsTrue(Entered(everyTick.FlightRecorder, attack),
+                "and so must the control, or the two are not comparable.");
+
+            Assert.That(everyTickRuns, Is.GreaterThan(Frames / 2),
+                "The control must actually be paying every tick, or there is no baseline to be cheaper than.");
+
+            Assert.That(scheduledRuns, Is.LessThan(everyTickRuns / 4),
+                $"An inherited schedule must cost a fraction of no schedule: {scheduledRuns} runs against "
+                + $"{everyTickRuns} over {Frames} frames. If these converge, inheritance has stopped gating "
+                + "and the guard is merely always due -- which still produces the right answer, and is the "
+                + "reason this needs its own test rather than being covered by the wake tests.");
+        }
+
         #region Scenario
 
         /// <summary>
@@ -396,6 +474,29 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             idle = idleNode.guid;
 
             return asset;
+        }
+
+        /// <summary>
+        /// A second agent on the same tree, tracked separately so the fixture still tears everything down.
+        /// <para>
+        /// Its own machine instantiates its own clone of the macro, so the two agents share an asset and
+        /// nothing else — which is the whole point when the thing under test is a per-agent schedule.
+        /// </para>
+        /// </summary>
+        private BehaviorTreeMachine SpawnExtraAgent(BehaviorTreeGraphAsset tree)
+        {
+            var extra = new GameObject("Zombie (control)");
+            extra.SetActive(false);
+            extraAgents.Add(extra);
+
+            var machine = extra.AddComponent<BehaviorTreeMachine>();
+            extra.GetComponent<Variables>().declarations.Set("hasTarget", false);
+            extra.AddComponent<AgentVariableWriter>();
+
+            machine.nest.macro = tree;
+            extra.SetActive(true);
+
+            return machine;
         }
 
         /// <summary>
