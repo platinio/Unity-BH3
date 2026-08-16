@@ -74,16 +74,34 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return function;
         }
 
-        private static VariableDeclarations Declarations()
+        /// <summary>
+        /// A call site's argument list, standing in for the ports a <see cref="VisualScriptGraphVariable"/>
+        /// declares. This replaced a <c>VariableDeclarations</c> when step 2b deleted name matching against
+        /// the agent scope: arguments now come from the node's own ports, so a test that supplies them has
+        /// to supply them the same way.
+        /// </summary>
+        private sealed class Arguments : IFunctionArguments
         {
-            // Deliberately wider than the Function's contract: a branch's ambient variables are not a call
-            // site's argument list, so staging must cope with extras without paying for them.
-            var declarations = new VariableDeclarations();
-            declarations.Set("scale", 3.0f);
-            declarations.Set("unrelatedA", "text");
-            declarations.Set("unrelatedB", 7);
-            declarations.Set("unrelatedC", Vector3.one);
-            return declarations;
+            private readonly (string name, object value)[] entries;
+
+            public Arguments(params (string name, object value)[] entries) => this.entries = entries;
+
+            public int Count => entries.Length;
+
+            public string NameAt(int index) => entries[index].name;
+
+            public object ValueAt(int index) => entries[index].value;
+        }
+
+        private static Arguments Declarations()
+        {
+            // Deliberately wider than the Function's contract: a call site may carry a port for an input the
+            // Function no longer declares, so staging must cope with extras without paying for them.
+            return new Arguments(
+                ("scale", 3.0f),
+                ("unrelatedA", "text"),
+                ("unrelatedB", 7),
+                ("unrelatedC", Vector3.one));
         }
 
         [Test]
@@ -98,12 +116,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void FunctionBackedVariable_IgnoresVariablesTheFunctionDoesNotDeclare()
+        public void FunctionBackedVariable_IgnoresArgumentsTheFunctionDoesNotDeclare()
         {
             var variable = new ScriptGraphVariable();
             variable.SetFunction(EchoFunction("Extras", "scale", typeof(float)));
 
-            // The three unrelated declarations must not be an error, and must not reach the Function.
+            // The three unrelated arguments must not be an error, and must not reach the Function. This is
+            // the drift case: a call site keeps a port for an input that has been removed, and the right
+            // behaviour is to report it and keep running, not to refuse to evaluate.
             Assert.That(variable.GetValue<float>(agent, Declarations()), Is.EqualTo(3.0f));
         }
 
@@ -147,9 +167,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var variable = new ScriptGraphVariable();
             variable.SetFunction(function);
 
-            var declarations = new VariableDeclarations();
-            declarations.Set("scale", 2.0f);
-            declarations.Set("boost", 9.0f);
+            var declarations = new Arguments(("scale", 2.0f), ("boost", 9.0f));
 
             Assert.That(variable.GetValue<float>(agent, declarations), Is.EqualTo(2.0f));
 

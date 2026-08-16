@@ -1,4 +1,5 @@
-﻿using ArcaneOnyx.GraphCore;
+﻿using System.Collections.Generic;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -13,6 +14,27 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string NodeName => comment == string.Empty? "Script Graph" : comment;
         public override bool CanBeUsedAsTransitionDestination => true;
+
+        /// <summary>
+        /// The four lifecycle graphs, for tooling that has to see every graph this node reads.
+        ///
+        /// <para>
+        /// Exposed because these fields can hold a <b>Function</b> — the inspector drawer is registered for
+        /// <c>BTScriptGraphVariable</c>, which is what all four are — and a Function here has no way to be
+        /// given arguments: only <see cref="VisualScriptGraphVariable"/> declares ports from a contract. That
+        /// makes the state worth reporting, and verification cannot report what it cannot reach.
+        /// </para>
+        /// </summary>
+        public IEnumerable<ScriptGraphVariable> LifecycleGraphs
+        {
+            get
+            {
+                yield return OnAwakeGraph;
+                yield return OnEnterGraph;
+                yield return OnUpdateGraph;
+                yield return OnExitGraph;
+            }
+        }
 
         protected override void Definition()
         {

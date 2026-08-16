@@ -6,9 +6,33 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
+
+        /// <summary>
+        /// The Function's contract as this node remembers it, and the only thing <see cref="Definition"/>
+        /// reads when declaring ports. See <see cref="VisualScriptingExtension.FunctionParameter"/> for why
+        /// it is a copy rather than a live read of the asset: <c>Definition()</c> runs during
+        /// deserialization, connections resolve by port key, and a key that does not exist yet is dropped
+        /// silently — so declaring ports from the asset loses wiring on any load where it has not resolved,
+        /// which is an import-order failure and therefore appears on one machine and not another.
+        /// </summary>
+        [Serialize]
+        private List<VisualScriptingExtension.FunctionParameter> parameters = new();
+
+        /// <summary>
+        /// The declared ports, in the same order as <see cref="parameters"/>. An array rather than a
+        /// dictionary because it is indexed once per argument per evaluation and never looked up by name.
+        /// </summary>
+        [DoNotSerialize]
+        private ValueInput[] parameterPorts = Array.Empty<ValueInput>();
+
+        /// <summary>Names index-aligned with <see cref="parameterPorts"/>, for resolve-time mapping.</summary>
+        [DoNotSerialize]
+        private string[] parameterNames = Array.Empty<string>();
+
+        public IReadOnlyList<VisualScriptingExtension.FunctionParameter> Parameters => parameters;
         public override string NodeName => comment == string.Empty? "Script Graph Variable" : comment;
         public override bool CanBeUsedAsTransitionDestination => false;
         public override string Description => "Returns value from Script Graph";
@@ -73,14 +97,32 @@ namespace ArcaneOnyx.BehaviorTree
         /// Points this node at a Function — a named, shared, contracted graph — instead of an anonymous
         /// sub-asset. The counterpart of <see cref="SetScriptGraph"/> for the new seam.
         /// </summary>
+        /// <summary>
+        /// Points this node at a Function and grows a port per declared input.
+        /// <para>
+        /// The refresh is part of assigning rather than a second step an author has to remember: a node
+        /// pointed at a Function whose inputs it does not declare has no way to be fed, which is the state
+        /// step 2b exists to make unreachable.
+        /// </para>
+        /// </summary>
         public void SetFunction(VisualScriptingExtension.FunctionGraphAsset asset)
         {
-            ScriptGraphVariable?.SetFunction(asset);
+            if (ScriptGraphVariable == null) return;
+
+            ScriptGraphVariable.SetFunction(asset);
+            RefreshParameters();
         }
         
+        /// <summary>
+        /// Declares one port per remembered parameter, plus the output. Reads <see cref="parameters"/> and
+        /// nothing else, so it is deterministic from this node's own serialized data and unaffected by
+        /// whether the Function asset happens to have resolved yet.
+        /// </summary>
         protected override void Definition()
         {
             base.Definition();
+
+            DeclareParameterPorts();
 
             if (ScriptGraphVariable == null) ScriptGraphVariable = CreateGraphWithOutput(typeof(object));
             Output = ValueOutput<object>(nameof(Output), () =>
@@ -92,7 +134,12 @@ namespace ArcaneOnyx.BehaviorTree
                 try
                 {
                     runtimeException = null;
-                    return ScriptGraphVariable.GetValue<object>(gameObject, ScriptGraphVariables);
+
+                    // A Function is fed by this node's declared ports; an embedded graph still reads the
+                    // ambient scope, because it has no contract to declare ports from.
+                    return ScriptGraphVariable.ReadsFunction
+                        ? ScriptGraphVariable.GetValue<object>(gameObject, this)
+                        : ScriptGraphVariable.GetValue<object>(gameObject, ScriptGraphVariables);
                 }
                 catch (Exception e)
                 {
@@ -113,6 +160,134 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (runtimeException != null) return ExecutionStatus.Exception;
             return base.OnUpdate();
+        }
+
+        // ------------------------------------------------------------------ declared inputs as ports
+
+        private void DeclareParameterPorts()
+        {
+            if (parameters == null || parameters.Count == 0)
+            {
+                parameterPorts = Array.Empty<ValueInput>();
+                parameterNames = Array.Empty<string>();
+                return;
+            }
+
+            var ports = new List<ValueInput>(parameters.Count);
+            var names = new List<string>(parameters.Count);
+
+            foreach (var parameter in parameters)
+            {
+                if (parameter == null || string.IsNullOrEmpty(parameter.Name) || parameter.Type == null) continue;
+                if (names.Contains(parameter.Name)) continue;
+
+                // Optional declares a default so the port is safe to leave unconnected; required declares
+                // none, which makes an unconnected one the unset-port case bt_verify already reports rather
+                // than a KeyNotFoundException on the first evaluation.
+                ports.Add(parameter.Optional
+                    ? ValueInput(parameter.Type, parameter.Name, parameter.DefaultValue)
+                    : ValueInput(parameter.Type, parameter.Name));
+
+                names.Add(parameter.Name);
+            }
+
+            parameterPorts = ports.ToArray();
+            parameterNames = names.ToArray();
+        }
+
+        /// <summary>
+        /// Rebuilds the remembered contract from the Function's declared inputs and re-declares the ports.
+        /// <para>
+        /// Returns one line per connection this cost, because a refresh that removes a port removes whatever
+        /// fed it, and an author who is not told has no way to notice until the value silently stops
+        /// arriving. Reporting is the mitigation; there is deliberately no undo.
+        /// </para>
+        /// </summary>
+        public List<string> RefreshParameters()
+        {
+            var lost = DescribeConnectionsLostByRefresh();
+
+            parameters = VisualScriptingExtension.FunctionParameter.ReadContract(Function);
+
+            // The staged-argument map is keyed on the plan and the argument count, neither of which changes
+            // when a parameter is renamed but the count stays the same.
+            ScriptGraphVariable?.InvalidateArgumentMap();
+
+            Define();
+            PortsChanged();
+
+            return lost;
+        }
+
+        /// <summary>
+        /// Which currently-connected ports a refresh would remove, named with what feeds them. Computed
+        /// before the rebuild, because afterwards the connection is already gone.
+        /// </summary>
+        private List<string> DescribeConnectionsLostByRefresh()
+        {
+            var lost = new List<string>();
+            if (parameters == null || parameters.Count == 0) return lost;
+
+            var current = VisualScriptingExtension.FunctionParameter.ReadContract(Function);
+
+            for (var i = 0; i < parameterPorts.Length; i++)
+            {
+                var name = parameterNames[i];
+                if (current.Exists(candidate => candidate.Name == name)) continue;
+
+                var source = ContractPorts.DescribeWhatFeeds(parameterPorts[i]);
+                if (source == null) continue;
+
+                lost.Add($"'{NodeName}': removing input '{name}' dropped its connection from {source}.");
+            }
+
+            return lost;
+        }
+
+        /// <summary>
+        /// How the remembered contract differs from what the Function declares now, one line per difference
+        /// and empty when they agree. This is the check that makes the copy safe: a renamed or retyped input
+        /// shows up here instead of silently unwiring this node.
+        /// </summary>
+        public List<string> DescribeContractDrift()
+        {
+            var drift = new List<string>();
+            if (Function == null) return drift;
+
+            foreach (var line in VisualScriptingExtension.FunctionParameter.DescribeDrift(Function, parameters))
+            {
+                drift.Add(line);
+            }
+
+            return drift;
+        }
+
+        // ------------------------------------------------------------------ IFunctionArguments
+
+        int IFunctionArguments.Count => parameterPorts.Length;
+
+        string IFunctionArguments.NameAt(int index) => parameterNames[index];
+
+        object IFunctionArguments.ValueAt(int index)
+        {
+            try
+            {
+                return parameterPorts[index].GetValue();
+            }
+            catch (MissingValuePortInputException e)
+            {
+                // A required port with nothing connected, named with this node and the input rather than
+                // failing inside the Function with no sign of where the value was owed.
+                //
+                // Only this exception is relabelled. A connected port evaluates whatever feeds it, which can
+                // be another whole graph, so catching everything here would put "the port has nothing
+                // connected" on top of a fault several hops away and send whoever is debugging it in exactly
+                // the wrong direction.
+                throw new Exception(
+                    $"'{NodeName}' cannot supply '{parameterNames[index]}' to " +
+                    $"{(Function != null ? Function.name : "its Function")}: the port has nothing connected " +
+                    "and declares no default.", e);
+            }
         }
     }
 }

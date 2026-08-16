@@ -24,6 +24,18 @@ namespace ArcaneOnyx.BehaviorTree
         [System.NonSerialized] private FunctionBinding binding;
         [System.NonSerialized] private GameObject boundAgent;
 
+        /// <summary>
+        /// The plan the argument map below was resolved against, held to detect a rebuild by reference.
+        /// </summary>
+        [System.NonSerialized] private FunctionBindingPlan mappedPlan;
+
+        /// <summary>
+        /// Argument slot -> index of the declared input it feeds, or -1 for an argument the Function does
+        /// not declare. Resolved once and reused, because the alternative is a name lookup per argument per
+        /// evaluation on the one path the whole binding plan exists to keep free of them.
+        /// </summary>
+        [System.NonSerialized] private int[] argumentIndices;
+
         public ScriptGraphAsset ScriptGraphAsset => scriptGraphAsset;
 
         public FunctionGraphAsset Function => function;
@@ -40,6 +52,23 @@ namespace ArcaneOnyx.BehaviorTree
             function = asset;
             binding = null;
             boundAgent = null;
+            InvalidateArgumentMap();
+        }
+
+        /// <summary>
+        /// Forces the argument map to be resolved again on the next evaluation.
+        /// <para>
+        /// Needed because the map is keyed on the binding plan and the argument <em>count</em>, neither of
+        /// which changes when a caller renames a parameter while keeping the same number of them. Every path
+        /// that can do that is editor-time — refreshing a node's contract, or pointing it at a different
+        /// Function — so this is called from there rather than checked per evaluation. Nothing in a player
+        /// build can rename a port.
+        /// </para>
+        /// </summary>
+        public void InvalidateArgumentMap()
+        {
+            mappedPlan = null;
+            argumentIndices = null;
         }
 
         /// <summary>
@@ -58,42 +87,63 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Stages whichever of the Function's declared inputs the caller has a variable for.
+        /// Stages the call site's arguments onto the binding.
+        ///
         /// <para>
-        /// This walks the <em>Function's</em> inputs and pulls each by key, rather than iterating the caller's
-        /// declarations and matching names. Two reasons, both measured rather than assumed:
-        /// <c>VariableDeclarations.GetEnumerator()</c> is declared to return the interface
-        /// <c>IEnumerator&lt;VariableDeclaration&gt;</c>, so a <c>foreach</c> boxes its struct enumerator and
-        /// allocates on every single evaluation; and the loop index here <em>is</em> the input index, so no
-        /// port is looked up by name in the call path — the rule the whole binding plan exists to enforce.
+        /// Arguments arrive from the calling node's own declared ports. They used to be matched by name
+        /// against the agent's flattened variable scope, which meant a Function's contract was satisfied by
+        /// coincidence — an agent that happened to declare a variable of the same name fed it, and nothing
+        /// about that was visible on the node. Ports replaced that outright (spec 10, step 2b): a contract
+        /// nobody can see is not a contract.
         /// </para>
+        ///
         /// <para>
-        /// The loop is also over the Function's inputs, typically none or a few, rather than over the agent's
-        /// entire declaration set.
+        /// <b>Names are resolved to indices once, not per evaluation.</b> The obvious implementation — stage
+        /// argument <c>i</c> into input <c>i</c> — is wrong, and silently so:
+        /// <see cref="FunctionBindingPlan.Resolve"/> skips any declared input that has no live port on the
+        /// graph's input unit, while the caller's contract copy lists every declared input. So the two lists
+        /// can differ in both length and order, and a positional stage would feed the wrong argument to the
+        /// wrong parameter with no error anywhere. The map below is what makes position safe, and it is
+        /// rebuilt only when the plan is (by reference) or the argument count changes.
         /// </para>
         /// </summary>
-        private static void StageArguments(FunctionBinding agentBinding, VariableDeclarations arguments)
+        private void StageArguments(FunctionBinding agentBinding, IFunctionArguments arguments)
         {
             if (arguments == null) return;
 
-            var keys = agentBinding.Plan.InputKeys;
+            var count = arguments.Count;
+            if (count == 0) return;
 
-            for (var i = 0; i < keys.Length; i++)
+            if (argumentIndices == null || argumentIndices.Length != count ||
+                !ReferenceEquals(mappedPlan, agentBinding.Plan))
             {
-                var key = keys[i];
+                argumentIndices = new int[count];
 
-                // An input the caller has no variable for is left to the Function's own default. These are
-                // ambient variables, not a call site's argument list, so gaps are expected.
-                if (!arguments.IsDefined(key)) continue;
+                for (var i = 0; i < count; i++)
+                {
+                    argumentIndices[i] = agentBinding.Plan.IndexOfInput(arguments.NameAt(i));
+                }
 
-                if (!agentBinding.TrySetArgument(i, arguments.Get(key), out var argumentError))
+                mappedPlan = agentBinding.Plan;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                var index = argumentIndices[i];
+
+                // A port for an input the Function no longer declares. Left unstaged rather than fataled:
+                // this is exactly the drift bt_verify reports and RefreshParameters repairs, and refusing to
+                // run would turn a reported, repairable staleness into a broken agent.
+                if (index < 0) continue;
+
+                if (!agentBinding.TrySetArgument(index, arguments.ValueAt(i), out var argumentError))
                 {
                     throw new System.InvalidOperationException(argumentError);
                 }
             }
         }
 
-        private T EvaluateFunction<T>(GameObject agent, VariableDeclarations arguments)
+        private T EvaluateFunction<T>(GameObject agent, IFunctionArguments arguments)
         {
             var agentBinding = BindingFor(agent);
 
@@ -112,7 +162,7 @@ namespace ArcaneOnyx.BehaviorTree
             return result;
         }
 
-        private void RunFunction(GameObject agent, VariableDeclarations arguments)
+        private void RunFunction(GameObject agent, IFunctionArguments arguments)
         {
             var agentBinding = BindingFor(agent);
 
@@ -139,23 +189,57 @@ namespace ArcaneOnyx.BehaviorTree
             scriptGraphAsset = asset;
         }
 
+        /// <summary>
+        /// Evaluates the Function this variable reads, with the arguments the call site supplies.
+        /// <para>
+        /// This is the entry point for a node that declares ports from the Function's contract. The
+        /// overloads taking <c>Variables</c> or <c>VariableDeclarations</c> reach the same evaluation with
+        /// <em>no</em> arguments — they predate ports and describe the ambient scope, which is no longer how
+        /// a Function is fed.
+        /// </para>
+        /// </summary>
+        public T GetValue<T>(GameObject gameObject, IFunctionArguments arguments)
+        {
+            if (!ReadsFunction)
+            {
+                throw new System.InvalidOperationException(
+                    "Arguments were supplied but this Script Graph Variable reads an embedded graph, not a " +
+                    "Function. Embedded graphs have no declared contract to bind them to.");
+            }
+
+            return EvaluateFunction<T>(gameObject, arguments);
+        }
+
+        /// <summary>Runs the Function for its control flow, with the call site's arguments.</summary>
+        public void Run(GameObject gameObject, IFunctionArguments arguments)
+        {
+            if (!ReadsFunction)
+            {
+                throw new System.InvalidOperationException(
+                    "Arguments were supplied but this Script Graph Variable reads an embedded graph, not a " +
+                    "Function. Embedded graphs have no declared contract to bind them to.");
+            }
+
+            RunFunction(gameObject, arguments);
+        }
+
         public T GetValue<T>(Variables input = null)
         {
-            if (ReadsFunction) return EvaluateFunction<T>(null, input == null ? null : input.declarations);
+            if (ReadsFunction) return EvaluateFunction<T>(null, null);
 
             return scriptGraphAsset.GetScriptGraphOutput<T>(input);
         }
 
         public T GetValue<T>(GameObject gameObject, Variables input = null)
         {
-            if (ReadsFunction) return EvaluateFunction<T>(gameObject, input == null ? null : input.declarations);
+            if (ReadsFunction) return EvaluateFunction<T>(gameObject, null);
 
             return scriptGraphAsset.GetScriptGraphOutput<T>(input, gameObject);
         }
 
         public T GetValue<T>(GameObject gameObject, VariableDeclarations variableDeclarations)
         {
-            if (ReadsFunction) return EvaluateFunction<T>(gameObject, variableDeclarations);
+            if (ReadsFunction) return EvaluateFunction<T>(gameObject, null);
 
             Dictionary<string, object> dynamicParameters = new();
 
@@ -171,7 +255,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (ReadsFunction)
             {
-                RunFunction(null, input == null ? null : input.declarations);
+                RunFunction(null, null);
                 return;
             }
 
@@ -182,7 +266,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (ReadsFunction)
             {
-                RunFunction(gameObject, input == null ? null : input.declarations);
+                RunFunction(gameObject, null);
                 return;
             }
 
@@ -193,7 +277,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (ReadsFunction)
             {
-                RunFunction(gameObject, input);
+                RunFunction(gameObject, null);
                 return;
             }
 

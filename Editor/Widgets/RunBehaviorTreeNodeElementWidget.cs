@@ -299,7 +299,13 @@ namespace ArcaneOnyx.BehaviorTree
                                   string.Join(System.Environment.NewLine + "  ", drift));
                     }
 
-                    runNode.RefreshParameters();
+                    var dropped = runNode.RefreshParameters();
+
+                    foreach (var line in dropped) Debug.LogWarning($"[BehaviorTree] {line}");
+
+                    // The contract just changed, which is the one moment this node is resized. Doing it here
+                    // rather than on the draw path is what keeps an author's own drag from being overwritten.
+                    Authoring.ContractPortLayout.ResizeToFitPorts(runNode);
 
                     GUI.changed = true;
                 }), label);

@@ -357,6 +357,24 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in asset.graph.Nodes)
             {
+                // A Function on a Script Graph node's lifecycle graph has no way to be given arguments:
+                // only a Script Graph Variable declares ports from a contract. Worth reporting because the
+                // inspector drawer is registered for BTScriptGraphVariable and so offers the Function field
+                // on all four of these too, and because the two failure shapes are both silent -- with no
+                // embedded graph beside it the Function never runs at all, and with one it runs unfed.
+                if (node is VisualScriptingNode lifecycleNode)
+                {
+                    foreach (var graph in lifecycleNode.LifecycleGraphs)
+                    {
+                        if (graph == null || !graph.ReadsFunction) continue;
+
+                        yield return
+                            $"{treeName}: node '{lifecycleNode.NodeName}' assigns Function " +
+                            $"'{graph.Function.name}' to a lifecycle graph, which cannot declare ports and so " +
+                            "cannot be passed arguments. Read it from a Script Graph Variable node instead.";
+                    }
+                }
+
                 if (node is not VisualScriptGraphVariable variableNode) continue;
 
                 if (variableNode.HasAmbiguousGraphSource)
@@ -364,6 +382,15 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     yield return
                         $"{treeName}: node '{variableNode.NodeName}' has both a Function and an embedded graph " +
                         "assigned. The Function is what runs, so the embedded graph is editable but dead.";
+                }
+
+                // Per node, not per Function: two nodes referencing one Function can be at different points
+                // of staleness, and the one that has drifted is the one an author has to go and fix.
+                foreach (var drift in variableNode.DescribeContractDrift())
+                {
+                    yield return
+                        $"{treeName}: node '{variableNode.NodeName}' — Function contract {drift} " +
+                        "Refresh its ports with fn_refresh_ports.";
                 }
 
                 var function = variableNode.Function;

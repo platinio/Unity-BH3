@@ -95,13 +95,50 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// Rebuilds the remembered contract from the sub-tree's own required and optional declarations.
+        /// <para>
+        /// Returns one line per connection this cost. A refresh that removes a port removes whatever fed it,
+        /// and an author who is not told has no way to notice until the value silently stops arriving —
+        /// <c>DescribeContractDrift</c> warns beforehand, but only if somebody ran it. Reporting is the
+        /// mitigation; there is deliberately no undo.
+        /// </para>
         /// </summary>
-        public void RefreshParameters()
+        public List<string> RefreshParameters()
         {
+            var lost = DescribeConnectionsLostByRefresh();
+
             parameters = ReadContract();
-           
+
             Define();
             PortsChanged();
+
+            return lost;
+        }
+
+        /// <summary>
+        /// Which currently-connected ports a refresh would remove, named with what feeds them. Computed
+        /// before the rebuild, because afterwards the connection is already gone.
+        /// </summary>
+        private List<string> DescribeConnectionsLostByRefresh()
+        {
+            var lost = new List<string>();
+            if (parameters == null || parameters.Count == 0) return lost;
+
+            var current = ReadContract();
+
+            foreach (var parameter in parameters)
+            {
+                if (parameter?.Name == null) continue;
+                if (current.Exists(candidate => candidate.Name == parameter.Name)) continue;
+                if (!parameterPorts.TryGetValue(parameter.Name, out var port)) continue;
+
+                var source = ContractPorts.DescribeWhatFeeds(port);
+                if (source == null) continue;
+
+                lost.Add($"'{NodeName}': removing parameter '{parameter.Name}' dropped its connection " +
+                         $"from {source}.");
+            }
+
+            return lost;
         }
 
         /// <summary>What the sub-tree declares today, required first and then optional.</summary>

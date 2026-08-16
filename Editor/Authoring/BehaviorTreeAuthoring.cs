@@ -827,14 +827,19 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 // a dropped connection is exactly the thing the caller should know happened.
                 var drift = target.DescribeContractDrift();
 
-                target.RefreshParameters();
+                var dropped = target.RefreshParameters();
+
+                // The contract just changed, so this is exactly when the node is allowed to be resized.
+                var size = ContractPortLayout.ResizeToFitPorts(target);
 
                 refreshed.Add(new
                 {
                     node = target.guid.ToString(),
                     subTree = target.BehaviorTreeGraphAsset != null ? target.BehaviorTreeGraphAsset.name : null,
                     ports = target.Parameters.Select(parameter => parameter.ToString()).ToArray(),
-                    resolved = drift.ToArray()
+                    resolved = drift.ToArray(),
+                    droppedConnections = dropped.ToArray(),
+                    size = $"{size.width:0} x {size.height:0}"
                 });
             }
 
