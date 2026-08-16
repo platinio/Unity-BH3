@@ -87,9 +87,54 @@ namespace ArcaneOnyx.BehaviorTree
 
             triggers ??= new List<GuardTrigger>();
             triggers.Add(trigger);
+            inheritedResolved = false;
         }
 
         public void ClearTriggers() => triggers?.Clear();
+
+        [DoNotSerialize] private bool inheritedResolved;
+
+        /// <summary>
+        /// Hands each key trigger the keys this guard's condition declares, once per node instance.
+        ///
+        /// <para>
+        /// <b>Why this is not per-evaluation.</b> The walk that finds them allocates, and it runs on the path
+        /// whose entire purpose is to be cheaper than evaluating the condition. A graph cannot change in a
+        /// player build, so the answer cannot either — the same editor-time-invalidation reasoning this
+        /// feature already applied to <c>FunctionBindingPlan</c>. Rewiring a condition while in Play Mode
+        /// therefore needs a re-enter to be picked up, which is the existing behaviour of every other cached
+        /// plan in this system.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Only triggers that already exist are enriched — none is created.</b> A guard with no trigger
+        /// keeps recomputing every tick, which is what it does today, so no asset changes behaviour by
+        /// upgrading. Creating one here would make an existing guard evaluate <em>less</em> often than before,
+        /// and less-often is the direction that turns a working guard into a stale one: a condition can depend
+        /// on things no key can express (a raycast, a timer), and nothing at runtime can tell that it does.
+        /// The trigger a new guard wants is seeded when the Function is assigned, where an author can see it
+        /// and edit it, and <c>bt_verify</c> names any guard still left without one.
+        /// </para>
+        /// </summary>
+        private void EnsureInheritedKeys()
+        {
+            if (inheritedResolved) return;
+            inheritedResolved = true;
+
+            if (triggers == null || triggers.Count == 0) return;
+
+            var inherited = InheritedWatchedKeys.Resolve(this);
+            if (inherited.Length == 0) return;
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                var trigger = triggers[i];
+                if (trigger != null && trigger.Kind == GuardTriggerKind.OnKeyChanged)
+                {
+                    trigger.SetInheritedKeys(inherited);
+                }
+            }
+        }
 
         [DoNotSerialize] private bool hasCachedResult;
         [DoNotSerialize] private bool cachedResult;
@@ -105,6 +150,11 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public override bool Ask(bool fresh)
         {
+            // Before the first IsDue rather than inside it: an entry asks with fresh: true and skips IsDue
+            // entirely, so resolving there would let the first OnEvaluated record versions for the authored
+            // keys only and leave every inherited key looking unseen.
+            EnsureInheritedKeys();
+
             if (!fresh && hasCachedResult && !IsDue()) return cachedResult;
 
             cachedResult = Evaluate();

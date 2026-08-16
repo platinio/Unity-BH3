@@ -459,11 +459,9 @@ mechanisms:
 - **Purity is never enforced.** A Function declared pure can contain a write unit and will execute it.
   `bt_verify` warns, naming the unit that writes. That warning is the entire mechanism — there is no runtime
   restriction and none is planned, matching spec 09's choice for guards.
-- **Watched keys are declared and verified, but nothing inherits them.** This spec's promise is that a
-  reactive guard whose condition is a Function picks up its keys so the guard wakes when they change. That
-  wiring does not exist. Today the list is checked against what the graph actually reads, in both
-  directions, and is otherwise unused at runtime. **It belongs to step 2**, alongside the caller-side
-  contract copies, since both are about a caller learning something from the Function it references.
+- ~~**Watched keys are declared and verified, but nothing inherits them.**~~ — **closed 2026-08-14, see
+  *Step 2a landed* below.** A reactive guard now picks up the keys declared by whatever Function its
+  condition reaches. Purity remains as described above: declared, warned about, never enforced.
 
 The derivation that backs both checks (`DeriveReadKeys`, `DeriveWrites`) lives on `FunctionGraphAsset`,
 beside the declarations it checks, rather than in whichever module runs the lint.
@@ -545,26 +543,20 @@ in `BehaviorTreeAuthoring`. Test alongside the existing `bt_set_value` tests.
 
 ### Step 2 — What a caller learns from the Function it references
 
-Two separable pieces, grouped because both are a caller reading something off the Function and remembering
-it. Either can be picked up alone.
+Three separable pieces, grouped because each is a caller learning something from the Function it references.
+Any can be picked up alone, though 2c is most useful after 2b, since a picker that filters by contract is
+worth more once the contract is visible on the node.
 
-**2a — Watched-key inheritance.** A reactive guard whose condition is a Function must pick up that
-Function's declared watched keys, so the guard wakes when they change. **This is the piece that makes the
-watched-keys field do anything at all** — today it is declared, verified against the graph in both
-directions, and consumed by nothing. Hand-added keys on the guard stay legal and are compared against the
-inherited set, per the original design. `FunctionGraphAsset.WatchedKeys` is the source;
-`DeriveReadKeys()` is what keeps it honest.
+**2a — Watched-key inheritance.** ✅ **Done, 2026-08-14** — see *Step 2a landed* below.
 
-**2b — Contract copies and drift.** Described below.
+**2b — Declared inputs become ports.** Designed 2026-08-14 with the tool owner, not yet built — see
+*Step 2b — Declared inputs become ports* at the end of this document.
 
-
-
-`FunctionParameter` and `FunctionParameter.DescribeDrift` exist and are tested, but **no BH3 node stores a
-contract copy yet**, so the drift lint currently has nothing to check on a node. Give
-`VisualScriptGraphVariable` a serialized `List<FunctionParameter>`, declare its ports from that copy (never
-from the live asset — see spike 4), and add `RefreshParameters` / `DescribeContractDrift` mirroring
-`RunBehaviorTreeGraphNode`. Then hang the drift lint off the existing loop in `BehaviorTreeVerification`.
-This is what makes acceptance criterion 2 fully true.
+**2c — Picking a Function by contract.** Designed 2026-08-14, not yet built — see *Step 2c — Picking a
+Function by contract* at the end of this document. A dropdown that offers only the Functions that can
+legally fill the port being wired, the way Unreal offers Blueprint functions matching a signature. Today's
+inspector field is a plain object field, so it offers every Function in the project — which makes the UI
+looser than `bt_guard_on_function`, which already refuses a non-boolean condition by name.
 
 ### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
 
@@ -617,3 +609,389 @@ reference, so it wants its own change.
 VisualScriptingExtension's editor assembly definition is named **`"NewAssembly"`**, not
 `ArcaneOnyx.VisualScriptingExtension.Editor`. Renaming it changes every by-name reference to it, so it was
 left alone rather than folded into this feature.
+
+***
+
+## Step 2a landed — watched-key inheritance, 2026-08-14
+
+Branch `feature/watched-key-inheritance` in BH3, VisualScriptingExtension and the superproject.
+TacticalPositionSelection is untouched. VisualScriptingExtension carries **documentation only** — the
+`watchedKeys` tooltip and the `WatchedKeys` docstring both asserted that nothing consumed the list, which
+this step makes false in the two places a designer and a maintainer are most likely to read it. No code
+there changed, and the dependency arrow is unchanged: BH3 consumes VSE, never the reverse.
+
+**What a guard now does.** On its first ask it walks backwards through its condition, collects the watched
+keys declared by everything it reaches, and hands them to its On Key Changed triggers. Those keys are then
+scanned alongside the hand-authored ones on every evaluation. Nothing is copied and nothing needs
+refreshing: edit the Function and the next run is correct.
+
+### Decisions taken while implementing
+
+- **The guard's key list was never the guard's.** A guard reads nothing — `Evaluate()` pulls a bool off a
+  port — so a trigger's keys are a *claim* about what the condition reads. That reframing decided everything
+  else: the correct key set is not a thing an author chooses, it is a thing the condition knows.
+- **Declared, not derived.** The walk collects what a node *declares*, never what a walk of its innards
+  finds. An embedded graph therefore contributes nothing, which is deliberate — deriving there would make
+  "declares" and "happens to read" the same word, and a runtime-computed key is invisible to any walk
+  regardless. `DeriveReadKeys()` stays what it was: the check that keeps a declaration honest.
+- **A capability interface, not a type test.** `IDeclaresWatchedKeys` (BH3 runtime) is implemented by
+  `VisualScriptGraphVariable`, returning its Function's keys live. This follows the rule
+  `ConditionalExecution` already states — everything that walks guards filters on capability, never on type
+  — and the second implementer is already specified: open question 5's C# node attribute lands here without
+  touching the walk. It is documented in `reactive-guards.md` as available today.
+- **Resolved once per node instance, not per evaluation.** The walk allocates and runs on the path the whole
+  trigger economy exists to keep cheap. Same editor-time-invalidation reasoning as `FunctionBindingPlan`: a
+  graph cannot change in a player build. **Consequence to know:** rewiring a condition during Play Mode
+  needs a re-enter to be picked up. `AddTrigger` resets the flag so authoring order does not matter.
+- **Seeded at authoring time, inherited at runtime, reported where neither applies.** This was the tool
+  owner's call between three options. `bt_guard_on_function` / `BehaviorTreeAuthoring.GuardOnFunction` seeds
+  a real trigger from the Function's keys — visible and editable in the asset, exactly as `GuardOnVariable`
+  already seeds from a variable name. Inheritance then keeps that trigger correct as the Function evolves.
+- **Inheritance never creates a trigger, and this is the load-bearing constraint.** Creating one would make
+  an existing guard evaluate *less* often than it does today, and less-often is the direction that turns a
+  working guard into a silently stale one — a condition can depend on a raycast or a timer that no key can
+  express, and nothing at runtime can detect that it does. So a guard with no trigger keeps its every-tick
+  behaviour and `bt_verify` names it. Acceptance criterion 6 holds by construction: no existing asset
+  changes behaviour.
+- **A guard condition must be a `bool` Function.** `GuardOnFunction` refuses anything else by name at
+  authoring time rather than letting the cast fail on the first tick.
+
+### Verification changes, including one loosening
+
+- Lint 4 (*no triggers, re-checks every tick*) now names the inherited keys when the condition declares any,
+  and points at `bt_guard_on_function`. This is the safety net for the one path seeding cannot cover: a
+  Function assigned through the inspector runs no authoring code.
+- Lint 3 (*watches no keys*) was **loosened** — it no longer fires when the condition supplies keys, because
+  authoring an empty key trigger and letting the Function fill it is now a legitimate shape. A test pins
+  that it still fires where it always did, so the loosening did not silently delete the lint.
+
+### A defect found and fixed on the way
+
+`BehaviorTreeGraphTopology.Collect` — the why-panel's "which variable did this guard read" walk — was
+**blind to every Function**. `FunctionGraphAsset` derives from `Macro<FlowGraph>` directly (because
+`ScriptGraphAsset` is sealed), so it can never arrive through `node.scriptGraphAssets`, and the panel
+silently fell back to weaker wording for any guard reading one. Fixed by consulting the same capability
+interface. Widening `scriptGraphAssets` would have been the wrong fix twice over: it is also what the
+repository sweep enumerates, and a standalone Function must never become a deletion candidate.
+
+### Known gaps, stated rather than discovered
+
+- **No lint for a hand-typed key the condition does not read.** The original design says hand-added keys are
+  "compared against the inherited set", but that comparison is only meaningful against a *complete*
+  declaration and there is no such thing: an embedded graph declares nothing, so every guard built by
+  `GuardOnVariable` would be reported. Implementing it as specified would produce false positives on most
+  existing content. The valuable half — *the condition declares keys nobody is watching* — cannot occur,
+  since inheritance covers it automatically.
+- **Fan-in through the condition is defensive, not exercised.** The walk is DAG-safe with a visited set,
+  matching the two existing guard walks. But BH3 ships no two-input boolean combinator — AND is expressed by
+  several guards naming one owner — so no stock content can currently build a condition with two Functions
+  in it. Depth is exercised (a `Not` between guard and Function is half of what the authoring helpers
+  produce); breadth is not.
+- **Play-Mode rewiring needs a re-enter**, per the caching decision above.
+
+### Tests
+
+437 EditMode (was 416), 436 passing — the one failure is the same pre-existing
+`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`. PlayMode 49 (was 47), 42
+passing, the same 7 pre-existing failures. 21 new EditMode tests plus 2 new PlayMode tests.
+
+The two PlayMode tests are deliberately a pair, because either alone proves nothing: one asserts the guard
+wakes on the key its Function declares *with a trigger naming no keys of its own*, the other that it stays
+asleep while an undeclared fact is written every frame. Passing both is only possible if inheritance is
+doing specific work rather than making the guard permanently due.
+
+### Demo
+
+`Assets/ArcaneOnyx/BH3Demos/WatchedKeyInheritance/` (superproject), reusing the existing `IsHurt.asset`.
+The tree is a real asset, `HurtOrIdle.asset`, authored through `bt_guard_on_function` — so the seeded
+`on hp changed` trigger is visible on the guard in the canvas, which is the half of this feature a designer
+actually touches. Three agents run that one asset, each clearing or removing something on its own running
+copy.
+
+Measured on a ~1000-frame run: the inheriting guard ran its condition graph 79 times (8% of frames) while
+holding the guarded branch; the agent receiving only undeclared writes ran it **once** and sat on the
+fallback; the control with no trigger ran it every frame. The first and third agree on the decision and
+differ 13× in cost. No key is typed anywhere in the demo.
+
+### Embedded trees got the coverage they never had
+
+Building a tree in code — `CreateInstance`, `graph.Nodes`, `SetupTransition` — is public API used by every
+play-mode fixture, and was entirely untested. `Test/PlayMode/EmbeddedTreeTests.cs` (6 tests) pins it: that
+such a tree runs at all, that guards and literal-fed ports survive the machine's `Instantiate`, and both
+halves of the sibling-priority rule.
+
+**That rule is documented in only one half, and the missing half misleads.** `bt_add_node` says execution
+order is canvas X. `BehaviorTreeGraph.SortIntoPriorityOrder` actually uses **transition indices when they
+form exactly `0..n-1`, each used once**, and falls back to canvas X only when they do not — a gap means
+something was removed without renumbering, a duplicate means two children claim one priority, and neither
+order is trustworthy. So a tree built in code with `CountTransitionsFromNode` has well-defined priority
+regardless of where its nodes sit, which is why the demo's original all-at-origin layout was a readability
+problem and not a correctness one. Both directions now have a test.
+
+***
+
+## Step 2b — Declared inputs become ports
+
+**The problem, stated plainly.** A Function declares typed inputs. A `VisualScriptGraphVariable` node has no
+input ports at all, so the only way to supply one is to declare an agent variable that happens to share the
+input's name — `StageArguments` matches by string against the node's flattened variable scope. Nothing about
+that is visible on the node: not the input's existence, not its type, not whether anything is feeding it.
+2a's demo hit it immediately — `IsHurt` declares a required `threshold`, and the Function throws
+`KeyNotFoundException` on its first evaluation, naming the key but not the node.
+
+**Decided: ports replace name matching entirely.** Name matching is invisible to a designer, which is the
+whole objection — a contract nobody can see is not a contract. The window to remove it cleanly is now: it
+applies only to the Function path (`StageArguments`), embedded graphs go through the untouched legacy seam,
+and Functions are days old, so the only content relying on the name coincidence is this feature's own demo.
+That window closes as soon as anyone authors with Functions in earnest.
+
+### The mechanism already exists in this codebase
+
+**Dynamic input ports on a BH3 node are possible, and `RunBehaviorTreeGraphNode` has been doing it all
+along** (`Definition()`). This is worth stating because the variable-matching workaround was written on the
+belief that they were not — the belief is wrong, and the reason it looked true is the third bullet:
+
+- **The non-generic overload.** `ValueInput(Type, string)` and `ValueInput(Type, string, object)`, not
+  `ValueInput<T>(...)`. The port's type comes from data rather than from a compile-time type argument.
+  Reached for with the generic form, this genuinely is impossible.
+- **`RefreshParameters()` → `Define(); PortsChanged();`** rebuilds the ports when the contract changes.
+- **Ports are declared from a serialized copy on the node, never from the referenced asset.** `Definition()`
+  runs *during deserialization*, and connections are resolved by port key — a connection to a key that does
+  not exist yet is dropped **silently**. Declaring ports by reading the Function live therefore loses wiring
+  on any load where the asset is not resolved yet: an import-order failure, so it appears on one machine and
+  not another. This is spike 4, already confirmed, and it is why the copy is not redundant.
+
+So 2b is `RunBehaviorTreeGraphNode`'s pattern applied to `VisualScriptGraphVariable`, and the half that
+usually costs the most already ships and is tested: `FunctionParameter`, `FunctionParameter.ReadContract`
+and `FunctionParameter.DescribeDrift`.
+
+### Defaults are the Function's, overridden at the call site
+
+No new mechanism. A Function's port definition carries `hasDefaultValue` / `defaultValue`, `ReadContract`
+copies them onto the `FunctionParameter`, and the node picks the overload accordingly:
+
+- **Optional** (the Function declares a default) → `ValueInput(type, name, default)`. Safe to leave
+  unconnected.
+- **Required** (no default) → `ValueInput(type, name)`. Leaving it unconnected becomes the unset-port case
+  `bt_verify` already reports — replacing today's `KeyNotFoundException` at first evaluation with a named
+  finding before anything runs.
+
+A call site that wants a different value connects a node or sets an inline value, which is what
+`bt_set_value` already does. The Function states the sensible default once; call sites disagree with it
+explicitly rather than by coincidence of naming.
+
+### Node sizing — decided, and it is an existing defect
+
+**Decided: the editor writes the size when the contract changes.** `ResizeToFitPorts` runs where a contract
+changes — assigning a Function, `RefreshParameters` — and writes `Position`: height from the port count,
+width from the longest port label measured with `GUI.skin`, which only editor code can do. The result is
+serialized like any other layout, so an author can still drag-resize afterwards and it holds until the
+contract changes again.
+
+**Decided: one mechanism, both nodes.** This is not new breakage introduced by 2b — it is live today on
+sub-trees. Nothing in BH3 overrides `StartingSize`, so every node is created at `BaseGraphNode`'s
+`150 × 100`, and a sub-tree node with six parameters is drawn at that size. The canvas does not grow to fit;
+it **squeezes**, and says so:
+
+```csharp
+// clamped so a node with many ports does not spill past its box
+float step = Mathf.Min(size + spacing, (p.height - size) / count);
+```
+
+The number needed is already computed — `BehaviorTreeNodeElementWidget.GetPortSectionHeight()` — and simply
+never reaches `Position`. So the work is plumbing an existing measurement into an existing field, applied to
+both nodes that declare ports from a contract. Two nodes with dynamic ports and only one that sizes
+correctly is the asymmetry that gets copied rather than fixed.
+
+Rejected: overriding `StartingSize` on the node (read only at creation, so it never reacts to a contract
+change, and runtime code cannot measure text), and growing the drawn box at draw time (`Position` is what
+hit-testing and connection routing read, so the drawn box and the stored rect would disagree).
+
+### What this makes true
+
+Acceptance criterion 2 — *"assigning a Function to a guard or variable node grows declared typed ports; a
+missing required input is reported by `bt_verify` and visible on the node"* — is currently false in every
+part. This is what makes it true.
+
+It also makes the spec's own authoring rule followable for the first time: *a Function fed through declared
+inputs compiles materially better than one that reads its data off the agent.* Until a node has ports, there
+is no way to feed a declared input from a call site, so every BH3 Function is pushed into the ambient style
+— the one that caps what Tier 2 can buy.
+
+### Work, in order
+
+1. `VisualScriptGraphVariable`: serialized `List<FunctionParameter>`, ports declared from it in
+   `Definition()`, plus `RefreshParameters` / `DescribeContractDrift` mirroring the sub-tree node.
+2. `StageArguments`: read from the ports instead of from the variable scope. Name matching is deleted, not
+   deprecated — the two coexisting is exactly the "which one wins" ambiguity ports exist to remove.
+3. Drift lint hung off the existing `FunctionProblems` loop in `BehaviorTreeVerification`.
+4. `ResizeToFitPorts` in the editor, applied to `VisualScriptGraphVariable` and `RunBehaviorTreeGraphNode`.
+5. Migrate the step 2a demo, which currently supplies `threshold` through a same-named agent variable and is
+   the one piece of content that relies on the mechanism being removed.
+6. `bt_refresh_sub_tree_ports` gains a Function equivalent, or is generalised to both.
+
+### Open, and worth settling before building
+
+- **What happens to a connection when a refresh removes its port?** The sub-tree node has the same question
+  and answers it by silence — the port disappears and the connection with it. Drift reporting names it
+  first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
+- **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
+  clearly right; discarding a deliberate manual size is less obviously so.
+
+***
+
+## Step 2c — Picking a Function by contract
+
+Requested by the tool owner 2026-08-14, by analogy with Unreal: you choose a Blueprint function from a
+dropdown that only offers functions matching the signature you are filling. Here the signature is the
+declared contract, and for a guard condition it is *returns `bool`*.
+
+**What is wrong today.** The inspector field added in step 2a is a plain object field, so its picker lists
+every `FunctionGraphAsset` in the project — a query Function, a float Function, a Function with no `Result`
+at all. Assigning one that cannot work is a click away, and the failure arrives later as a cast exception at
+the first tick. Note the asymmetry this creates: `bt_guard_on_function` **refuses** a non-boolean Function
+by name at authoring time, so the CLI is currently stricter than the UI. That is backwards — the UI is where
+the mistake is easiest to make.
+
+### The filter is the target port's type, and it has to be found rather than declared
+
+The obvious implementation — ask the node what type it wants — does not work, and knowing why saves
+somebody an afternoon:
+
+- `VisualScriptGraphVariable.Definition()` builds its graph with `typeof(object)` and declares
+  `ValueOutput<object>`. The node is deliberately untyped, which is what lets one node type serve
+  predicates, floats and queries alike.
+- So the constraint lives **downstream**: it is the type of the `ValueInput` this node's `Output` is
+  connected to. A guard's `Value` is `ValueInput<bool>`, and that is the only thing in the graph that knows
+  `bool` is required.
+
+So the picker resolves its filter by following `Output`'s connections, not by asking the node:
+
+| Node's Output | Offered |
+|---|---|
+| connected to a `bool` port | Functions whose `ResultType` is assignable to `bool` |
+| connected to a `Component` port | Functions returning `Component` **or a subclass** — assignability, matching the rule `FunctionBinding.TrySetArgument` already uses for arguments |
+| connected to several ports | the intersection; empty means the wiring itself is contradictory and should say so |
+| unconnected | everything, grouped by flavor — there is no constraint to apply, and inventing one would stop an author wiring the node up afterwards |
+
+**Assignability rather than exact type is not a detail.** The old seam compared
+`valueOutput.type == parameter.value.GetType()` and so silently never bound a subclass; the evaluation seam
+replaced that with assignability on purpose. A picker that filtered on exact equality would reintroduce the
+same wrongness one layer up, hiding a `Transform` Function from a `Component` port.
+
+### Classification is shared with the library panel, not reimplemented
+
+`FunctionGraphAuthoring.DescribeFlavor` and `FunctionGraphAsset.ResultType` already classify a Function as
+predicate / query / value, and `FindFunctions` already enumerates them. Spec 03's card sections are built
+from the same two things. **The dropdown must read them rather than grow its own rules** — two surfaces that
+disagree about what counts as a predicate is precisely the drift a single derived classification exists to
+prevent.
+
+The two surfaces are complementary, not alternatives, and 2c does not depend on 03 shipping:
+
+- **Spec 03's library panel** — browse and search everything in the project, drag onto a canvas. A
+  discovery surface.
+- **2c's dropdown** — pick, at the port you are filling, from what can legally go there. A completion
+  surface.
+
+### Shape
+
+A searchable dropdown (`AdvancedDropdown`) rather than an `EditorGUI.Popup`: a project with fifty Functions
+is the case this feature exists for, and a flat popup of fifty entries is worse than the object field it
+replaced. Each entry shows the Function's name, its flavor, and its required inputs, so the thing a designer
+is about to owe the node is visible before they choose. Plus **None** to clear, and — worth considering —
+**Create new Function…**, which is the moment an author most often discovers the one they want does not
+exist yet.
+
+### Open, and worth settling before building
+
+- ~~**Reaching the owning node from a `PropertyDrawer`.**~~ — **spiked 2026-08-16, answered below.**
+- **Whether an unconnected node should offer everything or nothing.** Everything is proposed above, on the
+  grounds that authors wire up in whatever order they like. The opposite argument is that a node with no
+  constraint is exactly where a wrong choice is cheapest to make and hardest to notice.
+- **Whether the drawer should also refuse a mismatch already assigned** — for instance a Function that was
+  valid until its `Result` type changed. `bt_verify` reports it, and a picker that silently dropped an
+  existing reference would be worse than one that shows it in error.
+
+### Spike: how a Function field reaches its owning node — resolved 2026-08-16
+
+Run against the live editor, because two plausible readings of the code gave opposite answers and only the
+running inspector-resolution settles it.
+
+**How BH3 node fields are actually drawn.** Visual Scripting resolves an inspector **per type**, and the
+order it resolves in is what matters here — confirmed by asking `InspectorProvider.instance` directly:
+
+| Type | Resolves to |
+|---|---|
+| `GuardTrigger` | `ArcaneOnyx.BehaviorTree.GuardTriggerInspector` — a registered VS `Inspector` |
+| `BTScriptGraphVariable` | `Unity.VisualScripting.CustomPropertyDrawerInspector` |
+
+So a registered VS `Inspector` wins; failing that, **VS bridges to a Unity `CustomPropertyDrawer`**. That
+bridge is the part worth knowing, because it is easy to conclude from the source that the drawer is dead
+code — `BTScriptGraphVariable` only ever appears as a `[Serialize] [Inspectable]` member of a VS unit, never
+as a `[SerializeField]` on any `MonoBehaviour` or `ScriptableObject`, and nothing in BH3's editor assembly
+constructs a `SerializedObject` at all. `GuardTriggerInspector`'s own doc states the general rule that way.
+
+It is nonetheless wrong for this type. **The drawer does run, and the Function field added in step 2a is
+live.**
+
+**Why it still cannot see the node.** `CustomPropertyDrawerInspector` derives from `Inspector`, so *it* has
+`metadata`. But it hands the drawer only a `SerializedProperty`, and that property does not belong to the
+tree asset: VS synthesises a host, `SerializedPropertyProvider<T> : ScriptableObject`, copies the value onto
+it, lets the drawer edit it, and copies back. So inside `OnGUI`,
+`property.serializedObject.targetObject` is a throwaway provider object, and the owning
+`VisualScriptGraphVariable` is **not in that object graph at all**.
+
+This is structural, not an oversight to work around. A `PropertyDrawer` for this type can never see the
+node, and therefore can never see `Output`, its connections, or the port type the picker must filter on.
+
+**The route that does work.** A VS `Inspector` registered for `BTScriptGraphVariable` takes precedence over
+the bridge, and receives `Metadata` — whose public surface includes `parent`, `root`, `value`, `path` and
+`definedType` (verified on the live type). `metadata.parent` is the containing node's metadata, so the
+picker can reach `Output` from there. `GuardTriggerInspector` is the working precedent for exactly this
+shape: a registered VS inspector drawing a nested type held inside a BH3 node.
+
+**Consequence for 2c: the picker is a VS `Inspector`, and it replaces the property drawer** rather than
+extending it. That also folds in the drawer's existing job — the Function field and the Open button — since
+registering an inspector takes the bridge out of the picture entirely.
+
+**One correction this spike forces elsewhere.** `BehaviorTreeVerification.FunctionProblems` carries a
+comment justifying its lifecycle-graph lint with *"the inspector drawer is registered for
+`BTScriptGraphVariable` and so offers the Function field on all four of these too."* The conclusion is
+right — the field is offered on all four lifecycle graphs — but it is right by way of the bridge, not
+because a drawer binds directly. Worth correcting when the inspector replaces the drawer, since the sentence
+will otherwise describe machinery that no longer exists.
+
+**The chain, executed rather than assumed.** Run against a real node in `HurtOrIdle.asset`; nothing here is
+inferred:
+
+```
+Metadata.Root().StaticObject(node).Member("ScriptGraphVariable", Instance | NonPublic)
+
+  path                     Root.VisualScriptGraphVariable.ScriptGraphVariable
+  definedType              BTScriptGraphVariable
+  parent  (one hop)        ObjectMetadata, value is the VisualScriptGraphVariable — reference-equal
+```
+
+**`metadata.parent` is exactly one hop, and its `value` is the node.** No intermediate member metadata to
+step over.
+
+From there the filter type resolves the whole way:
+
+```
+node.Output.connectedPorts
+  -> ArcaneOnyx.BehaviorTree.ValueInput { key = "Value", Type = System.Boolean }
+     owner: BooleanReactiveGuard
+```
+
+So a guard condition yields `System.Boolean`, which is precisely the constraint 2c filters on. **Nothing
+blocks building it.**
+
+Three practical notes for whoever writes it:
+
+- `ScriptGraphVariable` is a **private** field, so the `metadata["Name"]` indexer is not enough —
+  `Member(name, BindingFlags.Instance | BindingFlags.NonPublic)` is.
+- The port type lives on `Type` (capital) of **BH3's** `ArcaneOnyx.BehaviorTree.ValueInput`, not on a
+  lowercase `type` as Visual Scripting's own ports use. Guessing the VS spelling silently returns nothing.
+- `Output.connectedPorts` is the direct route; walking `connections` and reading `destination` works too but
+  yields nulls for the control-flow entries mixed into the same list.

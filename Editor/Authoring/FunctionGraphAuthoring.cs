@@ -83,6 +83,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return normalized;
         }
 
+        /// <summary>
+        /// Loads a Function by asset path, normalising the path and failing by name when there is none.
+        /// Exposed for authoring code outside this class that takes a Function path — a guard's condition,
+        /// for instance — so path handling stays in one place rather than being re-guessed per command.
+        /// </summary>
+        public static FunctionGraphAsset ResolveFunction(string path) => ResolveFunction(path, out _);
+
         private static FunctionGraphAsset ResolveFunction(string path, out string normalized)
         {
             normalized = NormalizePath(path);
@@ -225,6 +232,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             node.SetScriptGraph(null);
             node.SetFunction(function);
 
+            // No seeding call here on purpose. The SaveAssets below runs GuardScheduleSeeder, which seeds
+            // every guard whose condition now declares something -- one hook covering every path a Function
+            // can arrive by, rather than a call each assignment site has to remember. A freshly extracted
+            // Function declares nothing yet anyway, since extraction copies the graph and a graph carries no
+            // asset-level metadata, so there is usually nothing to inherit until an author declares it.
             EditorUtility.SetDirty(function);
             EditorUtility.SetDirty(tree);
             AssetDatabase.SaveAssets();

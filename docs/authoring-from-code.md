@@ -121,6 +121,7 @@ tree that already exists.
 | `SetValue(asset, port, value, x, y)` | `bt_set_value` | Checks whether the port declares a default and routes to an inline value or a connected literal. **Use this instead of `SetDefaultValue`** and gotcha 3 stops mattering |
 | `Connect(asset, parent, child, index)` | `bt_connect` | Parent → child transition |
 | `GuardOnVariable(asset, owner, name, expected, fallback, x, y)` | `bt_guard_on_variable` | A `BooleanConditionalExecution` fed by a variable read, adding a `Not` when `expected: false` |
+| `GuardOnFunction(asset, owner, function, expected, x, y)` | `bt_guard_on_function` | The same shape fed by a Function instead, and it **seeds the guard's key trigger from the Function's declared watched keys**. Refuses a Function whose `Result` is not `bool` |
 | `AddSubTree(asset, subTree, x, y)` | `bt_add_sub_tree` | A `RunBehaviorTreeGraphNode` pointed at another tree |
 | `Declare(asset, name, value, scope)` | `bt_declare` | Declares a variable — `required` / `optional` / `instance` |
 | `FeedFloat` / `FeedVector3` | `bt_feed_float` / `bt_feed_vector3` | Feed a port from a literal node whatever its declaration |
