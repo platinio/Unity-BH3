@@ -714,8 +714,10 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         [CliCommand("bt_add_node",
             "Add a node to a tree at a canvas position, sized the way the editor sizes it. Returns the node's " +
-            "guid. Child execution order is canvas X, not the order nodes are added — lay siblings out left " +
-            "to right in priority order.")]
+            "guid. Child execution order comes from the transition indices bt_connect assigns, whenever those " +
+            "form a genuine order (0..n-1, each used once); canvas X decides only when they do not, which is " +
+            "what a removal or a hand-edit leaves behind. Lay siblings out left to right in priority order " +
+            "regardless — the canvas is read that way, and it is the fallback the runtime uses.")]
         public static object AddNodeCommand(
             [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
             [CliArg("type", "Node type name, e.g. Sequence, Selector, WaitTime, PlayAnimationAndWait.", Required = true)] string type,
