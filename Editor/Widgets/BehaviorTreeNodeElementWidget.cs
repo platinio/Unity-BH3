@@ -55,7 +55,33 @@ namespace ArcaneOnyx.BehaviorTree
         private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -40.0f);
         private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
 
-        private readonly float TITLE_HEIGHT = 25.0f;
+        protected const float TITLE_HEIGHT = 25.0f;
+
+        /// <summary>
+        /// What a node reserves above and below its port rows: the icon or title band at the top, and the
+        /// name drawn across the bottom of the box.
+        /// <para>
+        /// Public because <see cref="Authoring.ContractPortLayout"/> sizes a node to its contract outside the
+        /// draw path and has to arrive at the same number. It used to carry its own copy with a comment
+        /// saying this one could not be referenced.
+        /// </para>
+        /// </summary>
+        public const float HEADER_AND_FOOTER_HEIGHT = 70.0f;
+
+        /// <summary>
+        /// Vertical space reserved above the ports, for a node that draws something there. Zero here, where
+        /// the title is drawn across the box and the ports share the space with it — which is legible only
+        /// while every port is a bare label. A port showing an inline field draws into the title, so a node
+        /// kind that can have one reserves a band and lays its ports out underneath.
+        /// </summary>
+        protected virtual float HeaderHeight => 0.0f;
+
+        /// <summary>
+        /// Whether this widget lets the base size its height to the ports. False for a node that computes its
+        /// own rect — <see cref="ConditionalExecutionWidget"/> is anchored to its owner and sizes itself, so
+        /// the base writing a height would be overwritten a moment later anyway.
+        /// </summary>
+        protected virtual bool SizesHeightToPorts => !node.ShowIcon;
 
         protected override bool snapToGrid => true;
 
@@ -240,7 +266,88 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
+                DrawProblemBadge(offset, p);
             }
+        }
+
+        /// <summary>
+        /// Marks a node that is wrong before anyone runs it.
+        ///
+        /// <para>
+        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
+        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
+        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
+        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
+        /// counter rather than to a timer.
+        /// </para>
+        ///
+        /// <para>
+        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
+        /// thing as an error anywhere else in the editor.
+        /// </para>
+        /// </summary>
+        /// <summary>#FF4747 — the red the badge and its border use for an error.</summary>
+        private static readonly Color ErrorRed = new Color(1.0f, 0.28f, 0.28f);
+
+        /// <summary>#FFC226 — the amber the badge and its border use for a warning.</summary>
+        private static readonly Color WarningAmber = new Color(1.0f, 0.76f, 0.15f);
+
+        /// <summary>
+        /// Unity's built-in console icons, so a problem here reads as the same kind of thing as a problem
+        /// anywhere else in the editor. Names, not art: <c>EditorGUIUtility.IconContent</c> resolves them
+        /// against the running skin, which is also why a missing one is tolerated at the call site.
+        /// </summary>
+        private const string ERROR_ICON = "console.erroricon.sml";
+
+        private const string WARNING_ICON = "console.warnicon.sml";
+
+        /// <summary>Border weight of the problem outline, in pixels.</summary>
+        private const int PROBLEM_BORDER_THICKNESS = 2;
+
+        protected void DrawProblemBadge(Vector2 offset, Rect nodeRect)
+        {
+            if (!Authoring.NodeProblemCache.TryGetWorst(element, out var severity, out var count)) return;
+
+            var isError = severity == NodeProblemSeverity.Error;
+            var tint = isError ? ErrorRed : WarningAmber;
+
+            // A border rather than a fill: the node's own colour still has to read, and a tinted node looks
+            // like a node type rather than a node in trouble.
+            GraphDrawer.DrawSelectionBox(nodeRect, PROBLEM_BORDER_THICKNESS, tint);
+
+            var icon = EditorGUIUtility.IconContent(isError ? ERROR_ICON : WARNING_ICON);
+            if (icon?.image == null) return;
+
+            // Top-left. The execution-status icon owns the opposite corner, and on a narrow node -- a guard,
+            // or anything at the default 150 width -- the two corners are close enough that a badge on the
+            // right sat on top of it.
+            var badge = new Rect(nodeRect.x + 2.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
+            GUI.DrawTexture(badge, icon.image, ScaleMode.ScaleToFit);
+
+            if (count > 1)
+            {
+                // Reads outward from the icon, away from the node, so the number never lands on the title.
+                var countRect = new Rect(badge.xMax - 3.0f, badge.y - 2.0f, 18.0f, 14.0f);
+                GUI.Label(countRect, count.ToString(), Styles.problemCount);
+            }
+
+            // Hovering is how the reader gets from "something is wrong" to "this is wrong and here is the
+            // fix" without leaving the canvas or opening a console.
+            GUI.Label(badge, new GUIContent(string.Empty, DescribeProblems()));
+        }
+
+        private string DescribeProblems()
+        {
+            var problems = Authoring.NodeProblemCache.For(element);
+            var description = new System.Text.StringBuilder();
+
+            foreach (var problem in problems)
+            {
+                if (description.Length > 0) description.AppendLine();
+                description.Append(problem);
+            }
+
+            return description.ToString();
         }
 
         /// <summary>
@@ -349,7 +456,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void CachePosition()
         {
-            var headerHeight = 0f;
+            var headerHeight = HeaderHeight;
             var edgeOrigin = element.Position.position;
             var innerOrigin = EdgeToInnerPosition(new Rect(edgeOrigin, Vector2.zero)).position;
             var edgeX = edgeOrigin.x;
@@ -359,10 +466,10 @@ namespace ArcaneOnyx.BehaviorTree
             var edgeWidth = InnerToEdgePosition(new Rect(0, 0, innerWidth, 0)).width;
             y = innerY + headerHeight;
 
-            if (!node.ShowIcon)
+            if (SizesHeightToPorts)
             {
                 Rect newPosition = position;
-                newPosition.height = 70 + (GetPortSectionHeight());
+                newPosition.height = HEADER_AND_FOOTER_HEIGHT + GetPortSectionHeight();
                 position = newPosition;
             }
             
@@ -470,30 +577,51 @@ namespace ArcaneOnyx.BehaviorTree
             );
         }
 
-        private float GetPortsHeight(IEnumerable<IPortWidget> portWidgets)
+        /// <summary>
+        /// How tall one column of ports draws, matching what <see cref="CachePortPosition"/> actually lays
+        /// out: every row's height, plus the spacing <em>between</em> rows.
+        ///
+        /// <para>
+        /// This used to sum the rows and then subtract one <c>spaceBetweenPorts</c> it had never added, while
+        /// asking <c>inputs.Count</c> whichever column it was handed — so the outputs column was measured
+        /// against the number of inputs. Both directions under-reported, which is why a node's port
+        /// background drew past its own bottom edge: measurably 4px on a one-port node, growing with the
+        /// port count.
+        /// </para>
+        /// </summary>
+        private float GetPortsHeight(IReadOnlyCollection<IPortWidget> portWidgets)
         {
+            if (portWidgets.Count == 0) return 0.0f;
+
             float height = 0;
-            
-            foreach (var input in portWidgets)
+
+            foreach (var port in portWidgets)
             {
-                height += input.GetHeight();
+                height += port.GetHeight();
             }
 
-            if (inputs.Count > 0)
-            {
-                height -= Styles.spaceBetweenPorts;
-            }
-
-            return height;
+            return height + ((portWidgets.Count - 1) * Styles.spaceBetweenPorts);
         }
 
-        private float GetPortSectionHeight()
+        /// <summary>The taller of the two port columns, since both are drawn from the same top edge.</summary>
+        protected float GetPortSectionHeight()
         {
             float inputHeight = GetPortsHeight(inputs);
             float ouputHeight = GetPortsHeight(outputs);
 
             return inputHeight > ouputHeight ? inputHeight : ouputHeight;
         }
+
+        /// <summary>
+        /// The whole vertical space the ports occupy below the header: the gap before them, the background's
+        /// own padding, and the rows. What a widget sizing itself to its ports has to reserve, as opposed to
+        /// <see cref="GetPortSectionHeight"/>, which is the rows alone.
+        /// </summary>
+        protected float PortBlockHeight =>
+            Styles.spaceBeforePorts
+            + Styles.portsBackground.padding.top
+            + GetPortSectionHeight()
+            + Styles.portsBackground.padding.bottom;
 
         protected Rect InnerToEdgePosition(Rect position)
         {
@@ -784,6 +912,15 @@ namespace ArcaneOnyx.BehaviorTree
             public static readonly float spaceBeforeSubtitle = 0;
 
             public static readonly float invokeFadeDuration = 0.5f;
+
+            /// <summary>The "3" on a node carrying more than one problem.</summary>
+            public static readonly GUIStyle problemCount = new GUIStyle
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = new Color(1.0f, 0.85f, 0.85f) }
+            };
             
             static Styles()
             {

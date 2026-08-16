@@ -50,6 +50,49 @@ namespace ArcaneOnyx.BehaviorTree
 
         public bool nullMeansSelf { get; private set; }
 
+        /// <summary>
+        /// Whether leaving this port unconnected is legitimate rather than a defect.
+        /// <para>
+        /// Set at the declaration site by <see cref="SafeToLeaveUnconnected"/>, which is the only place that
+        /// knows why.
+        /// </para>
+        /// </summary>
+        public bool safeToLeaveUnconnected { get; private set; }
+
+        /// <summary>
+        /// Declares that this port may be left unconnected without the node breaking.
+        ///
+        /// <para>
+        /// Two things make that true, and both are properties of how the <em>node</em> reads the port, which
+        /// is why this is stated here and not guessed at elsewhere: the port is read through
+        /// <see cref="GetComponent{T}"/>, which returns without ever calling <see cref="GetValue"/> and lets
+        /// the node fall back to the machine's own GameObject; or the node does not read the port at all.
+        /// </para>
+        ///
+        /// <para>
+        /// Unconditional, unlike <see cref="NullMeansSelf"/>, which silently does nothing when the port's
+        /// type is not a component holder. A marker that quietly fails to apply is worse than none, because
+        /// the port then gets reported as a defect and the declaration looks like it handled it.
+        /// </para>
+        /// </summary>
+        public ValueInput SafeToLeaveUnconnected()
+        {
+            safeToLeaveUnconnected = true;
+            return this;
+        }
+
+        /// <summary>
+        /// True when nothing feeds this port, it carries no inline default, and it was not declared safe to
+        /// leave alone — so reading it throws <see cref="MissingValuePortInputException"/>.
+        ///
+        /// <para>
+        /// One rule, one place. The canvas badge and <c>bt_verify</c> both ask this rather than each deciding
+        /// for itself; the previous arrangement had verification matching on port <em>name</em> against a
+        /// hard-coded set, which exempted every port called <c>Target</c> whether or not it was safe.
+        /// </para>
+        /// </summary>
+        public bool IsUnfedRequired => !hasValidConnection && !hasDefaultValue && !safeToLeaveUnconnected;
+
         public bool allowsNull { get; private set; }
 
         public PortValueConnection connection => behaviorTreeNode.graph?.valueConnections.SingleOrDefaultWithDestination(this);

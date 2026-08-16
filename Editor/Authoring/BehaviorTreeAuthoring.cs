@@ -827,20 +827,66 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 // a dropped connection is exactly the thing the caller should know happened.
                 var drift = target.DescribeContractDrift();
 
-                target.RefreshParameters();
+                var dropped = target.RefreshParameters();
+
+                // The contract just changed, so this is exactly when the node is allowed to be resized.
+                var size = ContractPortLayout.ResizeToFitPorts(target);
 
                 refreshed.Add(new
                 {
                     node = target.guid.ToString(),
                     subTree = target.BehaviorTreeGraphAsset != null ? target.BehaviorTreeGraphAsset.name : null,
                     ports = target.Parameters.Select(parameter => parameter.ToString()).ToArray(),
-                    resolved = drift.ToArray()
+                    resolved = drift.ToArray(),
+                    droppedConnections = dropped.ToArray(),
+                    size = $"{size.width:0} x {size.height:0}"
                 });
             }
 
             Save(asset);
 
             return new { tree = normalized, refreshed };
+        }
+
+        [CliCommand("bt_refresh_guard_keys",
+            "Add to each reactive guard's key trigger whatever its condition declares and the trigger does " +
+            "not already list. Adds only -- a key the trigger lists that nothing declares may be a " +
+            "deliberate hand-typed one, and is reported rather than removed.")]
+        public static object RefreshGuardKeysCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("node", "Guid of one guard. Omit to refresh every reactive guard in the tree.")] string node = null)
+        {
+            var asset = ResolveTree(tree, out var normalized);
+
+            var refreshed = new List<object>();
+
+            foreach (var candidate in asset.graph.Nodes.OfType<ReactiveGuard>())
+            {
+                if (node != null && candidate.guid.ToString() != node) continue;
+
+                var added = candidate.RefreshWatchedKeys();
+                if (added.Count == 0) continue;
+
+                refreshed.Add(new
+                {
+                    node = candidate.guid.ToString(),
+                    name = candidate.NodeName,
+                    added = added.ToArray(),
+                    keys = candidate.Triggers
+                        .Where(trigger => trigger != null && trigger.Kind == GuardTriggerKind.OnKeyChanged)
+                        .SelectMany(trigger => trigger.Keys)
+                        .ToArray()
+                });
+            }
+
+            if (refreshed.Count == 0)
+            {
+                return new { tree = normalized, refreshed = 0, note = "every guard already lists what its condition declares." };
+            }
+
+            Save(asset);
+
+            return new { tree = normalized, refreshed = refreshed.Count, guards = refreshed };
         }
 
         [CliCommand("bt_set_value",

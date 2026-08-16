@@ -63,6 +63,75 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// Facts something in this guard's condition reads without declaring — the gap that stops a guard
+        /// waking at all, as opposed to <see cref="Resolve"/>'s declarations, which are what schedules it.
+        ///
+        /// <para>
+        /// Reporting only. It walks the same condition the same way, so a guard cannot be told about a
+        /// Function that its schedule does not actually reach, and it is never consulted at evaluation time —
+        /// derivation is a check on a declaration, never a substitute for one.
+        /// </para>
+        /// </summary>
+        public static string[] ResolveUndeclaredReads(ConditionalExecution guard)
+        {
+            if (guard == null) return Array.Empty<string>();
+
+            try
+            {
+                var into = new List<string>();
+
+                CollectInto(into, guard, new HashSet<Guid> { guard.guid }, depth: 1, undeclared: true);
+
+                return into.Count == 0 ? Array.Empty<string>() : into.ToArray();
+            }
+            catch (Exception)
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>
+        /// The declarers in this guard's condition that are provably missing a key, so a caller can offer to
+        /// repair the declaration rather than only describe it. Same walk, same reachability rules.
+        /// </summary>
+        public static List<IDeclaresWatchedKeys> ResolveIncompleteDeclarers(ConditionalExecution guard)
+        {
+            var found = new List<IDeclaresWatchedKeys>();
+            if (guard == null) return found;
+
+            try
+            {
+                CollectDeclarersInto(found, guard, new HashSet<Guid> { guard.guid }, depth: 1);
+            }
+            catch (Exception)
+            {
+                // Same contract as the walks above: a scheduling aid must never throw into the tree.
+            }
+
+            return found;
+        }
+
+        private static void CollectDeclarersInto(
+            List<IDeclaresWatchedKeys> into, BehaviorTreeNode node, HashSet<Guid> seen, int depth)
+        {
+            if (node?.valueInputs == null || depth > MaxDepth) return;
+
+            foreach (var input in node.valueInputs)
+            {
+                var connection = input?.connection;
+                if (connection?.source?.behaviorTreeNode is not BehaviorTreeNode source) continue;
+                if (!seen.Add(source.guid)) continue;
+
+                if (source is IDeclaresWatchedKeys declarer && declarer.UndeclaredReadKeys.Count > 0)
+                {
+                    into.Add(declarer);
+                }
+
+                CollectDeclarersInto(into, source, seen, depth + 1);
+            }
+        }
+
+        /// <summary>
         /// Accumulates into <paramref name="into"/> — it is an output parameter in everything but the
         /// keyword, named the way <c>BehaviorTreeGraph.ChildTransitionsInPriorityOrder</c> already names one,
         /// and listed first so the signature says so before it says anything else. A recursive walk cannot
@@ -87,7 +156,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         /// </summary>
         private static void CollectInto(
-            List<string> into, BehaviorTreeNode node, HashSet<Guid> seen, int depth)
+            List<string> into, BehaviorTreeNode node, HashSet<Guid> seen, int depth, bool undeclared = false)
         {
             if (node?.valueInputs == null || depth > MaxDepth) return;
 
@@ -100,11 +169,14 @@ namespace ArcaneOnyx.BehaviorTree
                 // duplicate work — the key set is a union either way.
                 if (!seen.Add(source.guid)) continue;
 
-                if (source is IDeclaresWatchedKeys declarer) AddInto(into, declarer.DeclaredWatchedKeys);
+                if (source is IDeclaresWatchedKeys declarer)
+                {
+                    AddInto(into, undeclared ? declarer.UndeclaredReadKeys : declarer.DeclaredWatchedKeys);
+                }
 
                 // Kept walking past a declarer on purpose. A condition can combine several sources — a
                 // Function AND a variable read — and stopping at the first would silently drop the rest.
-                CollectInto(into, source, seen, depth + 1);
+                CollectInto(into, source, seen, depth + 1, undeclared);
             }
         }
 

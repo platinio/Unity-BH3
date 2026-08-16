@@ -91,7 +91,48 @@ namespace ArcaneOnyx.BehaviorTree
         public override bool  DrawInSubTree => true;
 
         public virtual string Description => string.Empty;
-        
+
+        /// <summary>
+        /// What is wrong with this node right now, for the canvas to draw and for tooling to report. Adding
+        /// nothing means the node is fine, which is the default.
+        ///
+        /// <para>
+        /// Declared here rather than behind a capability interface because <b>every</b> node can be wrong —
+        /// there is no node for which the question is meaningless, so an interface would separate nothing.
+        /// The capability-not-type rule the guard walks follow applies where a capability is genuinely
+        /// selective, as with <see cref="IDeclaresWatchedKeys"/>; it does not apply to something universal.
+        /// Being on the base also means a new node's author finds this among the members they already
+        /// override, rather than having to know an interface exists.
+        /// </para>
+        ///
+        /// <para>
+        /// Report what the node already knows: this is read to draw a canvas, and although the result is
+        /// cached against an invalidation counter rather than recomputed per frame, an override that walks a
+        /// whole graph is still felt on every edit to a large tree.
+        /// </para>
+        ///
+        /// <para>
+        /// Problems only an outside rule can see are contributed by registering a provider with
+        /// <c>NodeProblemCache</c> instead, so a lint does not have to become a property of the thing it
+        /// inspects. Always call <c>base.CollectProblems</c> when overriding.
+        /// </para>
+        /// </summary>
+        public virtual void CollectProblems(List<NodeProblem> into)
+        {
+            // Every node can have this one, which is why it is here rather than repeated per node: a port
+            // with nothing connected and no inline default throws MissingValuePortInputException the first
+            // time it is read. 22 shipped nodes declare at least one such port, and until now the only
+            // warning was bt_verify, which a designer never runs.
+            foreach (var port in valueInputs)
+            {
+                if (port == null || !port.IsUnfedRequired) continue;
+
+                into.Add(new NodeProblem(NodeProblemSeverity.Error,
+                    $"Input '{port.key}' has nothing connected and declares no default, so reading it throws.",
+                    "Connect a value, or feed it a literal."));
+            }
+        }
+
         public void PortsChanged()
         {
             onPortsChanged?.Invoke();

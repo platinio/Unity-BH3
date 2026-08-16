@@ -332,5 +332,62 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             return DescribeContract(asset);
         }
+
+        [CliCommand("fn_refresh_ports",
+            "Rebuild the input ports of every Script Graph Variable node in a tree from the contract of the " +
+            "Function it reads. Reports the drift it repaired and any connection the repair cost.")]
+        public static object RefreshFunctionPortsCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("node", "Guid of a single node. Omit to refresh every Function-backed node in the tree.")]
+            string node = null)
+        {
+            var asset = BehaviorTreeAuthoring.LoadTree(tree);
+            if (asset == null) throw new ArgumentException($"No behavior tree at '{tree}'.");
+
+            var refreshed = new List<object>();
+
+            foreach (var candidate in asset.graph.Nodes)
+            {
+                if (candidate is not VisualScriptGraphVariable variableNode) continue;
+                if (node != null && variableNode.guid.ToString() != node) continue;
+                if (variableNode.Function == null) continue;
+
+                // Drift is read before the rebuild, because afterwards there is nothing left to differ --
+                // the same order bt_refresh_sub_tree_ports uses, for the same reason.
+                var drift = variableNode.DescribeContractDrift();
+                var dropped = variableNode.RefreshParameters();
+
+                // The contract just changed, so this is exactly when the node is allowed to be resized.
+                var size = ContractPortLayout.ResizeToFitPorts(variableNode);
+
+                refreshed.Add(new
+                {
+                    node = variableNode.guid.ToString(),
+                    name = variableNode.NodeName,
+                    function = variableNode.Function.name,
+                    drift = drift.Count == 0 ? new List<string> { "none" } : drift,
+                    droppedConnections = dropped,
+                    ports = variableNode.Parameters.Select(parameter => parameter.ToString()).ToList(),
+                    size = $"{size.width:0} x {size.height:0}"
+                });
+            }
+
+            if (refreshed.Count == 0)
+            {
+                return new
+                {
+                    tree,
+                    refreshed = 0,
+                    note = node != null
+                        ? $"No Function-backed Script Graph Variable node with guid '{node}' in this tree."
+                        : "No Script Graph Variable node in this tree reads a Function."
+                };
+            }
+
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssets();
+
+            return new { tree, refreshed = refreshed.Count, nodes = refreshed };
+        }
     }
 }

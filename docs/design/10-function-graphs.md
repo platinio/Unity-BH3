@@ -549,8 +549,9 @@ worth more once the contract is visible on the node.
 
 **2a — Watched-key inheritance.** ✅ **Done, 2026-08-14** — see *Step 2a landed* below.
 
-**2b — Declared inputs become ports.** Designed 2026-08-14 with the tool owner, not yet built — see
-*Step 2b — Declared inputs become ports* at the end of this document.
+**2b — Declared inputs become ports.** ✅ **Done, 2026-08-15** — see *Step 2b landed* below. The design
+section *Step 2b — Declared inputs become ports* at the end of this document is what was built; both of its
+open questions were settled by the tool owner and are recorded there.
 
 **2c — Picking a Function by contract.** Designed 2026-08-14, not yet built — see *Step 2c — Picking a
 Function by contract* at the end of this document. A dropdown that offers only the Functions that can
@@ -682,6 +683,12 @@ repository sweep enumerates, and a standalone Function must never become a delet
   `GuardOnVariable` would be reported. Implementing it as specified would produce false positives on most
   existing content. The valuable half — *the condition declares keys nobody is watching* — cannot occur,
   since inheritance covers it automatically.
+
+  **Still true on a guard, and spec 11 holds the same line there.** But the reasoning does not carry to the
+  Function itself: a Function's declaration *can* be compared against its own graph, and the case that
+  cannot be derived — a key computed at runtime — is the exception rather than the norm. So the Function
+  inspector does offer to remove a declared key its graph never reads, behind a confirmation naming exactly
+  that exception. The guard still reports nothing in this direction.
 - **Fan-in through the condition is defensive, not exercised.** The walk is DAG-safe with a visited set,
   matching the two existing guard walks. But BH3 ships no two-input boolean combinator — AND is expressed by
   several guards naming one owner — so no stock content can currently build a condition with two Functions
@@ -837,6 +844,200 @@ is no way to feed a declared input from a call site, so every BH3 Function is pu
   first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
 - **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
   clearly right; discarding a deliberate manual size is less obviously so.
+
+***
+
+## Step 2b landed — declared inputs become ports, 2026-08-15
+
+Branch `feature/function-graph-ports`, **stacked on `feature/watched-key-inheritance`** rather than cut from
+`main`, because 2a was still in review. BH3 and the superproject carry changes.
+**VisualScriptingExtension is untouched** — `FunctionParameter`, `ReadContract` and `DescribeDrift` already
+shipped complete in the foundation pass, so this step only had to call them. TacticalPositionSelection is
+untouched (step 3 is not in this pass).
+
+Acceptance criterion 2 — *"assigning a Function to a guard or variable node grows declared typed ports; a
+missing required input is reported by `bt_verify` and visible on the node"* — was false in every part and is
+now true.
+
+### The trap that decided the implementation
+
+`FunctionBindingPlan.Resolve` **skips any declared input with no live port** on the graph's
+`ScriptGraphInput` unit (`FunctionBindingPlan.cs:181`), while `FunctionParameter.ReadContract` lists **every**
+declared input. The two lists can therefore disagree in length *and* order, so the obvious implementation —
+stage the node's argument *i* into plan input *i* — silently feeds the wrong argument to the wrong parameter.
+No error anywhere; the Function just returns a wrong number.
+
+It is not a corner case: it is what ordinary drift looks like from the inside, and it is reachable any time a
+caller has not been refreshed. So arguments resolve **by name to an index once**, and by index thereafter —
+the same resolve-time/call-time split the binding plan itself uses. `FunctionPortTests.AStaleLeadingPort_…`
+pins it, and it fails if anyone replaces the map with positional staging.
+
+### Decisions taken while implementing
+
+- **The node owns its arguments; `ScriptGraphVariable` owns the binding.** They meet at a new
+  `IFunctionArguments` (BH3 runtime) that the node implements over its own ports. Pushing ports down into
+  `ScriptGraphVariable` would put Visual Scripting port types into a helper with no business knowing them;
+  handing the binding up would let a caller stage against a plan that had since been rebuilt. The interface
+  is read positionally rather than as a dictionary because every allocation here is one per evaluation.
+- **It lives in BH3, not VisualScriptingExtension.** Its only implementers are BH3 nodes, and step 3's TPS
+  query item will carry serialized arguments rather than ports, so it would not implement this. Promoting it
+  to VSE later is a move, not a redesign.
+- **The argument map is invalidated by three things**: the plan changing (compared by reference, one check
+  per evaluation), the argument count changing, and an explicit `InvalidateArgumentMap()` from `SetFunction`
+  and `RefreshParameters`. The third exists because renaming a parameter changes neither of the first two.
+  All three are editor-time; nothing in a player build can rename a port.
+- **Assigning a Function refreshes the ports as part of assigning**, rather than leaving it as a second step
+  to remember. A node pointed at a Function whose inputs it does not declare cannot be fed at all.
+- **The `Variables` / `VariableDeclarations` overloads now stage nothing** for a Function. They describe the
+  ambient scope, which is no longer how a Function is fed. `VisualScriptingNode`'s four lifecycle graphs are
+  the only other callers — see the next section, where the reasoning about them was initially wrong.
+- **A required input's default lives on the port, not in the evaluator.** An input nothing stages has no
+  value at all and the graph reads it as a missing key — that *is* the `KeyNotFoundException` this step's
+  problem statement cites.
+- **The two drift directions are not symmetrical, and only one of them breaks anything.** A call site
+  holding a port for an input the Function has *dropped* is harmless: nothing inside the graph reads it any
+  more, so the argument is skipped. An input the Function declares that the call site has *no port for* is
+  the opposite — nothing supplies it, and the graph throws the bare `KeyNotFoundException` above, naming the
+  key and nothing else, which points at the Function when the thing to fix is the caller's stale copy. That
+  case is now **refused where the argument map is resolved**, naming the Function, the input, the call site
+  and the repair — so it costs nothing per evaluation, and it does not depend on anyone having run
+  `bt_verify` first. `IFunctionArguments.CallSiteName` exists for that message: an unsupplied input is the
+  call site's debt, so the call site is what gets named.
+
+### The two open questions, settled by the tool owner
+
+- **A refresh that removes a connected port still removes it, but now names what it dropped and what was
+  feeding it.** Applied to `RunBehaviorTreeGraphNode` as well, so the two contract-driven nodes agree; the
+  sub-tree node's previous answer was silence. `RefreshParameters` returns those lines on both nodes, and the
+  canvas logs them as warnings — losing a wire is the one part of a refresh nobody asked for.
+- **`ResizeToFitPorts` writes the exact fit**, discarding a manual resize, rather than growing only. That is
+  safe *because* the trigger is a discrete authoring action — assigning a Function, or refreshing either
+  node's parameters. It deliberately never runs from the draw path, on selection, or on load; an exact fit
+  stamped every frame would fight an author mid-drag.
+
+### A wrong assumption, caught in review, and what it changed
+
+The first version of this step was written believing that **a Function can never reach
+`VisualScriptingNode`'s four lifecycle graphs**, because all four early-out on `?.ScriptGraphAsset == null`.
+That is wrong, and the way it is wrong matters:
+
+- `scriptGraphAsset` and `function` are independently settable and never clear each other.
+- The inspector drawer carrying the Function field is registered for **`BTScriptGraphVariable`** — which is
+  exactly what all four lifecycle fields are. It already renders an "assigned both" warning and calls that
+  "a state a designer can now reach by dragging".
+- With both assigned, the early-out does not fire, the Function *does* run — and after this step it runs
+  **with no arguments**, where previously it received the ambient name-matched ones.
+
+So the change quietly removed the only mechanism those fields had, in a state reachable by dragging, with
+nothing reporting it. The lesson is narrow and worth keeping: *"the guard clause makes this unreachable"* is
+only true if the guard's condition cannot be satisfied alongside the state you are dismissing.
+
+**What was done about it.** Not a behaviour change — those fields having no port mechanism is a design gap
+larger than this step. Instead the state is now **reported**: `VisualScriptingNode` exposes its
+`LifecycleGraphs`, and `bt_verify` names any Function assigned to one, saying it cannot be passed arguments
+and to read it from a Script Graph Variable node instead. That covers both silent shapes at once — the
+Function that never runs, and the Function that runs unfed. Pinned by
+`Verify_ReportsAFunctionAssignedToALifecycleGraph`.
+
+**Still open, and deliberately not taken here:** giving those four fields a real port story. It is four
+contracts on one node, which needs designing rather than deciding in passing.
+
+### An existing defect fixed on the way
+
+Node sizing was already broken for sub-trees and had nothing to do with Functions: nothing overrides
+`StartingSize`, so every node is created at `BaseGraphNode`'s 150×100, and the canvas responds to too many
+ports by **clamping the spacing between them** rather than growing. `ContractPortLayout.ResizeToFitPorts`
+serves both nodes.
+
+Its measurement has a wrinkle worth knowing: `GUI.skin` throws outside `OnGUI`, and the callers that matter
+most (`fn_refresh_ports`, `bt_refresh_sub_tree_ports`) are pipeline commands that never run inside one. So
+the real measurement is attempted and a per-character estimate is used when it is unavailable. That affects
+width only, and only until the next refresh made from the canvas.
+
+### What grew out of this step, and now lives in spec 11
+
+Step 2b's drift lint was reported by `bt_verify` and nowhere else, which the tool owner pointed out is an
+agent surface: a designer never runs it. Making drift visible on the canvas turned into a general mechanism —
+any node reporting what is wrong with it, drawn as a badge — and then pulled in guard scheduling and the
+Function's own inspector.
+
+That is **[spec 11 — node problems](11-node-problems.md)**, implemented on the branch stacked directly on
+this one. It closes Unity-BH3#22 and supersedes two things written below:
+
+- The step 2a note that a wrong watched-key list is *"detectable, not just an empty one"* was true only of
+  `bt_verify`. It is now on the canvas, with the repair attached.
+- Verification's name-based `PortsSafeToLeaveUnset` allowlist is gone; whether an unconnected port is a
+  defect is declared at the port.
+
+### Known gaps, stated rather than discovered
+
+- **`ContractPortLayout` reads the widgets' own styles** for port spacing and port chrome, rather than
+  copying the numbers, so those cannot drift. **One number is still a literal**: the `70` header allowance,
+  which is a bare literal inside `BehaviorTreeNodeElementWidget.CachePosition` and so has nothing to
+  reference. Naming it there is a change to the widget layer rather than to this feature.
+- **`VisualScriptingNode`'s lifecycle graphs still have no port story** — now reported rather than silent,
+  per the section above.
+- **The `Unfed` case is covered by tests and verify, not by the demo.** An agent whose required port is
+  unconnected throws every tick, so demonstrating it live means either console spam or a disabled machine
+  that is not really running. `FunctionPortTests.AnUnconnectedRequiredPort_FailsNamingTheNodeAndTheInput`
+  covers the message instead.
+- **End-to-end evaluation through a node's `Output` is not EditMode-testable** without a running machine, so
+  the coverage splits: the node's port→argument half in `FunctionPortTests`, the argument→Function half in
+  `FunctionBackedScriptGraphVariableTests` with an `IFunctionArguments` double, and the whole path in the
+  demo.
+
+### Work item 6, and a deviation from the design section
+
+The design says *"`bt_refresh_sub_tree_ports` gains a Function equivalent, or is generalised to both."* The
+tool owner chose a **separate `fn_refresh_ports`**; `bt_refresh_sub_tree_ports` keeps its name, its node type
+and its behaviour, and gained only the dropped-connection report and the resize.
+
+### Tests
+
+**468 EditMode, 467 passing** at the point step 2b merged `main`. The single failure is the long-standing
+`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, unrelated to Functions.
+PlayMode unchanged at 56/49/7.
+
+> Later work on the same stack took this to **483 EditMode, 482 passing**, and then added further changes
+> that have not been run against the suite yet. See **spec 11** for what followed; treat the number here as
+> the 2b figure rather than the current one.
+
+25 new EditMode tests — 16 in `BH3/Test/EditMode/FunctionPortTests.cs` and 9 in `NodeProblemTests.cs` —
+plus four rewritten in `FunctionBackedScriptGraphVariableTests.cs`, which exercised the name-matching path
+this step deleted and now stage through an `IFunctionArguments` double.
+
+### A failure this branch inherited, since fixed upstream
+
+While this work was in progress,
+`WatchedKeyInheritanceTests.AGuardWithNoTriggers_WhoseConditionDeclaresKeys_IsReportedWithThoseKeysNamed`
+failed on the base branch — 2a's own section above reported that suite green, and it was not. It was left
+alone here rather than fixed, because the fix was a design call for 2a's author. **It is fixed on `main`
+(commit `25ad8c4`) and green after the merge.** Recorded because the *reason* it failed is worth keeping:
+
+`GuardScheduleSeeder` (`OnWillSaveAssets`) re-seeds any guard that has no triggers from what its condition
+declares. The test cleared the triggers and then saved — so the seeder put one back, lint 4 never fired, and
+the test was quietly asserting against the seeder rather than the lint. The fix reproduces the situation that
+actually happens instead: a Function gains a watched key *after* the trees referencing it were saved, so
+nothing re-seeds them and the guard is genuinely unscheduled.
+
+The design question underneath it still stands and is not closed by that fix: lint 4's Function branch
+justifies itself with *"a Function assigned through the inspector runs no authoring code"* — but the seeder
+hooks **save**, and the inspector path saves too. The overlap is real; the fixed test just no longer depends
+on it.
+
+### Demos
+
+- **`BH3Demos/FunctionPorts/`** (new). One Function and one tree asset, four agents, four different
+  `threshold` arguments — 80, 15, 95, and the Function's own declared default of 50. At the same `hp` they
+  give different answers, which is the thing that was impossible before: previously the argument came from a
+  same-named agent variable, so a second opinion needed a second copy of something. The left panel derives
+  the contract from the asset with `FunctionParameter.ReadContract` and shows the node's live drift state, so
+  it cannot disagree with `fn_describe` or the verify lint. Verified on Play with a game-view capture.
+- **`BH3Demos/WatchedKeyInheritance/`** (migrated). It supplied `IsHurt`'s required `threshold` by declaring
+  an agent variable of the same name — the one piece of content relying on the mechanism this step removed.
+  It now feeds a real port from a Float Literal of 60 in `HurtOrIdle.asset`, and the demo script no longer
+  declares `threshold` at all. Confirmed at runtime: port connected, value 60, no `threshold` variable on any
+  agent, evaluation unchanged.
 
 ***
 
