@@ -293,17 +293,7 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Ports."));
             }
 
-            // A required port nobody feeds throws on the first evaluation. Naming it here means it is
-            // visible while editing rather than at the moment it breaks.
-            for (var i = 0; i < parameterPorts.Length; i++)
-            {
-                var port = parameterPorts[i];
-                if (port == null || port.hasValidConnection || port.hasDefaultValue) continue;
-
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Required input '{parameterNames[i]}' has nothing connected.",
-                    "Connect a value, or give the input a default in the Function."));
-            }
+            // An unfed required port is reported by the base for every node, so it is not repeated here.
         }
 
         // ------------------------------------------------------------------ IFunctionArguments

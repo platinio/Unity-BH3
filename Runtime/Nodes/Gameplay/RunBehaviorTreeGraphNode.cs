@@ -230,16 +230,7 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Parameters."));
             }
 
-            foreach (var parameter in parameters)
-            {
-                if (parameter?.Name == null || parameter.Optional) continue;
-                if (!parameterPorts.TryGetValue(parameter.Name, out var port)) continue;
-                if (port == null || port.hasValidConnection || port.hasDefaultValue) continue;
-
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Required parameter '{parameter.Name}' has nothing connected.",
-                    $"Connect a value, or make it optional in {behaviorTreeGraphAsset.name}."));
-            }
+            // An unfed required parameter is just an unset port, which the base reports for every node.
         }
 
         public override void OnAwake()

@@ -119,6 +119,18 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public virtual void CollectProblems(List<NodeProblem> into)
         {
+            // Every node can have this one, which is why it is here rather than repeated per node: a port
+            // with nothing connected and no inline default throws MissingValuePortInputException the first
+            // time it is read. 22 shipped nodes declare at least one such port, and until now the only
+            // warning was bt_verify, which a designer never runs.
+            foreach (var port in valueInputs)
+            {
+                if (port == null || !port.IsUnfedRequired) continue;
+
+                into.Add(new NodeProblem(NodeProblemSeverity.Error,
+                    $"Input '{port.key}' has nothing connected and declares no default, so reading it throws.",
+                    "Connect a value, or feed it a literal."));
+            }
         }
 
         public void PortsChanged()
