@@ -962,7 +962,36 @@ right — the field is offered on all four lifecycle graphs — but it is right 
 because a drawer binds directly. Worth correcting when the inspector replaces the drawer, since the sentence
 will otherwise describe machinery that no longer exists.
 
-**Still open, and now the only thing blocking a build:** whether `metadata.parent` yields the node itself or
-an intermediate member metadata. The chain is public and the model is a tree rooted at the inspected object,
-so it is one `parent` hop or two; confirming which needs a registered inspector rendering in the graph
-window, which is a ten-minute check rather than a design question.
+**The chain, executed rather than assumed.** Run against a real node in `HurtOrIdle.asset`; nothing here is
+inferred:
+
+```
+Metadata.Root().StaticObject(node).Member("ScriptGraphVariable", Instance | NonPublic)
+
+  path                     Root.VisualScriptGraphVariable.ScriptGraphVariable
+  definedType              BTScriptGraphVariable
+  parent  (one hop)        ObjectMetadata, value is the VisualScriptGraphVariable — reference-equal
+```
+
+**`metadata.parent` is exactly one hop, and its `value` is the node.** No intermediate member metadata to
+step over.
+
+From there the filter type resolves the whole way:
+
+```
+node.Output.connectedPorts
+  -> ArcaneOnyx.BehaviorTree.ValueInput { key = "Value", Type = System.Boolean }
+     owner: BooleanReactiveGuard
+```
+
+So a guard condition yields `System.Boolean`, which is precisely the constraint 2c filters on. **Nothing
+blocks building it.**
+
+Three practical notes for whoever writes it:
+
+- `ScriptGraphVariable` is a **private** field, so the `metadata["Name"]` indexer is not enough —
+  `Member(name, BindingFlags.Instance | BindingFlags.NonPublic)` is.
+- The port type lives on `Type` (capital) of **BH3's** `ArcaneOnyx.BehaviorTree.ValueInput`, not on a
+  lowercase `type` as Visual Scripting's own ports use. Guessing the VS spelling silently returns nothing.
+- `Output.connectedPorts` is the direct route; walking `connections` and reading `destination` works too but
+  yields nulls for the control-flow entries mixed into the same list.
