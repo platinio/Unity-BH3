@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
-    public class RunBehaviorTreeGraphNode : GameplayNode, IReportsProblems
+    public class RunBehaviorTreeGraphNode : GameplayNode
     {
         [Serialize, Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
@@ -214,8 +214,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// invisible-drift problem as the Function node since parameters were added to it, so it reports
         /// through the same capability rather than getting its own answer.
         /// </summary>
-        public void CollectProblems(List<NodeProblem> into)
+        public override void CollectProblems(List<NodeProblem> into)
         {
+            base.CollectProblems(into);
+
             if (behaviorTreeGraphAsset == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,

@@ -6,8 +6,7 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments,
-        IReportsProblems
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
 
@@ -263,14 +262,16 @@ namespace ArcaneOnyx.BehaviorTree
             return drift;
         }
 
-        // ------------------------------------------------------------------ IReportsProblems
+        // ------------------------------------------------------------------ problems
 
         /// <summary>
         /// What is wrong with this node, for the canvas to draw. Everything here is something the node can
         /// see in itself without walking anything: a contract comparison and two null checks.
         /// </summary>
-        public void CollectProblems(List<NodeProblem> into)
+        public override void CollectProblems(List<NodeProblem> into)
         {
+            base.CollectProblems(into);
+
             if (Function == null && EmbeddedScriptGraph == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,

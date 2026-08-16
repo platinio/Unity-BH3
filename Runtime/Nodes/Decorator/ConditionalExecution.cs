@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     /// </summary>
     [SpecialNode]
-    public abstract class ConditionalExecution : GameplayNode, IReportsProblems
+    public abstract class ConditionalExecution : GameplayNode
     {
         [Serialize] private BehaviorTreeNode owner;
 
@@ -92,8 +92,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// asset as a description: an author reads the trigger and concludes the opposite of what happens.
         /// </para>
         /// </summary>
-        public virtual void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
+        public override void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
         {
+            base.CollectProblems(into);
+
             var declared = InheritedWatchedKeys.Resolve(this);
 
             var watchesKeys = false;
