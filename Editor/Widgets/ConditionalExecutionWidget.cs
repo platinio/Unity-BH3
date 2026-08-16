@@ -160,21 +160,33 @@ namespace ArcaneOnyx.BehaviorTree
                     }), $"Refresh Watched Keys ({missing} declared by the condition, not listed here)");
                 }
 
-                // The case a refresh cannot reach: the condition reads a fact nothing declares, so there is
-                // nothing for this guard to copy. Named here rather than left to the badge alone, because
-                // this menu is where someone comes looking for the fix.
-                if (undeclared.Length > 0)
+                // The case a refresh cannot reach, offered as the repair it actually needs rather than as an
+                // explanation of where the repair lives. The fix is on the Function, so this edits the
+                // Function -- named in the label, and confirmed first, because that asset is shared.
+                foreach (var declarer in InheritedWatchedKeys.ResolveIncompleteDeclarers(guard))
                 {
-                    var keys = string.Join(", ", undeclared);
+                    if (declarer.DeclarationOwner is not
+                        ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset function)
+                    {
+                        // Nowhere to write -- keys hand-declared in C#, or an embedded graph. Say so rather
+                        // than offering a button that cannot work.
+                        yield return new DropdownOption((System.Action)(() => { }),
+                            $"Reads {string.Join(", ", declarer.UndeclaredReadKeys)} undeclared "
+                            + "(no asset to fix it on)");
+                        continue;
+                    }
 
-                    yield return new DropdownOption((System.Action)(() => Debug.LogWarning(
-                            $"[BehaviorTree] '{guard.NodeName}' cannot be repaired from here. Its condition "
-                            + $"reads {keys} without declaring it, so this guard never wakes on it. Declare "
-                            + "it on the Function the condition reads (fn_set_metadata --watched_keys); "
-                            + "refreshing this guard would only copy the declaration that is missing it.")),
-                        $"Cannot refresh: condition reads {keys} without declaring it");
+                    foreach (var key in declarer.UndeclaredReadKeys)
+                    {
+                        var captured = key;
+
+                        yield return new DropdownOption((System.Action)(() =>
+                            Authoring.WatchedKeyRepair.DeclareOnFunction(function, captured)),
+                            $"Declare '{key}' on {function.name}");
+                    }
                 }
-                else if (missing == 0)
+
+                if (undeclared.Length == 0 && missing == 0)
                 {
                     yield return new DropdownOption((System.Action)(() => { }),
                         "Refresh Watched Keys (up to date)");

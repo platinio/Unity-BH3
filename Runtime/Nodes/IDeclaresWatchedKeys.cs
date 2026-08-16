@@ -83,5 +83,23 @@ namespace ArcaneOnyx.BehaviorTree
         /// whose name is computed at runtime is invisible to any walk.
         /// </para>
         IReadOnlyList<string> UndeclaredReadKeys { get; }
+
+        /// <summary>
+        /// The asset the declaration lives on, when it lives on one — so tooling can offer to repair an
+        /// incomplete declaration at its source instead of describing where the source is.
+        /// </summary>
+        ///
+        /// <para>
+        /// Null when there is nowhere to write: a node whose keys are hand-declared in C# has no asset to
+        /// edit, and neither does one reading an embedded graph. A caller that finds null should say what is
+        /// wrong and stop, rather than guessing at somewhere to put it.
+        /// </para>
+        ///
+        /// <para>
+        /// Returned as an <c>Object</c> rather than a Function type on purpose: BH3 consumes
+        /// VisualScriptingExtension and must not name its asset types in a runtime interface, and the second
+        /// implementer this interface already anticipates is not a Function at all.
+        /// </para>
+        UnityEngine.Object DeclarationOwner { get; }
     }
 }

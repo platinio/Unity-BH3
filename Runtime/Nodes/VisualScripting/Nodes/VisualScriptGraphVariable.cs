@@ -363,6 +363,13 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// The Function, which is where this node's watched keys are declared and therefore where an
+        /// incomplete declaration is repaired. Null for an embedded graph, which declares nothing anywhere.
+        /// </summary>
+        [DoNotSerialize]
+        public UnityEngine.Object DeclarationOwner => Function;
+
         /// <summary>Membership without LINQ, since this runs on the canvas path.</summary>
         private static bool IsDeclared(IReadOnlyList<string> declared, string key)
         {
