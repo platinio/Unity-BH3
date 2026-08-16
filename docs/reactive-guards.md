@@ -171,6 +171,32 @@ The one case where a stale key *is* provable: a guard whose condition is **not c
 own port default forever, so it depends on nothing and every key it lists is dead. That is reported
 unconditionally.
 
+### The sharper one: a fact the Function reads but never declares
+
+Everything above is about the *written-down* list lagging a correct declaration — annoying, but the guard
+still wakes. This one is worse, and it is the easy mistake to make:
+
+> **Adding a Get Variable unit to a Function does not change what the Function declares.**
+
+Inheritance hands a guard the **declaration**. So a fact your graph now reads, but never declared, schedules
+nothing: the guard keeps its old list, never wakes on that fact, and the branch quietly stops firing. Nothing
+throws. Nothing looks broken.
+
+Both the Function-backed node and any guard reading it now say so:
+
+> This guard's condition reads 'stamina' without declaring it, so the guard never wakes on it and its
+> branch can stop firing with nothing to point at.
+
+**Refresh Watched Keys cannot fix this**, and the menu says so rather than pretending — a refresh copies the
+declaration, and the declaration is the thing missing the key. The repair is on the Function:
+
+```bash
+unity command fn_set_metadata --function Assets/AI/Functions/IsHurt.asset --watched_keys hp,stamina
+```
+
+Or edit the Function's watched keys in its inspector. Once declared, every guard reading it wakes on the new
+fact immediately, and any guard whose written-down list now lags will offer a refresh to match.
+
 Hand-typed keys remain worth having for a dependency nothing can derive — a variable name computed at
 runtime, or a C# node doing its own lookup. Those are invisible to any walk, and a declaration is the only
 place they can be stated.

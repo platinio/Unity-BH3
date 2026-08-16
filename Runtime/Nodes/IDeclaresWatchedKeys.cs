@@ -55,5 +55,33 @@ namespace ArcaneOnyx.BehaviorTree
         /// honest answer for a node reading nothing agent-scoped — never a reason to guess.
         /// </summary>
         IReadOnlyList<string> DeclaredWatchedKeys { get; }
+
+        /// <summary>
+        /// Facts this node's source is known to read <em>without</em> declaring them — where the declaration
+        /// above is provably incomplete. Empty when it is complete, and equally empty when the node has no
+        /// way to tell, which is the honest answer rather than a guess.
+        /// </summary>
+        ///
+        /// <para>
+        /// The counterpart of the declaration, and on the same interface because it is the same subject: what
+        /// this node knows about the facts its value depends on. A node that can answer the first question can
+        /// usually say something about the second, and no node that cannot answer the first has an opinion on
+        /// either.
+        /// </para>
+        ///
+        /// <para>
+        /// It exists because the gap is otherwise silent and worse than a stale trigger. Inheritance hands a
+        /// guard the <em>declaration</em>, so a fact the source reads but never declared does not schedule
+        /// anything: the guard keeps its old schedule, never wakes on that fact, and the branch stops firing
+        /// with nothing to point at. Refreshing the guard's keys cannot fix it either, since that copies the
+        /// declaration that is missing the key — the repair is on the source.
+        /// </para>
+        ///
+        /// <para>
+        /// Derivation is incomplete by construction, so this is a one-way test: what it finds is genuinely
+        /// undeclared, and finding nothing does not prove the declaration is complete. A <c>GetVariable</c>
+        /// whose name is computed at runtime is invisible to any walk.
+        /// </para>
+        IReadOnlyList<string> UndeclaredReadKeys { get; }
     }
 }

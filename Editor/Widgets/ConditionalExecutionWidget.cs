@@ -126,7 +126,9 @@ namespace ArcaneOnyx.BehaviorTree
                 if (element is not ReactiveGuard guard) yield break;
 
                 var declared = InheritedWatchedKeys.Resolve(guard);
-                if (declared.Length == 0) yield break;
+                var undeclared = InheritedWatchedKeys.ResolveUndeclaredReads(guard);
+
+                if (declared.Length == 0 && undeclared.Length == 0) yield break;
 
                 var missing = 0;
 
@@ -140,20 +142,43 @@ namespace ArcaneOnyx.BehaviorTree
                     }
                 }
 
-                var label = missing == 0
-                    ? "Refresh Watched Keys (up to date)"
-                    : $"Refresh Watched Keys ({missing} declared by the condition, not listed here)";
-
-                yield return new DropdownOption((System.Action)(() =>
+                // Offered only when it would actually do something. It used to appear unconditionally and
+                // read "up to date" whenever the trigger matched the declaration -- including when the badge
+                // was warning about an undeclared read, which this cannot fix. A menu entry contradicting
+                // the badge beside it is worse than no entry.
+                if (missing > 0)
                 {
-                    UndoUtility.RecordEditedObject("Refresh Watched Keys");
+                    yield return new DropdownOption((System.Action)(() =>
+                    {
+                        UndoUtility.RecordEditedObject("Refresh Watched Keys");
 
-                    foreach (var line in guard.RefreshWatchedKeys()) Debug.Log($"[BehaviorTree] {line}");
+                        foreach (var line in guard.RefreshWatchedKeys()) Debug.Log($"[BehaviorTree] {line}");
 
-                    Authoring.NodeProblemCache.Invalidate();
+                        Authoring.NodeProblemCache.Invalidate();
 
-                    GUI.changed = true;
-                }), label);
+                        GUI.changed = true;
+                    }), $"Refresh Watched Keys ({missing} declared by the condition, not listed here)");
+                }
+
+                // The case a refresh cannot reach: the condition reads a fact nothing declares, so there is
+                // nothing for this guard to copy. Named here rather than left to the badge alone, because
+                // this menu is where someone comes looking for the fix.
+                if (undeclared.Length > 0)
+                {
+                    var keys = string.Join(", ", undeclared);
+
+                    yield return new DropdownOption((System.Action)(() => Debug.LogWarning(
+                            $"[BehaviorTree] '{guard.NodeName}' cannot be repaired from here. Its condition "
+                            + $"reads {keys} without declaring it, so this guard never wakes on it. Declare "
+                            + "it on the Function the condition reads (fn_set_metadata --watched_keys); "
+                            + "refreshing this guard would only copy the declaration that is missing it.")),
+                        $"Cannot refresh: condition reads {keys} without declaring it");
+                }
+                else if (missing == 0)
+                {
+                    yield return new DropdownOption((System.Action)(() => { }),
+                        "Refresh Watched Keys (up to date)");
+                }
             }
         }
     }

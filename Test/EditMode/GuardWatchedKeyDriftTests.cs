@@ -203,6 +203,78 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "most existing content");
         }
 
+        // ------------------------------------------------------------------ the sharper case: undeclared reads
+
+        /// <summary>
+        /// The tool owner's scenario, and a worse bug than the one this file is named for.
+        ///
+        /// <para>
+        /// Adding a variable <em>read</em> to a Function's graph does not change what the Function
+        /// <em>declares</em>, and inheritance hands a guard the declaration. So the guard never wakes on the
+        /// new fact — the branch silently stops firing — while every list involved agrees with every other
+        /// list, which is why the drift check above stays quiet. Runtime is wrong here, not just the asset.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void AKeyTheGraphReadsButDoesNotDeclare_IsReportedOnTheNodeHoldingTheFunction()
+        {
+            var function = Predicate("IsHurt", "hp");
+
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Reads.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            node.SetFunction(function);
+
+            Assert.That(NodeProblemCache.For(node), Is.Empty, "precondition: declaration matches the graph");
+
+            // What a designer does in the graph window: add a read, declare nothing.
+            var get = new Unity.VisualScripting.GetVariable
+            {
+                kind = VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
+            };
+            function.graph.units.Add(get);
+            get.Define();
+            get.name.SetDefaultValue("stamina");
+
+            FunctionEvaluator.InvalidateAll();
+            NodeProblemCache.Invalidate();
+
+            Assert.That(function.WatchedKeys, Has.None.EqualTo("stamina"),
+                "the declaration does not move on its own -- that is the whole defect");
+
+            var problems = NodeProblemCache.For(node);
+
+            Assert.That(problems.Select(problem => problem.Summary), Has.Some.Contains("stamina"));
+            Assert.That(problems.Select(problem => problem.Fix), Has.Some.Contains("fn_set_metadata"),
+                "refreshing the guard's keys would not help -- it copies the declaration that is missing the "
+                + "key -- so the fix named must be the one on the Function");
+        }
+
+        [Test]
+        public void AKeyTheGraphReadsAndDeclares_IsNotReported()
+        {
+            var function = Predicate("IsHurt", "hp");
+
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Declared.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            node.SetFunction(function);
+
+            var get = new Unity.VisualScripting.GetVariable
+            {
+                kind = VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
+            };
+            function.graph.units.Add(get);
+            get.Define();
+            get.name.SetDefaultValue("stamina");
+
+            function.SetWatchedKeys(new[] { "hp", "stamina" });
+            FunctionEvaluator.InvalidateAll();
+            NodeProblemCache.Invalidate();
+
+            Assert.That(NodeProblemCache.For(node).Select(problem => problem.Summary),
+                Has.None.Contains("stamina"),
+                "declared and read agree, so there is nothing to say");
+        }
+
         // ------------------------------------------------------------------ the narrow, provable case
 
         /// <summary>

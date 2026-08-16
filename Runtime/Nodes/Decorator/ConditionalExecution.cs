@@ -117,6 +117,19 @@ namespace ArcaneOnyx.BehaviorTree
                     "Connect a condition, or remove the key trigger."));
             }
 
+            // The sharper failure, and the reason it is reported on the guard as well as on the node holding
+            // the Function: this is the one that stops the guard waking at all. A fact the condition reads
+            // but never declares schedules nothing, so the branch quietly stops firing -- and unlike the
+            // trigger drift below, refreshing this guard's keys cannot fix it, because that copies the
+            // declaration that is missing the key.
+            foreach (var key in InheritedWatchedKeys.ResolveUndeclaredReads(this))
+            {
+                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                    $"This guard's condition reads '{key}' without declaring it, so the guard never wakes "
+                    + "on it and its branch can stop firing with nothing to point at.",
+                    "Declare it on the Function the condition reads, not here."));
+            }
+
             if (declared.Length == 0) return;
 
             foreach (var trigger in Triggers)
