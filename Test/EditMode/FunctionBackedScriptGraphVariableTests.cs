@@ -86,6 +86,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             public Arguments(params (string name, object value)[] entries) => this.entries = entries;
 
+            public string CallSiteName => "test call site";
+
             public int Count => entries.Length;
 
             public string NameAt(int index) => entries[index].name;

@@ -264,6 +264,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         // ------------------------------------------------------------------ IFunctionArguments
 
+        string IFunctionArguments.CallSiteName => NodeName;
+
         int IFunctionArguments.Count => parameterPorts.Length;
 
         string IFunctionArguments.NameAt(int index) => parameterNames[index];

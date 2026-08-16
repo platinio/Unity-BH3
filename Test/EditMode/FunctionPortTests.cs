@@ -254,19 +254,52 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
-        /// Why an optional input's default lives on the <em>port</em> rather than being applied by the
-        /// evaluator: an input nothing stages has no value at all, and the graph reads it as a missing key.
-        /// This is the <c>KeyNotFoundException</c> spec 10 cites as the failure step 2b removes — a node
-        /// with ports always stages every declared input, so it cannot happen from one.
+        /// An input nothing stages has no value at all — the graph reads it as a missing key, which is the
+        /// <c>KeyNotFoundException</c> spec 10 cites as the failure step 2b removes. It is refused before the
+        /// graph runs instead, because the bare exception names the key and nothing else and so points at
+        /// the Function when the thing to fix is the call site.
         /// </summary>
         [Test]
-        public void AnInputNothingStages_FailsRatherThanFallingBackToTheGraphsDefault()
+        public void AnInputWithNoArgument_IsRefusedBeforeTheGraphRuns()
         {
             var variable = new ScriptGraphVariable();
             variable.SetFunction(EchoFloat("Unstaged", "threshold", defaultValue: 1.0f));
 
-            Assert.Throws<KeyNotFoundException>(
+            var exception = Assert.Throws<System.InvalidOperationException>(
                 () => variable.GetValue<float>(agent, (IFunctionArguments)null));
+
+            Assert.That(exception.Message, Does.Contain("threshold"), "name the input that is owed");
+            Assert.That(exception.Message, Does.Contain("Unstaged"), "name the Function");
+            Assert.That(exception.Message, Does.Contain("fn_refresh_ports"), "name the repair");
+        }
+
+        /// <summary>
+        /// The same refusal reached through a real node, and the message must blame the node rather than the
+        /// Function — this is the drift shape a caller hits when its contract copy has fallen behind.
+        /// </summary>
+        [Test]
+        public void AnInputTheCallerHasNoPortFor_IsRefusedNamingTheCallSite()
+        {
+            var function = EchoFloat("Echo", "threshold", defaultValue: 1.0f);
+            var (_, node) = TreeReading(function);
+
+            // Give the Function a second input and leave the node un-refreshed, so it has no port for it.
+            function.graph.valueInputDefinitions.Add(new Unity.VisualScripting.ValueInputDefinition
+            {
+                key = "boost", label = "boost", type = typeof(float)
+            });
+            function.graph.PortDefinitionsChanged();
+            FunctionEvaluator.InvalidateAll();
+
+            var variable = new ScriptGraphVariable();
+            variable.SetFunction(function);
+
+            var exception = Assert.Throws<System.InvalidOperationException>(
+                () => variable.GetValue<float>(agent, (IFunctionArguments)node));
+
+            Assert.That(exception.Message, Does.Contain("boost"));
+            Assert.That(exception.Message, Does.Contain(node.NodeName),
+                "the call site owes the argument, so the call site is what the message must name");
         }
 
         /// <summary>

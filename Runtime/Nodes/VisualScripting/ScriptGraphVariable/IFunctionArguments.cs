@@ -21,6 +21,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public interface IFunctionArguments
     {
+        /// <summary>
+        /// What to call this call site in an error. Only read when something is already wrong, so it may be
+        /// as expensive as it needs to be to be useful — an input with no argument is reported against the
+        /// node that owes it, not against the Function that wanted it.
+        /// </summary>
+        string CallSiteName { get; }
+
         /// <summary>How many arguments this call site supplies.</summary>
         int Count { get; }
 

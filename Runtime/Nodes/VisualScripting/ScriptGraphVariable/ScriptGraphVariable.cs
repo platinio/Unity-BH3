@@ -109,23 +109,27 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private void StageArguments(FunctionBinding agentBinding, IFunctionArguments arguments)
         {
-            if (arguments == null) return;
+            var plan = agentBinding.Plan;
 
-            var count = arguments.Count;
-            if (count == 0) return;
+            // Deliberately not an early return on a call site with no arguments: a node with no ports feeding
+            // a Function that declares inputs is precisely the drift the coverage check below exists to catch.
+            var count = arguments?.Count ?? 0;
 
-            if (argumentIndices == null || argumentIndices.Length != count ||
-                !ReferenceEquals(mappedPlan, agentBinding.Plan))
+            if (argumentIndices == null || argumentIndices.Length != count || !ReferenceEquals(mappedPlan, plan))
             {
                 argumentIndices = new int[count];
 
                 for (var i = 0; i < count; i++)
                 {
-                    argumentIndices[i] = agentBinding.Plan.IndexOfInput(arguments.NameAt(i));
+                    argumentIndices[i] = plan.IndexOfInput(arguments.NameAt(i));
                 }
 
-                mappedPlan = agentBinding.Plan;
+                ThrowIfAnInputHasNoArgument(plan, arguments, count);
+
+                mappedPlan = plan;
             }
+
+            if (count == 0) return;
 
             for (var i = 0; i < count; i++)
             {
@@ -140,6 +144,49 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     throw new System.InvalidOperationException(argumentError);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Refuses to evaluate when the Function declares an input nothing is going to stage.
+        ///
+        /// <para>
+        /// This is the drift direction that actually breaks something. The other way round — a call site
+        /// holding a port for an input the Function has dropped — is harmless, because nothing inside the
+        /// graph reads it any more. But an input with <em>no</em> argument is never assigned a value at all,
+        /// and Visual Scripting reads that as a missing key: a bare
+        /// <c>KeyNotFoundException</c> thrown from inside the graph, naming the key and nothing else. That
+        /// message sends whoever hits it into the Function, when the thing that needs fixing is the call
+        /// site's stale contract copy.
+        /// </para>
+        ///
+        /// <para>
+        /// Checked here, where the argument map is resolved, rather than per evaluation — so it costs
+        /// nothing in the call path, and a Function that binds once keeps binding for free.
+        /// </para>
+        /// </summary>
+        private void ThrowIfAnInputHasNoArgument(FunctionBindingPlan plan, IFunctionArguments arguments, int count)
+        {
+            for (var input = 0; input < plan.InputKeys.Length; input++)
+            {
+                var staged = false;
+
+                for (var i = 0; i < count; i++)
+                {
+                    if (argumentIndices[i] != input) continue;
+
+                    staged = true;
+                    break;
+                }
+
+                if (staged) continue;
+
+                var callSite = arguments == null ? "the caller" : $"'{arguments.CallSiteName}'";
+
+                throw new System.InvalidOperationException(
+                    $"Function '{function.name}' declares input '{plan.InputKeys[input]}', but {callSite} has "
+                    + "no port for it, so nothing supplies it. The call site's copy of the contract is stale: "
+                    + "refresh its ports with fn_refresh_ports, which bt_verify also reports as drift.");
             }
         }
 
