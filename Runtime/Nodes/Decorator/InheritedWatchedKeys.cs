@@ -50,11 +50,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             try
             {
-                var keys = new List<string>();
+                var into = new List<string>();
 
-                Collect(guard, keys, new HashSet<Guid> { guard.guid }, depth: 1);
+                CollectInto(into, guard, new HashSet<Guid> { guard.guid }, depth: 1);
 
-                return keys.Count == 0 ? Array.Empty<string>() : keys.ToArray();
+                return into.Count == 0 ? Array.Empty<string>() : into.ToArray();
             }
             catch (Exception)
             {
@@ -62,7 +62,32 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private static void Collect(BehaviorTreeNode node, List<string> keys, HashSet<Guid> seen, int depth)
+        /// <summary>
+        /// Accumulates into <paramref name="into"/> — it is an output parameter in everything but the
+        /// keyword, named the way <c>BehaviorTreeGraph.ChildTransitionsInPriorityOrder</c> already names one,
+        /// and listed first so the signature says so before it says anything else. A recursive walk cannot
+        /// return its result without allocating a list per level and merging them, which is the shape both
+        /// sibling walks in this codebase avoid the same way.
+        ///
+        /// <para>
+        /// <b>This walks the behavior tree graph, not a Function's graph.</b> It follows value connections
+        /// backwards from a guard through behavior tree nodes — past a <c>Not</c>, past whatever else sits in
+        /// between — to find the nodes that <em>declare</em> keys, and then reads the declaration. It never
+        /// descends into a Function's own units.
+        /// </para>
+        ///
+        /// <para>
+        /// That is the difference between declared and derived, and it is deliberate. Walking a Function's
+        /// units is what <c>FunctionGraphAsset.DeriveReadKeys()</c> does, and its job is to keep the
+        /// declaration honest at verify time — not to feed the runtime. Derivation is incomplete by
+        /// construction: a <c>GetVariable</c> whose name is computed rather than literal is invisible to any
+        /// walk, so the declaration is the only place such a dependency can be stated at all. Reading
+        /// declarations here also keeps the cost proportional to the condition rather than to the size of
+        /// every Function it reaches.
+        /// </para>
+        /// </summary>
+        private static void CollectInto(
+            List<string> into, BehaviorTreeNode node, HashSet<Guid> seen, int depth)
         {
             if (node?.valueInputs == null || depth > MaxDepth) return;
 
@@ -75,15 +100,16 @@ namespace ArcaneOnyx.BehaviorTree
                 // duplicate work — the key set is a union either way.
                 if (!seen.Add(source.guid)) continue;
 
-                if (source is IDeclaresWatchedKeys declarer) Add(keys, declarer.DeclaredWatchedKeys);
+                if (source is IDeclaresWatchedKeys declarer) AddInto(into, declarer.DeclaredWatchedKeys);
 
                 // Kept walking past a declarer on purpose. A condition can combine several sources — a
                 // Function AND a variable read — and stopping at the first would silently drop the rest.
-                Collect(source, keys, seen, depth + 1);
+                CollectInto(into, source, seen, depth + 1);
             }
         }
 
-        private static void Add(List<string> keys, IReadOnlyList<string> declared)
+        /// <summary>Unions <paramref name="declared"/> into <paramref name="into"/>, trimmed and deduplicated.</summary>
+        private static void AddInto(List<string> into, IReadOnlyList<string> declared)
         {
             if (declared == null) return;
 
@@ -93,7 +119,7 @@ namespace ArcaneOnyx.BehaviorTree
                 if (string.IsNullOrWhiteSpace(key)) continue;
 
                 key = key.Trim();
-                if (!keys.Contains(key)) keys.Add(key);
+                if (!into.Contains(key)) into.Add(key);
             }
         }
     }
