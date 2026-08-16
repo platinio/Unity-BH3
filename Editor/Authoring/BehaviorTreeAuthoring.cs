@@ -925,6 +925,48 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return DescribeNode(guard);
         }
 
+        /// <summary>
+        /// Gives every reactive guard in <paramref name="asset"/> that has <b>no schedule at all</b>, and
+        /// whose condition declares watched keys, a key trigger seeded from those keys. Returns the guards it
+        /// changed, so a caller can report what it did rather than claim it silently.
+        ///
+        /// <para>
+        /// This is the repair for the case <see cref="GuardOnFunction"/> cannot reach: a Function that arrives
+        /// on a node some other way — extraction, a hand edit, a future inspector field — leaves a guard
+        /// re-checking every tick, which is legal but the most expensive thing a guard can do.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Only guards with no triggers at all are touched.</b> A guard that already carries a schedule has
+        /// had one chosen for it, and an author who deliberately picked an interval — because the condition
+        /// depends on something no key can express — must not have that quietly supplemented. Seeding runs
+        /// through the same walk the runtime uses, so what is written is what would have been inherited.
+        /// </para>
+        /// </summary>
+        public static List<ConditionalExecution> SeedMissingGuardTriggers(BehaviorTreeGraphAsset asset)
+        {
+            var seeded = new List<ConditionalExecution>();
+            if (asset?.graph == null) return seeded;
+
+            foreach (var node in asset.graph.Nodes)
+            {
+                // Capability, not type: a guard that carries a schedule without being a ReactiveGuard should
+                // be reached by this too, and one that carries none — a doorman — has nothing to schedule.
+                if (node is not ConditionalExecution guard || !guard.HasRecomputeSchedule) continue;
+                if (guard.Triggers.Count > 0) continue;
+
+                var declared = InheritedWatchedKeys.Resolve(guard);
+                if (declared.Length == 0) continue;
+
+                if (guard is ReactiveGuard watchman) watchman.AddTrigger(GuardTrigger.KeyChanged(declared));
+                else continue;
+
+                seeded.Add(guard);
+            }
+
+            return seeded;
+        }
+
         [CliCommand("bt_guard_on_function",
             "Guard a node on a Function returning bool — a named, shared predicate one fix updates everywhere. " +
             "The guard's recompute schedule is seeded from the Function's declared watched keys, so it wakes " +

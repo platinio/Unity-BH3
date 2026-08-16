@@ -302,6 +302,103 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 () => BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, true, 0.0f, 0.0f));
         }
 
+        // ------------------------------------------------------------------ seeding after the fact
+
+        [Test]
+        public void SeedMissingGuardTriggers_GivesAnUnscheduledGuardTheKeysItsConditionDeclares()
+        {
+            var (tree, _) = NewTree("SeedMissing");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("IsHurt", "hp");
+
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, expected: true, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).ClearTriggers();
+
+            var seeded = BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree);
+
+            Assert.That(seeded, Has.Count.EqualTo(1), "the unscheduled guard must be reported, not fixed silently");
+            Assert.That(KeyTriggerOf(guard).Keys, Is.EquivalentTo(new[] { "hp" }));
+        }
+
+        [Test]
+        public void SeedMissingGuardTriggers_LeavesAGuardThatAlreadyHasAScheduleAlone()
+        {
+            // The important half. An author who chose an interval did so because the condition depends on
+            // something no key can express; quietly adding a key trigger beside it would not be a repair.
+            var (tree, _) = NewTree("AlreadyScheduled");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("IsHurt", "hp");
+
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, expected: true, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).ClearTriggers();
+            ((ReactiveGuard)guard).AddTrigger(GuardTrigger.Interval(0.5f));
+
+            var seeded = BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree);
+
+            Assert.That(seeded, Is.Empty);
+            Assert.That(guard.Triggers, Has.Count.EqualTo(1), "no trigger may be added beside a chosen one");
+            Assert.That(guard.Triggers[0].Kind, Is.EqualTo(GuardTriggerKind.EveryInterval));
+        }
+
+        [Test]
+        public void SeedMissingGuardTriggers_LeavesAGuardWithNothingToInheritAlone()
+        {
+            var (tree, _) = NewTree("NothingToInherit");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+
+            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).ClearTriggers();
+
+            Assert.That(BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree), Is.Empty,
+                "an embedded graph declares nothing, so there is no schedule to invent from it");
+            Assert.That(guard.Triggers, Is.Empty);
+        }
+
+        [Test]
+        public void SeedMissingGuardTriggers_LeavesAnEntryOnlyDoormanAlone()
+        {
+            var (tree, _) = NewTree("DoormanUntouched");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("IsHurt", "hp");
+
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(
+                tree, owner, function, expected: true, 0.0f, 0.0f, BehaviorTreeAuthoring.GuardKind.Conditional);
+
+            Assert.That(BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree), Is.Empty,
+                "a doorman is asked once and never again, so it has no schedule to seed");
+            Assert.That(guard.Triggers, Is.Empty);
+        }
+
+        [Test]
+        public void ExtractingToAProjectAsset_SeedsTheGuardThatReadsTheExtractedNode()
+        {
+            // Before extraction the node held an embedded graph, which declares nothing -- so a guard on it
+            // was re-checking every tick with no way to do better. Extraction is what creates something to
+            // inherit, and is therefore the moment the schedule can be written.
+            var (tree, path) = NewTree("Extracted");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+
+            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hp", true, false, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).ClearTriggers();
+            Save(tree);
+
+            VisualScriptGraphVariable read = null;
+            foreach (var node in tree.graph.Nodes)
+            {
+                if (node is VisualScriptGraphVariable candidate) read = candidate;
+            }
+
+            var extracted = FunctionGraphAuthoring.ExtractToProjectAsset(tree, read, $"{Folder}/Extracted.asset");
+            extracted.SetWatchedKeys(new[] { "hp" });
+
+            // Re-seed now that the freshly extracted Function has a declaration; extraction itself copies the
+            // graph, and a graph carries no asset-level metadata to copy.
+            BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree);
+
+            Assert.That(KeyTriggerOf(guard), Is.Not.Null);
+            Assert.That(KeyTriggerOf(guard).Keys, Is.EquivalentTo(new[] { "hp" }));
+        }
+
         // ------------------------------------------------------------------ verification
 
         private static List<string> GuardFindings(string treePath)

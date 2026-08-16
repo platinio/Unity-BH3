@@ -232,6 +232,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             node.SetScriptGraph(null);
             node.SetFunction(function);
 
+            // Assigning a Function is the moment a guard reading this node can finally learn a schedule, and
+            // extraction is an assignment like any other. An embedded graph declared nothing, so any guard
+            // downstream of it has been re-checking every tick; now that there is a declaration to inherit,
+            // the schedule is written where an author can see and edit it rather than left to a lint.
+            // Guards that already carry a schedule are untouched.
+            BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree);
+
             EditorUtility.SetDirty(function);
             EditorUtility.SetDirty(tree);
             AssetDatabase.SaveAssets();
