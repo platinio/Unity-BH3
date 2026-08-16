@@ -418,16 +418,32 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AGuardWithNoTriggers_WhoseConditionDeclaresKeys_IsReportedWithThoseKeysNamed()
         {
-            // The one gap authoring-time seeding cannot close: a Function assigned through the inspector runs
-            // no authoring code, so the report has to be the safety net — and it is only actionable if it
-            // names the keys.
+            // The gap seeding cannot close, set up the way it actually happens: a Function gains a watched
+            // key AFTER the trees referencing it were authored and saved. Those trees were never re-saved,
+            // so GuardScheduleSeeder has never seen the new declaration, and the guard is still unscheduled
+            // while its condition now depends on something.
+            //
+            // Clearing the triggers and re-saving would not reproduce it -- the save would seed them back,
+            // which is the seeder working correctly and is asserted separately.
             var (tree, path) = NewTree("Unseeded");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
-            var function = NewPredicate("IsHurt", "hp");
+            var function = NewPredicate("IsHurt");
 
             var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, expected: true, 0.0f, 0.0f);
-            ((ReactiveGuard)guard).ClearTriggers();
             Save(tree);
+
+            Assert.That(guard.Triggers, Is.Empty,
+                "a Function declaring nothing seeds nothing, which is the state this tree is saved in");
+
+            // The Function grows a dependency later. Only the Function is dirty, so the tree is not re-saved
+            // and nothing re-seeds it.
+            function.SetWatchedKeys(new[] { "hp" });
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
+
+            Assert.That(guard.Triggers, Is.Empty,
+                "the tree was not re-saved, so the guard must still be unscheduled -- otherwise this test is "
+                + "reporting on the seeder rather than on the lint");
 
             var findings = GuardFindings(path);
 
