@@ -905,15 +905,64 @@ exist yet.
 
 ### Open, and worth settling before building
 
-- **Reaching the owning node from a `PropertyDrawer`.** The drawer is registered for
-  `BTScriptGraphVariable` and receives a `SerializedProperty`; the existing code gets the variable itself via
-  `property.boxedValue`, but the *node* that owns it — and therefore `Output` and its connections — is not
-  reachable that way. This may force the picker into a node inspector or a canvas-side control instead of a
-  property drawer. **This is the piece to spike first**; everything else here is straightforward, and this
-  one decides where the code lives.
+- ~~**Reaching the owning node from a `PropertyDrawer`.**~~ — **spiked 2026-08-16, answered below.**
 - **Whether an unconnected node should offer everything or nothing.** Everything is proposed above, on the
   grounds that authors wire up in whatever order they like. The opposite argument is that a node with no
   constraint is exactly where a wrong choice is cheapest to make and hardest to notice.
 - **Whether the drawer should also refuse a mismatch already assigned** — for instance a Function that was
   valid until its `Result` type changed. `bt_verify` reports it, and a picker that silently dropped an
   existing reference would be worse than one that shows it in error.
+
+### Spike: how a Function field reaches its owning node — resolved 2026-08-16
+
+Run against the live editor, because two plausible readings of the code gave opposite answers and only the
+running inspector-resolution settles it.
+
+**How BH3 node fields are actually drawn.** Visual Scripting resolves an inspector **per type**, and the
+order it resolves in is what matters here — confirmed by asking `InspectorProvider.instance` directly:
+
+| Type | Resolves to |
+|---|---|
+| `GuardTrigger` | `ArcaneOnyx.BehaviorTree.GuardTriggerInspector` — a registered VS `Inspector` |
+| `BTScriptGraphVariable` | `Unity.VisualScripting.CustomPropertyDrawerInspector` |
+
+So a registered VS `Inspector` wins; failing that, **VS bridges to a Unity `CustomPropertyDrawer`**. That
+bridge is the part worth knowing, because it is easy to conclude from the source that the drawer is dead
+code — `BTScriptGraphVariable` only ever appears as a `[Serialize] [Inspectable]` member of a VS unit, never
+as a `[SerializeField]` on any `MonoBehaviour` or `ScriptableObject`, and nothing in BH3's editor assembly
+constructs a `SerializedObject` at all. `GuardTriggerInspector`'s own doc states the general rule that way.
+
+It is nonetheless wrong for this type. **The drawer does run, and the Function field added in step 2a is
+live.**
+
+**Why it still cannot see the node.** `CustomPropertyDrawerInspector` derives from `Inspector`, so *it* has
+`metadata`. But it hands the drawer only a `SerializedProperty`, and that property does not belong to the
+tree asset: VS synthesises a host, `SerializedPropertyProvider<T> : ScriptableObject`, copies the value onto
+it, lets the drawer edit it, and copies back. So inside `OnGUI`,
+`property.serializedObject.targetObject` is a throwaway provider object, and the owning
+`VisualScriptGraphVariable` is **not in that object graph at all**.
+
+This is structural, not an oversight to work around. A `PropertyDrawer` for this type can never see the
+node, and therefore can never see `Output`, its connections, or the port type the picker must filter on.
+
+**The route that does work.** A VS `Inspector` registered for `BTScriptGraphVariable` takes precedence over
+the bridge, and receives `Metadata` — whose public surface includes `parent`, `root`, `value`, `path` and
+`definedType` (verified on the live type). `metadata.parent` is the containing node's metadata, so the
+picker can reach `Output` from there. `GuardTriggerInspector` is the working precedent for exactly this
+shape: a registered VS inspector drawing a nested type held inside a BH3 node.
+
+**Consequence for 2c: the picker is a VS `Inspector`, and it replaces the property drawer** rather than
+extending it. That also folds in the drawer's existing job — the Function field and the Open button — since
+registering an inspector takes the bridge out of the picture entirely.
+
+**One correction this spike forces elsewhere.** `BehaviorTreeVerification.FunctionProblems` carries a
+comment justifying its lifecycle-graph lint with *"the inspector drawer is registered for
+`BTScriptGraphVariable` and so offers the Function field on all four of these too."* The conclusion is
+right — the field is offered on all four lifecycle graphs — but it is right by way of the bridge, not
+because a drawer binds directly. Worth correcting when the inspector replaces the drawer, since the sentence
+will otherwise describe machinery that no longer exists.
+
+**Still open, and now the only thing blocking a build:** whether `metadata.parent` yields the node itself or
+an intermediate member metadata. The chain is public and the model is a tree rooted at the inspected object,
+so it is one `parent` hop or two; confirming which needs a registered inspector rendering in the graph
+window, which is a ten-minute check rather than a design question.
