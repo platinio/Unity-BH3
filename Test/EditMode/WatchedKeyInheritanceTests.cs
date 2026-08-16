@@ -370,33 +370,42 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void ExtractingToAProjectAsset_SeedsTheGuardThatReadsTheExtractedNode()
+        public void SavingATree_SeedsAGuardWhoseConditionDeclaresKeys()
         {
-            // Before extraction the node held an embedded graph, which declares nothing -- so a guard on it
-            // was re-checking every tick with no way to do better. Extraction is what creates something to
-            // inherit, and is therefore the moment the schedule can be written.
-            var (tree, path) = NewTree("Extracted");
+            // The hook that makes this reachable from every direction. A Function can arrive on a node from
+            // the CLI, from extraction, from a hand edit or from an inspector field nobody has written yet --
+            // and all of them end in a save, so the save is the one place that covers them all.
+            var (tree, _) = NewTree("SavedSeeds");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("IsHurt", "hp");
 
-            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hp", true, false, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, expected: true, 0.0f, 0.0f);
             ((ReactiveGuard)guard).ClearTriggers();
+
             Save(tree);
 
-            VisualScriptGraphVariable read = null;
-            foreach (var node in tree.graph.Nodes)
-            {
-                if (node is VisualScriptGraphVariable candidate) read = candidate;
-            }
-
-            var extracted = FunctionGraphAuthoring.ExtractToProjectAsset(tree, read, $"{Folder}/Extracted.asset");
-            extracted.SetWatchedKeys(new[] { "hp" });
-
-            // Re-seed now that the freshly extracted Function has a declaration; extraction itself copies the
-            // graph, and a graph carries no asset-level metadata to copy.
-            BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree);
-
-            Assert.That(KeyTriggerOf(guard), Is.Not.Null);
+            Assert.That(KeyTriggerOf(guard), Is.Not.Null,
+                "saving a tree must give an unscheduled guard the schedule its condition declares");
             Assert.That(KeyTriggerOf(guard).Keys, Is.EquivalentTo(new[] { "hp" }));
+        }
+
+        [Test]
+        public void SavingATree_DoesNotDisturbAGuardThatAlreadyHasASchedule()
+        {
+            // A save that rewrote an authored schedule would be a far worse trade than the every-tick default
+            // it exists to fix, so this is the assertion that keeps the hook safe to leave switched on.
+            var (tree, _) = NewTree("SavedUntouched");
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("IsHurt", "hp");
+
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, expected: true, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).ClearTriggers();
+            ((ReactiveGuard)guard).AddTrigger(GuardTrigger.Interval(0.5f));
+
+            Save(tree);
+
+            Assert.That(guard.Triggers, Has.Count.EqualTo(1));
+            Assert.That(guard.Triggers[0].Kind, Is.EqualTo(GuardTriggerKind.EveryInterval));
         }
 
         // ------------------------------------------------------------------ verification
