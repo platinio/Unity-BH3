@@ -31,7 +31,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
 
             var animator = GetComponent<Animator>(Animator);
-            var valueName = ValueName.GetValue() as string;
+            var valueName = ValueName.GetValueOrDefault<string>();
             var animatorValue = Value.GetValue();
             
             if (animatorValue is int intValue) animator.SetInteger(valueName, intValue);

@@ -55,6 +55,12 @@ Reading a port at runtime:
 float speed = Speed.GetValue<float>();
 ```
 
+`GetValue<T>()` converts whenever the wired value is not already a `T` — the canvas connects convertible
+types, not just identical ones, so an `int` output on a `float` port is legal and has to be readable.
+Casting `GetValue()` instead throws on exactly those connections. `GetValueOrDefault<T>()` is the variant
+that answers `default` rather than throwing when the value cannot be used. See
+[What "compatible" means](ports-and-wiring.md#what-compatible-means).
+
 ### Node metadata
 
 ```csharp

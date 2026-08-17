@@ -40,13 +40,13 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             base.OnEnter();
-            remainingDuration = (float)Duration.GetValue();
+            remainingDuration = Duration.GetValue<float>();
 
             var animator = GetComponent<Animator>(Animator);
-            string stateName = (string) StateName.GetValue();
-            float normalizeTransitionDuration = (float) TransitionDuration.GetValue();
-            int layer = (int) Layer.GetValue();
-            float normalizeTimeOffset = (float) TimeOffset.GetValue();
+            string stateName = StateName.GetValue<string>();
+            float normalizeTransitionDuration = TransitionDuration.GetValue<float>();
+            int layer = Layer.GetValue<int>();
+            float normalizeTimeOffset = TimeOffset.GetValue<float>();
             
             animator.CrossFade(stateName, normalizeTransitionDuration, layer, normalizeTimeOffset);
         }

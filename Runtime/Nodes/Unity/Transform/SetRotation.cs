@@ -40,10 +40,10 @@ namespace ArcaneOnyx.BehaviorTree
             
             targetTransform = GetComponent<Transform>(Target);
             
-            var targetRotationEuler = (Vector3) TargetRotation.GetValue();
+            var targetRotationEuler = TargetRotation.GetValue<Vector3>();
             targetRotation = Quaternion.Euler(targetRotationEuler);
             
-            duration = (float)Duration.GetValue();
+            duration = Duration.GetValue<float>();
             fromRotation = targetTransform.rotation;
             currentTime = 0;
         }

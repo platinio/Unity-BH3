@@ -214,7 +214,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var output = connection.source;
                 var value = output.GetPortValue();
-                
+
                 return value;
             }
             else
@@ -223,6 +223,122 @@ namespace ArcaneOnyx.BehaviorTree
                 throw new MissingValuePortInputException(key);
             }
         }
+
+        /// <summary>
+        /// Reads this port as <typeparamref name="T"/>, converting the value when its type is not already
+        /// <typeparamref name="T"/>.
+        ///
+        /// <para>
+        /// Use this rather than casting <see cref="GetValue"/>. What may feed a port is decided by
+        /// <see cref="CanConnectToValid"/> — <c>source.Type.IsConvertibleTo(destination.Type, false)</c> —
+        /// which accepts convertible pairs, not just identical ones: an <c>int</c> output into a
+        /// <c>float</c> input, a <c>GameObject</c> into a <c>Transform</c>. <see cref="GetValue"/> hands back
+        /// the raw boxed object, and <em>C# unboxing does not convert</em>: <c>(float)</c> applied to a boxed
+        /// <c>int</c> throws <see cref="InvalidCastException"/>. So every connection the canvas legitimately
+        /// created but whose types merely convert used to throw on its first evaluation.
+        /// </para>
+        ///
+        /// <para>
+        /// This resolves that by answering the question in one place with the same utility the connection
+        /// gate uses, so "what may feed this port" cannot drift between edit time and runtime again.
+        /// The exact-type case — overwhelmingly the common one — is a single type check and costs nothing
+        /// extra; only a genuinely converting read pays for the conversion, and
+        /// <see cref="ConversionUtility"/> caches the type-pair lookup behind it.
+        /// </para>
+        /// </summary>
+        /// <exception cref="MissingValuePortInputException">
+        /// Nothing feeds the port and it declares no default — unchanged from <see cref="GetValue"/>.
+        /// </exception>
+        /// <exception cref="InvalidCastException">
+        /// The value cannot become <typeparamref name="T"/> by any conversion. The message names the node,
+        /// the port, and both types, because the cause is nearly always a node reading its own port as a
+        /// type the port does not declare.
+        /// </exception>
+        public T GetValue<T>()
+        {
+            var value = GetValue();
+
+            if (TryConvertValue<T>(value, out var converted)) return converted;
+
+            throw new InvalidCastException(
+                $"{behaviorTreeNode?.GetType().Name ?? "A node"} read its '{key}' port as {typeof(T).Name}, "
+                + $"but the port holds {(value == null ? "null" : value.GetType().Name)} and there is no "
+                + $"conversion between the two. The port itself declares {Type.Name}"
+                + (typeof(T) == Type
+                    ? ", so whatever feeds it is the problem."
+                    : $" — reading a {Type.Name} port as {typeof(T).Name} is the node's own bug."));
+        }
+
+        /// <summary>
+        /// Reads this port as <typeparamref name="T"/> when it can, and returns <c>default</c> when it
+        /// cannot — the converting counterpart of <c>GetValue() as T</c>, for the readers that treat an
+        /// unusable value as "nothing here" rather than an error.
+        ///
+        /// <para>
+        /// Still throws <see cref="MissingValuePortInputException"/> for an unfed, defaultless port: that is
+        /// a missing wire, not a value the node can shrug off, and <c>as</c> never softened it either.
+        /// </para>
+        /// </summary>
+        public T GetValueOrDefault<T>()
+        {
+            TryConvertValue<T>(GetValue(), out var converted);
+            return converted;
+        }
+
+        /// <summary>
+        /// The single conversion rule both typed readers share, so they cannot disagree about what a port
+        /// value may become.
+        /// </summary>
+        private static bool TryConvertValue<T>(object value, out T result)
+        {
+            // The overwhelmingly common case: the value is already what was asked for. Note this is also
+            // true of a destroyed UnityEngine.Object, whose fake null is passed through exactly as a plain
+            // cast would have, so lifetime checks downstream keep working.
+            if (value is T typed)
+            {
+                result = typed;
+                return true;
+            }
+
+            result = default;
+
+            // null is a legitimate answer for a reference or nullable port and never one for a value type.
+            // Checked explicitly because `null is T` is false for every T, so a null would otherwise fall
+            // through and be reported as a conversion failure it isn't.
+            if (value == null) return NullSatisfies<T>();
+
+            if (!ConversionUtility.CanConvert(value, typeof(T), false)) return false;
+
+            try
+            {
+                var converted = ConversionUtility.Convert(value, typeof(T));
+
+                if (converted is T typedResult)
+                {
+                    result = typedResult;
+                    return true;
+                }
+
+                // A conversion can legitimately produce null even from a non-null value: the Unity
+                // hierarchy conversion answers null for a destroyed source, which is the same "there is
+                // nothing here" every other destroyed-object path in the codebase produces. Without this,
+                // a GameObject output feeding a Transform port would throw the moment its object died —
+                // and the destroyed case is precisely when a node most needs a null it can test for.
+                return converted == null && NullSatisfies<T>();
+            }
+            catch (InvalidConversionException)
+            {
+                // CanConvert answers from the type pair alone; the value itself can still refuse — an
+                // overflowing numeric narrowing, for instance. Reported as "cannot", which is what the
+                // callers of both readers are equipped to handle.
+            }
+
+            return false;
+        }
+
+        /// <summary>Whether null is an answer <typeparamref name="T"/> can hold at all.</summary>
+        private static bool NullSatisfies<T>() =>
+            !typeof(T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null;
 
         public T GetComponent<T>() where T : Component
         {

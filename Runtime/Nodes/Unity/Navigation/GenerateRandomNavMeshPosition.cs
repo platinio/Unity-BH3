@@ -37,14 +37,14 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            for (int i = 0; i < (int) MaxTries.GetValue(); i++)
+            for (int i = 0; i < MaxTries.GetValue<int>(); i++)
             {
                 Vector2 dir = Random.insideUnitCircle;
-                float d = Random.Range((float) MinDistance.GetValue(), (float)MaxDistance.GetValue());
+                float d = Random.Range(MinDistance.GetValue<float>(), MaxDistance.GetValue<float>());
 
                 Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
                 
-                if (NavMesh.SamplePosition(randomPosition, out var hit, (int) SampleDistance.GetValue(), NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(randomPosition, out var hit, SampleDistance.GetValue<float>(), NavMesh.AllAreas))
                 {
                     SavePosition(hit.position);
                     return ExecutionStatus.Success;
@@ -56,7 +56,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void SavePosition(Vector3 value)
         {
-            SaveVariable((string)PositionKey.GetValue(), VariableKind, value);
+            SaveVariable(PositionKey.GetValue<string>(), VariableKind, value);
         }
     }
 }

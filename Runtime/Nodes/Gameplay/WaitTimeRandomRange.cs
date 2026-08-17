@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override void OnEnter()
         {
-            timer = Random.Range( (float)minTime.GetValue(), (float)maxTime.GetValue());
+            timer = Random.Range( minTime.GetValue<float>(), maxTime.GetValue<float>());
         }
 
         public override ExecutionStatus OnUpdate()

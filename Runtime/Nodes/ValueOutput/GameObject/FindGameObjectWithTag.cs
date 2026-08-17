@@ -22,7 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             Output = ValueOutput<GameObject>(nameof(Output), () =>
             {
-                string tag = Tag.GetValue() as string;
+                string tag = Tag.GetValueOrDefault<string>();
                 return GameObject.FindWithTag(tag);
             });
         }
