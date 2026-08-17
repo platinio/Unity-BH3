@@ -79,6 +79,17 @@ Entry ignores the dirty flag. A stale *false* only costs latency, but a stale *t
 precondition no longer holds — the animation starts, the token is claimed, and the abort has to unwind it.
 Entries are rare next to ticks, so the extra evaluation is a rounding error against a whole class of glitch.
 
+### But it recomputes once, not twice
+
+A composite ticks a child on the same frame it declined to enter it, so entry and the tick that follows it
+are two separate moments in one frame. The tick **reuses the entry verdict** rather than asking again.
+
+That is not just an optimisation. Nothing promises a guard is stable within a frame — a random roll
+re-rolls, and a condition reading a fact another agent writes can change between the two calls. If the tick
+asked again it could answer *true* after entry answered *false*, and then the node would run without ever
+having entered: `OnUpdate` on state `OnEnter` never set. **Whether a branch enters is one decision per
+frame**, and the frame after is free to decide differently.
+
 ### What On Key Changed can see
 
 Agent-scope variables only — the facts branches react to. A branch's own graph variables are per-call-site

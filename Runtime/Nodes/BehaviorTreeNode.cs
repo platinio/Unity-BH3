@@ -588,12 +588,35 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// The guard that turned this node away at its last entry attempt, and the frame that attempt
+        /// happened on. Together they let the same-frame tick reuse the entry verdict instead of taking it
+        /// again — see <see cref="OnUpdateInternal"/>.
+        /// <para>
+        /// Deliberately not initialised. A <c>[DoNotSerialize]</c> field on a deserialized node can arrive
+        /// with its initialiser never having run, so the frame stamp is only ever trusted when the guard
+        /// reference beside it is non-null — which nothing but <see cref="OnNodeEnter"/> can make true.
+        /// </para>
+        /// </summary>
+        [DoNotSerialize]
+        private ConditionalExecution entryRefusal;
+
+        [DoNotSerialize]
+        private int entryRefusalFrame;
+
+        /// <summary>
         /// Asks <em>every</em> guard, of either kind. Entry is the one walk that is never filtered: a
         /// doorman that no longer interrupts must still decide entry exactly as it always did.
+        /// <para>
+        /// The verdict is recorded, because the tick that follows it in the same frame needs the answer and
+        /// must not go and get its own — see <see cref="OnUpdateInternal"/>.
+        /// </para>
         /// </summary>
         public sealed override void OnNodeEnter()
         {
             var failed = FirstFailingGuard(abortingOnly: false, fresh: true);
+
+            entryRefusal = failed;
+            entryRefusalFrame = Time.frameCount;
 
             if (failed != null)
             {
@@ -638,12 +661,28 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public sealed override ExecutionStatus OnUpdateInternal()
         {
-            // Filtered only for a node that is actually running. A composite ticks a child on the same frame
-            // it declined to enter it — Selector calls OnNodeEnter and then OnUpdateInternal in one
-            // iteration, and a refused entry returns early rather than stopping the tick. So for a node that
-            // never started, the entry decision has to be re-stated here in full: ask every guard, or a
-            // branch whose doorman turned it away runs anyway.
+            // A composite ticks a child on the same frame it declined to enter it — Selector calls
+            // OnNodeEnter and then OnUpdateInternal in one iteration, and a refused entry returns early
+            // rather than stopping the tick. So the entry decision has to be honoured here too, or a branch
+            // whose doorman turned it away runs anyway.
             //
+            // Honoured, not retaken. Re-asking the guards is not the same question asked twice: nothing
+            // promises a guard is stable within a frame. A RandomChance re-rolls, and a Function reading a
+            // fact another agent writes can change under it — so entry could answer false and the tick that
+            // follows it answer true, and then OnUpdate runs on a node whose OnEnter never did. That is the
+            // stale-state hazard exactly: a Wait ticking a timer it never set, a rotation slerping from a
+            // pose it never captured. Reusing the verdict makes "would this node enter" one decision per
+            // frame, which is both cheaper and the only answer that can be consistent.
+            //
+            // The frame stamp is what keeps it a verdict rather than a memory. Parallel and Entry enter
+            // their children once and then tick them every frame afterwards, so a refusal must not outlive
+            // the frame that produced it, or a branch turned away once could never start again.
+            if (!IsRunning && entryRefusal != null && entryRefusalFrame == Time.frameCount)
+            {
+                LastExecutionStatus = ExecutionStatus.Failure;
+                return ExecutionStatus.Failure;
+            }
+
             // Once the node is running the entry decision is spent, and only a guard that claims the right
             // to interrupt gets a say.
             var failed = FirstFailingGuard(abortingOnly: IsRunning);
