@@ -200,5 +200,129 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.IsFalse(runNode.HasBehaviorTreeGraphInstance,
                 "a branch nobody entered should cost nothing to exit");
         }
+
+        #region Releasing the instance
+
+        /// <summary>
+        /// The clone a call site makes is freed when the tree holding it is destroyed.
+        ///
+        /// <para>
+        /// Nothing else can free it: the instance is created per call site per agent, the machine destroys
+        /// only the root instance it made itself, and <see cref="BehaviorTreeGraph.OnDestroy"/> cascades node
+        /// destruction without knowing what any node owns. Until <c>RunBehaviorTreeGraphNode</c> overrode
+        /// <c>OnDestroy</c>, every sub-tree clone simply outlived its agent for the session.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void DestroyingAHostReleasesTheSubTreeInstanceItsCallSiteMade()
+        {
+            var host = RunningHost(out var runNode, out _, guarded: false);
+
+            var instance = runNode.BehaviorTreeGraphAssetInstance;
+
+            Assert.IsFalse(instance == null, "the call site instantiated its branch in order to run it");
+
+            host.graph.OnDestroy();
+
+            // Unity's overloaded equality: a destroyed object compares equal to null while the managed
+            // reference this test still holds keeps it reachable, so this is the only way to ask.
+            Assert.IsTrue(instance == null,
+                "the branch's clone has to go with the tree that owned it — one leaked ScriptableObject per "
+                + "call site per agent is invisible until a wave-based scene has spawned a few hundred");
+
+            Assert.IsFalse(runNode.HasBehaviorTreeGraphInstance,
+                "and the call site stops claiming to hold one");
+        }
+
+        /// <summary>
+        /// Destroying a branch that never ran must not clone it — the same trap
+        /// <see cref="ExitingASubTreeThatNeverRanDoesNotInstantiateIt"/> pins for exit, and a worse one here.
+        ///
+        /// <para>
+        /// <c>BehaviorTreeGraph.OnDestroy</c> calls <c>OnDestroy</c> on <em>every</em> node, so a tree with ten
+        /// branches the agent never took would, if this read the lazy property instead of the field,
+        /// instantiate all ten at teardown purely in order to destroy them. A leak fix that allocates.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void DestroyingASubTreeThatNeverRanDoesNotInstantiateIt()
+        {
+            var host = NewTree("Host");
+            var runNode = Add<RunBehaviorTreeGraphNode>(host);
+            runNode.SetBehaviorTreeGraphAsset(LongRunningBranch());
+
+            runNode.OnDestroy();
+
+            Assert.IsFalse(runNode.HasBehaviorTreeGraphInstance,
+                "a branch nobody entered should cost nothing to destroy either");
+        }
+
+        /// <summary>
+        /// The release reaches all the way down, not one level.
+        ///
+        /// <para>
+        /// A sub-tree can itself call a sub-tree, and each level clones again — so the leak multiplied with
+        /// exactly the nested, modular trees this tool encourages. The inner call site lives inside the
+        /// <em>outer clone</em>, which means the only thing that can ever reach it is a walk that goes through
+        /// that clone before destroying it. Destroying outermost-first would cut the path and leak everything
+        /// below.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void DestroyingAHostReleasesNestedSubTreeInstancesToo()
+        {
+            var innermost = LongRunningBranch();
+
+            var middle = NewTree("Middle");
+            var authoredInnerCall = Add<RunBehaviorTreeGraphNode>(middle);
+            authoredInnerCall.SetBehaviorTreeGraphAsset(innermost);
+            Connect(middle, middle.graph.EntryNode, authoredInnerCall);
+
+            var host = NewTree("Host");
+            var outerCall = Add<RunBehaviorTreeGraphNode>(host);
+            outerCall.SetBehaviorTreeGraphAsset(middle);
+            Connect(host, host.graph.EntryNode, outerCall);
+
+            host.graph.OnAwake();
+
+            var outerInstance = outerCall.BehaviorTreeGraphAssetInstance;
+
+            // The call site that actually runs is the one inside the outer clone, not the authored node.
+            var runningInnerCall = outerCall.BehaviorTreeGraphInstance.Nodes
+                .OfType<RunBehaviorTreeGraphNode>().Single();
+
+            var innerInstance = runningInnerCall.BehaviorTreeGraphAssetInstance;
+
+            Assert.IsFalse(outerInstance == null, "both levels cloned on the way up");
+            Assert.IsFalse(innerInstance == null);
+            Assert.AreNotSame(outerInstance, innerInstance, "and they are genuinely two objects");
+
+            host.graph.OnDestroy();
+
+            Assert.IsTrue(outerInstance == null, "the outer clone is released");
+            Assert.IsTrue(innerInstance == null,
+                "and so is the one nested inside it — reachable only through the outer clone, so destroying "
+                + "the outer one first would strand it permanently");
+        }
+
+        /// <summary>
+        /// Destroying twice is harmless. Worth pinning because the second call runs against a field holding a
+        /// destroyed object, where Unity's overloaded equality is the only thing standing between this and a
+        /// re-instantiate through the lazy getter.
+        /// </summary>
+        [Test]
+        public void DestroyingAHostTwiceIsHarmless()
+        {
+            var host = RunningHost(out var runNode, out _, guarded: false);
+
+            host.graph.OnDestroy();
+
+            Assert.DoesNotThrow(() => host.graph.OnDestroy(), "teardown has to tolerate being repeated");
+
+            Assert.IsFalse(runNode.HasBehaviorTreeGraphInstance,
+                "and must not have quietly built a fresh clone to destroy on the way through");
+        }
+
+        #endregion
     }
 }

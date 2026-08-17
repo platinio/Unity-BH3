@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -192,6 +193,48 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 + "override OnDestroy, so every sub-tree clone outlives the agent that created it.");
         }
 
+        /// <summary>
+        /// A dying agent releases sub-tree instances at every depth, not just the first.
+        ///
+        /// <para>
+        /// Each level of nesting clones again, so the leak grew with exactly the modular trees this tool
+        /// encourages — and the innermost clone is reachable only <em>through</em> the one above it, which
+        /// makes the order of the walk load-bearing rather than incidental. This is the production path for
+        /// that: machine destroyed, graph cascades, call site releases, and the same thing happens one level
+        /// down inside the clone it was holding.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DestroyingAnAgentReleasesNestedSubTreeInstancesAtEveryDepth()
+        {
+            var machine = Spawn(BuildTreeWithNestedSubTrees(), Declare);
+
+            yield return Frames(3);
+
+            var outerCall = RunningNode<RunBehaviorTreeGraphNode>(machine);
+
+            // Captured before the agent dies: both getters instantiate on demand, so reading either one
+            // afterwards would quietly manufacture a fresh clone and report success.
+            var outerInstance = outerCall.BehaviorTreeGraphAssetInstance;
+
+            var innerCall = outerCall.BehaviorTreeGraphInstance.Nodes
+                .OfType<RunBehaviorTreeGraphNode>().Single();
+
+            var innerInstance = innerCall.BehaviorTreeGraphAssetInstance;
+
+            Assert.IsFalse(outerInstance == null, "both levels are alive while the agent is");
+            Assert.IsFalse(innerInstance == null);
+
+            Object.DestroyImmediate(Agent);
+
+            yield return null;
+
+            Assert.IsTrue(outerInstance == null, "the agent's own call site released its branch");
+            Assert.IsTrue(innerInstance == null,
+                "and the branch released the one nested inside it. Only a walk that goes through the outer "
+                + "clone can reach this object at all, so it is the deep trees that leak worst.");
+        }
+
         #region Fixture
 
         /// <summary>
@@ -253,6 +296,35 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             Connect(graph, graph.EntryNode, repeater);
             Connect(graph, repeater, call);
+
+            return tree;
+        }
+
+        /// <summary>
+        /// Entry -&gt; Repeater -&gt; Run Behavior Tree -&gt; (a branch that itself runs a branch that holds
+        /// forever). Two levels, because one level cannot tell whether the release walks or just reaches.
+        /// </summary>
+        private BehaviorTreeGraphAsset BuildTreeWithNestedSubTrees()
+        {
+            var innermost = NewTree();
+            var hold = Add<WaitTime>(innermost.graph, 0.0f, 100.0f);
+            FeedFloat(innermost.graph, hold, hold.Time, 999.0f);
+            Connect(innermost.graph, innermost.graph.EntryNode, hold);
+
+            var middle = NewTree();
+            var innerCall = Add<RunBehaviorTreeGraphNode>(middle.graph, 0.0f, 100.0f);
+            innerCall.SetBehaviorTreeGraphAsset(innermost);
+            Connect(middle.graph, middle.graph.EntryNode, innerCall);
+
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var outerCall = Add<RunBehaviorTreeGraphNode>(graph, 0.0f, 250.0f);
+            outerCall.SetBehaviorTreeGraphAsset(middle);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, outerCall);
 
             return tree;
         }
