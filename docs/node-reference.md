@@ -95,10 +95,12 @@ Guards on the same owner are ANDed: attach several and the node runs only when a
 |---|---|
 | Set Position | Sets the transform's position |
 | Look At | Rotates `Target` to look at `LookTarget` |
-| Rotate | Rotates the transform to a target rotation over a given duration |
+| Rotate | Spins the transform around `Axis` at `Speed` degrees per second; runs until something stops it |
+| Set Rotation | Turns the transform to `TargetRotation` over `Duration`, then succeeds |
 
-> **Known issue:** `Rotate` and `SetRotation` both register under `Unity/Transform/Rotate`, so only one of
-> them is reachable from the create menu. Reference the types directly if you need the other from code.
+> `Rotate` keeps spinning and never finishes on its own, so put it under something that will stop it — a
+> guard, or a sibling that succeeds. `Set Rotation` is the one that ends. A `Duration` of `0` means "face
+> there now": it snaps to the target and succeeds on the first tick.
 
 ### Physics
 
@@ -113,7 +115,7 @@ Guards on the same owner are ANDed: attach several and the node runs only when a
 | Menu | Behavior |
 |---|---|
 | Set NavAgent Position | Updates the nav agent's destination |
-| Generate Random Navmesh Position | Generates a random NavMesh position; returns `SUCCESS`/`FAILURE` depending on whether one was found |
+| Generate Random Navmesh Position | Generates a random NavMesh position; returns `SUCCESS`/`FAILURE` depending on whether one was found. `SampleDistance` is how far from the random point it will look for navmesh — the default of `1` suits human-scale agents, and `0` can never hit anything |
 | Wait Until Reach Nav Target Position | Runs until the agent reaches its destination |
 | Stop NavAgent | Stops the nav agent |
 

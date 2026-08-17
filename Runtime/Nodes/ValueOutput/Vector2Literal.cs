@@ -7,7 +7,10 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Literal/Vector2")]
     public class Vector2Literal : Literal
     {
-        [Serialize, Inspectable] private Vector3 value;
+        // Vector2, not Vector3. The implicit Vector3 -> Vector2 conversion does not survive boxing:
+        // (Vector2)(object)aVector3 throws InvalidCastException, so every consumer of this port threw.
+        // Copy-pasted from Vector3Literal, which also left a dead Z component in the inspector.
+        [Serialize, Inspectable] private Vector2 value;
         
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
