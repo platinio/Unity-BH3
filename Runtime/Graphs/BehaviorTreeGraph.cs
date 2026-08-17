@@ -424,6 +424,28 @@ namespace ArcaneOnyx.BehaviorTree
             EntryNode.OnNodeEnter();
         }
 
+        /// <summary>
+        /// Stops the tree, giving whatever was still running its <c>OnExit</c>.
+        /// <para>
+        /// Exiting the entry node is enough to reach the whole live branch:
+        /// <see cref="ContainerNode.OnExit"/> exits its children in turn, and
+        /// <see cref="GraphCore.BaseGraphNode{TGraph,TNode,TNodeTransition}.OnNodeExit"/> returns immediately
+        /// for a node that never started — so the walk touches exactly what was running and nothing else.
+        /// </para>
+        /// <para>
+        /// The mirror of <see cref="OnEnter"/>, and the only way to put a tree down cleanly.
+        /// <see cref="OnDestroy"/> cascades <c>OnDestroy</c> and nothing else, so a tree dropped through that
+        /// alone never learns it stopped: a <c>NavMeshAgent</c> is left walking, an animation left playing.
+        /// </para>
+        /// </summary>
+        public void OnExit()
+        {
+            // Null-conditional because this runs on teardown paths, where throwing would strand the caller
+            // mid-swap with a half-released tree. OnEnter has no such guard on purpose: a graph reaching Start
+            // without an entry node is a broken asset and should say so loudly.
+            EntryNode?.OnNodeExit();
+        }
+
         public override ExecutionStatus OnUpdate()
         {
             var result = EntryNode.OnUpdateInternal();
