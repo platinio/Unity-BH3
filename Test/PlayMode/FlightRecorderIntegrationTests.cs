@@ -76,6 +76,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         /// opposite. The Cooldown defect found by the timing fixture was exactly the first shape, and it
         /// showed up as an entry count that would not grow.
         /// </para>
+        ///
+        /// <para>
+        /// The counts used to differ by one, because the Repeater restarted its child at the <em>end</em> of
+        /// each completing tick and so left it entered across the gap between two frames. That gap was the
+        /// bug: a guard turning false inside it went unnoticed, and the next tick ran a child whose entry had
+        /// been refused. Entry moved to <see cref="ContainerNode.TickChild"/>, so an entry now opens and
+        /// closes inside one tick and the pairing is exact at any frame boundary — a stricter invariant than
+        /// the one this replaced, and one that no longer depends on where in the tick the snapshot lands.
+        /// </para>
         /// </summary>
         [UnityTest]
         public IEnumerator EntersAndExitsStayPairedForANodeRestartedEveryFrame()
@@ -93,10 +102,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             int exits = ExitCount(recorder, child);
 
             Assert.Greater(enters, 2, "The Repeater has to have restarted the child several times.");
-            Assert.AreEqual(enters, exits + 1,
-                $"A restarted node is exited before it is re-entered, so at any snapshot exactly one entry is "
-                + $"still open. Saw {enters} enters against {exits} exits, which means an entry or an exit "
-                + "went unrecorded -- and every count taken from this recording is then off by that much.");
+            Assert.AreEqual(enters, exits,
+                $"A restarted node is entered and exited within one tick, so at a frame boundary no entry is "
+                + $"left open. Saw {enters} enters against {exits} exits, which means an entry or an exit "
+                + "went unrecorded -- and every count taken from this recording is then off by that much. "
+                + "A surplus enter also means the child sat entered between two frames, which is the window "
+                + "a guard change used to slip through.");
         }
 
         /// <summary>

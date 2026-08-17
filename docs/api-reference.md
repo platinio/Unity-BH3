@@ -31,6 +31,11 @@ public override void OnExit()               // when the node ends
 
 Return `Running` from `OnUpdate` for anything spanning more than one frame.
 
+`OnUpdate` only ever runs on a node that entered, so it may assume everything `OnEnter` set up. Entry is not
+guaranteed: a guard on the node can turn it away, and a container retries a refused entry on a later tick
+rather than ticking past it. If you write a container of your own, tick its children through
+`ContainerNode.TickChild` — see [Custom Nodes](custom-nodes.md#a-custom-decorator).
+
 Declare ports in `Definition()`, always calling `base.Definition()` first:
 
 ```csharp

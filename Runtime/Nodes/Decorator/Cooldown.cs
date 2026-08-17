@@ -34,13 +34,12 @@ namespace ArcaneOnyx.BehaviorTree
             cooldownEndTime = 0.0f;
         }
 
-        public override void OnEnter()
-        {
-            if (IsCoolingDown) return;
-
-            base.OnEnter();
-        }
-     
+        /// <summary>
+        /// The recharge gate is here and not in <c>OnEnter</c>, because entry is the tick's job — the child
+        /// is never reached while cooling down, so it is never entered either. This decorator is where the
+        /// enter-if-not-running rule was first written by hand; <see cref="ContainerNode.TickChild"/> is that
+        /// rule, now shared by every container that ticks a child it did not just enter.
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
@@ -48,15 +47,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             var task = GetChildren()[0];
 
-            // The child's only other entry point is OnEnter, which returns early while recharging -- and the
-            // container above exits and re-enters this decorator every frame, so every entry after the first
-            // one lands mid-recharge and is refused. By the time the cooldown expires nothing is left that
-            // would enter the child, and OnUpdateInternal runs OnUpdate without entering. The child would
-            // then execute carrying whatever state the previous pass left: a Wait would never reset its
-            // timer, an animation node would never re-trigger.
-            if (!task.IsRunning) task.OnNodeEnter();
-
-            var result = task.OnUpdateInternal();
+            var result = TickChild(task);
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
             task.OnNodeExit();

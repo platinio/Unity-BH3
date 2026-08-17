@@ -43,6 +43,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var entry = new Entry().WithChildren(child);
 
             entry.OnNodeEnter();
+            entry.OnUpdateInternal();
             Assert.AreEqual(1, child.EnterCalls, "The root must start the tree below it.");
 
             entry.OnNodeExit();

@@ -18,14 +18,6 @@ namespace ArcaneOnyx.BehaviorTree
         public override bool CanCut => false;
         public override bool CanBeUsedAsTransitionDestination => false;
 
-        public override void OnEnter()
-        {
-            for (int i = 0; i < GetChildren().Count; i++)
-            {
-                GetChildren()[i].OnNodeEnter();
-            }
-        }
-
         public override void OnExit()
         {
             for (int i = 0; i < GetChildren().Count; i++)
@@ -34,15 +26,19 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Reports the tree below verbatim. The child is entered here rather than in <c>OnEnter</c>: the
+        /// machine enters the root once and then ticks it for the lifetime of the agent, so an entry refused
+        /// at start-up would otherwise never be retried — see <see cref="ContainerNode.TickChild"/>.
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             if (GetChildren().Count == 0)
             {
                 return ExecutionStatus.Success;
             }
-                
-            var status = GetChildren()[0].OnUpdateInternal();
-            return status;
+
+            return TickChild(GetChildren()[0]);
         }
     }
 }

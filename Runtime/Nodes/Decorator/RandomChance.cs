@@ -30,12 +30,14 @@ namespace ArcaneOnyx.BehaviorTree
             Chance = ValueInput<float>(nameof(Chance), 0.5f);
         }
 
+        /// <summary>
+        /// Rolls once per entry, and only records the answer — a failed roll never reaches the child below,
+        /// so the child is never entered either. Entry itself is the tick's job; see
+        /// <see cref="ContainerNode.TickChild"/>.
+        /// </summary>
         public override void OnEnter()
         {
             rollPassed = Roll();
-            if (!rollPassed) return;
-
-            base.OnEnter();
         }
 
         public override ExecutionStatus OnUpdate()
@@ -44,7 +46,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
             var task = GetChildren()[0];
-            var result = task.OnUpdateInternal();
+            var result = TickChild(task);
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
             task.OnNodeExit();
