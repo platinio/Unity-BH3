@@ -32,7 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            string key = (string) Key.GetValue();
+            string key = Key.GetValue<string>();
             variableDeclarationCollection.Remove(key);
             
             return ExecutionStatus.Success;

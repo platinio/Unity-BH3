@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             var target = GetComponent<Rigidbody>(Target);
-            var torque = (Vector3) Torque.GetValue();
+            var torque = Torque.GetValue<Vector3>();
             
             target.AddTorque(torque, forceMode);
             return ExecutionStatus.Success;

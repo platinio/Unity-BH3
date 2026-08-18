@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -31,20 +31,29 @@ namespace ArcaneOnyx.BehaviorTree
             MinDistance = ValueInput<float>(nameof(MinDistance), 0.0f);
             MaxDistance = ValueInput<float>(nameof(MaxDistance), 0.0f);
             MaxTries = ValueInput<int>(nameof(MaxTries), 3);
-            SampleDistance = ValueInput<float>(nameof(SampleDistance), 0.0f);
+
+            // A sample radius of zero can never hit the navmesh, so the old default made this node return
+            // Failure forever for anyone who left it alone. One metre is the smallest radius that actually
+            // finds a surface under a point that is roughly on one.
+            SampleDistance = ValueInput<float>(nameof(SampleDistance), 1.0f);
             PositionKey = ValueInput<string>(nameof(PositionKey), string.Empty);
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            for (int i = 0; i < (int) MaxTries.GetValue(); i++)
+            // Read once rather than per iteration: the loop condition re-evaluated the port every pass, and a
+            // port read can reach a variable lookup or a whole script graph.
+            int maxTries = MaxTries.GetValue<int>();
+            float sampleDistance = SampleDistance.GetValue<float>();
+
+            for (int i = 0; i < maxTries; i++)
             {
                 Vector2 dir = Random.insideUnitCircle;
-                float d = Random.Range((float) MinDistance.GetValue(), (float)MaxDistance.GetValue());
+                float d = Random.Range(MinDistance.GetValue<float>(), MaxDistance.GetValue<float>());
 
                 Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
-                
-                if (NavMesh.SamplePosition(randomPosition, out var hit, (float) SampleDistance.GetValue(), NavMesh.AllAreas))
+
+                if (NavMesh.SamplePosition(randomPosition, out var hit, sampleDistance, NavMesh.AllAreas))
                 {
                     SavePosition(hit.position);
                     return ExecutionStatus.Success;
@@ -56,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void SavePosition(Vector3 value)
         {
-            SaveVariable((string)PositionKey.GetValue(), VariableKind, value);
+            SaveVariable(PositionKey.GetValue<string>(), VariableKind, value);
         }
     }
 }

@@ -277,7 +277,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             // problem to report, and certainly not its problem to crash on.
             try
             {
-                return getVariable.Key?.GetValue() as string;
+                return getVariable.Key?.GetValueOrDefault<string>();
             }
             catch (Exception)
             {

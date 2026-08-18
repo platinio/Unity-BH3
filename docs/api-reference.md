@@ -31,10 +31,21 @@ public override void OnExit()               // when the node ends
 
 Return `Running` from `OnUpdate` for anything spanning more than one frame.
 
-`OnUpdate` only ever runs on a node that entered, so it may assume everything `OnEnter` set up. Entry is not
-guaranteed: a guard on the node can turn it away, and a container retries a refused entry on a later tick
-rather than ticking past it. If you write a container of your own, tick its children through
-`ContainerNode.TickChild` — see [Custom Nodes](custom-nodes.md#a-custom-decorator).
+**`OnUpdate` only ever runs on a node that entered**, so it may assume everything `OnEnter` set up. Entry
+is not guaranteed, in two ways. A guard on the node can turn it away at the door; and if `OnEnter` throws
+the node has not entered either, so it is left not-running and its status becomes `Exception`. In both
+cases the parent retries the entry on a later tick rather than ticking past it.
+
+That matters because `OnEnter` is where a node sets up the state `OnUpdate` reads — a `Wait` whose timer was
+never assigned would count down from zero and report `Success`, so the branch would proceed as though it had
+waited. A failure that repeats every frame is one you can find; one that silently succeeds is not.
+
+For the same reason a node that failed to enter is not exited either — `OnExit` would be tearing down an
+entry that never completed. A container that had already entered some of its children when a later one
+threw does exit those, so nothing is left half-started.
+
+If you write a container of your own, tick its children through `ContainerNode.TickChild` — see
+[Custom Nodes](custom-nodes.md#a-custom-decorator).
 
 Declare ports in `Definition()`, always calling `base.Definition()` first:
 
@@ -59,6 +70,12 @@ Reading a port at runtime:
 ```csharp
 float speed = Speed.GetValue<float>();
 ```
+
+`GetValue<T>()` converts whenever the wired value is not already a `T` — the canvas connects convertible
+types, not just identical ones, so an `int` output on a `float` port is legal and has to be readable.
+Casting `GetValue()` instead throws on exactly those connections. `GetValueOrDefault<T>()` is the variant
+that answers `default` rather than throwing when the value cannot be used. See
+[What "compatible" means](ports-and-wiring.md#what-compatible-means).
 
 ### Node metadata
 
@@ -128,6 +145,39 @@ public class EnemyController : MonoBehaviour
 > inside one tree expresses the same thing — that keeps the transition visible on the canvas and explainable
 > by [The Why Panel](why-panel.md). See
 > [Best Practices](best-practices.md#give-each-branch-its-own-tree-asset).
+
+#### What a switch does
+
+`Switch` puts the old tree down and brings the new one up, in that order. Concretely:
+
+1. **The outgoing branch is stopped.** Whatever was running receives its `OnExit`, so a node gets the chance
+   to undo what it started — stop a `NavMeshAgent`, end an animation, release a claim. A tree that is merely
+   abandoned never gets this, and the agent keeps acting on decisions made by a tree it is no longer running.
+2. **The outgoing tree is destroyed.** It was a per-agent clone and nothing else refers to it.
+3. **The incoming asset is instantiated.** The agent runs a private copy, exactly as it does for the tree
+   assigned in the inspector — so two agents switched to the same asset do not share node state, and the
+   asset on disk never accumulates runtime state.
+4. **The new tree is awoken and entered.** `OnAwake` is what builds each composite's child list from the
+   transitions and arms each guard onto its owner, so a switched-in tree honours its preconditions from its
+   first tick.
+5. **A halted agent is revived.** `Update` stops ticking once the root returns `Success` or `Failure`;
+   switching clears that, which is what makes a one-shot tree handing over to the next phase work.
+
+The machine enters the tree exactly once regardless of whether the switch happened before or after Unity's
+`Start`, so calling `Switch` from `Start`, `OnEnable`, a coroutine or an event handler is all fine.
+
+> **Do not call `Switch` from `Awake`.** Unity does not order `Awake` between components, so the call may
+> land before the machine has set itself up. It is refused with an error rather than served, because
+> serving it would corrupt the agent in a way that depends on component order. Use `Start` or later.
+
+> `OriginalMacro` keeps reporting the asset assigned in the inspector — a switch does not rewrite it.
+
+#### Exit graphs run on teardown too
+
+A node's `OnExit` can be an author-written script graph (`On Exit Graph` on the Visual Scripting nodes).
+Because a replaced *and* a destroyed tree are both now stopped properly, those graphs fire on a switch and
+on agent destruction, not only when a branch finishes normally. An exit graph must not assume the agent's
+other components are still alive — during destruction, the order between them is undefined.
 
 ---
 

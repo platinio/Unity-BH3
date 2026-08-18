@@ -4,7 +4,11 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Transform/Rotate")]
+    // Its own path and its own label. Both used to read "Rotate", the same as the Rotate node -- so one of
+    // the two was unreachable in the create menu, and an author looking at an existing tree could not tell
+    // which of them an asset actually contained. The class name is deliberately unchanged: that is what
+    // assets serialize, so renaming it would break every tree holding one.
+    [GraphCreateMenu("Unity/Transform/Set Rotation")]
     public class SetRotation : GameplayNode
     {
         [DoNotSerialize]
@@ -22,7 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
         private float currentTime;
         private float duration;
 
-        public override string NodeName => "Rotate";
+        public override string NodeName => "Set Rotation";
         public override string Description => "Rotates the transform to a target rotation in a define duration";
 
         protected override void Definition()
@@ -40,16 +44,22 @@ namespace ArcaneOnyx.BehaviorTree
             
             targetTransform = GetComponent<Transform>(Target);
             
-            var targetRotationEuler = (Vector3) TargetRotation.GetValue();
+            var targetRotationEuler = TargetRotation.GetValue<Vector3>();
             targetRotation = Quaternion.Euler(targetRotationEuler);
             
-            duration = (float)Duration.GetValue();
+            duration = Duration.GetValue<float>();
             fromRotation = targetTransform.rotation;
             currentTime = 0;
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            if (duration <= 0.0f)
+            {
+                targetTransform.rotation = targetRotation;
+                return ExecutionStatus.Success;
+            }
+
             targetTransform.rotation = Quaternion.Slerp(fromRotation, targetRotation, currentTime / duration);
             currentTime += Time.deltaTime;
 

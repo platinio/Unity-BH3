@@ -22,7 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.Definition();
 
             Key = ValueInput<string>(nameof(Key));
-            Value = ValueOutput<object>(nameof(Value), () => GetValue((string)Key.GetValue(), BehaviorTreeMachine));
+            Value = ValueOutput<object>(nameof(Value), () => GetValue(Key.GetValue<string>(), BehaviorTreeMachine));
         }
         
         public object GetValue(string key, BehaviorTreeMachine machine)

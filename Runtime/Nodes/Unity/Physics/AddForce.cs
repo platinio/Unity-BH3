@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             var target = GetComponent<Rigidbody>(Target);
-            var force = (Vector3) Force.GetValue();
+            var force = Force.GetValue<Vector3>();
             
             target.AddForce(force, forceMode);
             return ExecutionStatus.Success;

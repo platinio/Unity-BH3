@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
+using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -96,6 +98,54 @@ namespace ArcaneOnyx.BehaviorTree
             if (!child.IsRunning) child.OnNodeEnter();
 
             return child.OnUpdateInternal();
+        }
+
+        /// <summary>
+        /// Enters every child, and if one of them throws, exits the ones that already entered before letting
+        /// the exception out.
+        ///
+        /// <para>
+        /// A container that enters several children at once has a half-open window in the middle of that
+        /// loop. Without the unwind, a child that entered before the failure is stranded: this container's
+        /// own entry failed, so it is not running, so <see cref="OnNodeExit"/> returns early and the
+        /// <see cref="OnExit"/> sweep that would have exited the children never happens. The child then sits
+        /// marked running for the rest of the session — and a later re-entry calls <c>OnNodeEnter</c> on it a
+        /// second time with no exit in between, which is the double-entry the composites warn about by name:
+        /// a Wait resets its timer, an animation restarts.
+        /// </para>
+        ///
+        /// <para>
+        /// The exception is rethrown, not swallowed. Entering children is the container's whole job, so a
+        /// container that could not do it has not entered either — this only makes sure it leaves nothing
+        /// behind on the way out.
+        /// </para>
+        /// </summary>
+        protected void EnterChildren()
+        {
+            var toEnter = GetChildren();
+            int entered = 0;
+
+            try
+            {
+                for (; entered < toEnter.Count; entered++)
+                {
+                    toEnter[entered].OnNodeEnter();
+                }
+            }
+            catch
+            {
+                // Only the ones that actually got in. The child that threw did not enter -- BaseGraphNode
+                // clears its running flag on that path -- and OnNodeExit would do nothing for it anyway.
+                for (int i = 0; i < entered; i++)
+                {
+                    // The sweep has to finish even if an exit throws: a second fault must not strand the
+                    // siblings this method exists to release, and the entry exception is the diagnosis.
+                    try { toEnter[i].OnNodeExit(); }
+                    catch (Exception exitException) { Debug.LogException(exitException); }
+                }
+
+                throw;
+            }
         }
 
         public override ExecutionStatus OnUpdate()

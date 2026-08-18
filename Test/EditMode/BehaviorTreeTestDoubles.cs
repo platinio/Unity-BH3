@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
+using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
@@ -120,6 +122,127 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public override void OnExit() => ExitCalls++;
 
         public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+    }
+
+    /// <summary>
+    /// A guard that answers differently every time it is asked — false first, then true.
+    ///
+    /// <para>
+    /// Nothing promises a guard is stable within a frame, and this is the cheapest honest stand-in for the
+    /// ones that are not: a <c>RandomChance</c> that re-rolls, or a condition reading a fact another agent
+    /// writes between two calls in the same tick. A fixture using <see cref="CountingGuard"/> and flipping
+    /// <c>Result</c> by hand cannot express it, because the flip would happen at a moment the test chose
+    /// rather than at the moment the engine happens to ask twice.
+    /// </para>
+    /// </summary>
+    internal sealed class UnstableGuard : ConditionalExecution
+    {
+        public int Evaluations { get; private set; }
+
+        public override string NodeName => "Unstable Test Guard";
+
+        public override bool Evaluate()
+        {
+            Evaluations++;
+            return Evaluations > 1;
+        }
+    }
+
+    /// <summary>
+    /// A node that publishes one value on a <see cref="ValueOutput"/> declared as <typeparamref name="T"/>.
+    ///
+    /// <para>
+    /// Exists because the shipped <see cref="Literal"/> nodes cannot express the case that matters here: a
+    /// port carrying a type that merely <em>converts</em> to the consumer's. A test needs to control the
+    /// declared output type and the published value independently, and it must not be hostage to whether
+    /// some literal's backing field happens to match the port it advertises — that was its own bug, and a
+    /// fixture built on it would pass or fail for reasons that have nothing to do with conversion.
+    /// </para>
+    /// </summary>
+    internal sealed class ValueSource<T> : BehaviorTreeNode
+    {
+        /// <summary>What the port publishes. Settable so one node can serve several assertions.</summary>
+        public T Published { get; set; }
+
+        [DoNotSerialize]
+        public ValueOutput Value { get; private set; }
+
+        public override string NodeName => $"Test {typeof(T).Name} Source";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            Value = ValueOutput<T>(nameof(Value), () => Published);
+        }
+    }
+
+    /// <summary>
+    /// A node whose <see cref="OnEnter"/> throws, and whose <see cref="OnUpdate"/> would report
+    /// <see cref="ExecutionStatus.Success"/> if anything ever ticked it.
+    ///
+    /// <para>
+    /// The <c>Success</c> is the whole point. A node left flagged running after a failed entry gets ticked
+    /// rather than re-entered, and the damage is not the exception — it is the branch afterwards reporting
+    /// that it finished. <c>WaitTime</c> is the real instance: its timer is assigned in <c>OnEnter</c>, so
+    /// a tick after a failed entry counts down from zero and succeeds as though the wait had elapsed.
+    /// </para>
+    /// </summary>
+    internal sealed class ThrowsOnEnterNode : BehaviorTreeNode
+    {
+        public int UpdateCalls { get; private set; }
+        public int ExitCalls { get; private set; }
+
+        public override string NodeName => "Throws On Enter Test Node";
+
+        public override void OnEnter() => throw new InvalidOperationException("OnEnter failed");
+
+        public override void OnExit() => ExitCalls++;
+
+        public override ExecutionStatus OnUpdate()
+        {
+            UpdateCalls++;
+            return ExecutionStatus.Success;
+        }
+    }
+
+    /// <summary>
+    /// Enters normally and throws on the way out. Models the second fault in an unwind: the container is
+    /// already exiting the children it entered because a later one failed to enter.
+    /// </summary>
+    internal sealed class ThrowsOnExitNode : BehaviorTreeNode
+    {
+        public int EnterCalls { get; private set; }
+
+        public override string NodeName => "Throws On Exit Test Node";
+
+        public override void OnEnter() => EnterCalls++;
+
+        public override void OnExit() => throw new InvalidOperationException("OnExit failed");
+
+        public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+    }
+
+    /// <summary>
+    /// A node with one <see cref="ValueInput"/> declared as <typeparamref name="T"/> and nothing else —
+    /// <see cref="ValueSource{T}"/>'s counterpart, so a test can stand up any (output type, input type) pair
+    /// and ask the two questions the production code asks: may this connect, and can the value be read.
+    /// </summary>
+    internal sealed class ValueSink<T> : BehaviorTreeNode
+    {
+        [DoNotSerialize]
+        public ValueInput Value { get; private set; }
+
+        public override string NodeName => $"Test {typeof(T).Name} Sink";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            // Declared without a default on purpose: a default would mask an unread connection, and the
+            // unfed-port behaviour is itself one of the things these fixtures pin.
+            Value = ValueInput<T>(nameof(Value));
+        }
     }
 
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>

@@ -26,7 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             var target = GetComponent<Transform>(Target);
-            var lookTarget = LookTarget.GetValue() as Transform;
+            var lookTarget = LookTarget.GetValueOrDefault<Transform>();
             
             target.LookAt(lookTarget.position, target.up);
             return ExecutionStatus.Success;

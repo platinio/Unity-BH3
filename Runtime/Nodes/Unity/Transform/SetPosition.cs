@@ -26,7 +26,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override ExecutionStatus OnUpdate()
         {
             var target = GetComponent<Transform>(Target);
-            var newPosition = (Vector3) NewPosition.GetValue();
+            var newPosition = NewPosition.GetValue<Vector3>();
 
             target.position = newPosition;
             return ExecutionStatus.Success;

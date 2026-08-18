@@ -22,7 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            UnityEngine.Object.DontDestroyOnLoad(Object.GetValue() as Object);
+            UnityEngine.Object.DontDestroyOnLoad(Object.GetValueOrDefault<Object>());
             return ExecutionStatus.Success;
         }
     }

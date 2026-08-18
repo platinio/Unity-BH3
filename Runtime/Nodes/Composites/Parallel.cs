@@ -18,10 +18,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             ResetChildrenTaskStatus();
 
-            for (int n = 0; n < children.Count; n++)
-            {
-                children[n].OnNodeEnter();
-            }
+            EnterChildren();
         }
 
         private void ResetChildrenTaskStatus()

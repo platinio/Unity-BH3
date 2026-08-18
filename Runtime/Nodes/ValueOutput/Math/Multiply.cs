@@ -27,8 +27,8 @@ namespace ArcaneOnyx.BehaviorTree
             
             Result = ValueOutput<float>(nameof(Result), () =>
             {
-                float a = (float) A.GetValue();
-                float b = (float) B.GetValue();
+                float a = A.GetValue<float>();
+                float b = B.GetValue<float>();
                 
                 return a * b;
             });

@@ -24,6 +24,6 @@ namespace ArcaneOnyx.BehaviorTree
             Value = ValueInput<bool>(nameof(Value), false);
         }
 
-        public override bool Evaluate() => (bool) Value.GetValue();
+        public override bool Evaluate() => Value.GetValue<bool>();
     }
 }
