@@ -238,6 +238,54 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + string.Join("\n", undeclared));
         }
 
+        /// <summary>
+        /// No node exposes one key twice.
+        ///
+        /// <para>
+        /// Each port collection is a <c>KeyedCollection</c> and already refuses a duplicate within itself,
+        /// so this looks redundant and is not: <c>inputs</c> and <c>outputs</c> concatenate three separate
+        /// collections (control, value, invalid), and no one of them can see a key held by another. This
+        /// checks the thing that actually matters -- what the node exposes, taken together -- and it is the
+        /// check that keeps holding if a node ever declares a control port, which none does today.
+        /// </para>
+        ///
+        /// <para>
+        /// The cost of a duplicate is not cosmetic. <c>NodePreservation</c> resolves every stored
+        /// connection with <c>inputs.Single(p =&gt; p.key == key)</c> on every <c>Define()</c>, so a
+        /// duplicate turns into <c>InvalidOperationException</c> the moment a connection is restored, and
+        /// <c>defaultValues</c> is keyed by the string alone with no room to tell the two apart.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void CreateMenuNodes_DoNotReuseAPortKey()
+        {
+            var offenders = new List<string>();
+
+            foreach (var type in CreateMenuNodes())
+            {
+                var node = (BehaviorTreeNode)Activator.CreateInstance(type);
+                node.Define();
+
+                foreach (var key in RepeatedKeys(node.inputs.Select(port => port.key)))
+                {
+                    offenders.Add($"{type.Name} exposes the input key '{key}' more than once");
+                }
+
+                foreach (var key in RepeatedKeys(node.outputs.Select(port => port.key)))
+                {
+                    offenders.Add($"{type.Name} exposes the output key '{key}' more than once");
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                "A port key is the only thing identifying a port once the node is built, so two ports "
+                + "cannot share one:\n"
+                + string.Join("\n", offenders));
+        }
+
+        private static IEnumerable<string> RepeatedKeys(IEnumerable<string> keys) =>
+            keys.GroupBy(key => key).Where(group => group.Count() > 1).Select(group => group.Key);
+
         [Test]
         public void Decorators_WrapExactlyOneChild()
         {

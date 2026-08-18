@@ -245,6 +245,34 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    /// <summary>
+    /// Declares two ports under one key.
+    ///
+    /// <para>
+    /// Nothing shipped can do this by accident -- every node keys its ports with <c>nameof</c>, so a
+    /// collision needs a subclass shadowing a name its base class already used. This double is that shape,
+    /// written on purpose, because the protection against it is a property of the collection type rather
+    /// than anything visible at the call site: swap <c>PortCollection</c> for a plain list and it is gone
+    /// with nothing to notice.
+    /// </para>
+    /// </summary>
+    internal sealed class DuplicateKeyNode : BehaviorTreeNode
+    {
+        public const string SharedKey = "Shared";
+
+        public override string NodeName => "Duplicate Key Test Node";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            ValueInput<float>(SharedKey);
+            ValueInput<float>(SharedKey);
+        }
+
+        public override ExecutionStatus OnUpdate() => ExecutionStatus.Success;
+    }
+
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>
     internal sealed class FixedCondition : Condition
     {

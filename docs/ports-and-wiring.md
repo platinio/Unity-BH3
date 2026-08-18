@@ -60,6 +60,12 @@ from — it just calls `GetValue<float>()`.
 > connected — reading it otherwise throws. See
 > [Ports you must connect](node-reference.md#ports-you-must-connect).
 
+> **A key is unique across the whole node.** `nameof` gives you that for free, which is why every shipped
+> node uses it. Declare two ports under one key — easiest to do by accident in a subclass, reusing a name
+> the base class already took — and the second declaration throws, `Define()` catches it, and the node
+> arrives with **no ports at all**. A key is the only thing identifying a port afterwards, so it cannot
+> mean two of them.
+
 ### What "compatible" means
 
 The canvas lets you wire an output into an input whenever the two types are **convertible**, not only when
