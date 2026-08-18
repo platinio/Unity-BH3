@@ -207,17 +207,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         public abstract bool Evaluate();
 
+        /// <summary>
+        /// Drops the owner's guard-index cache, which removing this guard invalidates: an index is a
+        /// position among the owner's guards, so every guard after this one shifts down by one.
+        /// <para>
+        /// One call, not one per sibling. This used to walk the whole graph and call the same method on the
+        /// same owner once for every guard sharing it -- <c>Clear()</c> is idempotent, so the walk only
+        /// repeated itself. It also dereferenced <c>owner</c> unconditionally, and a guard matches itself in
+        /// that walk, so deleting one that had never been given an owner threw NullReferenceException from
+        /// inside an editor delete rather than deleting anything.
+        /// </para>
+        /// </summary>
         public override void BeforeRemove()
         {
             base.BeforeRemove();
 
-            foreach (var graphElement in graph.elements)
-            {
-                if (graphElement is ConditionalExecution conditionalExecution)
-                {
-                    if (conditionalExecution.owner == owner) owner.ClearConditionalExecutionInexCache();
-                }
-            }
+            owner?.ClearConditionalExecutionInexCache();
         }
     }
 }

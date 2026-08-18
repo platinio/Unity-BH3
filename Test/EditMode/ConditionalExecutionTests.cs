@@ -274,5 +274,62 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(2, repeater.GetChildren().Count,
                 "Yet the graph accepted two. Authoring code must enforce MaxChildrenLimit itself.");
         }
+
+        /// <summary>
+        /// A guard that never got an owner can still be deleted.
+        ///
+        /// <para>
+        /// Removal used to walk the graph and clear the index cache on <c>owner</c> once for every guard
+        /// sharing it -- and a guard matches itself in that walk, so a null owner was dereferenced every
+        /// time. Deleting an unarmed guard threw <see cref="System.NullReferenceException"/> instead of
+        /// deleting it. Having an owner and being armed are separate steps, as
+        /// <see cref="AGuardIsOnlyAttachedToItsOwnerByGraphOnAwake"/> pins, and nothing obliges the first
+        /// to have happened before someone deletes the guard.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void AGuardThatNeverGotAnOwnerCanStillBeDeleted()
+        {
+            var graph = new BehaviorTreeGraph();
+            var guard = AddNode<CountingGuard>(graph);
+
+            Assert.IsNull(guard.Owner, "the whole case: nothing ever gave it one");
+
+            Assert.DoesNotThrow(() => graph.Nodes.Remove(guard),
+                "deleting a guard cannot depend on whether it was ever attached to anything");
+
+            CollectionAssert.DoesNotContain(graph.Nodes, guard);
+        }
+
+        /// <summary>
+        /// Removing a guard renumbers the ones after it.
+        ///
+        /// <para>
+        /// An index is a position among the owner's guards, so deleting one shifts every later guard down.
+        /// The cache is keyed by guid and would otherwise keep answering with the position a guard held
+        /// before. Dropping it is the whole job of the removal hook -- which used to do it by calling the
+        /// same method on the same owner once per sibling.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void RemovingAGuardRenumbersTheOnesAfterIt()
+        {
+            var graph = new BehaviorTreeGraph();
+            var sequence = AddNode<Sequence>(graph);
+
+            var first = AddNode<CountingGuard>(graph);
+            var second = AddNode<CountingGuard>(graph);
+            first.UpdateOwner(sequence);
+            second.UpdateOwner(sequence);
+
+            Assert.AreEqual(1, sequence.GetConditionalIndex(second),
+                "second in graph order -- and asking is what fills the cache");
+
+            graph.Nodes.Remove(first);
+
+            Assert.AreEqual(0, sequence.GetConditionalIndex(second),
+                "it is the only guard left, so it is first now; a cache surviving the removal would still "
+                + "answer 1");
+        }
     }
 }
