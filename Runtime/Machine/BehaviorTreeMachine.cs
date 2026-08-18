@@ -114,7 +114,8 @@ namespace ArcaneOnyx.BehaviorTree
                 // previous tree finished.
                 lastExecutionStatus = ExecutionStatus.Inactive;
 
-                OverrideGraphAndSubGraphVariables(graphInstance, behaviorTreeGraph);
+                OverrideGraphVariables(graphInstance);
+                BuildVariableScopes(graphInstance, behaviorTreeGraph);
                 behaviorTreeGraph.OnAwake();
             }
             catch (Exception e)
@@ -168,18 +169,22 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Builds the root scope and opens a nested one for every sub-tree.
+        /// Builds the root variable scope and hands it to every node, so each sub-tree can open a nested one
+        /// from it.
         /// <para>
         /// The root scope holds the agent's variables, so anything an agent declares is visible to every
         /// branch however deeply nested. Each <c>RunBehaviorTreeGraphNode</c> then opens a child scope around
         /// its own instance, seeded with that branch's optional defaults — so a branch reads its own values
         /// first and the agent's only when it declares none, and its writes stay inside it.
         /// </para>
+        /// <para>
+        /// Scopes only. Pushing the agent's <c>Variables</c> into the tree's declarations is a separate step
+        /// with its own method, <see cref="OverrideGraphVariables"/>, and both are called from
+        /// <see cref="AwakenTree"/>.
+        /// </para>
         /// </summary>
-        private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
+        private void BuildVariableScopes(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
         {
-            OverrideGraphVariables(graphAsset);
-
             if (graph == null || graphAsset == null) return;
 
             var rootScope = new BehaviorTreeVariableScope(graphAsset.declarations);

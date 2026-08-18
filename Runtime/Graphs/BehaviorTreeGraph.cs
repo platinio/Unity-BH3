@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
@@ -440,9 +440,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public void OnExit()
         {
-            // Null-conditional because this runs on teardown paths, where throwing would strand the caller
-            // mid-swap with a half-released tree. OnEnter has no such guard on purpose: a graph reaching Start
-            // without an entry node is a broken asset and should say so loudly.
+            // Guarded, unlike OnEnter, which should fail loudly on a graph that has no entry node.
             EntryNode?.OnNodeExit();
         }
 
