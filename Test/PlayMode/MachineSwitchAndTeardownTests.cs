@@ -1,5 +1,6 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Linq;
+using System.Text.RegularExpressions;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -235,6 +236,197 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 + "clone can reach this object at all, so it is the deep trees that leak worst.");
         }
 
+        /// <summary>
+        /// The tree a switch replaces is destroyed, not merely dropped.
+        ///
+        /// <para>
+        /// The outgoing graph is an instance the agent made for itself, so nothing else can free it. One leak
+        /// per switch sounds small until it is a boss that changes phase on a timer, or a squad whose members
+        /// swap between combat and patrol trees all encounter — the count is per swap, not per agent.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingDestroysTheTreeItReplaced()
+        {
+            var machine = Spawn(BuildGuardedTree(guardAnswers: true), Declare);
+
+            yield return Frames(2);
+
+            var replaced = machine.GraphInstance;
+
+            Assert.IsFalse(replaced == null, "The agent is running an instance before the switch.");
+
+            machine.Switch(BuildGuardedTree(guardAnswers: true));
+
+            // Destroy is deferred to the end of the frame, so the question cannot be asked in the same one.
+            yield return Frames(2);
+
+            Assert.IsTrue(replaced == null,
+                "The tree that was switched out has to be destroyed. Nothing else holds a reference to it: "
+                + "the machine made it, the machine replaced it, and the machine is the only owner.");
+        }
+
+        /// <summary>
+        /// A switch stops the outgoing branch rather than abandoning it mid-action.
+        ///
+        /// <para>
+        /// The old tree was running something when it was replaced, and whatever that something started is
+        /// still going: a <c>NavMeshAgent</c> walking to a destination, an animation playing, a claim held on
+        /// a shared resource. <c>OnDestroy</c> cascades <c>OnDestroy</c> and never <c>OnExit</c>, so only an
+        /// explicit exit gives that branch the call it acts on. Asserted through the recorder because the
+        /// exit is what the node observes, and the recording is keyed by guid so it survives the clone.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingStopsTheBranchTheOldTreeLeftRunning()
+        {
+            var machine = Spawn(BuildGuardedTree(guardAnswers: true), Declare);
+            var outgoingBranch = guarded;
+
+            yield return Frames(2);
+
+            var recorder = machine.FlightRecorder;
+
+            Assert.IsTrue(Entered(recorder, outgoingBranch), "The old tree is mid-branch when it is replaced.");
+            Assert.AreEqual(0, ExitCount(recorder, outgoingBranch), "and that branch has not stopped yet.");
+
+            machine.Switch(BuildGuardedTree(guardAnswers: true));
+
+            yield return Frames(2);
+
+            Assert.AreEqual(1, ExitCount(machine.FlightRecorder, outgoingBranch),
+                "The branch the old tree left running must be exited by the switch. Without it the agent "
+                + "keeps walking to a destination chosen by a tree it is no longer running.");
+        }
+
+        /// <summary>
+        /// Switching revives an agent whose tree had finished.
+        ///
+        /// <para>
+        /// <c>Update</c> stops ticking once the root returns a terminal status, and <c>Switch</c> is the only
+        /// thing that can reopen it — the docs advertise exactly that, for a one-shot tree handing over to the
+        /// next phase. A switch that left the halted status in place would install the new tree correctly and
+        /// then never tick it, which reads from outside as the switch having silently done nothing.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingRevivesAnAgentWhoseTreeHadFinished()
+        {
+            var machine = Spawn(BuildFinishingTree(), Declare);
+
+            yield return Frames(3);
+
+            Assert.AreEqual(ExecutionStatus.Success, machine.LastExecutionStatus,
+                "The one-shot tree has finished, so the machine has stopped ticking.");
+
+            var replacement = BuildGuardedTree(guardAnswers: true);
+            var replacementBranch = guarded;
+
+            machine.Switch(replacement);
+
+            yield return Frames(3);
+
+            Assert.IsTrue(Entered(machine.FlightRecorder, replacementBranch),
+                "A halted agent handed a new tree has to start running it. Leaving the terminal status in "
+                + "place would install the tree and never tick it.");
+        }
+
+        /// <summary>
+        /// Switching repeatedly keeps exactly one tree alive. The per-swap leak, stated as an accumulation
+        /// rather than as a single event.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingTwiceLeavesOnlyTheNewestTreeAlive()
+        {
+            var machine = Spawn(BuildGuardedTree(guardAnswers: true), Declare);
+
+            yield return Frames(2);
+
+            var first = machine.GraphInstance;
+
+            machine.Switch(BuildGuardedTree(guardAnswers: true));
+
+            yield return Frames(2);
+
+            var second = machine.GraphInstance;
+
+            machine.Switch(BuildGuardedTree(guardAnswers: true));
+
+            yield return Frames(2);
+
+            Assert.IsTrue(first == null, "The tree from before the first switch is gone.");
+            Assert.IsTrue(second == null, "and so is the one that replaced it.");
+            Assert.IsFalse(machine.GraphInstance == null, "leaving only the tree the agent is running now.");
+        }
+
+        /// <summary>
+        /// A tree switched in before <c>Start</c> is entered once, not twice.
+        ///
+        /// <para>
+        /// Unity runs <c>Awake</c> on activation and <c>Start</c> only later, so a component that calls
+        /// <c>Switch</c> from its own <c>Awake</c> — a spawner picking a brain by difficulty, say — installs
+        /// the new tree inside that window. If the switch entered the tree itself, the machine's own
+        /// <c>Start</c> would then enter it a second time: every node in the live branch re-entered on a tree
+        /// that never stopped, which for a leaf means its <c>OnEnter</c> side effect fired twice.
+        /// </para>
+        ///
+        /// <para>
+        /// Counted on the entry node because it is the one node the root enter reaches directly, and so the
+        /// one place a double entry shows up whatever the tree below it looks like.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ATreeSwitchedInBeforeStartIsEnteredExactlyOnce()
+        {
+            var machine = Spawn(BuildGuardedTree(guardAnswers: true), Declare);
+
+            // No frame is allowed to pass first: Awake has run, Start has not, and that gap is the case.
+            var replacement = BuildGuardedTree(guardAnswers: true);
+            var root = replacement.graph.EntryNode.guid;
+
+            machine.Switch(replacement);
+
+            yield return Frames(3);
+
+            Assert.AreEqual(1, EnterCount(machine.FlightRecorder, root),
+                "The tree is entered exactly once. Switch entering it and Start entering it again would "
+                + "restart a branch that was already running.");
+        }
+
+        /// <summary>
+        /// A switch that arrives before the machine's own <c>Awake</c> is refused, loudly.
+        ///
+        /// <para>
+        /// Unity does not order <c>Awake</c> between components, so a caller in another component's
+        /// <c>Awake</c> can land first. Serving that call is worse than refusing it:
+        /// <c>OverrideGraphVariables</c> reads a <c>Variables</c> component that <c>Awake</c> has not assigned
+        /// yet, and <c>SwitchToEmbed</c> clears <c>nest.macro</c> — so the machine's own <c>Awake</c> would
+        /// then read that null as the embedded-graph case, drop the reference to the instance the switch had
+        /// created, and leave it with nothing able to free it. Which of those happens would be decided by
+        /// component order, silently.
+        /// </para>
+        ///
+        /// <para>
+        /// The agent is built inactive so no lifecycle method has run when <c>Switch</c> is called — the one
+        /// state in which this is reproducible from a test.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingBeforeAwakeIsRefusedRatherThanCorrupting()
+        {
+            var machine = SpawnDormant();
+
+            LogAssert.Expect(LogType.Error, new Regex("before its own Awake"));
+
+            machine.Switch(BuildGuardedTree(guardAnswers: true));
+
+            Assert.IsTrue(machine.GraphInstance == null,
+                "The call is ignored, so no instance is created -- one made here would be orphaned the moment "
+                + "Awake ran and could never be destroyed.");
+
+            yield return null;
+        }
+
         #region Fixture
 
         /// <summary>
@@ -272,6 +464,23 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             guarded = guardedNode.guid;
             fallback = fallbackNode.guid;
+
+            return tree;
+        }
+
+        /// <summary>
+        /// Entry -&gt; Wait(0), with no Repeater over it — so the root reaches <c>Success</c> on its first tick
+        /// and the machine halts. The state a switch has to be able to bring an agent back out of.
+        /// </summary>
+        private BehaviorTreeGraphAsset BuildFinishingTree()
+        {
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            var wait = Add<WaitTime>(graph, 0.0f, 100.0f);
+            FeedFloat(graph, wait, wait.Time, 0.0f);
+
+            Connect(graph, graph.EntryNode, wait);
 
             return tree;
         }
