@@ -1,5 +1,8 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.TestTools;
 
 namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
@@ -42,6 +45,72 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.GreaterOrEqual(ExitCount(machine.FlightRecorder, guid), 1,
                 "The node entered but never exited: its OnUpdate cannot complete, which is exactly what an "
                 + "InvalidCastException on a port read looks like from outside.");
+        }
+
+        /// <summary>
+        /// A <c>NavMeshAgent</c> stops moving at its own <c>stoppingDistance</c>, so
+        /// <c>WaitUntilReachNavTargetPosition</c> must judge arrival against it. The old fixed 1mm threshold
+        /// only ever completed for agents with <c>stoppingDistance</c> zero; everyone else parked at their
+        /// stopping distance and waited forever — which presents as an agent standing next to its
+        /// destination, permanently "travelling".
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ArrivalRespectsTheAgentsStoppingDistance()
+        {
+            // A NavMesh built at runtime, so the test does not depend on a scene with a baked one.
+            var floor = new NavMeshBuildSource
+            {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(20.0f, 0.1f, 20.0f),
+                transform = Matrix4x4.identity,
+                area = 0
+            };
+            var data = UnityEngine.AI.NavMeshBuilder.BuildNavMeshData(
+                NavMesh.GetSettingsByID(0), new List<NavMeshBuildSource> { floor },
+                new Bounds(Vector3.zero, new Vector3(40.0f, 4.0f, 40.0f)),
+                Vector3.zero, Quaternion.identity);
+            var navMeshInstance = NavMesh.AddNavMeshData(data);
+
+            try
+            {
+                var tree = NewTree();
+                var graph = tree.graph;
+
+                var sequence = Add<Sequence>(graph, 0.0f, 200.0f);
+                Connect(graph, graph.EntryNode, sequence);
+
+                var setDestination = Add<SetNavAgentPosition>(graph, -150.0f, 400.0f);
+                var destination = Add<Vector3Literal>(graph, -150.0f, 550.0f);
+                SetPrivateField(destination, "value", new Vector3(5.0f, 0.0f, 5.0f));
+                destination.Value.ValidlyConnectTo(setDestination.NavPosition);
+                Connect(graph, sequence, setDestination);
+
+                var arrive = Add<WaitUntilReachNavTargetPosition>(graph, 150.0f, 400.0f);
+                Connect(graph, sequence, arrive);
+
+                var guid = arrive.guid;
+                var machine = Spawn(tree, (agentObject, _) =>
+                {
+                    var navAgent = agentObject.AddComponent<NavMeshAgent>();
+                    navAgent.stoppingDistance = 0.6f;
+                });
+
+                // ~7m at default agent speed is a couple of seconds; the deadline only bounds the failure
+                // case, where the agent has parked at its stopping distance and the node never exits.
+                float deadline = Time.time + 10.0f;
+                while (Time.time < deadline && ExitCount(machine.FlightRecorder, guid) == 0)
+                {
+                    yield return null;
+                }
+
+                Assert.GreaterOrEqual(ExitCount(machine.FlightRecorder, guid), 1,
+                    "The agent stopped at its stoppingDistance but the node kept waiting for a 1mm "
+                    + "approach that a stopped agent can never make.");
+            }
+            finally
+            {
+                navMeshInstance.Remove();
+            }
         }
     }
 }

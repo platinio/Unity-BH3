@@ -30,8 +30,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            float d = Vector3.Distance( navAgent.transform.position, navAgent.destination);
-            return d < 0.001f ? ExecutionStatus.Success : ExecutionStatus.Running;
+            // remainingDistance is not meaningful until the path is computed.
+            if (navAgent.pathPending) return ExecutionStatus.Running;
+
+            // The agent stops moving at its own stoppingDistance, so arrival must be judged against it —
+            // a fixed 1mm threshold waits forever on any agent with a non-zero stopping distance. The
+            // floor keeps the old behavior for agents that do drive all the way onto the point.
+            float arriveDistance = Mathf.Max(navAgent.stoppingDistance, 0.001f);
+            return navAgent.remainingDistance <= arriveDistance
+                ? ExecutionStatus.Success
+                : ExecutionStatus.Running;
         }
     }
 }
