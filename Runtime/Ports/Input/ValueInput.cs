@@ -258,6 +258,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var value = GetValue();
 
+            if (value is T typed) return typed;
+
             if (TryConvertValue<T>(value, out var converted)) return converted;
 
             throw new InvalidCastException(
@@ -281,7 +283,11 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public T GetValueOrDefault<T>()
         {
-            TryConvertValue<T>(GetValue(), out var converted);
+            var value = GetValue();
+
+            if (value is T typed) return typed;
+
+            TryConvertValue<T>(value, out var converted);
             return converted;
         }
 
