@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.GraphCore;
@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// Precisely: the initialiser is skipped when the serializer cannot call a constructor, which is when
         /// the type has no parameterless one — it then materialises the object directly. So this is a
         /// property of the node <em>type</em>, not of deserialization in general.
-        /// <c>CreateMenuNodes_AreConstructibleByTheSerializer</c> keeps every node type constructible, which
+        /// <c>NodeTypes_AreConstructibleByTheSerializer</c> keeps every node type constructible, which
         /// is the real fix; lazily initialising is what makes a field safe even if one ever is not.
         /// </para>
         /// </para>
@@ -278,6 +278,25 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize]
         public Dictionary<string, object> defaultValues { get; private set; }
 
+        /// <summary>
+        /// Declares a port. <b>A key is unique across everything the node exposes</b>, and that is
+        /// enforced rather than assumed: every port collection is a <c>KeyedCollection</c>, so adding a
+        /// second port under a live key throws <see cref="ArgumentException"/>.
+        /// <para>
+        /// It has to hold, because a key is the only thing that identifies a port afterwards.
+        /// <see cref="defaultValues"/> is a <c>Dictionary&lt;string, object&gt;</c> with no room for a
+        /// direction or a type, and <c>NodePreservation</c> resolves a stored connection back to a live
+        /// port with <c>inputs.Single(p =&gt; p.key == key)</c> on every <see cref="Define"/> -- which
+        /// throws on two matches rather than picking one.
+        /// </para>
+        /// <para>
+        /// The throw surfaces oddly, so it is worth knowing what it looks like: <see cref="Define"/>
+        /// catches whatever <see cref="Definition"/> throws, logs a warning and undefines the node, so a
+        /// duplicate key presents as a node that arrives with <em>no ports at all</em>.
+        /// <c>CreateMenuNodes_DefineSuccessfully</c> is the gate that turns that into a failing test
+        /// rather than a warning nobody reads in a build.
+        /// </para>
+        /// </summary>
         protected ValueInput ValueInput<T>(string key)
         {
             return ValueInput(typeof(T), key);
@@ -290,7 +309,6 @@ namespace ArcaneOnyx.BehaviorTree
         
         protected ValueInput ValueInput(Type type, string key)
         {
-            //EnsureUniqueInput(key);
             var port = new ValueInput(key, type);
             valueInputs.Add(port);
             return port;
@@ -298,7 +316,6 @@ namespace ArcaneOnyx.BehaviorTree
         
         protected ValueInput ValueInput(Type type, string key, object defaultValue)
         {
-            //EnsureUniqueInput(key);
             var port = new ValueInput(key, type);
             valueInputs.Add(port);
             port.SetDefaultValue(defaultValue);
@@ -307,7 +324,6 @@ namespace ArcaneOnyx.BehaviorTree
         
         protected ValueOutput ValueOutput(Type type, string key)
         {
-            //EnsureUniqueOutput(key);
             var port = new ValueOutput(key, type);
             valueOutputs.Add(port);
             return port;
@@ -315,7 +331,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected ValueOutput ValueOutput(Type type, string key, GetPortValue getValue)
         {
-            //EnsureUniqueOutput(key);
             var port = new ValueOutput(key, type, getValue);
             valueOutputs.Add(port);
             return port;
