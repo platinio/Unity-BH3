@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -236,6 +236,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "These nodes expose a port property that Definition() never assigns, so the first read of it "
                 + "throws NullReferenceException and takes the branch down with it:\n"
                 + string.Join("\n", undeclared));
+        }
+
+        /// <summary>
+        /// Every node type the serializer may rebuild can be built by calling a constructor.
+        ///
+        /// <para>
+        /// When a type has no parameterless constructor the serializer cannot call one, so it materialises
+        /// the object directly instead — and that skips every field initialiser on the class. Fields declared
+        /// <c>[DoNotSerialize]</c> are the ones this bites, because nothing restores them afterwards either:
+        /// they simply arrive null. <c>PlaceHolderNode</c> was the only node in that state, and on a
+        /// deserialized tree it came back with a null <c>conditionalExecutionIndexCache</c> — measured at 240
+        /// of them across the shipped trees, every one of which would throw on
+        /// <c>GetConditionalIndex</c>.
+        /// </para>
+        ///
+        /// <para>
+        /// <see cref="BehaviorTreeNode"/> itself is excluded: its constructor is protected, it carries no
+        /// create-menu entry, and nothing ever places the bare base class in a graph. Every type that can
+        /// actually appear in one is in scope.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void NodeTypes_AreConstructibleByTheSerializer()
+        {
+            var unconstructible = RuntimeTypes()
+                .Where(type => type.IsClass && !type.IsAbstract && typeof(BehaviorTreeNode).IsAssignableFrom(type))
+                .Where(type => type != typeof(BehaviorTreeNode))
+                .Where(type => type.GetConstructor(Type.EmptyTypes) == null)
+                .Select(type => type.Name)
+                .OrderBy(name => name)
+                .ToArray();
+
+            CollectionAssert.IsEmpty(unconstructible,
+                "A node type with no parameterless constructor is materialised without one, which skips "
+                + "every field initialiser it has -- so a [DoNotSerialize] field arrives null on a "
+                + "deserialized tree and the first read of it throws:\n"
+                + string.Join("\n", unconstructible));
         }
 
         /// <summary>

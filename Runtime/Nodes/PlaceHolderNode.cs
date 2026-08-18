@@ -1,4 +1,5 @@
-﻿using Unity.VisualScripting;
+﻿using System;
+using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -17,6 +18,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         public bool IsSelected = false;
         
+        /// <summary>
+        /// For the serializer only. Without it this type has no parameterless constructor, so
+        /// deserialization cannot call a constructor at all and materialises the object directly — which
+        /// skips every field initialiser on the class, including the ones inherited from
+        /// <see cref="BehaviorTreeNode"/>. Every other node type already has one, so this was the only node
+        /// arriving half-built.
+        /// </summary>
+        [Obsolete(Serialization.ConstructorWarning)]
+        public PlaceHolderNode() { }
+
         public PlaceHolderNode(BehaviorTreeTransition owner)
         {
             this.owner = owner;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.GraphCore;
@@ -58,17 +58,30 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// The guards armed on this node, created on first use.
         /// <para>
-        /// Lazily rather than by field initialiser because the field is <see cref="DoNotSerializeAttribute"/>:
-        /// a node that comes back from deserialization — which is every node in a running tree, since the
-        /// machine instantiates its macro — can arrive with this null, its initialiser never having run. That
-        /// went unnoticed while the only code path touched the list of nodes that <em>own</em> a guard; the
-        /// moment anything walked every node it threw.
+        /// Lazily rather than by field initialiser because the field is <see cref="DoNotSerializeAttribute"/>
+        /// and a deserialized node can arrive with it null, its initialiser never having run. That went
+        /// unnoticed while the only code path touched the list of nodes that <em>own</em> a guard; the moment
+        /// anything walked every node it threw.
+        /// <para>
+        /// Precisely: the initialiser is skipped when the serializer cannot call a constructor, which is when
+        /// the type has no parameterless one — it then materialises the object directly. So this is a
+        /// property of the node <em>type</em>, not of deserialization in general.
+        /// <c>NodeTypes_AreConstructibleByTheSerializer</c> keeps every node type constructible, which
+        /// is the real fix; lazily initialising is what makes a field safe even if one ever is not.
+        /// </para>
         /// </para>
         /// </summary>
         private List<ConditionalExecution> Guards => conditionalExecutions ??= new List<ConditionalExecution>();
 
-        [DoNotSerialize] 
-        private Dictionary<Guid, int> conditionalExecutionIndexCache = new();
+        [DoNotSerialize]
+        private Dictionary<Guid, int> conditionalExecutionIndexCache;
+
+        /// <summary>
+        /// Where a guard's index is remembered, created on first use for the same reason
+        /// <see cref="Guards"/> is — a field initialiser is not guaranteed to have run.
+        /// </summary>
+        private Dictionary<Guid, int> ConditionalExecutionIndexCache =>
+            conditionalExecutionIndexCache ??= new Dictionary<Guid, int>();
 
         public virtual bool CanUseConditionalExecutions => true;
         public event Action onPortsChanged;
@@ -441,7 +454,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public int GetConditionalIndex(ConditionalExecution conditionalExecution)
         {
-            if (conditionalExecutionIndexCache.TryGetValue(conditionalExecution.guid, out int index))
+            if (ConditionalExecutionIndexCache.TryGetValue(conditionalExecution.guid, out int index))
             {
                 return index;
             }
@@ -460,7 +473,7 @@ namespace ArcaneOnyx.BehaviorTree
                 }
             }
 
-            conditionalExecutionIndexCache[conditionalExecution.guid] = index;
+            ConditionalExecutionIndexCache[conditionalExecution.guid] = index;
             return index;
         }
         
@@ -484,7 +497,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void ClearConditionalExecutionInexCache()
         {
-            conditionalExecutionIndexCache.Clear();
+            ConditionalExecutionIndexCache.Clear();
         }
 
         /// <summary>
