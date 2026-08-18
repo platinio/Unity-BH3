@@ -6,7 +6,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Literal/Integer")]
     public class IntegerLiteral : Literal
     {
-        [Serialize, Inspectable] private float value;
+        [Serialize, Inspectable] private int value;
         
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }

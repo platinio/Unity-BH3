@@ -58,7 +58,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private bool Roll()
         {
-            float chance = (float) Chance.GetValue();
+            float chance = Chance.GetValue<float>();
             if (chance <= 0.0f) return false;
             if (chance >= 1.0f) return true;
 

@@ -114,6 +114,17 @@ site**. Two branches running side by side under a Parallel hold two different sc
 Because the scope is per call site, using the same branch twice with different arguments keeps them apart.
 Passing data by agreeing on a variable name is never necessary, and should not be done.
 
+### How long an instance lives
+
+The clone is created **lazily, on first use**, and released when the tree holding it is destroyed — so a
+destroyed agent takes its whole tree of instances with it, at every depth. A branch the agent never entered
+is never cloned at all, and costs nothing to tear down.
+
+Nothing else can free these. The instance belongs to one call site on one agent, which is exactly what keeps
+two uses of a branch from sharing state; the flip side is that the call site is the only thing that knows the
+clone exists. That makes the count per call site **per agent, multiplied by nesting** — the reason it is
+worth knowing that a wave-based scene spawning modular agents is the case that would feel it first.
+
 ---
 
 ## Refreshing the contract

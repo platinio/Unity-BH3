@@ -45,10 +45,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             var rb = GetComponent<Rigidbody>(Target);
 
-            Vector3 explosionOrigin = (Vector3) ExplosionOrigin.GetValue();
-            float explosionForce = (float) ExplosionForce.GetValue();
-            float explosionRadius = (float)ExplosionRadius.GetValue();
-            float explosionUpModifier = (float)ExplosionUpModifier.GetValue();
+            Vector3 explosionOrigin = ExplosionOrigin.GetValue<Vector3>();
+            float explosionForce = ExplosionForce.GetValue<float>();
+            float explosionRadius = ExplosionRadius.GetValue<float>();
+            float explosionUpModifier = ExplosionUpModifier.GetValue<float>();
             
             rb.AddExplosionForce(explosionForce, explosionOrigin, explosionRadius, explosionUpModifier, forceMode);
         }

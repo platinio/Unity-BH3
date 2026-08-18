@@ -67,6 +67,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             return machine;
         }
 
+        /// <summary>
+        /// Builds the agent and attaches a machine, but leaves the GameObject inactive so no Unity lifecycle
+        /// method has run on it — not even <c>Awake</c>. The only way to reach the state a component whose own
+        /// <c>Awake</c> runs before the machine's would see, which is otherwise unreproducible from a test.
+        /// </summary>
+        protected BehaviorTreeMachine SpawnDormant()
+        {
+            Agent = new GameObject("Agent");
+            Agent.SetActive(false);
+
+            return Agent.AddComponent<BehaviorTreeMachine>();
+        }
+
         protected static BehaviorTreeGraphAsset NewTree() =>
             ScriptableObject.CreateInstance<BehaviorTreeGraphAsset>();
 

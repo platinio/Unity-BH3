@@ -22,7 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override void OnEnter()
         {
-            timer = (float) Time.GetValue();
+            timer = Time.GetValue<float>();
         }
 
         public override ExecutionStatus OnUpdate()

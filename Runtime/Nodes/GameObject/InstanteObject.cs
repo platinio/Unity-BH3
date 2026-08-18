@@ -28,9 +28,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            var prefab = Prefab.GetValue() as GameObject;
-            Vector3 p = (Vector3) InstantiatePosition.GetValue();
-            Vector3 rotation = (Vector3)Rotation.GetValue();
+            var prefab = Prefab.GetValueOrDefault<GameObject>();
+            Vector3 p = InstantiatePosition.GetValue<Vector3>();
+            Vector3 rotation = Rotation.GetValue<Vector3>();
 
             Object.Instantiate(prefab, p, Quaternion.Euler(rotation));
             return ExecutionStatus.Success;

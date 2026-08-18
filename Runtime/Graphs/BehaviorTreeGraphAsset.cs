@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// Values this tree supplies for itself when the agent does not. Applied to the root tree's
-        /// declarations by <c>BehaviorTreeMachine.OverrideGraphAndSubGraphVariables</c>, and always losing to
+        /// declarations by <c>BehaviorTreeMachine.OverrideGraphVariables</c>, and always losing to
         /// the agent, so a branch can ship a sensible default and only genuinely agent-specific values need
         /// to appear in <see cref="requiredDeclarations"/>.
         /// </summary>

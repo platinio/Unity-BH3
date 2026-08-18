@@ -84,7 +84,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected virtual bool TryUpdateNavAgentPosition()
         {
-            Vector3 pos = (Vector3)NavPosition.GetValue();
+            Vector3 pos = NavPosition.GetValue<Vector3>();
             return navAgent.SetDestination(pos);
         }
     }

@@ -340,7 +340,7 @@ public class TargetInRangeGuard : ReactiveGuard
     {
         if (!VariableScope.TryGet("target", out var value) || value is not GameObject target) return false;
 
-        float range = (float)Range.GetValue();
+        float range = Range.GetValue<float>();
 
         return (target.transform.position - gameObject.transform.position).sqrMagnitude <= range * range;
     }
