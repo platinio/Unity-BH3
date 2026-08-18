@@ -44,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
                 
-                if (NavMesh.SamplePosition(randomPosition, out var hit, (int) SampleDistance.GetValue(), NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(randomPosition, out var hit, (float) SampleDistance.GetValue(), NavMesh.AllAreas))
                 {
                     SavePosition(hit.position);
                     return ExecutionStatus.Success;
