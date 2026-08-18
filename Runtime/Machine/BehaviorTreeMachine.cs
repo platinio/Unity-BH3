@@ -11,6 +11,18 @@ namespace ArcaneOnyx.BehaviorTree
         private BehaviorTreeGraph behaviorTreeGraph;
         private ExecutionStatus lastExecutionStatus = ExecutionStatus.Inactive;
         private BehaviorTreeGraphAsset graphInstance = null;
+
+        /// <summary>
+        /// Whether <see cref="Awake"/> has run. <see cref="Switch"/> refuses before it, because everything a
+        /// tree needs to come alive — the <c>Variables</c> component, the recorder — is set up there.
+        /// </summary>
+        private bool hasAwoken;
+
+        /// <summary>
+        /// Whether <see cref="Start"/> has run. <see cref="Switch"/> reads it to decide whether entering the
+        /// new tree is its job or still Start's, so a tree is entered exactly once however early it arrives.
+        /// </summary>
+        private bool hasStarted;
         
         public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
 
@@ -34,67 +46,145 @@ namespace ArcaneOnyx.BehaviorTree
             base.Awake();
             Variables = GetComponent<Variables>();
             Variables.declarations.Set("This", gameObject);
-            
-            if (hasGraph)
-            {
-                graphInstance = null;
-                OriginalMacro = nest.macro;
 
-                if (nest.macro != null)
-                {
-                    graphInstance = Instantiate(nest.macro);
-                    nest.SwitchToEmbed(graphInstance.graph);
-                }
-                
+            if (!hasGraph) return;
+
+            OriginalMacro = nest.macro;
+
+            // Before the scopes are built, because building them is when call sites are registered and a
+            // call site can only be registered against a recorder that already exists. Attached once per
+            // agent rather than per tree: Switch rebinds the new graph to this same recorder, so a
+            // recording spans the swap instead of restarting at it.
+            Debugging.BehaviorTreeRecorder.Attach(this, OriginalMacro != null ? OriginalMacro.name : name);
+
+            // Everything Switch depends on now exists, so it is allowed from here on.
+            hasAwoken = true;
+
+            AwakenTree(nest.macro);
+        }
+
+        /// <summary>
+        /// Brings <paramref name="macro"/> alive on this agent and makes it the tree <c>Update</c> ticks.
+        /// <para>
+        /// The single answer to "how does a tree come alive", shared by <see cref="Awake"/> and
+        /// <see cref="Switch"/>. It was written twice, and the second copy drifted: <c>Switch</c> skipped both
+        /// the <c>Instantiate</c> and the <c>OnAwake</c>, so a switched-in tree ran the shared project asset
+        /// with empty composite child lists and guards that had never been armed onto their owners — an agent
+        /// that silently ignored every precondition in the tree it had just been handed.
+        /// </para>
+        /// <para>
+        /// A null <paramref name="macro"/> is the embedded-graph case, not an error: the tree is authored into
+        /// the scene on <c>nest.embed</c>, there is nothing to clone, and <see cref="ReleaseTree"/> must not
+        /// destroy it because the agent does not own it.
+        /// </para>
+        /// </summary>
+        private void AwakenTree(BehaviorTreeGraphAsset macro)
+        {
+            // The try/catch spans the whole method, and is unconditional rather than editor-only. Both matter:
+            // ThrowIfCausesRecursion below throws for exactly the authoring mistake a designer is most likely
+            // to make, and a switch has already destroyed the outgoing tree by the time it does -- so an
+            // exception escaping here unnamed and unlogged leaves an agent with no tree and no explanation.
+            // The catch only adds the tree's name and rethrows, and that context is worth more in a player
+            // build, not less.
+            try
+            {
+                // Instantiated so per-agent runtime state -- composite indices, guard caches, WaitTime timers,
+                // all [DoNotSerialize] fields on node instances -- lives on a private copy. Running the asset
+                // directly makes one shared definition carry per-run state: two agents on the same tree
+                // overwrite each other, and in the editor the asset collects that state and dirties on disk.
+                graphInstance = macro != null ? Instantiate(macro) : null;
+
+                if (graphInstance != null) nest.SwitchToEmbed(graphInstance.graph);
+
                 behaviorTreeGraph = nest.embed;
-                var graph = graphInstance == null ? nest.embed : graphInstance.graph;
-                
+
                 //throws an exception if subgraphs causes recursion
-                graph.ThrowIfCausesRecursion();
-                
+                behaviorTreeGraph.ThrowIfCausesRecursion();
+
                 var nodes = behaviorTreeGraph.Nodes;
                 foreach (var node in nodes)
                 {
                     node.SetMachine(this);
                 }
 
-                // Before the scopes are built, because building them is when call sites are registered and a
-                // call site can only be registered against a recorder that already exists.
-                Debugging.BehaviorTreeRecorder.Attach(this, OriginalMacro != null ? OriginalMacro.name : name);
                 Debugging.BehaviorTreeRecorder.Bind(behaviorTreeGraph, FlightRecorder);
 
-               #if UNITY_EDITOR
-                try
-                {
-                    OverrideGraphAndSubGraphVariables(graphInstance, graph);
-                    behaviorTreeGraph.OnAwake();
-                }
-                catch (Exception e)
-                {
-                    string macroName = nest?.macro?.name;
-                    Debug.LogError($"BehaviorTree = {macroName} Method = OnAwake() Exception = {e}", gameObject);
-                    throw;
-                }
-                #else
-                OverrideGraphAndSubGraphVariables(graphInstance, graph);
+                // A fresh tree has not run, so it is not halted. Update stops ticking on a terminal root
+                // status and only this reopens it -- which is what lets a switch revive an agent whose
+                // previous tree finished.
+                lastExecutionStatus = ExecutionStatus.Inactive;
+
+                OverrideGraphVariables(graphInstance);
+                BuildVariableScopes(graphInstance, behaviorTreeGraph);
                 behaviorTreeGraph.OnAwake();
-                #endif
+            }
+            catch (Exception e)
+            {
+                string macroName = macro != null ? macro.name : null;
+                Debug.LogError($"BehaviorTree = {macroName} Method = AwakenTree() Exception = {e}", gameObject);
+
+                // Nothing half-built is left behind for Update to tick. A tree that never finished waking has
+                // empty composite child lists, so Entry would return Success on the very next frame and the
+                // agent would halt looking exactly like a tree that had simply finished -- the loudest failure
+                // in the codebase reduced to an agent standing still. Releasing also frees the clone, which
+                // ReleaseTree is otherwise the only thing that does.
+                ReleaseTree();
+
+                throw;
             }
         }
 
         /// <summary>
-        /// Builds the root scope and opens a nested one for every sub-tree.
+        /// Stops the tree this agent is running and frees it.
+        /// <para>
+        /// Exit before destroy, and in that order: exiting is what hands a running branch its <c>OnExit</c> so
+        /// it can put its own toys away, and <c>OnDestroy</c> alone never reaches that. The clone is then
+        /// released because the agent is the only owner of it -- one leaked <c>ScriptableObject</c> per swap is
+        /// invisible until a boss has changed phase a few hundred times.
+        /// </para>
+        /// <para>
+        /// Only <see cref="graphInstance"/> is destroyed. An embedded graph was authored into the scene and
+        /// belongs to it, and a <c>Destroy</c> aimed at a project asset is an error Unity refuses.
+        /// </para>
+        /// <para>
+        /// <b>This runs author-written logic during <c>OnDestroy</c>.</b> A node's <c>OnExit</c> can be an
+        /// arbitrary script graph (<c>VisualScriptingNode.OnExitGraph</c>), so an exit graph now fires while
+        /// the agent is being torn down as well as on a normal branch exit. That is the price of the fix — a
+        /// branch cannot both clean up after itself and never be told it stopped — but it means an exit graph
+        /// must not assume its sibling components are still alive, because destruction order between them is
+        /// not defined.
+        /// </para>
+        /// </summary>
+        private void ReleaseTree()
+        {
+            if (behaviorTreeGraph == null) return;
+
+            behaviorTreeGraph.OnExit();
+            behaviorTreeGraph.OnDestroy();
+
+            if (graphInstance != null) Destroy(graphInstance);
+
+            behaviorTreeGraph = null;
+            graphInstance = null;
+        }
+
+        /// <summary>
+        /// Builds the root variable scope and hands it to every node, so each sub-tree can open a nested one
+        /// from it.
         /// <para>
         /// The root scope holds the agent's variables, so anything an agent declares is visible to every
         /// branch however deeply nested. Each <c>RunBehaviorTreeGraphNode</c> then opens a child scope around
         /// its own instance, seeded with that branch's optional defaults — so a branch reads its own values
         /// first and the agent's only when it declares none, and its writes stay inside it.
         /// </para>
+        /// <para>
+        /// Scopes only. Pushing the agent's <c>Variables</c> into the tree's declarations is a separate step
+        /// with its own method, <see cref="OverrideGraphVariables"/>, and both are called from
+        /// <see cref="AwakenTree"/>.
+        /// </para>
         /// </summary>
-        private void OverrideGraphAndSubGraphVariables(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
+        private void BuildVariableScopes(BehaviorTreeGraphAsset graphAsset, BehaviorTreeGraph graph)
         {
-            OverrideGraphVariables(graphAsset);
-
             if (graph == null || graphAsset == null) return;
 
             var rootScope = new BehaviorTreeVariableScope(graphAsset.declarations);
@@ -120,29 +210,49 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Replaces the tree this agent is running: a boss changing phase, an NPC entering combat, a possessed
+        /// unit handed a different brain.
+        /// <para>
+        /// The whole of it is put the old tree down, bring the new one up, and enter it. Nothing about "how a
+        /// tree comes alive" is restated here -- that lives in <see cref="AwakenTree"/> and is shared with
+        /// <see cref="Awake"/>, because a second copy of that rule is exactly what went stale last time.
+        /// </para>
+        /// </summary>
         public void Switch(BehaviorTreeGraphAsset behaviorTreeGraphAsset)
         {
             if (behaviorTreeGraphAsset == null) return;
-            
-            graphInstance = behaviorTreeGraphAsset;
-            lastExecutionStatus = ExecutionStatus.Running;
-            behaviorTreeGraph = behaviorTreeGraphAsset.graph;
-            
-            var nodes = behaviorTreeGraph.Nodes;
 
-            foreach (var node in nodes)
+            // Refused rather than attempted, because succeeding here is worse than failing. Unity does not
+            // order Awake between components, so a caller in another component's Awake may land before ours:
+            // the Variables component this reads through would be unassigned, and -- since SwitchToEmbed
+            // clears nest.macro -- our own Awake would afterwards read that null as "embedded graph", drop the
+            // reference to the instance made here and leave it with no owner to free it. Silent corruption,
+            // decided by component order. Saying so is the only honest answer.
+            if (!hasAwoken)
             {
-                node.SetMachine(this);
+                Debug.LogError(
+                    $"Switch was called on '{name}' before its own Awake had run, so the agent is not ready to "
+                    + "receive a tree and the call was ignored. Unity does not order Awake between components "
+                    + "-- call Switch from Start or later.", gameObject);
+
+                return;
             }
 
-            Debugging.BehaviorTreeRecorder.Bind(behaviorTreeGraph, FlightRecorder);
+            ReleaseTree();
+            AwakenTree(behaviorTreeGraphAsset);
 
-            OverrideGraphAndSubGraphVariables(behaviorTreeGraphAsset, behaviorTreeGraphAsset.graph);
-            nest.SwitchToEmbed(behaviorTreeGraph);
+            // Entered here rather than inside AwakenTree because Awake must not: Unity calls Start afterwards
+            // and that is where the first tree is entered. Guarding on hasStarted keeps it to exactly one
+            // entry per tree in the window between the two, where a caller in another component's Start or in
+            // OnEnable can otherwise be entered a second time by our own Start.
+            if (hasStarted) behaviorTreeGraph.OnEnter();
         }
 
         private void Start()
         {
+            hasStarted = true;
+
             if (hasGraph && behaviorTreeGraph != null)
             {
                 behaviorTreeGraph.OnEnter();
@@ -190,17 +300,12 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected override void OnDestroy()
         {
+            // Detached first so the registry is cleaned even if a node's exit throws on the way down.
             Debugging.BehaviorTreeRecorder.Detach(this);
 
-            if (hasGraph && behaviorTreeGraph != null)
-            {
-                behaviorTreeGraph.OnDestroy();
-            }
-
-            if (graphInstance)
-            {
-                Destroy(graphInstance);
-            }
+            // The same teardown a switch performs -- a dying agent owes its running branch the same OnExit a
+            // replaced one does, and keeping a second hand-rolled copy here is how Switch drifted from Awake.
+            ReleaseTree();
         }
 
         private void OnApplicationPause(bool pauseStatus)
