@@ -34,11 +34,19 @@ namespace ArcaneOnyx.BehaviorTree
             var valueName = ValueName.GetValueOrDefault<string>();
             var animatorValue = Value.GetValue();
             
+            // else if, and the error in a final else. A boxed value is exactly one type, so these were never
+            // alternatives that could both run -- but as three independent ifs with no return, the error ran
+            // unconditionally, including after a set that worked. Every entry of this node logged a failure it
+            // had not had, and Debug.LogError is expensive enough that across many agents it cost real time.
             if (animatorValue is int intValue) animator.SetInteger(valueName, intValue);
-            if (animatorValue is float floatValue) animator.SetFloat(valueName, floatValue);
-            if (animatorValue is bool boolValue) animator.SetBool(valueName, boolValue);
-            
-            Debug.LogError("Cant convert animator value to int, float or bool");
+            else if (animatorValue is float floatValue) animator.SetFloat(valueName, floatValue);
+            else if (animatorValue is bool boolValue) animator.SetBool(valueName, boolValue);
+            else
+            {
+                Debug.LogError(
+                    $"'{NodeName}' cannot set '{valueName}': an animator parameter is int, float or bool, and "
+                    + $"Value is {(animatorValue == null ? "null" : animatorValue.GetType().Name)}.", gameObject);
+            }
         }
 
         public override ExecutionStatus OnUpdate()

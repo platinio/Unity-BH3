@@ -130,6 +130,39 @@ public class EnemyController : MonoBehaviour
 > by [The Why Panel](why-panel.md). See
 > [Best Practices](best-practices.md#give-each-branch-its-own-tree-asset).
 
+#### What a switch does
+
+`Switch` puts the old tree down and brings the new one up, in that order. Concretely:
+
+1. **The outgoing branch is stopped.** Whatever was running receives its `OnExit`, so a node gets the chance
+   to undo what it started — stop a `NavMeshAgent`, end an animation, release a claim. A tree that is merely
+   abandoned never gets this, and the agent keeps acting on decisions made by a tree it is no longer running.
+2. **The outgoing tree is destroyed.** It was a per-agent clone and nothing else refers to it.
+3. **The incoming asset is instantiated.** The agent runs a private copy, exactly as it does for the tree
+   assigned in the inspector — so two agents switched to the same asset do not share node state, and the
+   asset on disk never accumulates runtime state.
+4. **The new tree is awoken and entered.** `OnAwake` is what builds each composite's child list from the
+   transitions and arms each guard onto its owner, so a switched-in tree honours its preconditions from its
+   first tick.
+5. **A halted agent is revived.** `Update` stops ticking once the root returns `Success` or `Failure`;
+   switching clears that, which is what makes a one-shot tree handing over to the next phase work.
+
+The machine enters the tree exactly once regardless of whether the switch happened before or after Unity's
+`Start`, so calling `Switch` from `Start`, `OnEnable`, a coroutine or an event handler is all fine.
+
+> **Do not call `Switch` from `Awake`.** Unity does not order `Awake` between components, so the call may
+> land before the machine has set itself up. It is refused with an error rather than served, because
+> serving it would corrupt the agent in a way that depends on component order. Use `Start` or later.
+
+> `OriginalMacro` keeps reporting the asset assigned in the inspector — a switch does not rewrite it.
+
+#### Exit graphs run on teardown too
+
+A node's `OnExit` can be an author-written script graph (`On Exit Graph` on the Visual Scripting nodes).
+Because a replaced *and* a destroyed tree are both now stopped properly, those graphs fire on a switch and
+on agent destruction, not only when a branch finishes normally. An exit graph must not assume the agent's
+other components are still alive — during destruction, the order between them is undefined.
+
 ---
 
 ## `BehaviorTreeGraphAsset`

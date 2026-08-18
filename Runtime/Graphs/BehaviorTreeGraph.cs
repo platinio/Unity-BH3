@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
@@ -422,6 +422,26 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             EntryNode.OnNodeEnter();
+        }
+
+        /// <summary>
+        /// Stops the tree, giving whatever was still running its <c>OnExit</c>.
+        /// <para>
+        /// Exiting the entry node is enough to reach the whole live branch:
+        /// <see cref="ContainerNode.OnExit"/> exits its children in turn, and
+        /// <see cref="GraphCore.BaseGraphNode{TGraph,TNode,TNodeTransition}.OnNodeExit"/> returns immediately
+        /// for a node that never started — so the walk touches exactly what was running and nothing else.
+        /// </para>
+        /// <para>
+        /// The mirror of <see cref="OnEnter"/>, and the only way to put a tree down cleanly.
+        /// <see cref="OnDestroy"/> cascades <c>OnDestroy</c> and nothing else, so a tree dropped through that
+        /// alone never learns it stopped: a <c>NavMeshAgent</c> is left walking, an animation left playing.
+        /// </para>
+        /// </summary>
+        public void OnExit()
+        {
+            // Guarded, unlike OnEnter, which should fail loudly on a graph that has no entry node.
+            EntryNode?.OnNodeExit();
         }
 
         public override ExecutionStatus OnUpdate()
