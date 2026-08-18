@@ -54,10 +54,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            // A duration of zero is both this node's own default and a reasonable thing to ask for ("face
-            // there now"), so it is answered rather than guarded against. Falling through would compute
-            // 0 / 0 = NaN and Slerp writes a NaN t straight into the transform's rotation -- a corrupt
-            // rotation on the very tick the node reports Success.
             if (duration <= 0.0f)
             {
                 targetTransform.rotation = targetRotation;
