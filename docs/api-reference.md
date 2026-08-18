@@ -65,6 +65,10 @@ protected override void Definition()
 }
 ```
 
+Every key must be unique across the node. `nameof` gives you that as long as a subclass does not reuse a
+name its base class already declared; if one does, the duplicate declaration throws and the node ends up
+with no ports at all.
+
 Reading a port at runtime:
 
 ```csharp
