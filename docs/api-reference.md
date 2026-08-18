@@ -31,16 +31,21 @@ public override void OnExit()               // when the node ends
 
 Return `Running` from `OnUpdate` for anything spanning more than one frame.
 
-**`OnUpdate` only ever runs on a node that entered.** If `OnEnter` throws, the node has not entered: it is
-left not-running, its status becomes `Exception`, and its parent retries the entry on the next frame rather
-than ticking it. That matters because `OnEnter` is where a node sets up the state `OnUpdate` reads — a
-`Wait` whose timer was never assigned would count down from zero and report `Success`, so the branch would
-proceed as though it had waited. A failure that repeats every frame is one you can find; one that silently
-succeeds is not.
+**`OnUpdate` only ever runs on a node that entered**, so it may assume everything `OnEnter` set up. Entry
+is not guaranteed, in two ways. A guard on the node can turn it away at the door; and if `OnEnter` throws
+the node has not entered either, so it is left not-running and its status becomes `Exception`. In both
+cases the parent retries the entry on a later tick rather than ticking past it.
+
+That matters because `OnEnter` is where a node sets up the state `OnUpdate` reads — a `Wait` whose timer was
+never assigned would count down from zero and report `Success`, so the branch would proceed as though it had
+waited. A failure that repeats every frame is one you can find; one that silently succeeds is not.
 
 For the same reason a node that failed to enter is not exited either — `OnExit` would be tearing down an
 entry that never completed. A container that had already entered some of its children when a later one
 threw does exit those, so nothing is left half-started.
+
+If you write a container of your own, tick its children through `ContainerNode.TickChild` — see
+[Custom Nodes](custom-nodes.md#a-custom-decorator).
 
 Declare ports in `Definition()`, always calling `base.Definition()` first:
 

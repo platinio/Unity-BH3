@@ -15,17 +15,17 @@ namespace ArcaneOnyx.BehaviorTree
             if (GetChildren().Count == 0) return ExecutionStatus.Success; 
             
             var task = GetChildren()[0];
-            var result = task.OnUpdateInternal();
+            var result = TickChild(task);
 
             if (result != ExecutionStatus.Failure)
             {
+                // Exit only. The next tick enters it -- see ContainerNode.TickChild -- so a restart cannot
+                // be refused on one frame and then ticked as though it had taken on the next.
                 if (result == ExecutionStatus.Success)
                 {
-                    //lets enter and exit the node to prepare to run again
                     task.OnNodeExit();
-                    task.OnNodeEnter();
                 }
-            
+
                 return ExecutionStatus.Running;
             }
 

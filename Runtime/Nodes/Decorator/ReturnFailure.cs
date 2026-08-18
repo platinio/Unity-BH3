@@ -15,7 +15,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (GetChildren().Count == 0) return ExecutionStatus.Failure; 
             
             var task = GetChildren()[0];
-            var result = task.OnUpdateInternal();
+            var result = TickChild(task);
 
             if (result == ExecutionStatus.Failure || result == ExecutionStatus.Success)
             {

@@ -160,7 +160,6 @@ public class MaxAttempts : Decorator
     public override void OnEnter()
     {
         used = 0;
-        base.OnEnter();
     }
 
     public override ExecutionStatus OnUpdate()
@@ -168,7 +167,7 @@ public class MaxAttempts : Decorator
         if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
         var child = GetChildren()[0];
-        var result = child.OnUpdateInternal();
+        var result = TickChild(child);
 
         if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
         if (result == ExecutionStatus.Success) return ExecutionStatus.Success;
@@ -177,11 +176,23 @@ public class MaxAttempts : Decorator
         if (used >= Attempts.GetValue<int>()) return ExecutionStatus.Failure;
 
         child.OnNodeExit();
-        child.OnNodeEnter();
         return ExecutionStatus.Running;
     }
 }
 ```
+
+> **Tick children through `TickChild`, never `OnUpdateInternal` directly.** It enters the child first if the
+> child is not already running, and that is the only thing standing between you and a node whose `OnUpdate`
+> runs without its `OnEnter`. An entry can be *refused* — a guard on the child says no and it never starts —
+> and a decorator that entered its child once and then ticked it every frame afterwards has no way to notice.
+> The guard turns true a frame later, the tick sails through, and a `WaitTime` counts down a timer it never
+> set and reports that the wait elapsed. A convention test fails the build if a new container calls
+> `OnUpdateInternal` directly.
+>
+> The same rule is why the restart above is `child.OnNodeExit()` alone. Re-entering the child here would
+> decide *this child may start* on one frame and act on that decision on the next; leaving it to the next
+> `TickChild` asks the guard at the moment the answer is used. It costs nothing — the child's next `OnUpdate`
+> lands on the following frame either way — and it means `OnEnter` never runs for a child that will not run.
 
 > **`MaxChildrenLimit => 1` is required on a decorator.** The architecture tests enforce the declaration, and
 > without it a second child can be attached that will never run.

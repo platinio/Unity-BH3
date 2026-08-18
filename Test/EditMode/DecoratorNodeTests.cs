@@ -77,8 +77,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                     "Repeater always reports Running, no matter what the child returns.");
             }
 
-            // Entered once by OnEnter, then re-entered after each completing tick.
-            Assert.AreEqual(ticks + 1, child.EnterCalls, "Repeater should restart the child on every completion.");
+            // One entry per tick, because the tick is what enters the child -- see ContainerNode.TickChild.
+            // It used to be entered once up front and then restarted at the end of each completing tick,
+            // which is the same count offset by one and left the child sitting entered across the gap
+            // between two frames.
+            Assert.AreEqual(ticks, child.EnterCalls, "Repeater should restart the child on every completion.");
         }
 
         [Test]
