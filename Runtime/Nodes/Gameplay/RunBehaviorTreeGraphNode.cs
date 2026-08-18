@@ -339,6 +339,44 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// Releases the instance this call site made, and everything nested inside it.
+        /// <para>
+        /// The clone is per call site per agent — that is what stops two uses of one branch sharing state,
+        /// and it is also why nothing else can free it. The machine destroys only the root instance it made
+        /// itself, and <see cref="BehaviorTreeGraph.OnDestroy"/> cascades node destruction without knowing
+        /// what any node owns. So until this existed, every sub-tree clone outlived the agent that created
+        /// it, for the whole session — multiplying with exactly the nested, modular trees this tool
+        /// encourages, and invisible until a wave-based scene has spawned a few hundred agents.
+        /// </para>
+        /// <para>
+        /// Reads the <em>field</em>, never <see cref="BehaviorTreeGraphAssetInstance"/>. The property's getter
+        /// instantiates on demand, so asking it here would manufacture a clone purely in order to destroy it —
+        /// and on a call site the agent never entered, that is a clone brought into existence for the first
+        /// time at teardown. <c>ExitingASubTreeThatNeverRanDoesNotInstantiateIt</c> pins the same trap for
+        /// <see cref="OnExit"/>.
+        /// </para>
+        /// </summary>
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+
+            if (behaviorTreeGraphAssetInstance == null) return;
+
+            // Innermost first: a nested call site inside this branch owns a clone of its own, and this walk is
+            // the only thing that reaches it. Destroying the outer instance first would cut the path to it and
+            // leak precisely the deep trees that cost the most.
+            behaviorTreeGraphAssetInstance.graph.OnDestroy();
+
+            // Outside play mode Destroy refuses and the object survives, which would make this method quietly
+            // do nothing in exactly the edit-mode tests written to prove it works. ReactiveGuard reads the
+            // clock through the same switch for the same reason.
+            if (UnityEngine.Application.isPlaying) Object.Destroy(behaviorTreeGraphAssetInstance);
+            else Object.DestroyImmediate(behaviorTreeGraphAssetInstance);
+
+            behaviorTreeGraphAssetInstance = null;
+        }
+
         public override void SetMachine(IGraphMachine machine)
         {
             base.SetMachine(machine);
