@@ -20,10 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
-            for (int i = 0; i < GetChildren().Count; i++)
-            {
-                GetChildren()[i].OnNodeEnter();
-            }
+            EnterChildren();
         }
 
         public override void OnExit()

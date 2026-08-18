@@ -35,10 +35,15 @@ namespace ArcaneOnyx.BehaviorTree
                 // re-roll. Any multi-frame action would hang forever.
                 // The flag is only ever false here, on that resume; after a Success below it is set back to
                 // true so the next child does get entered. Pinned by ARunningChild_IsTickedAgainButNotReEntered.
+                // Cleared *after* the entry, not before. If OnNodeEnter throws — an unfed required port, a
+                // guard whose condition faults — clearing first would leave this sequence believing it had
+                // entered a child it had not, and the next tick would go straight to OnUpdateInternal on a
+                // node whose OnEnter never ran. That is the silent-success hazard again, arriving through a
+                // cached flag rather than through IsRunning: the entry is retried, visibly, every frame.
                 if (callOnEnter)
                 {
-                    callOnEnter = false;
                     task.OnNodeEnter();
+                    callOnEnter = false;
                 }
 
                 var result = task.OnUpdateInternal();
