@@ -93,6 +93,118 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
         }
 
+        /// <summary>
+        /// Two nodes cannot claim the same create-menu path.
+        ///
+        /// <para>
+        /// <c>SetRotation</c> registered on <c>"Unity/Transform/Rotate"</c>, the path <c>Rotate</c> already
+        /// owned, and shadowed its <c>NodeName</c> too. One of the two was therefore unreachable from the
+        /// menu, and — because both drew as "Rotate" on the canvas — an author looking at an existing tree
+        /// could not tell which node it actually contained. Neither symptom looks like a bug from the outside;
+        /// it looks like the node behaving strangely.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void CreateMenuNodes_DoNotShareAMenuPath()
+        {
+            var duplicates = CreateMenuNodes()
+                .GroupBy(t => t.GetCustomAttribute<GraphCreateMenu>(false).CreateMenuValue)
+                .Where(group => group.Count() > 1)
+                .Select(group => $"'{group.Key}' is claimed by {string.Join(", ", group.Select(t => t.Name))}")
+                .ToArray();
+
+            CollectionAssert.IsEmpty(duplicates,
+                "Each create-menu path belongs to exactly one node. A shared path makes one of them "
+                + "unreachable from the menu and makes authored assets ambiguous to read:\n"
+                + string.Join("\n", duplicates));
+        }
+
+        /// <summary>
+        /// Every create-menu node defines successfully.
+        ///
+        /// <para>
+        /// <c>Define()</c> catches whatever <c>Definition()</c> throws, logs a warning and then
+        /// <c>Undefine()</c>s the node — so a node that fails to define does not announce itself, it simply
+        /// arrives with no ports at all. <c>Rotate</c> shipped that way: it declared
+        /// <c>ValueInput&lt;float&gt;(nameof(Speed), 0)</c>, and because <c>SetDefaultValue</c> type-checks the
+        /// default against the port, a boxed <c>int</c> on a <c>float</c> port threw inside <c>Definition</c>.
+        /// One character, and every port on the node was gone.
+        /// </para>
+        ///
+        /// <para>
+        /// This is the cheapest possible test of a node — construct it and define it — and the whole
+        /// <c>Unity/*</c> leaf family had nothing even this cheap, which is precisely why several of them had
+        /// never worked.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void CreateMenuNodes_DefineSuccessfully()
+        {
+            var failed = new List<string>();
+
+            foreach (var type in CreateMenuNodes())
+            {
+                if (!typeof(BehaviorTreeNode).IsAssignableFrom(type) || type.IsAbstract) continue;
+
+                var node = (BehaviorTreeNode)Activator.CreateInstance(type);
+                node.Define();
+
+                if (!node.isDefined) failed.Add(type.Name);
+            }
+
+            CollectionAssert.IsEmpty(failed,
+                "These nodes threw inside Definition(). Define() swallows that and undefines the node, so "
+                + "they reach a graph with no ports rather than reporting anything (check the console for "
+                + "'Failed to define'):\n" + string.Join("\n", failed));
+        }
+
+        /// <summary>
+        /// A node that exposes a port property must actually declare that port in <c>Definition()</c>.
+        ///
+        /// <para>
+        /// <c>Rotate</c> exposed an <c>Axis</c> input and never assigned it, so <c>OnEnter</c>'s
+        /// <c>(Vector3)Axis.GetValue()</c> was a guaranteed <see cref="NullReferenceException"/> — the node
+        /// broke its branch the first time anything entered it, and could not have worked since the port was
+        /// added. Nothing catches this at compile time: the property is simply left null.
+        /// </para>
+        ///
+        /// <para>
+        /// Checked structurally rather than by ticking, because it needs no scene, no machine and no
+        /// arguments — which is what makes it cheap enough to cover every node in the assembly rather than
+        /// the handful someone remembered to write a test for.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void CreateMenuNodes_DeclareEveryPortTheyExpose()
+        {
+            var undeclared = new List<string>();
+
+            foreach (var type in CreateMenuNodes())
+            {
+                if (!typeof(BehaviorTreeNode).IsAssignableFrom(type) || type.IsAbstract) continue;
+
+                var node = (BehaviorTreeNode)Activator.CreateInstance(type);
+                node.Define();
+
+                var portProperties = type
+                    .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(p => typeof(ValueInput).IsAssignableFrom(p.PropertyType)
+                                || typeof(ValueOutput).IsAssignableFrom(p.PropertyType));
+
+                foreach (var property in portProperties)
+                {
+                    if (property.GetValue(node) != null) continue;
+
+                    undeclared.Add($"{type.Name}.{property.Name} ({property.PropertyType.Name})");
+                }
+            }
+
+            CollectionAssert.IsEmpty(undeclared,
+                "These nodes expose a port property that Definition() never assigns, so the first read of it "
+                + "throws NullReferenceException and takes the branch down with it:\n"
+                + string.Join("\n", undeclared));
+        }
+
         [Test]
         public void Decorators_WrapExactlyOneChild()
         {
