@@ -120,6 +120,39 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
+        /// No two create-menu nodes answer to the same <c>NodeName</c>.
+        ///
+        /// <para>
+        /// The menu path decides where a node is created from; <c>NodeName</c> is the label it wears on the
+        /// canvas afterwards, and it is the only thing distinguishing two nodes once they are both sitting in
+        /// a graph. <c>FindGameObjectWithTag</c> shipped calling itself "Find Game Object", copy-pasted from
+        /// its sibling — so the two would have been indistinguishable to read, and a tree using both would
+        /// show the same word twice with different behaviour behind it.
+        /// </para>
+        ///
+        /// <para>
+        /// That one escaped every gate here because it carried no <c>[GraphCreateMenu]</c> at all, which made
+        /// it invisible to this whole fixture. Giving it a menu entry is what brings it under the rules, and
+        /// this is the rule its name was breaking.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void CreateMenuNodes_DoNotShareANodeName()
+        {
+            var duplicates = CreateMenuNodes()
+                .Select(type => new { type, node = (BehaviorTreeNode)Activator.CreateInstance(type) })
+                .GroupBy(entry => entry.node.NodeName)
+                .Where(group => group.Count() > 1)
+                .Select(group => $"'{group.Key}' is worn by {string.Join(", ", group.Select(e => e.type.Name))}")
+                .ToArray();
+
+            CollectionAssert.IsEmpty(duplicates,
+                "A node's NodeName is its label on the canvas, and two nodes wearing the same one are "
+                + "indistinguishable once placed. Usually a copy-paste that forgot to rename:\n"
+                + string.Join("\n", duplicates));
+        }
+
+        /// <summary>
         /// Every create-menu node defines successfully.
         ///
         /// <para>
