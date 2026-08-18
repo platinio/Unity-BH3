@@ -176,6 +176,23 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    /// <summary>
+    /// Enters normally and throws on the way out. Models the second fault in an unwind: the container is
+    /// already exiting the children it entered because a later one failed to enter.
+    /// </summary>
+    internal sealed class ThrowsOnExitNode : BehaviorTreeNode
+    {
+        public int EnterCalls { get; private set; }
+
+        public override string NodeName => "Throws On Exit Test Node";
+
+        public override void OnEnter() => EnterCalls++;
+
+        public override void OnExit() => throw new InvalidOperationException("OnExit failed");
+
+        public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+    }
+
     /// <summary>A <see cref="Condition"/> whose <see cref="Condition.Evaluate"/> returns a fixed value.</summary>
     internal sealed class FixedCondition : Condition
     {

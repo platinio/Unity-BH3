@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
+using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -99,7 +101,10 @@ namespace ArcaneOnyx.BehaviorTree
                 // clears its running flag on that path -- and OnNodeExit would do nothing for it anyway.
                 for (int i = 0; i < entered; i++)
                 {
-                    toEnter[i].OnNodeExit();
+                    // The sweep has to finish even if an exit throws: a second fault must not strand the
+                    // siblings this method exists to release, and the entry exception is the diagnosis.
+                    try { toEnter[i].OnNodeExit(); }
+                    catch (Exception exitException) { Debug.LogException(exitException); }
                 }
 
                 throw;

@@ -1,7 +1,9 @@
 using System;
+using System.Text.RegularExpressions;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
@@ -352,6 +354,49 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "the first child got in before the second failed, and nothing else will ever exit it: the "
                 + "container is not running, so its own exit sweep does not run.");
             Assert.AreEqual(1, first.ExitCalls, "so the container has to exit it on the way out.");
+        }
+
+        /// <summary>
+        /// The unwind finishes even when one of the exits it performs throws as well.
+        ///
+        /// <para>
+        /// Exiting a child runs author code, and <c>BaseGraphNode.OnNodeExit</c> lets whatever it throws
+        /// out. A bare sweep therefore stops at the first exit that faults, stranding every sibling after
+        /// it — the exact bug the sweep exists to prevent, one level deeper — and the secondary exception
+        /// replaces the entry failure, so the log names the wrong node. The window needs two throws, so it
+        /// is narrow; but a sweep that only works while nothing else goes wrong is not an invariant.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void AnUnwindKeepsGoingWhenAnExitThrowsToo()
+        {
+            var graph = new BehaviorTreeGraph();
+            var parallel = AddNode<ParallelSequence>(graph);
+
+            var faultsOnTheWayOut = new ThrowsOnExitNode { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
+            var wouldBeStranded = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
+            var failsToEnter = new ThrowsOnEnterNode { Position = new Rect(400.0f, 300.0f, 150.0f, 100.0f) };
+            graph.Nodes.Add(faultsOnTheWayOut);
+            graph.Nodes.Add(wouldBeStranded);
+            graph.Nodes.Add(failsToEnter);
+
+            Connect(graph, graph.EntryNode, parallel);
+            Connect(graph, parallel, faultsOnTheWayOut);
+            Connect(graph, parallel, wouldBeStranded);
+            Connect(graph, parallel, failsToEnter);
+
+            graph.OnAwake();
+
+            LogAssert.Expect(LogType.Exception, new Regex("InvalidOperationException: OnExit failed"));
+
+            var thrown = Assert.Throws<InvalidOperationException>(() => parallel.OnNodeEnter());
+
+            Assert.AreEqual("OnEnter failed", thrown.Message,
+                "the entry failure is the diagnosis; a fault during the cleanup must not replace it.");
+
+            Assert.AreEqual(1, wouldBeStranded.ExitCalls,
+                "the sibling entered before the first child faulted on exit, and the sweep is its only way out.");
+            Assert.IsFalse(wouldBeStranded.IsRunning);
         }
 
         #endregion
