@@ -45,7 +45,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private bool IsFacingTarget()
         {
-            Transform selectedTarget = TransformTarget.GetValue() as Transform;
+            Transform selectedTarget = TransformTarget.GetValueOrDefault<Transform>();
             if (selectedTarget == null) return true;
             
             Vector3 targetPosition = selectedTarget.position;
@@ -54,14 +54,14 @@ namespace ArcaneOnyx.BehaviorTree
             Vector2 dir2D = new Vector2(dir.x, dir.z).normalized;
             Vector2 thisDir = new Vector2(transform.forward.x, transform.forward.z).normalized;
 
-            float acceptableRotation = (float) AcceptableRotation.GetValue();
+            float acceptableRotation = AcceptableRotation.GetValue<float>();
             
             return Vector2.Dot(dir2D, thisDir) > acceptableRotation;
         }
 
         private void FaceTransformTarget()
         {
-            Transform selectedTarget = TransformTarget.GetValue() as Transform;
+            Transform selectedTarget = TransformTarget.GetValueOrDefault<Transform>();
             if (selectedTarget == null) return;
 
             Vector3 targetPosition = selectedTarget.position;
@@ -69,8 +69,8 @@ namespace ArcaneOnyx.BehaviorTree
             Vector3 dir = (targetPosition - transform.position).normalized;
             Quaternion desireRot = Quaternion.LookRotation(dir);
 
-            Vector3 rotationOffset = (Vector3) RotationOffset.GetValue();
-            float rotationSpeed = (float) RotationSpeed.GetValue();
+            Vector3 rotationOffset = RotationOffset.GetValue<Vector3>();
+            float rotationSpeed = RotationSpeed.GetValue<float>();
             
             transform.rotation = Quaternion.RotateTowards(transform.rotation, desireRot * Quaternion.Euler(rotationOffset), rotationSpeed * Time.deltaTime);
         }

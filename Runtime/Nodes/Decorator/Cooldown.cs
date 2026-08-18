@@ -60,7 +60,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
 
             task.OnNodeExit();
-            cooldownEndTime = Time.time + (float) Duration.GetValue();
+            cooldownEndTime = Time.time + Duration.GetValue<float>();
 
             return result;
         }

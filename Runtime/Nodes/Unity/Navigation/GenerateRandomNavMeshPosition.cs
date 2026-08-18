@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -43,17 +43,13 @@ namespace ArcaneOnyx.BehaviorTree
         {
             // Read once rather than per iteration: the loop condition re-evaluated the port every pass, and a
             // port read can reach a variable lookup or a whole script graph.
-            int maxTries = (int) MaxTries.GetValue();
-
-            // (float), not (int). GetValue returns the raw boxed object and unboxing does not convert, so
-            // casting a boxed float to int throws InvalidCastException -- which this node did on its first
-            // tick with its own default, before anyone connected anything to it.
-            float sampleDistance = (float) SampleDistance.GetValue();
+            int maxTries = MaxTries.GetValue<int>();
+            float sampleDistance = SampleDistance.GetValue<float>();
 
             for (int i = 0; i < maxTries; i++)
             {
                 Vector2 dir = Random.insideUnitCircle;
-                float d = Random.Range((float) MinDistance.GetValue(), (float)MaxDistance.GetValue());
+                float d = Random.Range(MinDistance.GetValue<float>(), MaxDistance.GetValue<float>());
 
                 Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
 
@@ -69,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void SavePosition(Vector3 value)
         {
-            SaveVariable((string)PositionKey.GetValue(), VariableKind, value);
+            SaveVariable(PositionKey.GetValue<string>(), VariableKind, value);
         }
     }
 }

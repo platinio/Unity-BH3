@@ -34,7 +34,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             Value = ValueInput<Object>(nameof(Value), null);
 
-            Result = ValueOutput<bool>(nameof(Result), () => Value.GetValue() as Object != null);
+            Result = ValueOutput<bool>(nameof(Result), () => Value.GetValueOrDefault<Object>() != null);
         }
     }
 }

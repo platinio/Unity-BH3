@@ -77,6 +77,10 @@ public class DealDamageNode : GameplayNode
 
 `Description` is optional but worth setting — it shows in the Graph Inspector when the node is selected.
 
+Read every port with `GetValue<T>()` at the type the port declares, as above. Casting `GetValue()` compiles
+and then throws on any connection whose types merely convert — see
+[What "compatible" means](ports-and-wiring.md#what-compatible-means).
+
 Note that `Target` declares **no default**, so it must be connected; `Damage` declares `10f`, so it need not
 be. That choice is part of your node's contract.
 

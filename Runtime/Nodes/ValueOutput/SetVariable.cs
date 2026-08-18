@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
        
         public override ExecutionStatus OnUpdate()
         {
-            string key = (string) Key.GetValue();
+            string key = Key.GetValue<string>();
             object value = Value.GetValue();
 
             // Same switch as GameplayNode.SaveVariable, which is why this defers to it: two copies of the

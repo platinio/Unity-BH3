@@ -44,8 +44,8 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             
             targetTransform = GetComponent<Transform>(Target);
-            speed = (float) Speed.GetValue();
-            axis = (Vector3)Axis.GetValue();
+            speed = Speed.GetValue<float>();
+            axis = Axis.GetValue<Vector3>();
         }
 
         public override ExecutionStatus OnUpdate()

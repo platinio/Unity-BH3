@@ -31,7 +31,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
 
             var animator = GetComponent<Animator>(Animator);
-            var valueName = ValueName.GetValue() as string;
+            var valueName = ValueName.GetValueOrDefault<string>();
             var animatorValue = Value.GetValue();
             
             // else if, and the error in a final else. A boxed value is exactly one type, so these were never

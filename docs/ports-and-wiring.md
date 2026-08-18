@@ -60,6 +60,37 @@ from — it just calls `GetValue<float>()`.
 > connected — reading it otherwise throws. See
 > [Ports you must connect](node-reference.md#ports-you-must-connect).
 
+### What "compatible" means
+
+The canvas lets you wire an output into an input whenever the two types are **convertible**, not only when
+they are identical. `GetValue<T>()` applies exactly the same rule, so anything the editor let you draw can
+be read:
+
+| You wired | Into a port of | What happens |
+|---|---|---|
+| `int` | `float` | widened |
+| `float` | `int` | rounded, the way `Convert.ChangeType` rounds |
+| `GameObject` | `Transform` | resolved through `GetComponent` |
+| `Vector3` | `Vector2` | the `z` is dropped |
+| `Transform` | `Object` | passed through unchanged |
+
+Reading a port of one type as another is the node's own business and always converts the same way, so
+`Speed.GetValue<float>()` is correct whether the wire carries a float, an int, or a Visual Scripting value
+of unknown type.
+
+> **Always read a port with `GetValue<T>()`, never by casting `GetValue()`.** A plain
+> `(float) Speed.GetValue()` throws `InvalidCastException` on every one of the rows above: `GetValue()`
+> hands back a boxed object, and C# unboxing does not convert. This is enforced by a test.
+
+Two things it deliberately does **not** do. It never invents a value for an unconnected, defaultless port —
+that still throws, because a missing wire is an authoring mistake worth reporting. And it never quietly
+zeroes a value it cannot use: reading a port that holds `"soon"` as a `float` throws, and the message names
+the node, the port, and both types.
+
+For readers where an unusable value simply means "nothing here" — a target that could not be resolved, say —
+use `GetValueOrDefault<T>()`, which converts identically but answers `default` instead of throwing. That is
+the converting replacement for `GetValue() as T`.
+
 ## Value outputs
 
 A `ValueOutput` is a port a node offers to others.

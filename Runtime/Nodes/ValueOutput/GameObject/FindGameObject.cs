@@ -24,7 +24,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             Output = ValueOutput<GameObject>(nameof(Output), () =>
             {
-                string gameObjectName = Name.GetValue() as string;
+                string gameObjectName = Name.GetValueOrDefault<string>();
                 return GameObject.Find(gameObjectName);
             });
         }
