@@ -31,6 +31,17 @@ namespace ArcaneOnyx.BehaviorTree
         public BehaviorTreeGraphAsset OriginalMacro { get; private set; }
 
         /// <summary>
+        /// The agent variable every machine publishes itself under, so a tree can read the GameObject it is
+        /// running on.
+        ///
+        /// <para>
+        /// A const because it is a contract between this line and every read site, and a misspelling on
+        /// either side of a string literal compiles and then simply finds nothing.
+        /// </para>
+        /// </summary>
+        public const string SelfVariableKey = "This";
+
+        /// <summary>
         /// This agent's black box, or null outside the editor and dev builds. Assigned through
         /// <see cref="Debugging.BehaviorTreeRecorder"/>, which is what makes it disappear from a shipped build.
         /// </summary>
@@ -45,7 +56,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Awake();
             Variables = GetComponent<Variables>();
-            Variables.declarations.Set("This", gameObject);
+            Variables.declarations.Set(SelfVariableKey, gameObject);
 
             if (!hasGraph) return;
 
