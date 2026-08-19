@@ -50,6 +50,7 @@ namespace ArcaneOnyx.BehaviorTree
         private Guid callSitesNode;
         private int callSitesTick = -1;
         private int callSitesEventCount = -1;
+        private int callSitesDropped = -1;
 
         private GUIStyle wrapped;
         private GUIStyle headline;
@@ -535,6 +536,15 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         ///
         /// <para>
+        /// The dropped count is in the key because this list can shrink as well as grow. Once the ring is
+        /// full <c>EventCount</c> saturates and only <c>Dropped</c> moves, and what those later writes push
+        /// off the back are the node's own oldest events — so a call site the node has no remaining events
+        /// in would go on being offered in the picker, resolving to an explanation with nothing in it. On a
+        /// machine that has stopped ticking the tick cannot notice it either, and an external writer does
+        /// not need the tree to be running to keep filling the ring.
+        /// </para>
+        ///
+        /// <para>
         /// Public, with the rest of the panel's drawing private, because a cache key is the half of this
         /// class that can be wrong without looking wrong — and unlike the drawing, it can be tested.
         /// </para>
@@ -545,7 +555,8 @@ namespace ArcaneOnyx.BehaviorTree
                 ReferenceEquals(callSitesRecording, recording) &&
                 callSitesNode == nodeGuid &&
                 callSitesTick == recording.Tick &&
-                callSitesEventCount == recording.EventCount)
+                callSitesEventCount == recording.EventCount &&
+                callSitesDropped == recording.Dropped)
             {
                 return cachedCallSites;
             }
@@ -556,6 +567,7 @@ namespace ArcaneOnyx.BehaviorTree
             callSitesNode = nodeGuid;
             callSitesTick = recording.Tick;
             callSitesEventCount = recording.EventCount;
+            callSitesDropped = recording.Dropped;
 
             return cachedCallSites;
         }

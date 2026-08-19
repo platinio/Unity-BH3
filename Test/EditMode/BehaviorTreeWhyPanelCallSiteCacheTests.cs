@@ -36,12 +36,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             public int Reads { get; private set; }
 
+            private int dropped;
+
             public string AgentName => "Zombie";
             public string TreeName => "ZombieTree";
             public int Tick { get; set; }
             public int EventCount => events.Count;
             public IReadOnlyList<BehaviorTreeCallSite> CallSites => callSites;
-            public int Dropped => 0;
+            public int Dropped => dropped;
 
             public BehaviorTreeEvent EventAt(int index)
             {
@@ -61,6 +63,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 events.Add(BehaviorTreeEvent.Create(
                     BehaviorTreeEventKind.NodeEnter, Tick, events.Count, Tick, Tick * 0.02f, callSiteId, node));
+
+                return this;
+            }
+
+            /// <summary>
+            /// One more event into a ring that is already full: it lands, the oldest falls off, and only
+            /// <see cref="Dropped"/> moves. <see cref="EventCount"/> and <see cref="Tick"/> stay exactly
+            /// where they were, which is the whole state the key has to be able to notice.
+            /// </summary>
+            public CountingRecording WrapWith(Guid node, int callSiteId)
+            {
+                events.RemoveAt(0);
+                events.Add(BehaviorTreeEvent.Create(
+                    BehaviorTreeEventKind.NodeEnter, Tick, events.Count, Tick, Tick * 0.02f, callSiteId, node));
+
+                dropped++;
 
                 return this;
             }
@@ -150,6 +168,40 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.Greater(recording.Reads, 0,
                 "Once the ring is full the event count stops changing, so a key without the tick freezes.");
+        }
+
+        /// <summary>
+        /// The list can shrink, and nothing else in the key can see it happen.
+        ///
+        /// <para>
+        /// Past the wrap <c>EventCount</c> has saturated, and on a machine that has stopped ticking the tick
+        /// has stopped too — while an external writer keeps filling the ring, because it does not need the
+        /// tree to be running. What those writes push off the back are this node's own oldest events, so a
+        /// call site it no longer has any events in would go on being offered by the picker and resolve to
+        /// an explanation with nothing in it.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void AnEventEvictedFromAFullRingRebuildsTheAnswer()
+        {
+            var recording = OneBranchAtTwoCallSites();
+            var panel = Panel();
+
+            CollectionAssert.AreEquivalent(new[] { 1, 2 }, panel.CallSites(recording, Branch), "Fixture check.");
+
+            var tickBefore = recording.Tick;
+            var countBefore = recording.EventCount;
+
+            // Evicts the branch's entry at call site 1, which is the oldest event held.
+            recording.WrapWith(Other, 1);
+
+            Assert.AreEqual(tickBefore, recording.Tick,
+                "Guards the test: the tick must not be what the key noticed.");
+            Assert.AreEqual(countBefore, recording.EventCount,
+                "Nor the count, which is what a full ring stops moving.");
+
+            CollectionAssert.AreEquivalent(new[] { 2 }, panel.CallSites(recording, Branch),
+                "The branch has no events left at call site 1, so the picker must stop offering it.");
         }
 
         [Test]
