@@ -32,15 +32,15 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Resolved per entry rather than once, because Target is a port: what it points at can
-            // differ between one entry and the next.
-            targetRigidbody = GetComponent<Rigidbody>(Target);
+            TryResolve(Target, out targetRigidbody);
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            if (targetRigidbody == null) return ExecutionStatus.Failure;
+
             var torque = Torque.GetValue<Vector3>();
-            
+
             targetRigidbody.AddTorque(torque, forceMode);
             return ExecutionStatus.Success;
         }

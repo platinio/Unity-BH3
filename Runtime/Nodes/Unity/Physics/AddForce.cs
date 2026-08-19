@@ -32,15 +32,18 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Resolved per entry rather than once, because Target is a port: what it points at can
-            // differ between one entry and the next.
-            targetRigidbody = GetComponent<Rigidbody>(Target);
+            TryResolve(Target, out targetRigidbody);
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            // The miss was reported on entry; this is the "and fails" half of it. Without it a tree
+            // dropped onto a prefab with no Rigidbody answers with a NullReferenceException from inside
+            // the node, which takes the branch down saying nothing about why.
+            if (targetRigidbody == null) return ExecutionStatus.Failure;
+
             var force = Force.GetValue<Vector3>();
-            
+
             targetRigidbody.AddForce(force, forceMode);
             return ExecutionStatus.Success;
         }

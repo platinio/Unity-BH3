@@ -43,13 +43,35 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// A method signature on its own line, which is how every one in this codebase is written. Anything
         /// spanning lines simply does not match, and an unmatched signature leaves the previous method name
         /// in place -- so this can misattribute a line, never invent an offender out of nothing.
+        ///
+        /// <para>
+        /// The type-parameter list and the constraint clause are both optional and both matter:
+        /// <c>TryResolve&lt;T&gt;(ValueInput port, out T component) where T : Component</c> has both, and
+        /// without them it does not match at all — leaving the lookup in its body attributed to whatever
+        /// method happened to be declared above it, and reported as an offender in a method that does not
+        /// contain it.
+        /// </para>
         /// </summary>
         private static readonly Regex MethodSignature = new Regex(
-            @"^\s*(?:public|private|protected|internal)[\w\s<>,\[\]\.]*?\s(\w+)\s*\([^;]*\)\s*$");
+            @"^\s*(?:public|private|protected|internal)[\w\s<>,\[\]\.]*?\s(\w+)(?:<[^(]*>)?\s*\([^;]*\)\s*(?:where\s[^{;]*)?$");
 
         /// <summary><c>GetComponent&lt;NavMeshAgent&gt;(Target)</c> — the port-taking helper, not the bare one.</summary>
         private static readonly Regex PortComponentLookup = new Regex(
             @"[^\.\w]GetComponent<[\w\.]+>\s*\(\s*\w+\s*\)");
+
+        /// <summary>
+        /// <c>TryResolve(Target, out navAgent)</c> — the guarded form, which is the same lookup and so is
+        /// bound by the same rule.
+        ///
+        /// <para>
+        /// Written without a type argument on purpose, so it matches calls (where <c>T</c> is inferred) and
+        /// not the declaration, which is <c>TryResolve&lt;T&gt;(</c>. Both forms are counted together:
+        /// scanning only for the bare lookup would have made this test pass by finding nothing the moment
+        /// the nodes moved to the helper — the exact rot its own count assertion exists to catch.
+        /// </para>
+        /// </summary>
+        private static readonly Regex PortComponentResolve = new Regex(
+            @"[^\.\w]TryResolve\s*\(\s*\w+\s*,\s*out\s");
 
         /// <summary>
         /// The runtime source, or <c>null</c> when it is not on disk where this test can see it — BH3 is a
@@ -273,18 +295,26 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                     // The port-taking overload only. A bare GetComponent<T>() is an ordinary MonoBehaviour
                     // lookup -- BehaviorTreeMachine and AgentVariableWriter make several -- and this rule
                     // is about the port helper, which is the one whose answer can change between entries.
-                    if (!PortComponentLookup.IsMatch(lines[index])) continue;
+                    if (!PortComponentLookup.IsMatch(lines[index]) && !PortComponentResolve.IsMatch(lines[index]))
+                    {
+                        continue;
+                    }
 
                     resolutions++;
 
                     if (method == "OnEnter") continue;
+
+                    // TryResolve's own body performs the lookup, and that is not a resolution site -- it is
+                    // where the lookup now lives. What the rule constrains is where it is *called* from, and
+                    // every one of those is a TryResolve(...) line checked above.
+                    if (method == "TryResolve") continue;
 
                     offenders.Add($"{Relative(file)}:{index + 1}  in {method}()  {lines[index].Trim()}");
                 }
             }
 
             Assert.Greater(resolutions, 8,
-                "The scan found almost no component lookups, so it proved nothing. If the helper was "
+                "The scan found almost no component lookups, so it proved nothing. If either helper was "
                 + "renamed, this test has to change with it.");
 
             CollectionAssert.IsEmpty(offenders,

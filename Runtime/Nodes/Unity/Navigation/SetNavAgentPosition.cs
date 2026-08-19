@@ -36,17 +36,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Per entry and unconditional. Re-fetching only when the cache was null still answered with
-            // the first Target this node ever saw, so a port whose value changed between entries was
-            // ignored for good.
-            navAgent = GetComponent<NavMeshAgent>(Target);
-
-            if (navAgent == null)
+            if (!TryResolve(Target, out navAgent))
             {
-                Debug.LogError(
-                    $"'{NodeName}' found no NavMeshAgent on its Target or on the agent itself.",
-                    gameObject);
-
                 // Cleared explicitly: OnUpdate reads it, and without this the entry would report
                 // whatever the previous one achieved.
                 setPositionWasCompleted = false;

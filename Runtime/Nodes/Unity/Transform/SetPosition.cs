@@ -29,8 +29,6 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Resolved per entry rather than once, because Target is a port: what it points at can
-            // differ between one entry and the next.
             targetTransform = GetComponent<Transform>(Target);
         }
 

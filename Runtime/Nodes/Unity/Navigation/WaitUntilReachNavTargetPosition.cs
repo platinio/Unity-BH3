@@ -27,16 +27,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Resolved per entry rather than once, because Target is a port: what it points at can
-            // differ between one entry and the next.
-            navAgent = GetComponent<NavMeshAgent>(Target);
-
-            if (navAgent == null)
-            {
-                Debug.LogError(
-                    $"'{NodeName}' found no NavMeshAgent on its Target or on the agent itself.",
-                    gameObject);
-            }
+            TryResolve(Target, out navAgent);
         }
 
         public override ExecutionStatus OnUpdate()

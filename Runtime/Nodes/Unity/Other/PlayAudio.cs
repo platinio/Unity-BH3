@@ -28,13 +28,13 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            // Resolved per entry rather than once, because Target is a port: what it points at can
-            // differ between one entry and the next.
-            audioPlayer = GetComponent<AudioSource>(AudioSource);
+            TryResolve(AudioSource, out audioPlayer);
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            if (audioPlayer == null) return ExecutionStatus.Failure;
+
             audioPlayer.clip = audioClip;
             audioPlayer.Play();
 
