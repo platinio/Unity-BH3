@@ -456,20 +456,31 @@ namespace ArcaneOnyx.BehaviorTree
             return ExecutionStatus.Running;
         }
       
+        /// <summary>
+        /// Hands the frame's late/fixed hook to the nodes that are actually running.
+        ///
+        /// <para>
+        /// The test read the other way round -- it skipped nodes whose status was Running and called the
+        /// hook on every idle one. Nothing noticed because no node in the repo overrides either hook, so the
+        /// first one written would have found it runs only while its branch is not running, which is the
+        /// opposite of what a per-frame hook on a behaviour node can mean.
+        /// </para>
+        /// </summary>
         public void OnLateUpdate()
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus == ExecutionStatus.Running) continue;
+                if (node.LastExecutionStatus != ExecutionStatus.Running) continue;
                 node.OnLateUpdate();
             }
         }
 
+        /// <inheritdoc cref="OnLateUpdate"/>
         public void OnFixedUpdate()
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus == ExecutionStatus.Running) continue;
+                if (node.LastExecutionStatus != ExecutionStatus.Running) continue;
                 node.OnFixedUpdate();
             }
         }
