@@ -13,6 +13,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     /// a tick on its own misses everything written within a tick. The premise behind the first is asserted
     /// here directly against a real recorder rather than assumed, because the whole finding rests on it.
     /// </para>
+    ///
+    /// <para>
+    /// The third is the two of them at once, and it is why the stamp counts what fell off as well: past the
+    /// wrap the count has stopped, and on a machine that is no longer ticking so has the tick, while a sensor
+    /// writing through <c>ExternalVariableWrite</c> carries on regardless. Only <c>Dropped</c> still moves.
+    /// </para>
     /// </summary>
     [TestFixture]
     public class BehaviorTreeRecordingStampTests
@@ -91,6 +97,34 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(tickBefore, recorder.Tick, "The other half: the tick must not be what moved here.");
             Assert.AreNotEqual(before, BehaviorTreeRecordingStamp.Of(recorder));
+        }
+
+        /// <summary>
+        /// Both of the other signals held still, on purpose. The recorder is wrapped so the count has
+        /// saturated, and <c>BeginTick</c> is never called -- which is not a contrived state: the machine's
+        /// <c>Update</c> stops calling it once the tree has finished, and <c>ExternalVariableWrite</c> exists
+        /// so out-of-tree systems can write anyway. Nothing but <c>Dropped</c> can notice this.
+        /// </summary>
+        [Test]
+        public void AStampChangesWhenEventsArriveAfterTheWrapWithNoTickToAdvance()
+        {
+            var recorder = Saturated();
+
+            var before = BehaviorTreeRecordingStamp.Of(recorder);
+            var tickBefore = recorder.Tick;
+            var countBefore = recorder.EventCount;
+
+            recorder.ExternalVariableWrite("sensor", "hasTarget", 100, 101);
+
+            Assert.AreEqual(tickBefore, recorder.Tick,
+                "Guards the test: nothing advanced the tick, so the tick cannot be what the stamp noticed.");
+            Assert.AreEqual(countBefore, recorder.EventCount,
+                "And the ring is past capacity, so the count cannot be either.");
+
+            Assert.AreNotEqual(before, BehaviorTreeRecordingStamp.Of(recorder),
+                "A wrapped recording on a halted machine is still being written to by sensors. A panel that "
+                + "cannot see those writes freezes while labelling itself live -- the shipped bug, one "
+                + "precondition further in.");
         }
 
         [Test]
