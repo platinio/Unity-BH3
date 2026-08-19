@@ -251,6 +251,13 @@ differently:
 A guard set to `Takes Over Lower Priority` whose owner is not a direct child of a Selector still gates entry and still aborts
 — it just has nobody to bid against. `bt_verify` says so.
 
+**Until the Sequence semantics above are built, guard the branch rather than its steps.** To make a
+multi-step routine stop the moment a condition drops, put the reactive guard on the thing that *is* the
+branch — the **Run Behavior Tree Graph** node that calls it, or the composite itself — not on one of the
+children inside it. `Stops Its Own Branch` on a call node aborts the whole sub-tree and the abort reaches
+every node inside the instance, which is the effect people are usually reaching for when they guard a child.
+That is also the arrangement everything below assumes.
+
 ### Sub-trees are guarded like anything else
 
 A **Run Behavior Tree Graph** node takes guards exactly the way any other node does — only `Entry` refuses
