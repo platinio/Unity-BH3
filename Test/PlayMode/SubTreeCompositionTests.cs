@@ -197,7 +197,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         {
             // The authored call node is not the one running -- the machine cloned the whole tree -- so find
             // the clone by guid before asking it anything.
-            var runningCall = machine.GraphInstance.graph.Nodes
+            var runningCall = machine.RunningGraph.Nodes
                 .OfType<RunBehaviorTreeGraphNode>()
                 .FirstOrDefault(n => n.guid == authoredCall.guid);
 
