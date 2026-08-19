@@ -80,6 +80,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var before = machine.GraphInstance;
             Assert.IsNotNull(before, "Fixture check.");
 
+            var beforeGraph = before.graph;
+
             machine.Switch(LeafOnlyTree());
 
             yield return Settle();
@@ -87,6 +89,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.IsNotNull(machine.GraphInstance);
             Assert.AreNotSame(before, machine.GraphInstance,
                 "An index built from the old instance points at nodes ReleaseTree has already destroyed.");
+
+            // The graph object, not just the asset that holds it. AwakenTree instantiates the macro and then
+            // takes the clone's graph, so the two are replaced together -- and it is the graph that the guard
+            // has to key on once it asks the machine what it is running rather than what it cloned. Pinning
+            // it here means that conversion inherits a premise test instead of needing a new one.
+            Assert.AreNotSame(beforeGraph, machine.GraphInstance.graph,
+                "The running graph is what an index is built from, so a switch has to replace it too.");
         }
 
         /// <summary>

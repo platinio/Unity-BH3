@@ -337,6 +337,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             var machine = MachineFor(recorder);
 
+            // This has to read whatever the machine is actually *running*, and the guard below keys on the
+            // same value. GraphInstance is only the clone of a macro, so an agent whose tree is authored
+            // into the scene has none — and a wrong read here now produces a *stably* empty index rather
+            // than a noisily empty one, because the guard correctly stops re-scanning. The old guard's
+            // re-scan loop was the only thing making that case visible.
+            //
+            // PR #52 changes this read to machine.RunningGraph for exactly that reason. Whichever of the
+            // two lands second: that change has to survive the merge, and this paragraph goes with it.
             var graph = machine != null ? machine.GraphInstance : null;
 
             // The old guard was "same recorder, and the index came out non-empty", which says nothing about
