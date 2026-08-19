@@ -39,6 +39,25 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Machine ticks advanced per second of wall clock while playing back.</summary>
         private const float PlaybackTicksPerSecond = 60.0f;
 
+        /// <summary>
+        /// The panel editor-wide scrub requests move: the one that is actually on screen.
+        ///
+        /// <para>
+        /// Claimed in <see cref="OnGUI"/> rather than in the constructor, because being constructed says
+        /// nothing about being visible. Panels are built per <c>GraphContext</c>, contexts are rebuilt on
+        /// every reference switch, and <c>GraphContext.Dispose</c> never disposes panels — so a
+        /// constructor claim means "last constructed", which is a different panel from "the one you are
+        /// looking at" in both of the cases that matter: two graph windows open, where the second window's
+        /// collapsed timeline would take scrub requests aimed at the first window's visible one; and a
+        /// window that has closed, whose panel would go on answering for the editor forever.
+        /// </para>
+        ///
+        /// <para>
+        /// Drawing is the only liveness signal available here, and it is the right one: a panel that draws
+        /// is by definition the panel a moved playhead would be seen on. The claim is therefore
+        /// self-healing — whatever stale value it holds is corrected by the next panel to draw.
+        /// </para>
+        /// </summary>
         private static BehaviorTreeTimelinePanel active;
 
         private BehaviorTreeRecordingSnapshot loaded;
@@ -69,7 +88,6 @@ namespace ArcaneOnyx.BehaviorTree
             this.context = context;
 
             titleContent = new GUIContent("Timeline", BoltCore.Icons.variablesWindow?[IconSize.Small]);
-            active = this;
         }
 
         public GraphCore.IGraphContext context { get; }
@@ -81,8 +99,31 @@ namespace ArcaneOnyx.BehaviorTree
         public Vector2 minSize => new(420.0f, 120.0f);
 
         /// <summary>
+        /// Where this panel's playhead sits, or -1 when it is live rather than scrubbing.
+        /// </summary>
+        public int ScrubTick => scrubTick;
+
+        /// <summary>
+        /// Takes the editor-wide scrub target for this panel. Called from <see cref="OnGUI"/>, which is what
+        /// makes the claim mean "on screen" rather than "constructed" — see <see cref="active"/>.
+        /// </summary>
+        public void ClaimScrubTarget()
+        {
+            active = this;
+        }
+
+        /// <summary>
         /// Moves the scrubber from elsewhere in the editor. The why-inspector emits tick links for exactly
         /// this and nothing consumed them until now — clicking "aborted at tick 412" should take you there.
+        ///
+        /// <para>
+        /// Silently does nothing until some timeline has drawn. That is the honest answer rather than a
+        /// missing one: with no timeline on screen there is no playhead to move, and the alternative —
+        /// arming a panel nobody is looking at — is how a request ends up landing on the wrong window.
+        /// <c>BehaviorTreeBreakpointResponder.Reveal</c> already documents this no-op as the ordinary case
+        /// of the timeline never having been opened; until the claim moved to <see cref="OnGUI"/> that
+        /// comment described behaviour the code did not have.
+        /// </para>
         /// </summary>
         public static void RequestScrub(int tick)
         {
@@ -103,6 +144,10 @@ namespace ArcaneOnyx.BehaviorTree
 
         public void OnGUI(Rect position)
         {
+            // Before anything can return early: a panel drawing its "no agent is recording" message is still
+            // the timeline on screen, and is still the one a tick link should move.
+            ClaimScrubTarget();
+
             var recording = CurrentRecording();
             var toolbar = new Rect(position.x, position.y, position.width, ToolbarHeight);
 
