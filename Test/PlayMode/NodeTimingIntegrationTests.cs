@@ -344,5 +344,120 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 "The machine kept handing out FixedUpdate after the tree finished.");
         }
 
+        /// <summary>
+        /// Entry -> Repeater -> Selector -> [ guarded WaitTime, the counting node ]. The guarded branch has
+        /// the higher priority and its guard is false to begin with, so the counting node is what runs;
+        /// publishing the fact makes the guard pass and the Selector take the branch away from it.
+        /// </summary>
+        private static BehaviorTreeGraphAsset PreemptibleHookTree()
+        {
+            var asset = NewTree();
+            var graph = asset.graph;
+
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var selector = Add<Selector>(graph, 0.0f, 250.0f);
+
+            var preemptor = Add<WaitTime>(graph, -900.0f, 400.0f);
+            var counter = Add<HookCountingNode>(graph, 900.0f, 400.0f);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, selector);
+
+            // Connection order is priority order, so the guarded branch is connected first: it is the one
+            // that must be able to take over, and a Selector only ever preempts in favour of an earlier child.
+            Connect(graph, selector, preemptor);
+            Connect(graph, selector, counter);
+
+            FeedFloat(graph, preemptor, preemptor.Time, 999.0f);
+
+            var read = ReadAgentVariable(graph, "hasTarget", -600.0f, 0.0f);
+
+            var guard = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
+            guard.UpdateOwner(preemptor);
+            read.Value.ValidlyConnectTo(guard.Value);
+            guard.AddTrigger(GuardTrigger.KeyChanged("hasTarget"));
+
+            return asset;
+        }
+
+        /// <summary>
+        /// A node whose branch was taken away from it stops receiving the frame hooks.
+        ///
+        /// <para>
+        /// This is the case that separates the two signals a filter could use, and it is why the filter asks
+        /// <c>IsRunning</c> rather than <c>LastExecutionStatus == Running</c>. <c>LastExecutionStatus</c> is
+        /// written only by a tick, and nothing resets it on the way out — so a Selector preempting a branch
+        /// calls <c>victim.OnNodeExit()</c> with no final tick and leaves the victim reading <c>Running</c>
+        /// for as long as it exists. A status filter passes that test forever.
+        /// </para>
+        ///
+        /// <para>
+        /// What that buys in practice: a preempted MoveTo would go on steering its agent from
+        /// <c>OnFixedUpdate</c> while the branch that owned it was over and another branch was driving. The
+        /// assertions below deliberately check the stale status <em>as well as</em> the hook counts, so the
+        /// test says out loud why the obvious filter is wrong rather than merely failing with it.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator APreemptedNodeStopsReceivingTheFrameHooks()
+        {
+            var machine = Spawn(
+                PreemptibleHookTree(), (_, variables) => variables.declarations.Set("hasTarget", false));
+
+            var counter = RunningNode<HookCountingNode>(machine);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.IsTrue(counter.IsRunning,
+                "The guarded branch was not refused, so the counting node never ran and there is nothing to "
+                + "preempt.");
+
+            var lateBefore = counter.LateUpdates;
+            var fixedBefore = counter.FixedUpdates;
+
+            Assert.Greater(lateBefore, 0, "Fixture check: it has to have been receiving hooks to stop.");
+
+            PublishFact(machine, "hasTarget", true);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.IsFalse(counter.IsRunning,
+                "The Selector did not take the branch over, so nothing here is about a preempted node.");
+
+            Assert.AreEqual(ExecutionStatus.Running, counter.LastExecutionStatus,
+                "The trap, asserted rather than described: the node is not running, and its last status still "
+                + "says Running -- because a preemption exits it without a final tick and nothing resets it.");
+
+            var lateAfterPreemption = counter.LateUpdates;
+            var fixedAfterPreemption = counter.FixedUpdates;
+
+            for (int frame = 0; frame < 5; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(lateAfterPreemption, counter.LateUpdates,
+                "A preempted node kept receiving OnLateUpdate. The filter is reading the last status, which a "
+                + "preemption leaves saying Running forever.");
+            Assert.AreEqual(fixedAfterPreemption, counter.FixedUpdates,
+                "A preempted node kept receiving OnFixedUpdate -- the one that would keep a preempted MoveTo "
+                + "steering an agent its branch no longer owns.");
+        }
+
     }
 }

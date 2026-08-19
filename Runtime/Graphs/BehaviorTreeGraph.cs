@@ -465,12 +465,23 @@ namespace ArcaneOnyx.BehaviorTree
         /// first one written would have found it runs only while its branch is not running, which is the
         /// opposite of what a per-frame hook on a behaviour node can mean.
         /// </para>
+        ///
+        /// <para>
+        /// <b>The question is <see cref="BaseGraphNode{TGraph,TNode,TNodeTransition}.IsRunning"/>, not the
+        /// last status.</b> They agree while a branch runs normally and part company the moment one is cut
+        /// short: <c>LastExecutionStatus</c> is written only by a tick, and nothing resets it on the way out,
+        /// so a node exited mid-run keeps reading <c>Running</c> for as long as it exists. A Selector
+        /// preempting a branch calls <c>victim.OnNodeExit()</c> with no final tick, which is exactly that --
+        /// and a status filter would go on handing both hooks to a preempted MoveTo, which would go on
+        /// steering an agent whose branch is over. <c>IsRunning</c> is set on entry and cleared on exit and
+        /// is the flag every other caller already trusts to decide whether a node is live.
+        /// </para>
         /// </summary>
         public void OnLateUpdate()
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus != ExecutionStatus.Running) continue;
+                if (!node.IsRunning) continue;
                 node.OnLateUpdate();
             }
         }
@@ -480,7 +491,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             foreach (var node in Nodes)
             {
-                if (node.LastExecutionStatus != ExecutionStatus.Running) continue;
+                if (!node.IsRunning) continue;
                 node.OnFixedUpdate();
             }
         }
