@@ -1,9 +1,15 @@
-﻿using System.Linq;
-using ArcaneOnyx.GraphCore;
-using UnityEngine;
+﻿using ArcaneOnyx.GraphCore;
 
 namespace ArcaneOnyx.BehaviorTree
 {
+    /// <summary>
+    /// A <see cref="Sequence"/> whose children are reshuffled after every pass.
+    ///
+    /// <para>
+    /// The same note about preemption order applies as on <see cref="RandomSelector"/>: priority within a
+    /// pass is the order drawn for that pass.
+    /// </para>
+    /// </summary>
     [GraphCreateMenu("Composite/Random Sequence")]
     public class RandomSequence : Sequence
     {
@@ -19,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void SortChildren()
         {
-            children = GetChildren().OrderBy(_ => Random.value).ToList();
+            RandomChildOrder.Shuffle(GetChildren());
         }
     }
 }

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 
@@ -108,5 +108,35 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, a.UpdateCalls);
             Assert.AreEqual(1, b.UpdateCalls);
         }
+
+        /// <summary>
+        /// The shuffle actually reorders.
+        ///
+        /// <para>
+        /// The two permutation tests above are satisfied by a shuffle that returns the list untouched, which
+        /// is a real way to get Fisher-Yates wrong: draw the swap index from the wrong range and elements can
+        /// end up unable to move, or unable to stay. Eight children reshuffled twenty times land in their
+        /// original order every single time with probability 40320 to the power of -20, so a run that never
+        /// reorders is a broken shuffle rather than luck.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void RandomSelector_ShufflingDoesNotLeaveTheOrderAlone()
+        {
+            var children = Enumerable.Range(0, 8).Select(_ => new ScriptedNode()).ToArray();
+            var selector = new RandomSelector().WithChildren(children);
+
+            bool reordered = false;
+
+            for (int shuffle = 0; shuffle < 20 && !reordered; shuffle++)
+            {
+                selector.SortChildren();
+                reordered = !selector.GetChildren().SequenceEqual(children);
+            }
+
+            Assert.IsTrue(reordered,
+                "Twenty shuffles of eight children never changed the order, so the shuffle is not shuffling.");
+        }
+
     }
 }
