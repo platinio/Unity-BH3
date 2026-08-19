@@ -18,6 +18,8 @@ namespace ArcaneOnyx.BehaviorTree
         public override string NodeName => "Add Force";
         public override string Description => "Applies physics force to target Rigidbody.";
 
+        private Rigidbody targetRigidbody;
+
         protected override void Definition()
         {
             base.Definition();
@@ -26,12 +28,20 @@ namespace ArcaneOnyx.BehaviorTree
             Force = ValueInput<Vector3>(nameof(Force), Vector3.zero);
         }
 
+        public override void OnEnter()
+        {
+            base.OnEnter();
+
+            // Resolved per entry rather than once, because Target is a port: what it points at can
+            // differ between one entry and the next.
+            targetRigidbody = GetComponent<Rigidbody>(Target);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            var target = GetComponent<Rigidbody>(Target);
             var force = Force.GetValue<Vector3>();
             
-            target.AddForce(force, forceMode);
+            targetRigidbody.AddForce(force, forceMode);
             return ExecutionStatus.Success;
         }
     }

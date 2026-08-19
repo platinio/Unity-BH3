@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -32,16 +32,25 @@ namespace ArcaneOnyx.BehaviorTree
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
         
-        public override void OnAwake()
-        {
-            navAgent = GetComponent<NavMeshAgent>(Target);
-        }
-
         public override void OnEnter()
         {
+            base.OnEnter();
+
+            // Per entry and unconditional. Re-fetching only when the cache was null still answered with
+            // the first Target this node ever saw, so a port whose value changed between entries was
+            // ignored for good.
+            navAgent = GetComponent<NavMeshAgent>(Target);
+
             if (navAgent == null)
             {
-                navAgent = GetComponent<NavMeshAgent>(Target);
+                Debug.LogError(
+                    $"'{NodeName}' found no NavMeshAgent on its Target or on the agent itself.",
+                    gameObject);
+
+                // Cleared explicitly: OnUpdate reads it, and without this the entry would report
+                // whatever the previous one achieved.
+                setPositionWasCompleted = false;
+                return;
             }
             
             if (!WaitForPathComplete)

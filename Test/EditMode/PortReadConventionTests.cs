@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -38,6 +38,18 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         /// <summary><c>Speed.GetValue&lt;float&gt;()</c> — a typed read of a port.</summary>
         private static readonly Regex TypedRead = new Regex(@"\b(\w+)\.GetValue(?:OrDefault)?<([\w\.]+)>\(\)");
+
+        /// <summary>
+        /// A method signature on its own line, which is how every one in this codebase is written. Anything
+        /// spanning lines simply does not match, and an unmatched signature leaves the previous method name
+        /// in place -- so this can misattribute a line, never invent an offender out of nothing.
+        /// </summary>
+        private static readonly Regex MethodSignature = new Regex(
+            @"^\s*(?:public|private|protected|internal)[\w\s<>,\[\]\.]*?\s(\w+)\s*\([^;]*\)\s*$");
+
+        /// <summary><c>GetComponent&lt;NavMeshAgent&gt;(Target)</c> — the port-taking helper, not the bare one.</summary>
+        private static readonly Regex PortComponentLookup = new Regex(
+            @"[^\.\w]GetComponent<[\w\.]+>\s*\(\s*\w+\s*\)");
 
         /// <summary>
         /// The runtime source, or <c>null</c> when it is not on disk where this test can see it — BH3 is a
@@ -221,6 +233,64 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "Either the declaration or the read is wrong, and a converting read will hide it rather "
                 + "than throw. (Narrowing to a subtype is allowed and is not listed here.)\n"
                 + string.Join("\n", mismatches));
+        }
+
+        /// <summary>
+        /// Every component a node resolves from a port, it resolves when the node is entered.
+        ///
+        /// <para>
+        /// The three ways to do this were all in the codebase at once, and each is wrong somewhere the
+        /// others are not. <c>OnAwake</c> answers with whatever <c>Target</c> pointed at the first time and
+        /// never looks again, so a port fed by anything that changes is ignored for the lifetime of the
+        /// object — that was the actual defect in the navigation nodes. <c>OnUpdate</c> is correct but pays
+        /// the lookup on every tick of a node that may run for many. <c>OnEnter</c> is the one that is both:
+        /// fresh for each entry, once per entry.
+        /// </para>
+        ///
+        /// <para>
+        /// Nothing but a convention keeps this true — the compiler is happy with all three — and the split
+        /// grew because the next author copied whichever file they opened first. So it is checked, in the
+        /// same textual way and for the same reason as the two rules above.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ComponentsAreResolvedWhenTheNodeIsEntered()
+        {
+            var offenders = new List<string>();
+            int resolutions = 0;
+
+            foreach (var file in RuntimeSources())
+            {
+                var lines = File.ReadAllLines(file);
+                var method = "<none>";
+
+                for (int index = 0; index < lines.Length; index++)
+                {
+                    var signature = MethodSignature.Match(lines[index]);
+
+                    if (signature.Success) method = signature.Groups[1].Value;
+
+                    // The port-taking overload only. A bare GetComponent<T>() is an ordinary MonoBehaviour
+                    // lookup -- BehaviorTreeMachine and AgentVariableWriter make several -- and this rule
+                    // is about the port helper, which is the one whose answer can change between entries.
+                    if (!PortComponentLookup.IsMatch(lines[index])) continue;
+
+                    resolutions++;
+
+                    if (method == "OnEnter") continue;
+
+                    offenders.Add($"{Relative(file)}:{index + 1}  in {method}()  {lines[index].Trim()}");
+                }
+            }
+
+            Assert.Greater(resolutions, 8,
+                "The scan found almost no component lookups, so it proved nothing. If the helper was "
+                + "renamed, this test has to change with it.");
+
+            CollectionAssert.IsEmpty(offenders,
+                "Resolve a component from a port in OnEnter. In OnAwake the node keeps the first Target it "
+                + "ever saw even after the port's value changes; in OnUpdate it pays the lookup every "
+                + "tick:\n" + string.Join("\n", offenders));
         }
     }
 }

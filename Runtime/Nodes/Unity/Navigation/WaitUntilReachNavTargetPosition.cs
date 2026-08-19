@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -23,13 +23,28 @@ namespace ArcaneOnyx.BehaviorTree
             Target = ValueInput<GameObject>(nameof(Target)).SafeToLeaveUnconnected();
         }
         
-        public override void OnAwake()
+        public override void OnEnter()
         {
+            base.OnEnter();
+
+            // Resolved per entry rather than once, because Target is a port: what it points at can
+            // differ between one entry and the next.
             navAgent = GetComponent<NavMeshAgent>(Target);
+
+            if (navAgent == null)
+            {
+                Debug.LogError(
+                    $"'{NodeName}' found no NavMeshAgent on its Target or on the agent itself.",
+                    gameObject);
+            }
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            // Nothing to wait for. Failure rather than a NullReferenceException, and the reason was
+            // logged once on entry instead of on every frame this node is ticked.
+            if (navAgent == null) return ExecutionStatus.Failure;
+
             // remainingDistance is not meaningful until the path is computed.
             if (navAgent.pathPending) return ExecutionStatus.Running;
 

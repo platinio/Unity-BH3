@@ -13,6 +13,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput NewPosition { get; private set; }
 
+        private Transform targetTransform;
+
         public override string NodeName => "Set Position";
 
         protected override void Definition()
@@ -23,12 +25,20 @@ namespace ArcaneOnyx.BehaviorTree
             NewPosition = ValueInput<Vector3>(nameof(NewPosition), Vector3.zero);
         }
 
+        public override void OnEnter()
+        {
+            base.OnEnter();
+
+            // Resolved per entry rather than once, because Target is a port: what it points at can
+            // differ between one entry and the next.
+            targetTransform = GetComponent<Transform>(Target);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            var target = GetComponent<Transform>(Target);
             var newPosition = NewPosition.GetValue<Vector3>();
 
-            target.position = newPosition;
+            targetTransform.position = newPosition;
             return ExecutionStatus.Success;
         }
     }

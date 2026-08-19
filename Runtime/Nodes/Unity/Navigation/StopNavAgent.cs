@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -15,13 +15,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         private NavMeshAgent navAgent = null;
         
-        public override void OnAwake()
-        {
-            navAgent = GetComponent<NavMeshAgent>(Target);
-        }
-
         public override void OnEnter()
         {
+            base.OnEnter();
+
+            // Resolved per entry rather than once, because Target is a port: what it points at can
+            // differ between one entry and the next.
+            navAgent = GetComponent<NavMeshAgent>(Target);
+
+            if (navAgent == null)
+            {
+                Debug.LogError(
+                    $"'{NodeName}' found no NavMeshAgent on its Target or on the agent itself.",
+                    gameObject);
+                return;
+            }
+
             navAgent.isStopped = true;
             navAgent.velocity = Vector3.zero;
         }
@@ -35,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            return ExecutionStatus.Success;
+            return navAgent == null ? ExecutionStatus.Failure : ExecutionStatus.Success;
         }
     }
 }
