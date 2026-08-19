@@ -37,6 +37,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         [MenuItem("Tools/BH3/Flight Recorder/Build demo scene", priority = 20)]
         public static void Build()
         {
+            // Here rather than beside the NewScene call: by then two assets have been written, so Cancel
+            // would still have dirtied the project.
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
             var engage = BuildEngageBranch();
             var sentry = BuildSentryTree(engage);
 
@@ -50,7 +54,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             Debug.Log(
                 $"[FlightRecorderDemo] Built {SentryPath}, {EngagePath} and {ScenePath}.\n"
                 + "Press Play, then open Tools > BH3 > Flight Recorder and toggle the agent facts to make it "
-                + "change its mind.");
+                + "change its mind.\n"
+                + "These three files are tracked in the BH3 submodule, so rebuilding them shows up as a "
+                + "change in git.");
 
             EditorUtility.FocusProjectWindow();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<Object>(SentryPath);
@@ -140,6 +146,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>
         /// A scene with one agent. The machine reads its macro in <c>Awake</c>, and the guards read facts off
         /// the Variables component, so both have to be in place before play mode starts.
+        ///
+        /// <para>
+        /// <see cref="NewSceneMode.Single"/> closes every open scene and loses unsaved changes without
+        /// prompting and without erroring, which is why <see cref="Build"/> asks first. Nothing may reach
+        /// this by a path that has not asked that question.
+        /// </para>
         /// </summary>
         private static void BuildScene(BehaviorTreeGraphAsset sentry)
         {
