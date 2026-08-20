@@ -89,12 +89,22 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void DrawOverlay()
         {
+            if (IsDangling) return;
+
             if (!BehaviorTreeScrubOverride.IsRunning(element.destination, element.destination.IsRunning)) return;
             BehaviorTreeGraphDrawer.DrawTransition(graph, this, new WidgetElementState(), Vector2.zero);
         }
 
+        /// <summary>
+        /// Missing an end, so there is nothing to draw a line between and nothing to lay out. One rule, asked
+        /// of the canvas rather than restated here, because the canvas is what acts on the answer.
+        /// </summary>
+        private bool IsDangling => BehaviorTreeCanvas.IsDangling(canvas.graph, element);
+
         public override void DrawBackground()
         {
+            if (IsDangling) return;
+
             DrawConnection(Vector2.zero);
         }
 
@@ -142,34 +152,33 @@ namespace ArcaneOnyx.BehaviorTree
             var labelWidth = Styles.label.CalcSize(label).x;
             var labelHeight = EditorGUIUtility.singleLineHeight;
 
-            try
+            // A transition whose source or destination has been deleted has nothing to lay out between, so it
+            // sits this frame out. Removing it is the canvas repair's job, not layout's -- see
+            // BehaviorTreeCanvas.RemoveDanglingElements. This used to be a bare try/catch around the whole
+            // block that deleted the transition from the graph on *any* exception, unrecorded: a transient
+            // failure -- a widget mid-rebuild during a reload, a bug in the loop below -- read as "a node was
+            // removed" and destroyed authored data the user could not undo. It also mutated graph.elements
+            // from inside the canvas's own layout pass, while the canvas was iterating it.
+            if (IsDangling) return;
+
+            sourcePosition = canvas.Widget(element.source).position;
+            destinationPosition = canvas.Widget(element.destination).position;
+
+            int conditionalCount = 0;
+
+            foreach (var graphElement in element.graph.elements)
             {
-                sourcePosition = canvas.Widget(element.source).position;
-                destinationPosition = canvas.Widget(element.destination).position;
-
-                int conditionalCount = 0;
-
-                foreach (var graphElement in element.graph.elements)
+                if (graphElement is ConditionalExecution conditionalExecution)
                 {
-                    if (graphElement is ConditionalExecution conditionalExecution)
-                    {
-                        if (conditionalExecution.Owner == element.destination) conditionalCount++;
-                    }
+                    if (conditionalExecution.Owner == element.destination) conditionalCount++;
                 }
+            }
 
-                destinationPosition.height += conditionalCount * 45.0f;
-                destinationPosition.position -= new Vector2(0, conditionalCount * 45.0f);
-             
-                sourcePosition.position += new Vector2(0, conditionalCount * 45.0f);
-            }
-            catch 
-            {
-                //if there is an exception while getting the widget from source or destination is likely
-                //that one of the nodes was remove lest remove the transition too
-                graph.elements.Remove(element);
-                return;
-            }
-           
+            destinationPosition.height += conditionalCount * 45.0f;
+            destinationPosition.position -= new Vector2(0, conditionalCount * 45.0f);
+
+            sourcePosition.position += new Vector2(0, conditionalCount * 45.0f);
+
             LudiqGUIUtility.ClosestPoints(sourcePosition, destinationPosition, out var sourceClosestPoint, out var destinationClosestPoint);
 
 

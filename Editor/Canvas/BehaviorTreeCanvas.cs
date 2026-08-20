@@ -69,9 +69,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnGUI();
             
-            if (HasInvalidConditionals())
+            if (HasDanglingElements())
             {
-                RemoveInvalidConditionals();
+                RemoveDanglingElements();
             }
 
             ScriptGraphAssetsRepository.Instance.RemoveInvalid();
@@ -86,41 +86,81 @@ namespace ArcaneOnyx.BehaviorTree
             if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
         }
 
-        private void RemoveInvalidConditionals()
+        /// <summary>
+        /// Deletes the elements whose anchor has gone, with an undo record.
+        ///
+        /// <para>
+        /// This is the one place allowed to remove an element because something it points at is missing.
+        /// Transitions used to be culled from inside a bare <c>catch</c> in
+        /// <see cref="BehaviorTreeTransitionWidget.CachePosition"/> instead, which destroyed authored data
+        /// with no undo record and treated any exception at all as evidence that a node had been deleted.
+        /// A layout pass is the wrong place to edit the graph in any case: it runs while the canvas is
+        /// iterating the very collection it was mutating.
+        /// </para>
+        /// </summary>
+        private readonly List<GraphCore.IGraphElement> dangling = new List<GraphCore.IGraphElement>();
+
+        private void RemoveDanglingElements()
         {
             UndoUtility.RecordEditedObject("Delete Graph Element");
-                
-            for (int i = graph.elements.Count - 1; i >= 0; i--)
+
+            // Collected first, then removed. Walking by index meant `ElementAt` on a merged collection, which
+            // enumerates from the start every call — an O(n²) pass over a collection it was mutating as it
+            // went. Two halves of one rule that scan differently is the drift this class exists to stop.
+            dangling.Clear();
+
+            foreach (var graphElement in graph.elements)
             {
-                var graphElement = graph.elements.ElementAt(i);
-                var conditionalExecution = graphElement as ConditionalExecution;
-                var owner = conditionalExecution?.Owner;
-                
-                if (conditionalExecution != null)
-                {
-                    if (owner == null || !graph.elements.Contains(owner))
-                    {
-                        graph.elements.Remove(graphElement);
-                    }
-                }
+                if (IsDangling(graphElement)) dangling.Add(graphElement);
             }
+
+            foreach (var graphElement in dangling) graph.elements.Remove(graphElement);
+
+            dangling.Clear();
         }
 
-        private bool HasInvalidConditionals()
+        private bool HasDanglingElements()
         {
-            for (int i = graph.elements.Count - 1; i >= 0; i--)
+            foreach (var graphElement in graph.elements)
             {
-                var graphElement = graph.elements.ElementAt(i);
-                if (IsInvalidConditional(graphElement as ConditionalExecution)) return true;
+                if (IsDangling(graphElement)) return true;
             }
 
             return false;
         }
 
-        private bool IsInvalidConditional(ConditionalExecution conditionalExecution)
+        private bool IsDangling(GraphCore.IGraphElement graphElement) => IsDangling(graph, graphElement);
+
+        /// <summary>
+        /// Whether an element is anchored to something that no longer exists: a guard whose owner has been
+        /// deleted, or a transition missing an end. Both are undrawable, and both arise the same way —
+        /// deleting a node the element was attached to.
+        ///
+        /// <para>
+        /// Static because the question is about the graph, not about a canvas: the transition widget asks it
+        /// to decide whether to lay itself out this frame, and the repair above asks it to decide what to
+        /// delete. Stating it twice is how the two ended up disagreeing, with layout deleting elements the
+        /// repair was there to handle.
+        /// </para>
+        /// </summary>
+        public static bool IsDangling(BehaviorTreeGraph graph, GraphCore.IGraphElement graphElement)
         {
-            if (conditionalExecution == null) return false;
-            return conditionalExecution.Owner == null || !graph.elements.Contains(conditionalExecution.Owner);
+            if (graph == null) return false;
+
+            if (graphElement is ConditionalExecution conditionalExecution)
+            {
+                return conditionalExecution.Owner == null || !graph.elements.Contains(conditionalExecution.Owner);
+            }
+
+            if (graphElement is BehaviorTreeTransition transition)
+            {
+                return transition.source == null
+                    || transition.destination == null
+                    || !graph.elements.Contains(transition.source)
+                    || !graph.elements.Contains(transition.destination);
+            }
+
+            return false;
         }
 
         public override void Open()
