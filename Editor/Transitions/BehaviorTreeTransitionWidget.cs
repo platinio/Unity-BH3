@@ -200,20 +200,15 @@ namespace ArcaneOnyx.BehaviorTree
             sourcePosition = canvas.Widget(element.source).position;
             destinationPosition = canvas.Widget(element.destination).position;
 
-            int conditionalCount = 0;
+            // The same measured stack height the drawer routes lines with — never a guard count times a
+            // constant, because guards grow past their minimum height when their ports need the room, and
+            // an endpoint cached from the constant lands the line sections apart from each other.
+            var guardStackHeight = ConditionalExecutionWidget.StackHeightAbove(canvas, element.destination);
 
-            foreach (var graphElement in element.graph.elements)
-            {
-                if (graphElement is ConditionalExecution conditionalExecution)
-                {
-                    if (conditionalExecution.Owner == element.destination) conditionalCount++;
-                }
-            }
+            destinationPosition.height += guardStackHeight;
+            destinationPosition.position -= new Vector2(0, guardStackHeight);
 
-            destinationPosition.height += conditionalCount * 45.0f;
-            destinationPosition.position -= new Vector2(0, conditionalCount * 45.0f);
-
-            sourcePosition.position += new Vector2(0, conditionalCount * 45.0f);
+            sourcePosition.position += new Vector2(0, guardStackHeight);
 
             LudiqGUIUtility.ClosestPoints(sourcePosition, destinationPosition, out var sourceClosestPoint, out var destinationClosestPoint);
 
