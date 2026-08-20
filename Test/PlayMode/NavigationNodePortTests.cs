@@ -1,6 +1,7 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
@@ -112,5 +113,44 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 navMeshInstance.Remove();
             }
         }
+
+        /// <summary>
+        /// A navigation node whose agent cannot be found fails, rather than throwing on every entry.
+        ///
+        /// <para>
+        /// The three navigation nodes resolved their <c>NavMeshAgent</c> in <c>OnAwake</c> and dereferenced
+        /// it without a check. On an agent that has no <c>NavMeshAgent</c> -- a tree dropped onto the wrong
+        /// prefab, which is an authoring mistake and a normal one -- the cache was null and the first entry
+        /// was a <c>NullReferenceException</c> from inside the node. That takes the branch down and says
+        /// nothing about why.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANavNodeWithNoAgentFailsInsteadOfThrowing()
+        {
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            var node = Add<StopNavAgent>(graph, 0.0f, 200.0f);
+            Connect(graph, graph.EntryNode, node);
+
+            var guid = node.guid;
+
+            LogAssert.Expect(LogType.Error, new Regex("found no NavMeshAgent"));
+
+            // Spawned bare: the fixture's agent carries a machine, not a NavMeshAgent, which is exactly the
+            // situation under test.
+            var machine = Spawn(tree);
+
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(Entered(machine.FlightRecorder, guid),
+                "The node never entered -- the fixture wiring is wrong, not the guard under test.");
+            Assert.GreaterOrEqual(ExitCount(machine.FlightRecorder, guid), 1,
+                "The node entered and never exited, which is what an exception thrown inside OnEnter looks "
+                + "like from outside.");
+        }
+
     }
 }
