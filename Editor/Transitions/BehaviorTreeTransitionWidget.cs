@@ -21,6 +21,16 @@ namespace ArcaneOnyx.BehaviorTree
         /// element collection paid for them at runtime forever after.
         /// <see cref="BehaviorTreeGraph.IsPersistentElement"/> is what keeps them out of the asset.
         /// </para>
+        ///
+        /// <para>
+        /// <b>This adds unconditionally, which is only safe because a graph has exactly one canvas.</b>
+        /// <c>CanvasProvider</c> is a caching <c>SingleDecoratorProvider</c> keyed on the graph, so one
+        /// transition can never have two widgets at once — including in a sub-tree preview, which resolves
+        /// widgets through the sub-graph's own cached canvas rather than the parent's. Were that to change,
+        /// each canvas would add its own three proxies to the one shared element collection and every line
+        /// segment would get duplicate hit targets; the guard to restore then is to skip adding when the
+        /// graph already holds placeholders owned by this transition.
+        /// </para>
         /// </summary>
         public BehaviorTreeTransitionWidget(BehaviorTreeCanvas canvas, BehaviorTreeTransition element) : base(canvas, element)
         {
@@ -36,6 +46,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             // Scaffolding outliving the thing it was scaffolding for would leave invisible, still-selectable
             // nodes on the canvas.
+            //
+            // Each Remove raises CollectionChanged while the widget provider is freeing widgets, so anything
+            // subscribing to that collection has to tolerate being called mid-free. The current subscribers
+            // do -- Recollect sets a flag, NodeProblemCache.Invalidate clears a dictionary -- and the canvas
+            // unsubscribes Recollect before FreeAll. A subscriber that instead walked the widgets would be
+            // reading them as they are torn down.
             foreach (var placeholder in placeHolderNodes) graph.elements.Remove(placeholder);
 
             placeHolderNodes.Clear();
