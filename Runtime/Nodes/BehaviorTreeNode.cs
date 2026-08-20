@@ -526,7 +526,7 @@ namespace ArcaneOnyx.BehaviorTree
             return index;
         }
         
-        public int CountConditionalExection()
+        public int CountConditionalExecutions()
         {
             int count = 0;
             
@@ -544,7 +544,7 @@ namespace ArcaneOnyx.BehaviorTree
             return count;
         }
 
-        public void ClearConditionalExecutionInexCache()
+        public void ClearConditionalExecutionIndexCache()
         {
             ConditionalExecutionIndexCache.Clear();
         }
