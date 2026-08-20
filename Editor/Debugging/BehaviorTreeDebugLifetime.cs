@@ -58,14 +58,23 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Clears both statics together. They describe one thing between them -- which recording, at which
-        /// tick -- so clearing one without the other leaves the canvas and the panels describing different
-        /// moments, which is the failure <see cref="BehaviorTreeDebugSession"/> exists to prevent.
+        /// Clears the debugging statics together. They describe one thing between them -- which agent, which
+        /// recording, at which tick -- so clearing one without the others leaves the canvas and the panels
+        /// describing different moments, which is the failure <see cref="BehaviorTreeDebugSession"/> exists
+        /// to prevent.
+        ///
+        /// <para>
+        /// <see cref="BehaviorTreeDebugTarget.Forget"/> is the third because the target memo is a static
+        /// that outlives a play-mode boundary too. Its own clock is a quarter of a second, so it is not
+        /// finding 1.2 by itself, but a boundary is exactly the moment its answer stops being one -- the
+        /// agent it names is about to be destroyed or replaced.
+        /// </para>
         /// </summary>
         public static void Reset()
         {
             BehaviorTreeScrubOverride.Clear();
             BehaviorTreeDebugSession.Clear();
+            BehaviorTreeDebugTarget.Forget();
         }
     }
 }

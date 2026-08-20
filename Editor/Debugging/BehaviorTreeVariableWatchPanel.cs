@@ -60,6 +60,22 @@ namespace ArcaneOnyx.BehaviorTree
         private BehaviorTreeRecordingStamp cachedStamp = BehaviorTreeRecordingStamp.None;
         private int cachedAtTick = int.MinValue;
 
+        /// <summary>
+        /// Which tree asset each call site was running, remembered so the project is searched once per call
+        /// site instead of once per expanded history row per repaint.
+        ///
+        /// <para>
+        /// Deliberately <em>not</em> invalidated with <see cref="watch"/>. That cache turns over every tick
+        /// while an agent plays, and this answer does not depend on the tick or the event count at all — a
+        /// call site's asset is decided by the recording's call-site registry and by what is on the canvas.
+        /// Clearing the two together would have left a project-wide asset search running at tick rate, which
+        /// is the same cost under a different name.
+        /// </para>
+        /// </summary>
+        private readonly Dictionary<int, Remembered<BehaviorTreeGraphAsset>> assetByCallSite = new();
+        private IBehaviorTreeRecording assetsFor;
+        private BehaviorTreeGraph assetsOnCanvas;
+
         private GUIStyle valueStyle;
         private GUIStyle writerStyle;
         private GUIStyle scopeStyle;
@@ -720,6 +736,30 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (recording == null || callSiteId == BehaviorTreeCallSite.RootId) return null;
 
+            var onCanvas = context?.graph as BehaviorTreeGraph;
+
+            // A different recording or a different canvas is a different question, and both are cheap to
+            // notice. A call site the registry has not grown yet is simply a miss, resolved once.
+            if (!ReferenceEquals(assetsFor, recording) || !ReferenceEquals(assetsOnCanvas, onCanvas))
+            {
+                assetByCallSite.Clear();
+                assetsFor = recording;
+                assetsOnCanvas = onCanvas;
+            }
+            else if (assetByCallSite.TryGetValue(callSiteId, out var entry) && entry.TryReuse(out var remembered))
+            {
+                return remembered;
+            }
+
+            var resolved = ResolveAssetForCallSite(callSiteId, recording, onCanvas);
+            assetByCallSite[callSiteId] = new Remembered<BehaviorTreeGraphAsset>(resolved);
+
+            return resolved;
+        }
+
+        private BehaviorTreeGraphAsset ResolveAssetForCallSite(
+            int callSiteId, IBehaviorTreeRecording recording, BehaviorTreeGraph onCanvas)
+        {
             var callSites = recording.CallSites;
             BehaviorTreeCallSite? found = null;
 
@@ -733,7 +773,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (found == null) return null;
 
-            if (FindIn(context?.graph as BehaviorTreeGraph, found.Value.RunNodeGuid) is RunBehaviorTreeGraphNode run &&
+            if (FindIn(onCanvas, found.Value.RunNodeGuid) is RunBehaviorTreeGraphNode run &&
                 run.BehaviorTreeGraphAsset != null)
             {
                 return run.BehaviorTreeGraphAsset;

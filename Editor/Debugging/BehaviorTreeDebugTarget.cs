@@ -24,11 +24,116 @@ namespace ArcaneOnyx.BehaviorTree
     public static class BehaviorTreeDebugTarget
     {
         /// <summary>
+        /// How long a resolution that had to walk the scene may be reused. Matches the cadence
+        /// <see cref="BehaviorTreeBreakpointResponder"/> already runs its own scene work at.
+        /// </summary>
+        private const double MemoSeconds = 0.25;
+
+        private static GraphCore.IGraphContext memoContext;
+        private static GameObject memoSelection;
+        private static Remembered<BehaviorTreeMachine> memoMachine;
+        private static string memoSource;
+        private static double memoAt = double.NegativeInfinity;
+        private static bool memoValid;
+
+        /// <summary>
         /// The agent to explain or scrub, or null when nothing says which. <paramref name="source"/> names how
         /// it was decided, so a panel can show it and a reader can tell "this is the agent on screen" from
         /// "this is the only one running".
+        ///
+        /// <para>
+        /// Memoized, because this is asked four to eight times per repaint — <c>CurrentRecording</c> from both
+        /// <c>OnGUI</c> and <c>GetHeight</c> in each of three panels, plus <c>DrawSourceControls</c> and
+        /// <c>CurrentTopology</c> — and when neither the canvas nor the selection answers, <em>every one of
+        /// those</em> falls through to <see cref="SingleRecordingMachine"/>'s <c>FindObjectsByType</c>. That
+        /// is O(scene) several times per repaint of a window that repaints every frame, and it is worst in
+        /// the multi-agent scene where the walk returns null anyway.
+        /// </para>
+        ///
+        /// <para>
+        /// Sharing one answer per frame is not only cheaper: it is what stops two panels resolving
+        /// differently <em>within</em> a repaint, which is the disagreement this class exists to prevent.
+        /// </para>
         /// </summary>
         public static BehaviorTreeMachine Resolve(GraphCore.IGraphContext context, out string source)
+        {
+            if (MemoAnswers(context, out var remembered))
+            {
+                source = memoSource;
+                return remembered;
+            }
+
+            var machine = Decide(context, out source);
+
+            memoContext = context;
+            memoSelection = Selection.activeGameObject;
+            memoMachine = new Remembered<BehaviorTreeMachine>(machine);
+            memoSource = source;
+            memoAt = EditorApplication.timeSinceStartup;
+            memoValid = true;
+
+            return machine;
+        }
+
+        /// <summary>
+        /// Whether the remembered answer is still the answer.
+        ///
+        /// <para>
+        /// The two inputs a user can change — which canvas is asking, and what is selected in the hierarchy —
+        /// are compared directly rather than waited out, so nothing a user does is ever a quarter of a second
+        /// late. The clock only bounds how stale a <em>scene walk</em> may be, which is the part that cannot
+        /// be invalidated by watching anything cheap: a null answer means no single agent was recording, and
+        /// nothing announces when that stops being true.
+        /// </para>
+        ///
+        /// <para>
+        /// A remembered machine is also re-checked for liveness every time. Skipping that would hand a
+        /// destroyed machine to a panel for up to <see cref="MemoSeconds"/> — a cache reintroducing the
+        /// exact failure the resolver is written to avoid.
+        /// </para>
+        /// </summary>
+        private static bool MemoAnswers(GraphCore.IGraphContext context, out BehaviorTreeMachine remembered)
+        {
+            remembered = null;
+
+            if (!memoValid) return false;
+            if (!ReferenceEquals(memoContext, context)) return false;
+            if (memoSelection != Selection.activeGameObject) return false;
+            if (EditorApplication.timeSinceStartup - memoAt > MemoSeconds) return false;
+
+            // A remembered machine that has been destroyed reads as null through Unity's operator, exactly
+            // like a remembered "no agent is recording" -- which is why the two are told apart by
+            // Remembered<T> rather than by a null check that cannot see the difference. Serving a destroyed
+            // machine here would have a cache reintroducing the failure the resolver exists to avoid.
+            if (!memoMachine.TryReuse(out remembered)) return false;
+
+            // Detaching a recorder is the other way an answer stops being one, and no cheap key can see it.
+            // Through IsRecording so the memo and the resolver agree on what "recording" means by
+            // construction rather than by two copies of the same test staying in step.
+            return remembered == null || IsRecording(remembered);
+        }
+
+        /// <summary>
+        /// Drops the memo, so the next ask resolves from scratch.
+        ///
+        /// <para>
+        /// A static that survives a play-mode boundary is the shape of finding 1.2, and this one does — the
+        /// clock keeps it to a quarter of a second, which is short enough not to be that bug and long enough
+        /// that a boundary should still say so out loud. This is the seam for it: the play-mode handler
+        /// added by the 1.2 fix should call it alongside the two statics it already clears.
+        /// </para>
+        /// </summary>
+        public static void Forget()
+        {
+            memoValid = false;
+            memoContext = null;
+            memoSelection = null;
+            memoMachine = default;
+            memoSource = null;
+            memoAt = double.NegativeInfinity;
+        }
+
+        private static BehaviorTreeMachine Decide(GraphCore.IGraphContext context, out string source)
         {
             // The canvas's own reference knows which machine it was opened through. This is the answer whenever
             // the tree is being watched live, which is the case the panels exist for.

@@ -37,6 +37,22 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>guid to the live node, built from the machine's graph including every sub-tree.</summary>
         private readonly Dictionary<Guid, BehaviorTreeNode> nodesByGuid = new();
         private BehaviorTreeFlightRecorder indexedFor;
+        private Remembered<BehaviorTreeMachine> indexedMachine;
+        // A plain reference, not Remembered<T>: RunningGraph is a BehaviorTreeGraph, which derives
+        // from Graph : IGraph and is not a UnityEngine.Object. Destruction-staleness is a Unity-object
+        // problem; a released graph is caught by reference identity alone.
+        private BehaviorTreeGraph indexedGraph;
+        private int indexedCallSites = -1;
+
+        /// <summary>
+        /// How long a scene walk that found nothing may be reused. The same cadence
+        /// <c>BehaviorTreeBreakpointResponder</c> runs its own scene work at.
+        /// </summary>
+        private const double MachineLookupSeconds = 0.25;
+
+        private BehaviorTreeFlightRecorder machineLookupFor;
+        private Remembered<BehaviorTreeMachine> machineLookup;
+        private double machineLookupAt = double.NegativeInfinity;
 
         [MenuItem("Tools/BH3/Flight Recorder", priority = 0)]
         public static void Open()
@@ -140,7 +156,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         private void DrawFacts(BehaviorTreeFlightRecorder recorder)
         {
-            var machine = FindMachine(recorder);
+            var machine = MachineFor(recorder);
             if (machine == null || machine.Variables == null) return;
 
             var declarations = machine.Variables.declarations;
@@ -322,18 +338,90 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         private void EnsureIndex(BehaviorTreeFlightRecorder recorder)
         {
-            if (ReferenceEquals(indexedFor, recorder) && nodesByGuid.Count > 0) return;
+            var machine = MachineFor(recorder);
+
+            // Whatever the machine is actually *running*, and the guard below keys on the same value.
+            // GraphInstance is only the clone of a macro, so an agent whose tree is authored into the scene
+            // has none, and its whole event log read as truncated guids. Reading it wrongly here would now
+            // produce a *stably* empty index rather than a noisily empty one, because the guard correctly
+            // stops re-scanning — the old guard's re-scan loop was the only thing making that case visible.
+            var graph = machine != null ? machine.RunningGraph : null;
+
+            // The old guard was "same recorder, and the index came out non-empty", which says nothing about
+            // whether the work was done. It failed in two directions at once.
+            //
+            // It never stopped: an agent the walk could not name — no machine found, or a machine whose
+            // graph this window cannot read — produced an empty index that never satisfied it, so the scene
+            // walk and the graph walk ran again on every repaint, at 10 Hz, for as long as the window was
+            // open.
+            //
+            // And it never rebuilt: a recorder is attached once in Awake and deliberately outlives every
+            // Switch, so a boss changing phase left the index pointing at nodes belonging to a graph
+            // instance ReleaseTree had already destroyed, and every event in the new tree fell back to a
+            // truncated guid for the rest of that agent's life. The graph instance is the thing that
+            // actually changes there, so it is what the guard asks about; the call-site count is the second
+            // signal, for a sub-tree entered for the first time under an unchanged root.
+            if (ReferenceEquals(indexedFor, recorder) &&
+                indexedMachine.TryReuse(out var lastMachine) && ReferenceEquals(lastMachine, machine) &&
+                ReferenceEquals(indexedGraph, graph) &&
+                indexedCallSites == recorder.CallSites.Count)
+            {
+                return;
+            }
 
             nodesByGuid.Clear();
             indexedFor = recorder;
+            indexedMachine = new Remembered<BehaviorTreeMachine>(machine);
+            indexedGraph = graph;
+            indexedCallSites = recorder.CallSites.Count;
 
-            // Through the machine's own answer rather than its cloned asset: a tree authored into the scene
-            // has no clone, and this window used to equate the two independently of everything else that
-            // asks. An embedded-graph agent's whole event log read as truncated guids because of it.
-            var machine = FindMachine(recorder);
-            if (machine == null) return;
+            if (graph == null) return;
 
-            Index(machine.RunningGraph, 0);
+            // RunningGraph *is* the graph, where GraphInstance was an asset wrapping one.
+            Index(graph, 0);
+        }
+
+        /// <summary>
+        /// The agent behind a recorder, looked up once rather than on every repaint.
+        ///
+        /// <para>
+        /// <c>DrawFacts</c> and <c>EnsureIndex</c> both asked, and <see cref="OnInspectorUpdate"/> repaints
+        /// this window ten times a second whether or not anything changed — so a scene-wide
+        /// <c>FindObjectsByType</c> ran twenty times a second for the whole of play mode.
+        /// </para>
+        ///
+        /// <para>
+        /// A remembered machine is kept only while it still owns this recorder, which covers the two ways
+        /// the answer goes bad: the agent is destroyed, or its recorder is detached. A lookup that found
+        /// nothing is the one that cannot be invalidated by watching anything, so it is the one the clock is
+        /// for.
+        /// </para>
+        /// </summary>
+        private BehaviorTreeMachine MachineFor(BehaviorTreeFlightRecorder recorder)
+        {
+            if (ReferenceEquals(machineLookupFor, recorder) && machineLookup.TryReuse(out var remembered))
+            {
+                if (remembered != null && ReferenceEquals(remembered.FlightRecorder, recorder))
+                {
+                    return remembered;
+                }
+
+                // Only a remembered "nothing" gets to wait out the clock. A remembered agent that has been
+                // destroyed, or handed its recorder over, is answered again now.
+                if (remembered == null && EditorApplication.timeSinceStartup - machineLookupAt <= MachineLookupSeconds)
+                {
+                    return null;
+                }
+            }
+
+            machineLookupFor = recorder;
+
+            var found = FindMachine(recorder);
+
+            machineLookup = new Remembered<BehaviorTreeMachine>(found);
+            machineLookupAt = EditorApplication.timeSinceStartup;
+
+            return found;
         }
 
         private void Index(BehaviorTreeGraph graph, int depth)
