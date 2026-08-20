@@ -45,9 +45,7 @@ namespace ArcaneOnyx.BehaviorTree
         private string loadedFrom;
 
         private BehaviorTreeTimeline timeline;
-        private int cachedEventCount = -1;
-        private int cachedTick = -1;
-        private object cachedSource;
+        private BehaviorTreeRecordingStamp cachedStamp = BehaviorTreeRecordingStamp.None;
 
         private BehaviorTreeTreeState state;
         private int stateTick = int.MinValue;
@@ -194,25 +192,19 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private BehaviorTreeTimeline TimelineFor(IBehaviorTreeRecording recording)
         {
-            if (timeline != null &&
-                ReferenceEquals(cachedSource, recording) &&
-                cachedEventCount == recording.EventCount &&
-                cachedTick == recording.Tick)
-            {
-                return timeline;
-            }
+            var stamp = BehaviorTreeRecordingStamp.Of(recording);
+
+            if (timeline != null && cachedStamp.Equals(stamp)) return timeline;
 
             // A different agent means a different clock. Carrying the playhead across would park it on a tick
             // number that means nothing in the new recording and ghost the canvas with it.
-            if (!ReferenceEquals(cachedSource, recording))
+            if (!ReferenceEquals(cachedStamp.Recording, recording))
             {
                 GoLive();
                 viewInitialised = false;
             }
 
-            cachedSource = recording;
-            cachedEventCount = recording.EventCount;
-            cachedTick = recording.Tick;
+            cachedStamp = stamp;
             stateTick = int.MinValue;
 
             return BehaviorTreeTimeline.Build(recording, CurrentTopology());
@@ -833,9 +825,7 @@ namespace ArcaneOnyx.BehaviorTree
         private void Invalidate()
         {
             timeline = null;
-            cachedSource = null;
-            cachedEventCount = -1;
-            cachedTick = -1;
+            cachedStamp = BehaviorTreeRecordingStamp.None;
             stateTick = int.MinValue;
             viewInitialised = false;
         }
