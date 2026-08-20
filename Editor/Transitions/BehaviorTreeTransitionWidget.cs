@@ -10,21 +10,43 @@ namespace ArcaneOnyx.BehaviorTree
     [Widget(typeof(BehaviorTreeTransition))]
     public class BehaviorTreeTransitionWidget : GraphCore.GraphElementWidget<BehaviorTreeCanvas, BehaviorTreeTransition>
     {
+        /// <summary>
+        /// Builds the hit-test proxies for this transition's three line segments.
+        ///
+        /// <para>
+        /// They are added to the graph because that is what gets them widgets, and therefore picking — but
+        /// they are this widget's state and live for as long as it does, which is why the list is here and
+        /// not on the transition. It used to be a serialized field on the transition, so opening a tree
+        /// silently added three nodes per transition to a file nobody had edited, and every walk over the
+        /// element collection paid for them at runtime forever after.
+        /// <see cref="BehaviorTreeGraph.IsPersistentElement"/> is what keeps them out of the asset.
+        /// </para>
+        /// </summary>
         public BehaviorTreeTransitionWidget(BehaviorTreeCanvas canvas, BehaviorTreeTransition element) : base(canvas, element)
         {
-            if (element.PlaceHolderNodes != null && element.PlaceHolderNodes.Count > 0) return;
-            
-            element.PlaceHolderNodes = new List<PlaceHolderNode>();
-            
             for (int n = 0; n < TRANSITION_SECTION_COUNT; n++)
             {
                 var placeholder = new PlaceHolderNode(element);
                 graph.elements.Add(placeholder);
-                element.PlaceHolderNodes.Add(placeholder);
+                placeHolderNodes.Add(placeholder);
             }
         }
-        
+
+        public override void Dispose()
+        {
+            // Scaffolding outliving the thing it was scaffolding for would leave invisible, still-selectable
+            // nodes on the canvas.
+            foreach (var placeholder in placeHolderNodes) graph.elements.Remove(placeholder);
+
+            placeHolderNodes.Clear();
+
+            base.Dispose();
+        }
+
         public const int TRANSITION_SECTION_COUNT = 3;
+
+        /// <summary>This transition's three line-segment hit targets, in order from source to destination.</summary>
+        private readonly List<PlaceHolderNode> placeHolderNodes = new List<PlaceHolderNode>(TRANSITION_SECTION_COUNT);
         
         private Edge sourceEdge;
         private Edge destinationEdge;
@@ -58,8 +80,6 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.HandleInput();
 
-            if (element.PlaceHolderNodes == null) return;
-
             // Ask the selection, never PlaceHolderNode.IsSelected. That field is a cache refreshed only when
             // the placeholder's own widget runs HandleInput, so after the canvas clears the selection it can
             // still read true here — and this method would then re-add the transition and every placeholder,
@@ -67,7 +87,7 @@ namespace ArcaneOnyx.BehaviorTree
             // transitions do it at once, and the selection becomes impossible to move.
             bool placeHolderNodeIsSelected = false;
 
-            foreach (var placeHolderNode in element.PlaceHolderNodes)
+            foreach (var placeHolderNode in placeHolderNodes)
             {
                 if (selection.Contains(placeHolderNode))
                 {
@@ -80,7 +100,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 if (!selection.Contains(element)) selection.Add(element);
 
-                foreach (var placeHolderNode in element.PlaceHolderNodes)
+                foreach (var placeHolderNode in placeHolderNodes)
                 {
                     if (!selection.Contains(placeHolderNode)) selection.Add(placeHolderNode);
                 }
@@ -357,12 +377,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void UpdateSelectionState()
         {
-            if (isSelected)
+            if (!isSelected) return;
+
+            foreach (var placeHolderNode in placeHolderNodes)
             {
-                for (int i = 0; i < 3; i++)
-                {
-                    GraphDrawer.DrawSelectionBox(element.PlaceHolderNodes[i].Position, 2, Color.cyan);
-                }
+                GraphDrawer.DrawSelectionBox(placeHolderNode.Position, 2, Color.cyan);
             }
         }
 
@@ -370,7 +389,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             for (int i = 0; i < TRANSITION_SECTION_COUNT; i++)
             {
-                element.PlaceHolderNodes[i].Position = transitionRects[i];
+                placeHolderNodes[i].Position = transitionRects[i];
             }
         }
 
