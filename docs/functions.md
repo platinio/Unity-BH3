@@ -88,10 +88,14 @@ This is a **general** mechanism, not a Function one: a node reports itself by im
 `NodeProblemCache`. New
 checks appear on the canvas without the drawing code being touched.
 
-> **Freshness.** The badge recomputes when the evaluation layer drops its own caches — the same counter, on
-> purpose, so the badge and the runtime cannot disagree about whether a node is fine. The one lag: a Function
-> edited in the graph window and not yet saved. The evaluator lags identically, so the badge is still honest
-> about what would happen if you pressed Play right now.
+> **Freshness.** The badge recomputes on two signals. The first is the evaluation layer dropping its own
+> caches — the same counter, on purpose, so the badge and the runtime cannot disagree about whether a node is
+> fine. The second is the graph changing shape: connecting a port, disconnecting one, adding or deleting
+> anything. That second one is why `Required input 'threshold' has nothing connected` clears the moment you
+> connect a value, rather than lingering until something unrelated happened to refresh it.
+>
+> The one lag: a Function edited in the graph window and not yet saved. The evaluator lags identically, so
+> the badge is still honest about what would happen if you pressed Play right now.
 
 > **Before this existed**, a declared input was matched by name against the agent's own variables: you
 > supplied `threshold` by declaring an agent variable called `threshold`. That worked, but nothing about it
