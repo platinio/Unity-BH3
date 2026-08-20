@@ -42,6 +42,11 @@ namespace ArcaneOnyx.BehaviorTree
         private int cachedScope = -1;
         private int cachedAtTick = -1;
 
+        private IReadOnlyList<int> cachedCallSites;
+        private string[] cachedCallSiteNames;
+        private BehaviorTreeRecordingStamp callSitesStamp = BehaviorTreeRecordingStamp.None;
+        private Guid callSitesNode;
+
         private GUIStyle wrapped;
         private GUIStyle headline;
         private GUIStyle role;
@@ -246,16 +251,12 @@ namespace ArcaneOnyx.BehaviorTree
 
         private float DrawCallSitePicker(float x, float y, float width, IBehaviorTreeRecording recording, Guid nodeGuid)
         {
-            var callSites = BehaviorTreeExplainer.CallSitesFor(recording, nodeGuid);
+            var callSites = CallSites(recording, nodeGuid);
             if (callSites.Count <= 1) return y;
 
             // One branch asset used twice is two different stories, and the canvas cannot say which one the
             // designer meant — the clone keeps the original guids.
-            var names = new string[callSites.Count];
-            for (int i = 0; i < callSites.Count; i++)
-            {
-                names[i] = BehaviorTreeExplainer.CallSitePath(recording, callSites[i]);
-            }
+            var names = CallSiteNames(recording, nodeGuid);
 
             if (callSiteIndex >= names.Length) callSiteIndex = 0;
 
@@ -273,7 +274,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private int CurrentScope(IBehaviorTreeRecording recording, Guid nodeGuid)
         {
-            var callSites = BehaviorTreeExplainer.CallSitesFor(recording, nodeGuid);
+            var callSites = CallSites(recording, nodeGuid);
             if (callSites.Count == 0) return BehaviorTreeCallSite.RootId;
 
             return callSites[Mathf.Clamp(callSiteIndex, 0, callSites.Count - 1)];
@@ -512,6 +513,81 @@ namespace ArcaneOnyx.BehaviorTree
         #region Explanation cache
 
         /// <summary>
+        /// Which call sites this node has events in, newest answer reused until the recording moves.
+        ///
+        /// <para>
+        /// <see cref="BehaviorTreeExplainer.CallSitesFor"/> is a full ring scan with a list allocation per
+        /// call, and it was reached three times per repaint: twice through <see cref="CurrentScope"/>,
+        /// because IMGUI asks for a height and then draws and <see cref="Explanation"/> resolves the scope
+        /// <em>before</em> its own cache check, and once more from <see cref="DrawCallSitePicker"/>. So the
+        /// panel replayed the whole ring three times to hand back an explanation it had already computed.
+        /// </para>
+        ///
+        /// <para>
+        /// Keyed on the recording having moved — the same events <see cref="Explanation"/> keys on, minus
+        /// the scope and the scrub tick, which it cannot depend on: the scope is <em>derived</em> from this
+        /// list, and a call site a node has already run in does not stop existing because the playhead moved
+        /// back before it.
+        /// </para>
+        ///
+        /// <para>
+        /// The dropped count is in the key because this list can shrink as well as grow. Once the ring is
+        /// full <c>EventCount</c> saturates and only <c>Dropped</c> moves, and what those later writes push
+        /// off the back are the node's own oldest events — so a call site the node has no remaining events
+        /// in would go on being offered in the picker, resolving to an explanation with nothing in it. On a
+        /// machine that has stopped ticking the tick cannot notice it either, and an external writer does
+        /// not need the tree to be running to keep filling the ring.
+        /// </para>
+        ///
+        /// <para>
+        /// Public, with the rest of the panel's drawing private, because a cache key is the half of this
+        /// class that can be wrong without looking wrong — and unlike the drawing, it can be tested.
+        /// </para>
+        /// </summary>
+        public IReadOnlyList<int> CallSites(IBehaviorTreeRecording recording, Guid nodeGuid)
+        {
+            var stamp = BehaviorTreeRecordingStamp.Of(recording);
+
+            if (cachedCallSites != null && callSitesStamp.Equals(stamp) && callSitesNode == nodeGuid)
+            {
+                return cachedCallSites;
+            }
+
+            cachedCallSites = BehaviorTreeExplainer.CallSitesFor(recording, nodeGuid);
+            cachedCallSiteNames = null;
+            callSitesStamp = stamp;
+            callSitesNode = nodeGuid;
+
+            return cachedCallSites;
+        }
+
+        /// <summary>
+        /// What to call each of those call sites in the picker.
+        ///
+        /// <para>
+        /// Built alongside the list and dropped with it, which is enough: a path is walked from the
+        /// recording's call-site registry, and an id only reaches this list by appearing on one of the
+        /// node's events — which cannot happen before the branch was entered and its scope registered.
+        /// </para>
+        /// </summary>
+        public string[] CallSiteNames(IBehaviorTreeRecording recording, Guid nodeGuid)
+        {
+            var callSites = CallSites(recording, nodeGuid);
+
+            if (cachedCallSiteNames != null) return cachedCallSiteNames;
+
+            var names = new string[callSites.Count];
+            for (int i = 0; i < callSites.Count; i++)
+            {
+                names[i] = BehaviorTreeExplainer.CallSitePath(recording, callSites[i]);
+            }
+
+            cachedCallSiteNames = names;
+
+            return names;
+        }
+
+        /// <summary>
         /// The explanation for the current selection, recomputed only when something it depends on moved.
         /// IMGUI asks for a height and then draws, so an uncached explainer would run twice per repaint of a
         /// panel that is open all session.
@@ -556,6 +632,14 @@ namespace ArcaneOnyx.BehaviorTree
             cachedNode = Guid.Empty;
             cachedScope = -1;
             cachedAtTick = -1;
+
+            // Every caller either changes the recording or the selected node, both of which the call-site
+            // key already covers — so this is belt and braces. It is here anyway because a reader is
+            // entitled to assume a method called Invalidate invalidates.
+            cachedCallSites = null;
+            cachedCallSiteNames = null;
+            callSitesStamp = BehaviorTreeRecordingStamp.None;
+            callSitesNode = Guid.Empty;
         }
 
         #endregion
