@@ -163,10 +163,21 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         /// The live instance of a node type on the graph the machine is running — not the authored one. Use
         /// only when a test needs runtime state that the recorder does not carry, such as a guard's
         /// evaluation count.
+        ///
+        /// <para>
+        /// Through <c>RunningGraph</c> rather than the cloned asset, so this answers for an agent spawned by
+        /// <see cref="SpawnDormant"/>'s embedded sibling as well as a macro-backed one. Asking the clone
+        /// works only while every caller happens to spawn from a macro, and a fixture that throws
+        /// <c>NullReferenceException</c> the first time someone pairs two of its own helpers is the most
+        /// confusing place in the suite to throw from.
+        /// </para>
         /// </summary>
         protected static T RunningNode<T>(BehaviorTreeMachine machine) where T : BehaviorTreeNode
         {
-            var node = machine.GraphInstance.graph.Nodes.OfType<T>().FirstOrDefault();
+            Assert.IsNotNull(machine.RunningGraph,
+                "The machine is not running a tree — it has not woken yet, or its tree was released.");
+
+            var node = machine.RunningGraph.Nodes.OfType<T>().FirstOrDefault();
             Assert.IsNotNull(node, $"The running graph must contain a {typeof(T).Name}.");
 
             return node;

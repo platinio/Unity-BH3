@@ -44,10 +44,19 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return topology;
         }
 
-        /// <summary>The tree an agent is running, including the branches it has entered so far.</summary>
+        /// <summary>
+        /// The tree an agent is running, including the branches it has entered so far.
+        ///
+        /// <para>
+        /// Asks the machine what it is running rather than reaching for its cloned asset. An agent whose
+        /// tree is authored into the scene has no clone — it runs <c>nest.embed</c> — so reading the clone
+        /// returned an empty topology for it, and every panel built on this then showed that agent a tree
+        /// with no nodes in it and fell back to bare guids.
+        /// </para>
+        /// </summary>
         public static BehaviorTreeGraphTopology From(BehaviorTreeMachine machine)
         {
-            return From(machine != null && machine.GraphInstance != null ? machine.GraphInstance.graph : null);
+            return From(machine != null ? machine.RunningGraph : null);
         }
 
         public bool TryGetNode(Guid guid, out BehaviorTreeNodeInfo node) => nodes.TryGetValue(guid, out node);

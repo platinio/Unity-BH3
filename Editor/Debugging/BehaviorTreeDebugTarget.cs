@@ -108,7 +108,9 @@ namespace ArcaneOnyx.BehaviorTree
             if (!memoMachine.TryReuse(out remembered)) return false;
 
             // Detaching a recorder is the other way an answer stops being one, and no cheap key can see it.
-            return remembered == null || remembered.FlightRecorder != null;
+            // Through IsRecording so the memo and the resolver agree on what "recording" means by
+            // construction rather than by two copies of the same test staying in step.
+            return remembered == null || IsRecording(remembered);
         }
 
         /// <summary>
@@ -137,7 +139,9 @@ namespace ArcaneOnyx.BehaviorTree
             // the tree is being watched live, which is the case the panels exist for.
             if (context?.reference != null)
             {
-                if (context.reference.machine is BehaviorTreeMachine viewed && viewed.FlightRecorder != null)
+                var viewed = context.reference.machine as BehaviorTreeMachine;
+
+                if (IsRecording(viewed))
                 {
                     source = "shown on this canvas";
                     return viewed;
@@ -147,7 +151,8 @@ namespace ArcaneOnyx.BehaviorTree
                 if (owner != null)
                 {
                     var onOwner = owner.GetComponent<BehaviorTreeMachine>();
-                    if (onOwner?.FlightRecorder != null)
+
+                    if (IsRecording(onOwner))
                     {
                         source = "shown on this canvas";
                         return onOwner;
@@ -161,7 +166,8 @@ namespace ArcaneOnyx.BehaviorTree
             if (selected != null)
             {
                 var onSelection = selected.GetComponent<BehaviorTreeMachine>();
-                if (onSelection?.FlightRecorder != null)
+
+                if (IsRecording(onSelection))
                 {
                     source = "selected in the hierarchy";
                     return onSelection;
@@ -182,6 +188,24 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// Whether this machine is something the panels can read a history from: alive, and holding a
+        /// recorder.
+        ///
+        /// <para>
+        /// The null test has to be the <see cref="UnityEngine.Object"/> one, and every route into this
+        /// method used to bypass it in a different way -- an <c>is</c> pattern match, which succeeds on a
+        /// destroyed machine, and <c>?.</c>, which is the C# null check rather than Unity's. A destroyed
+        /// machine that answered here would be handed to a panel, which then either throws
+        /// <c>MissingReferenceException</c> out of <c>OnGUI</c> when it reads <c>machine.name</c>, or draws
+        /// a dead recording under a LIVE banner.
+        /// </para>
+        /// </summary>
+        public static bool IsRecording(BehaviorTreeMachine machine)
+        {
+            return machine != null && machine.FlightRecorder != null;
+        }
+
+        /// <summary>
         /// The one machine recording, or null when there are none or several. Walks the scene only when the
         /// cheaper answers failed, which is why the registry is not consulted — it holds recordings rather than
         /// agents, and a topology needs the machine.
@@ -194,7 +218,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var machine in Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
             {
-                if (machine == null || machine.FlightRecorder == null) continue;
+                if (!IsRecording(machine)) continue;
 
                 if (found != null) return null;
 

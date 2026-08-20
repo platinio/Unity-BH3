@@ -57,9 +57,8 @@ namespace ArcaneOnyx.BehaviorTree
         private string filter = string.Empty;
 
         private BehaviorTreeVariableWatch watch;
-        private IBehaviorTreeRecording cachedRecording;
-        private int cachedTick = int.MinValue;
-        private int cachedEventCount = -1;
+        private BehaviorTreeRecordingStamp cachedStamp = BehaviorTreeRecordingStamp.None;
+        private int cachedAtTick = int.MinValue;
 
         /// <summary>
         /// Which tree asset each call site was running, remembered so the project is searched once per call
@@ -214,23 +213,25 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// Rebuilt only when something it depends on moved. IMGUI asks for a height and then draws, so an
         /// uncached build would replay the ring twice per repaint of a panel that is open all session.
+        ///
+        /// <para>
+        /// The playhead is compared separately from the recording's own position, and both halves are
+        /// load-bearing. Without the stamp this froze: with no timeline open the playhead is a constant -1,
+        /// which left the event count as the only moving part of the key -- and that saturates at the ring's
+        /// capacity, so after 2048 events the table stopped rebuilding while the header above it went on
+        /// printing a live tick that kept advancing.
+        /// </para>
         /// </summary>
         private BehaviorTreeVariableWatch WatchFor(IBehaviorTreeRecording recording)
         {
-            var tick = CurrentTick(recording);
+            var atTick = CurrentTick(recording);
+            var stamp = BehaviorTreeRecordingStamp.Of(recording);
 
-            if (watch != null &&
-                ReferenceEquals(cachedRecording, recording) &&
-                cachedTick == tick &&
-                cachedEventCount == recording.EventCount)
-            {
-                return watch;
-            }
+            if (watch != null && cachedStamp.Equals(stamp) && cachedAtTick == atTick) return watch;
 
-            watch = BehaviorTreeVariableWatch.At(recording, tick, CurrentTopology());
-            cachedRecording = recording;
-            cachedTick = tick;
-            cachedEventCount = recording.EventCount;
+            watch = BehaviorTreeVariableWatch.At(recording, atTick, CurrentTopology());
+            cachedStamp = stamp;
+            cachedAtTick = atTick;
 
             return watch;
         }

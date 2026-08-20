@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.VisualScriptingExtension;
@@ -361,5 +361,36 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.That(NodeProblemCache.For(node), Is.Empty, "removing a provider must also take its findings");
         }
+
+        /// <summary>
+        /// <see cref="RunScriptGraph"/> reports itself, on every instance, configured or not.
+        ///
+        /// <para>
+        /// The node runs the shared script-graph asset outside the machine's variable scope, so graph state
+        /// is shared between agents and <c>Self</c> does not resolve to the agent. That is not a
+        /// misconfiguration anyone can correct by filling the field in -- the node is wrong when it is fully
+        /// set up -- so the warning is unconditional, and it is how the instances already sitting in trees
+        /// get found. The class cannot simply be deleted: its name is what assets serialize.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void RunScriptGraph_ReportsItselfEvenWhenFullyConfigured()
+        {
+            var node = new RunScriptGraph();
+            node.Define();
+
+            var problems = new List<NodeProblem>();
+            node.CollectProblems(problems);
+
+            Assert.IsTrue(problems.Any(problem => problem.Severity == NodeProblemSeverity.Warning
+                    && problem.Summary.Contains("no agent context")),
+                "A Run Script Graph node did not warn about running the shared asset without agent context:" + "\n"
+                + string.Join("\n", problems.Select(problem => $"{problem.Severity}: {problem.Summary}")));
+
+            Assert.IsTrue(problems.Any(problem => problem.Severity == NodeProblemSeverity.Error
+                    && problem.Summary.Contains("No script graph assigned")),
+                "An unassigned script graph is an error, and the node did not report one.");
+        }
+
     }
 }

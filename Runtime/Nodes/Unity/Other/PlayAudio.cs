@@ -13,6 +13,8 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable] 
         private AudioClip audioClip;
 
+        private AudioSource audioPlayer;
+
         public override string NodeName => "Play Audio";
         public override string Description => "Plays an audio clip";
 
@@ -22,9 +24,17 @@ namespace ArcaneOnyx.BehaviorTree
             AudioSource = ValueInput<Object>(nameof(AudioSource), null);
         }
 
+        public override void OnEnter()
+        {
+            base.OnEnter();
+
+            TryResolve(AudioSource, out audioPlayer);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            var audioPlayer = GetComponent<AudioSource>(AudioSource);
+            if (audioPlayer == null) return ExecutionStatus.Failure;
+
             audioPlayer.clip = audioClip;
             audioPlayer.Play();
 
