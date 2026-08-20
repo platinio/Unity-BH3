@@ -232,6 +232,85 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "the badge must go stale on the same signal the evaluator does, or the two can disagree");
         }
 
+        /// <summary>
+        /// The most common canvas edit there is, and the one the cache used to survive. Every node's base
+        /// problem is connection-dependent, so a badge that outlives the connection fixing it is the exact
+        /// disagreement this class exists to make unrepresentable.
+        ///
+        /// <para>
+        /// Deliberately no <c>Invalidate</c> call: the point is that feeding the port is enough on its own.
+        /// The edit goes through the authoring API rather than a widget, which is also the reason the
+        /// invalidation hangs off the graph's element collection instead of the editor call sites — the
+        /// collection is what both routes have in common.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ConnectingAPort_ClearsTheBadgeWithoutAnExplicitInvalidate()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Connected.asset");
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait), Is.Not.Empty,
+                "precondition: the unfed port is reported, and now cached as reported");
+
+            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+                "a badge that survives the connection that fixes it teaches people to ignore badges");
+        }
+
+        /// <summary>
+        /// The same failure from the other side, and the worse of the two: a node that has been broken since
+        /// the cache last looked keeps drawing as healthy, so nothing on the canvas says the tree stopped
+        /// working.
+        /// </summary>
+        [Test]
+        public void DisconnectingARequiredPort_BringsTheBadgeBackWithoutAnExplicitInvalidate()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Disconnected.asset");
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+                "precondition: the fed node is clean, and now cached as clean");
+
+            wait.Time.Disconnect();
+
+            Assert.That(NodeProblemCache.For(wait).Select(problem => problem.Summary),
+                Has.Some.Contains("Time"),
+                "the node is broken again and must stop drawing as healthy");
+        }
+
+        /// <summary>
+        /// The one entry nothing could ever drop.
+        ///
+        /// <para>
+        /// Freshness comes from the node's graph raising a change, so a node that has no graph yet has no
+        /// signal. Caching its answer would produce the single permanently stale entry in the class — still
+        /// reported after the node joins a graph and the problem is fixed. It is computed and returned, but
+        /// not stored.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ANodeWithNoGraph_IsAnsweredButNotCached()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/LateJoiner.asset");
+
+            // Defined but not in any graph, which is the state a node is built in before it is added.
+            var wait = new WaitTime();
+            wait.Define();
+
+            Assert.That(NodeProblemCache.For(wait), Is.Not.Empty,
+                "precondition: the unfed port is reported even without a graph");
+
+            tree.graph.Nodes.Add(wait);
+            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+                "an answer cached before the node had a graph has no signal that can ever drop it, so the "
+                + "badge would outlive the fix forever");
+        }
+
         // ------------------------------------------------------------------ unset ports, for every node
 
         /// <summary>

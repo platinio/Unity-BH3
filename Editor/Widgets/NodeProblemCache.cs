@@ -25,8 +25,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// </para>
     ///
     /// <para>
-    /// The local counter beside it covers what the evaluator does not care about: sub-tree contracts, undo,
-    /// and the refresh verbs. Both are bumped by whole events, never by a timer.
+    /// <b>The second signal is the graph saying it changed.</b> The base problem every node reports is
+    /// connection-dependent — <c>CollectProblems</c> flags <see cref="ValueInput.IsUnfedRequired"/>, which is
+    /// false the moment something feeds the port — so the badge has to go stale on connect and disconnect or
+    /// it survives the edit that fixes it. Rather than asking each editing call site to remember, this
+    /// listens to <c>graph.elements</c>, which already raises a change for connections (they are merged into
+    /// it alongside nodes and transitions) as well as for anything added or deleted. One rule in one place:
+    /// a connect path added later cannot forget to call something it never had to call.
+    /// </para>
+    ///
+    /// <para>
+    /// <see cref="Invalidate"/> covers the rest — sub-tree contracts, undo, and the refresh verbs — and is
+    /// bumped by whole events, never by a timer.
     /// </para>
     ///
     /// <para>
@@ -44,9 +54,14 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         private static readonly List<NodeProblem> Scratch = new();
 
-        private static int evaluatorVersion = -1;
+        /// <summary>
+        /// The graphs whose element collection is currently being listened to, so the subscription can be
+        /// taken back off again. Also what keeps a graph from being subscribed to twice, since every node in
+        /// it arrives here separately.
+        /// </summary>
+        private static readonly HashSet<BehaviorTreeGraph> Observed = new();
 
-        private static int localVersion;
+        private static int evaluatorVersion = -1;
 
         [InitializeOnLoadMethod]
         private static void Hook()
@@ -87,11 +102,44 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             Invalidate();
         }
 
-        /// <summary>Drops everything, so the next draw asks again. Call it on a whole event, not a tick.</summary>
+        /// <summary>
+        /// Drops everything, so the next draw asks again. Call it on a whole event, not a tick.
+        ///
+        /// <para>
+        /// The graph subscriptions go with it. Nothing is cached to keep fresh any more, and dropping them
+        /// here is also what stops a graph nobody has open being held alive by this class: it is re-observed
+        /// only if something asks about one of its nodes again.
+        /// </para>
+        /// </summary>
         public static void Invalidate()
         {
+            foreach (var graph in Observed)
+            {
+                if (graph != null) graph.elements.CollectionChanged -= Invalidate;
+            }
+
+            Observed.Clear();
             Cache.Clear();
-            localVersion++;
+        }
+
+        /// <summary>
+        /// Starts listening to the graph a node belongs to, once per graph. False when there is no graph to
+        /// listen to, which is the caller's signal not to cache what it is about to compute.
+        ///
+        /// <para>
+        /// Called from the miss path rather than on every read: a hit means this graph was already observed
+        /// when the entry was computed, because the only thing that drops entries also drops subscriptions.
+        /// </para>
+        /// </summary>
+        private static bool Observe(BehaviorTreeNode node)
+        {
+            var graph = node.graph;
+
+            if (graph == null) return false;
+
+            if (Observed.Add(graph)) graph.elements.CollectionChanged += Invalidate;
+
+            return true;
         }
 
         /// <summary>
@@ -105,10 +153,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             if (evaluatorVersion != FunctionEvaluator.Version)
             {
                 evaluatorVersion = FunctionEvaluator.Version;
-                Cache.Clear();
+                Invalidate();
             }
 
             if (Cache.TryGetValue(node, out var cached)) return cached;
+
+            // A node with no graph has nothing that can tell this class it changed, so its answer is computed
+            // and handed back but never stored. Caching it would be the one way to get an entry that no
+            // signal can ever drop -- a permanently wrong badge on the node the moment it joins a graph,
+            // which is the exact failure the subscription above exists to prevent.
+            var canGoStale = Observe(node);
 
             Scratch.Clear();
 
@@ -145,7 +199,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 ? Array.Empty<NodeProblem>()
                 : Sorted(Scratch);
 
-            Cache[node] = problems;
+            if (canGoStale) Cache[node] = problems;
+
             return problems;
         }
 
