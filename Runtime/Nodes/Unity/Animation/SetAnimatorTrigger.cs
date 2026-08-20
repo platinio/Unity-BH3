@@ -12,6 +12,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput TriggerName { get; private set; }
        
+        private Animator targetAnimator;
+
         public override string NodeName => "Set Animator Trigger";
         public override string Description => "Sets triggerName in the animator";
 
@@ -25,15 +27,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnEnter()
         {
-            var animator = GetComponent<Animator>(Animator);
+            if (!TryResolve(Animator, out targetAnimator)) return;
+
             string triggerName = TriggerName.GetValueOrDefault<string>();
-            
-            animator.SetTrigger(triggerName);
+
+            targetAnimator.SetTrigger(triggerName);
         }
 
         public override ExecutionStatus OnUpdate()
         {
-            return ExecutionStatus.Success;
+            return targetAnimator == null ? ExecutionStatus.Failure : ExecutionStatus.Success;
         }
     }
 }

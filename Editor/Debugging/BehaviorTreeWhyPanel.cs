@@ -37,20 +37,15 @@ namespace ArcaneOnyx.BehaviorTree
         private int callSiteIndex;
 
         private BehaviorTreeExplanation cached;
-        private IBehaviorTreeRecording cachedRecording;
+        private BehaviorTreeRecordingStamp cachedStamp = BehaviorTreeRecordingStamp.None;
         private Guid cachedNode;
         private int cachedScope = -1;
         private int cachedAtTick = -1;
-        private int cachedTick = -1;
-        private int cachedEventCount = -1;
 
         private IReadOnlyList<int> cachedCallSites;
         private string[] cachedCallSiteNames;
-        private IBehaviorTreeRecording callSitesRecording;
+        private BehaviorTreeRecordingStamp callSitesStamp = BehaviorTreeRecordingStamp.None;
         private Guid callSitesNode;
-        private int callSitesTick = -1;
-        private int callSitesEventCount = -1;
-        private int callSitesDropped = -1;
 
         private GUIStyle wrapped;
         private GUIStyle headline;
@@ -551,23 +546,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public IReadOnlyList<int> CallSites(IBehaviorTreeRecording recording, Guid nodeGuid)
         {
-            if (cachedCallSites != null &&
-                ReferenceEquals(callSitesRecording, recording) &&
-                callSitesNode == nodeGuid &&
-                callSitesTick == recording.Tick &&
-                callSitesEventCount == recording.EventCount &&
-                callSitesDropped == recording.Dropped)
+            var stamp = BehaviorTreeRecordingStamp.Of(recording);
+
+            if (cachedCallSites != null && callSitesStamp.Equals(stamp) && callSitesNode == nodeGuid)
             {
                 return cachedCallSites;
             }
 
             cachedCallSites = BehaviorTreeExplainer.CallSitesFor(recording, nodeGuid);
             cachedCallSiteNames = null;
-            callSitesRecording = recording;
+            callSitesStamp = stamp;
             callSitesNode = nodeGuid;
-            callSitesTick = recording.Tick;
-            callSitesEventCount = recording.EventCount;
-            callSitesDropped = recording.Dropped;
 
             return cachedCallSites;
         }
@@ -613,27 +602,25 @@ namespace ArcaneOnyx.BehaviorTree
             // this and takes care not to leak the future. -1 when nothing is scrubbing, which means "now".
             var atTick = BehaviorTreeScrubOverride.TickFor(recording);
 
-            // The recording itself is part of the key: selecting a different agent in the hierarchy changes
+            // The recording itself is part of the stamp: selecting a different agent in the hierarchy changes
             // which one this panel is about, and a cache watching only tick and count would happily serve the
             // previous agent's answer for the new one.
+            var stamp = BehaviorTreeRecordingStamp.Of(recording);
+
             if (cached != null &&
-                ReferenceEquals(cachedRecording, recording) &&
+                cachedStamp.Equals(stamp) &&
                 cachedNode == nodeGuid &&
                 cachedScope == scope &&
-                cachedAtTick == atTick &&
-                cachedTick == recording.Tick &&
-                cachedEventCount == recording.EventCount)
+                cachedAtTick == atTick)
             {
                 return cached;
             }
 
             cached = BehaviorTreeExplainer.Explain(recording, scope, nodeGuid, CurrentTopology(), atTick);
-            cachedRecording = recording;
+            cachedStamp = stamp;
             cachedNode = nodeGuid;
             cachedScope = scope;
             cachedAtTick = atTick;
-            cachedTick = recording.Tick;
-            cachedEventCount = recording.EventCount;
 
             return cached;
         }
@@ -641,16 +628,18 @@ namespace ArcaneOnyx.BehaviorTree
         private void Invalidate()
         {
             cached = null;
-            cachedRecording = null;
-            cachedTick = -1;
-            cachedEventCount = -1;
+            cachedStamp = BehaviorTreeRecordingStamp.None;
+            cachedNode = Guid.Empty;
+            cachedScope = -1;
+            cachedAtTick = -1;
 
             // Every caller either changes the recording or the selected node, both of which the call-site
-            // key already covers — so this is belt and braces. It is here anyway because a partial
-            // Invalidate is a trap: the panel's other cache has six key fields and this method clears four
-            // of them, and a reader is entitled to assume a method called Invalidate invalidates.
+            // key already covers — so this is belt and braces. It is here anyway because a reader is
+            // entitled to assume a method called Invalidate invalidates.
             cachedCallSites = null;
             cachedCallSiteNames = null;
+            callSitesStamp = BehaviorTreeRecordingStamp.None;
+            callSitesNode = Guid.Empty;
         }
 
         #endregion
