@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -222,7 +222,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.BeforeRemove();
 
-            owner?.ClearConditionalExecutionInexCache();
+            owner?.ClearConditionalExecutionIndexCache();
         }
     }
 }
