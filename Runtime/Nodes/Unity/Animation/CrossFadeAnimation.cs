@@ -21,6 +21,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Duration { get; private set; }
 
         private float remainingDuration = 0.0f;
+        private Animator targetAnimator;
         
         public override string NodeName => "Cross Fade Animation";
         public override string Description => "Cross Fade Animation to StateName";
@@ -42,17 +43,22 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             remainingDuration = Duration.GetValue<float>();
 
-            var animator = GetComponent<Animator>(Animator);
+            if (!TryResolve(Animator, out targetAnimator)) return;
+
             string stateName = StateName.GetValue<string>();
             float normalizeTransitionDuration = TransitionDuration.GetValue<float>();
             int layer = Layer.GetValue<int>();
             float normalizeTimeOffset = TimeOffset.GetValue<float>();
-            
-            animator.CrossFade(stateName, normalizeTransitionDuration, layer, normalizeTimeOffset);
+
+            targetAnimator.CrossFade(stateName, normalizeTransitionDuration, layer, normalizeTimeOffset);
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            // Before the countdown, not after it: no cross-fade was started, so waiting out its duration
+            // and then reporting Success would hold the branch for the full time and lie at the end of it.
+            if (targetAnimator == null) return ExecutionStatus.Failure;
+
             remainingDuration -= Time.deltaTime;
             return remainingDuration <= 0? ExecutionStatus.Success : ExecutionStatus.Running;
         }

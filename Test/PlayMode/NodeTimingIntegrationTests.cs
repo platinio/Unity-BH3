@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using Unity.VisualScripting;
@@ -236,5 +236,228 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             return Spawn(tree, (_, variables) => variables.declarations.Set("marker", false));
         }
+
+        /// <summary>
+        /// A node that keeps count of the two per-frame hooks, and finishes when told to.
+        /// </summary>
+        private sealed class HookCountingNode : BehaviorTreeNode
+        {
+            public int LateUpdates;
+            public int FixedUpdates;
+            public bool Finish;
+
+            public override string NodeName => "Hook Counting Test Node";
+
+            public override ExecutionStatus OnUpdate() =>
+                Finish ? ExecutionStatus.Success : ExecutionStatus.Running;
+
+            public override void OnLateUpdate() => LateUpdates++;
+
+            public override void OnFixedUpdate() => FixedUpdates++;
+        }
+
+        /// <summary>
+        /// The late and fixed hooks reach a node while it is running, and stop when the tree finishes.
+        ///
+        /// <para>
+        /// Two defects, and each hid the other. <c>BehaviorTreeGraph</c> forwarded both hooks with a filter
+        /// that skipped nodes whose status was <c>Running</c> and called them on every idle one, so a running
+        /// node heard nothing. And <c>LateUpdate</c>/<c>FixedUpdate</c> on the machine had no halt check at
+        /// all, so they kept forwarding to a tree that <c>Update</c> had already latched off.
+        /// </para>
+        ///
+        /// <para>
+        /// Nothing caught either, because no node in the repo overrides either hook — the first one written
+        /// would have found it fires only while its own branch is not running, and then carries on after the
+        /// tree is over. Latent is the cheapest time to fix it, and it is why this test has to bring its own
+        /// node.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFrameHooksReachARunningNodeAndStopWhenTheTreeFinishes()
+        {
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            var counter = Add<HookCountingNode>(graph, 0.0f, 100.0f);
+            Connect(graph, graph.EntryNode, counter);
+
+            var machine = Spawn(tree);
+
+            // The authored node is not the one that runs -- the machine ticks a clone of the whole graph.
+            var running = RunningNode<HookCountingNode>(machine);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            // FixedUpdate runs on the physics clock, not the frame clock, so a handful of rendered
+            // frames does not guarantee one has happened. Wait for the thing being counted.
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(ExecutionStatus.Running, running.LastExecutionStatus,
+                "The node is not running, so what follows would not be measuring a running node.");
+
+            // Counted from here, not from zero. The machine is spawned partway through a frame, so the
+            // node can collect a hook or two before its first tick has given it a status at all --
+            // which would satisfy "greater than zero" without the running node ever being reached.
+            int lateWhileRunning = running.LateUpdates;
+            int fixedWhileRunning = running.FixedUpdates;
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.Greater(running.LateUpdates, lateWhileRunning,
+                "A node that is running received no OnLateUpdate. The graph is handing the hook to the "
+                + "nodes that are not running.");
+            Assert.Greater(running.FixedUpdates, fixedWhileRunning,
+                "A node that is running received no OnFixedUpdate, for the same reason.");
+
+            running.Finish = true;
+
+            // One tick to return Success, and one more so a still-forwarding LateUpdate would show up.
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(ExecutionStatus.Success, machine.LastExecutionStatus,
+                "The tree did not finish, so the rest of this test would prove nothing about a finished one.");
+
+            int lateWhenFinished = running.LateUpdates;
+            int fixedWhenFinished = running.FixedUpdates;
+
+            for (int frame = 0; frame < 5; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.AreEqual(lateWhenFinished, running.LateUpdates,
+                "The machine kept handing out LateUpdate after the tree finished. Update stops at the halt "
+                + "and the other two callbacks have to agree with it.");
+            Assert.AreEqual(fixedWhenFinished, running.FixedUpdates,
+                "The machine kept handing out FixedUpdate after the tree finished.");
+        }
+
+        /// <summary>
+        /// Entry -> Repeater -> Selector -> [ guarded WaitTime, the counting node ]. The guarded branch has
+        /// the higher priority and its guard is false to begin with, so the counting node is what runs;
+        /// publishing the fact makes the guard pass and the Selector take the branch away from it.
+        /// </summary>
+        private static BehaviorTreeGraphAsset PreemptibleHookTree()
+        {
+            var asset = NewTree();
+            var graph = asset.graph;
+
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var selector = Add<Selector>(graph, 0.0f, 250.0f);
+
+            var preemptor = Add<WaitTime>(graph, -900.0f, 400.0f);
+            var counter = Add<HookCountingNode>(graph, 900.0f, 400.0f);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, selector);
+
+            // Connection order is priority order, so the guarded branch is connected first: it is the one
+            // that must be able to take over, and a Selector only ever preempts in favour of an earlier child.
+            Connect(graph, selector, preemptor);
+            Connect(graph, selector, counter);
+
+            FeedFloat(graph, preemptor, preemptor.Time, 999.0f);
+
+            var read = ReadAgentVariable(graph, "hasTarget", -600.0f, 0.0f);
+
+            var guard = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
+            guard.UpdateOwner(preemptor);
+            read.Value.ValidlyConnectTo(guard.Value);
+            guard.AddTrigger(GuardTrigger.KeyChanged("hasTarget"));
+
+            return asset;
+        }
+
+        /// <summary>
+        /// A node whose branch was taken away from it stops receiving the frame hooks.
+        ///
+        /// <para>
+        /// This is the case that separates the two signals a filter could use, and it is why the filter asks
+        /// <c>IsRunning</c> rather than <c>LastExecutionStatus == Running</c>. <c>LastExecutionStatus</c> is
+        /// written only by a tick, and nothing resets it on the way out — so a Selector preempting a branch
+        /// calls <c>victim.OnNodeExit()</c> with no final tick and leaves the victim reading <c>Running</c>
+        /// for as long as it exists. A status filter passes that test forever.
+        /// </para>
+        ///
+        /// <para>
+        /// What that buys in practice: a preempted MoveTo would go on steering its agent from
+        /// <c>OnFixedUpdate</c> while the branch that owned it was over and another branch was driving. The
+        /// assertions below deliberately check the stale status <em>as well as</em> the hook counts, so the
+        /// test says out loud why the obvious filter is wrong rather than merely failing with it.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator APreemptedNodeStopsReceivingTheFrameHooks()
+        {
+            var machine = Spawn(
+                PreemptibleHookTree(), (_, variables) => variables.declarations.Set("hasTarget", false));
+
+            var counter = RunningNode<HookCountingNode>(machine);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.IsTrue(counter.IsRunning,
+                "The guarded branch was not refused, so the counting node never ran and there is nothing to "
+                + "preempt.");
+
+            var lateBefore = counter.LateUpdates;
+            var fixedBefore = counter.FixedUpdates;
+
+            Assert.Greater(lateBefore, 0, "Fixture check: it has to have been receiving hooks to stop.");
+
+            PublishFact(machine, "hasTarget", true);
+
+            for (int frame = 0; frame < 3; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.IsFalse(counter.IsRunning,
+                "The Selector did not take the branch over, so nothing here is about a preempted node.");
+
+            Assert.AreEqual(ExecutionStatus.Running, counter.LastExecutionStatus,
+                "The trap, asserted rather than described: the node is not running, and its last status still "
+                + "says Running -- because a preemption exits it without a final tick and nothing resets it.");
+
+            var lateAfterPreemption = counter.LateUpdates;
+            var fixedAfterPreemption = counter.FixedUpdates;
+
+            for (int frame = 0; frame < 5; frame++)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(lateAfterPreemption, counter.LateUpdates,
+                "A preempted node kept receiving OnLateUpdate. The filter is reading the last status, which a "
+                + "preemption leaves saying Running forever.");
+            Assert.AreEqual(fixedAfterPreemption, counter.FixedUpdates,
+                "A preempted node kept receiving OnFixedUpdate -- the one that would keep a preempted MoveTo "
+                + "steering an agent its branch no longer owns.");
+        }
+
     }
 }
