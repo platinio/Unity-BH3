@@ -281,6 +281,36 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "the node is broken again and must stop drawing as healthy");
         }
 
+        /// <summary>
+        /// The one entry nothing could ever drop.
+        ///
+        /// <para>
+        /// Freshness comes from the node's graph raising a change, so a node that has no graph yet has no
+        /// signal. Caching its answer would produce the single permanently stale entry in the class — still
+        /// reported after the node joins a graph and the problem is fixed. It is computed and returned, but
+        /// not stored.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ANodeWithNoGraph_IsAnsweredButNotCached()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/LateJoiner.asset");
+
+            // Defined but not in any graph, which is the state a node is built in before it is added.
+            var wait = new WaitTime();
+            wait.Define();
+
+            Assert.That(NodeProblemCache.For(wait), Is.Not.Empty,
+                "precondition: the unfed port is reported even without a graph");
+
+            tree.graph.Nodes.Add(wait);
+            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+                "an answer cached before the node had a graph has no signal that can ever drop it, so the "
+                + "badge would outlive the fix forever");
+        }
+
         // ------------------------------------------------------------------ unset ports, for every node
 
         /// <summary>

@@ -123,20 +123,23 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// Starts listening to the graph a node belongs to, once per graph.
+        /// Starts listening to the graph a node belongs to, once per graph. False when there is no graph to
+        /// listen to, which is the caller's signal not to cache what it is about to compute.
         ///
         /// <para>
         /// Called from the miss path rather than on every read: a hit means this graph was already observed
         /// when the entry was computed, because the only thing that drops entries also drops subscriptions.
         /// </para>
         /// </summary>
-        private static void Observe(BehaviorTreeNode node)
+        private static bool Observe(BehaviorTreeNode node)
         {
             var graph = node.graph;
 
-            if (graph == null || !Observed.Add(graph)) return;
+            if (graph == null) return false;
 
-            graph.elements.CollectionChanged += Invalidate;
+            if (Observed.Add(graph)) graph.elements.CollectionChanged += Invalidate;
+
+            return true;
         }
 
         /// <summary>
@@ -155,7 +158,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             if (Cache.TryGetValue(node, out var cached)) return cached;
 
-            Observe(node);
+            // A node with no graph has nothing that can tell this class it changed, so its answer is computed
+            // and handed back but never stored. Caching it would be the one way to get an entry that no
+            // signal can ever drop -- a permanently wrong badge on the node the moment it joins a graph,
+            // which is the exact failure the subscription above exists to prevent.
+            var canGoStale = Observe(node);
 
             Scratch.Clear();
 
@@ -192,7 +199,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 ? Array.Empty<NodeProblem>()
                 : Sorted(Scratch);
 
-            Cache[node] = problems;
+            if (canGoStale) Cache[node] = problems;
+
             return problems;
         }
 
