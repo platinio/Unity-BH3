@@ -390,18 +390,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// larger on each axis and tinted near-black.
         ///
         /// <para>
-        /// This used to build a 1x1 <c>Texture2D</c> every call and then never draw with it — a null
-        /// assignment above the lazy-create guard made the guard always true, and the draw below used the
-        /// shared style regardless. A <c>Texture2D</c> is a native object the GC does not collect and nothing
-        /// destroyed the previous one, so a graph window open on a 166-element tree orphaned several thousand
-        /// textures <em>per second</em> until a domain reload. The texture is gone rather than cached,
-        /// because nothing ever read it.
-        /// </para>
-        ///
-        /// <para>
-        /// Assigning the background here is the other half of the same bug. The draw took whichever sprite the
-        /// <em>previous</em> node had left in the shared style — correct only because every node loads the
-        /// same one, and blank for the first node drawn after a reload.
+        /// The background is assigned here rather than relied on, because <c>Styles.background</c> is shared
+        /// by every node — left to itself it holds whichever sprite the previous node drew with.
         /// </para>
         /// </summary>
         protected virtual void DrawOutsideBox(Rect p)
