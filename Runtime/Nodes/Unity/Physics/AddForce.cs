@@ -18,6 +18,8 @@ namespace ArcaneOnyx.BehaviorTree
         public override string NodeName => "Add Force";
         public override string Description => "Applies physics force to target Rigidbody.";
 
+        private Rigidbody targetRigidbody;
+
         protected override void Definition()
         {
             base.Definition();
@@ -26,12 +28,23 @@ namespace ArcaneOnyx.BehaviorTree
             Force = ValueInput<Vector3>(nameof(Force), Vector3.zero);
         }
 
+        public override void OnEnter()
+        {
+            base.OnEnter();
+
+            TryResolve(Target, out targetRigidbody);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            var target = GetComponent<Rigidbody>(Target);
+            // The miss was reported on entry; this is the "and fails" half of it. Without it a tree
+            // dropped onto a prefab with no Rigidbody answers with a NullReferenceException from inside
+            // the node, which takes the branch down saying nothing about why.
+            if (targetRigidbody == null) return ExecutionStatus.Failure;
+
             var force = Force.GetValue<Vector3>();
-            
-            target.AddForce(force, forceMode);
+
+            targetRigidbody.AddForce(force, forceMode);
             return ExecutionStatus.Success;
         }
     }
