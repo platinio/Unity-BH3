@@ -120,8 +120,7 @@ namespace ArcaneOnyx.BehaviorTree
                     ? "No agent in this scene is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
                     : "Enter play mode to watch an agent, or load an exported recording.", EditorStyles.miniLabel);
 
-                BehaviorTreeScrubOverride.Clear();
-                BehaviorTreeDebugSession.Clear();
+                BehaviorTreeDebugLifetime.Reset();
                 return;
             }
 
