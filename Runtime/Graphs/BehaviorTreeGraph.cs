@@ -86,6 +86,34 @@ namespace ArcaneOnyx.BehaviorTree
             valueOutputDefinitions = new PortDefinitionCollection<ValueOutputDefinition>();
         }
 
+        /// <summary>
+        /// Placeholders are canvas scaffolding, not content.
+        ///
+        /// <para>
+        /// A <see cref="PlaceHolderNode"/> exists so a transition's three line segments can be clicked; the
+        /// transition widget builds them when it opens and rewrites their rects from the draw rects on every
+        /// repaint. Nothing about them is authored, and they used to be written to the asset anyway — so
+        /// merely opening a tree added three serialized nodes per transition, unrecorded for undo, and every
+        /// walk over <c>elements</c> paid for them at runtime forever after.
+        /// </para>
+        ///
+        /// <para>
+        /// Returning false here both stops that and undoes it: a tree written by an older version sheds its
+        /// stored placeholders when it loads, and the widget rebuilds the ones it needs.
+        /// </para>
+        /// </summary>
+        protected override bool IsPersistentElement(GraphCore.IGraphElement element) => element is not PlaceHolderNode;
+
+        public override void OnAfterDependenciesDeserialized()
+        {
+            base.OnAfterDependenciesDeserialized();
+
+            // The legacy placeholder lists have done their one job by now -- defining the objects the element
+            // list referred to by id. Clearing them is what actually takes the stored placeholders out of the
+            // asset, since the field is still written whenever it holds something.
+            foreach (var transition in Transitions) transition.DiscardLegacyPlaceHolderNodes();
+        }
+
         public void DestroyUnusedScriptGraphAssets(BehaviorTreeGraphAsset graphAsset)
         {
             List<ScriptGraphAsset> unusedScriptGraphAssets = ScriptGraphAssetsRepository.Instance.GetScriptGraphAssets(graphAsset);
