@@ -1,4 +1,4 @@
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -32,16 +32,16 @@ namespace ArcaneOnyx.BehaviorTree
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
         
-        public override void OnAwake()
-        {
-            navAgent = GetComponent<NavMeshAgent>(Target);
-        }
-
         public override void OnEnter()
         {
-            if (navAgent == null)
+            base.OnEnter();
+
+            if (!TryResolve(Target, out navAgent))
             {
-                navAgent = GetComponent<NavMeshAgent>(Target);
+                // Cleared explicitly: OnUpdate reads it, and without this the entry would report
+                // whatever the previous one achieved.
+                setPositionWasCompleted = false;
+                return;
             }
             
             if (!WaitForPathComplete)

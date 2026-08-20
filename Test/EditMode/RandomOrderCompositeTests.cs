@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 
@@ -108,5 +108,65 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, a.UpdateCalls);
             Assert.AreEqual(1, b.UpdateCalls);
         }
+
+        /// <summary>
+        /// The shuffle actually reorders.
+        ///
+        /// <para>
+        /// The two permutation tests above are satisfied by a shuffle that returns the list untouched, which
+        /// is a real way to get Fisher-Yates wrong: draw the swap index from the wrong range and elements can
+        /// end up unable to move, or unable to stay. Eight children reshuffled twenty times land in their
+        /// original order every single time with probability 40320 to the power of -20, so a run that never
+        /// reorders is a broken shuffle rather than luck.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Both composites, because both call the shuffle and only one used to be checked.</b> Every
+        /// other <see cref="RandomSequence"/> test here is satisfied by an identity order — the permutation
+        /// ones by construction, the semantic ones because they use children that all answer the same way —
+        /// so deleting the shuffle call from <c>RandomSequence.SortChildren</c> left the whole suite green.
+        /// A random sequence that never randomises looks exactly like a working sequence, which is the kind
+        /// of defect that is only ever found by someone wondering why the variety went away.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void RandomSelector_ShufflingDoesNotLeaveTheOrderAlone()
+        {
+            var children = EightChildren();
+
+            AssertShufflingReorders(new RandomSelector().WithChildren(children), children);
+        }
+
+        /// <inheritdoc cref="RandomSelector_ShufflingDoesNotLeaveTheOrderAlone"/>
+        [Test]
+        public void RandomSequence_ShufflingDoesNotLeaveTheOrderAlone()
+        {
+            var children = EightChildren();
+
+            AssertShufflingReorders(new RandomSequence().WithChildren(children), children);
+        }
+
+        private static ScriptedNode[] EightChildren() =>
+            Enumerable.Range(0, 8).Select(_ => new ScriptedNode()).ToArray();
+
+        /// <summary>
+        /// One body, two named tests. Named rather than parameterised so a failure says which composite
+        /// stopped shuffling without anyone having to read the case list.
+        /// </summary>
+        private static void AssertShufflingReorders(ContainerNode composite, BehaviorTreeNode[] authored)
+        {
+            bool reordered = false;
+
+            for (int shuffle = 0; shuffle < 20 && !reordered; shuffle++)
+            {
+                composite.SortChildren();
+                reordered = !composite.GetChildren().SequenceEqual(authored);
+            }
+
+            Assert.IsTrue(reordered,
+                $"Twenty shuffles of eight children never changed the order, so {composite.GetType().Name} "
+                + "is not shuffling.");
+        }
+
     }
 }
