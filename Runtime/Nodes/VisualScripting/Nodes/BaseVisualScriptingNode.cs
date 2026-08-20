@@ -38,9 +38,9 @@ namespace ArcaneOnyx.BehaviorTree
             return scriptGraphVariable;
         }
         
-        protected BTScriptGraphVariable CreateGraphWithOutput(Type returnTyoe)
+        protected BTScriptGraphVariable CreateGraphWithOutput(Type returnType)
         {
-            var scriptGraphVariable = new BTScriptGraphVariable(returnTyoe);
+            var scriptGraphVariable = new BTScriptGraphVariable(returnType);
             scriptGraphVariables.Add(scriptGraphVariable);
             return scriptGraphVariable;
         }

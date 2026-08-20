@@ -14,6 +14,8 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput Value { get; private set; }
         
+        private Animator targetAnimator;
+
         public override string NodeName => "Set Animator Value";
         public override string Description => "Sets value in the animator, value can be int/float/boolean";
 
@@ -30,7 +32,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            var animator = GetComponent<Animator>(Animator);
+            if (!TryResolve(Animator, out targetAnimator)) return;
+
             var valueName = ValueName.GetValueOrDefault<string>();
             var animatorValue = Value.GetValue();
             
@@ -38,9 +41,9 @@ namespace ArcaneOnyx.BehaviorTree
             // alternatives that could both run -- but as three independent ifs with no return, the error ran
             // unconditionally, including after a set that worked. Every entry of this node logged a failure it
             // had not had, and Debug.LogError is expensive enough that across many agents it cost real time.
-            if (animatorValue is int intValue) animator.SetInteger(valueName, intValue);
-            else if (animatorValue is float floatValue) animator.SetFloat(valueName, floatValue);
-            else if (animatorValue is bool boolValue) animator.SetBool(valueName, boolValue);
+            if (animatorValue is int intValue) targetAnimator.SetInteger(valueName, intValue);
+            else if (animatorValue is float floatValue) targetAnimator.SetFloat(valueName, floatValue);
+            else if (animatorValue is bool boolValue) targetAnimator.SetBool(valueName, boolValue);
             else
             {
                 Debug.LogError(
@@ -51,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            return ExecutionStatus.Success;
+            return targetAnimator == null ? ExecutionStatus.Failure : ExecutionStatus.Success;
         }
     }
 }
