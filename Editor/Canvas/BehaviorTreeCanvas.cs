@@ -98,16 +98,25 @@ namespace ArcaneOnyx.BehaviorTree
         /// iterating the very collection it was mutating.
         /// </para>
         /// </summary>
+        private readonly List<GraphCore.IGraphElement> dangling = new List<GraphCore.IGraphElement>();
+
         private void RemoveDanglingElements()
         {
             UndoUtility.RecordEditedObject("Delete Graph Element");
 
-            for (int i = graph.elements.Count - 1; i >= 0; i--)
-            {
-                var graphElement = graph.elements.ElementAt(i);
+            // Collected first, then removed. Walking by index meant `ElementAt` on a merged collection, which
+            // enumerates from the start every call — an O(n²) pass over a collection it was mutating as it
+            // went. Two halves of one rule that scan differently is the drift this class exists to stop.
+            dangling.Clear();
 
-                if (IsDangling(graphElement)) graph.elements.Remove(graphElement);
+            foreach (var graphElement in graph.elements)
+            {
+                if (IsDangling(graphElement)) dangling.Add(graphElement);
             }
+
+            foreach (var graphElement in dangling) graph.elements.Remove(graphElement);
+
+            dangling.Clear();
         }
 
         private bool HasDanglingElements()
