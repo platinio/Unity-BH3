@@ -25,6 +25,8 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize, Inspectable]
         public ForceMode forceMode;
 
+        private Rigidbody targetRigidbody;
+
         public override string NodeName => "Add Explosive Force";
         public override string Description => "Applies a force that simulates explosion effects to the target RigidBody.";
 
@@ -43,14 +45,26 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnEnter();
 
-            var rb = GetComponent<Rigidbody>(Target);
+            if (!TryResolve(Target, out targetRigidbody)) return;
 
             Vector3 explosionOrigin = ExplosionOrigin.GetValue<Vector3>();
             float explosionForce = ExplosionForce.GetValue<float>();
             float explosionRadius = ExplosionRadius.GetValue<float>();
             float explosionUpModifier = ExplosionUpModifier.GetValue<float>();
-            
-            rb.AddExplosionForce(explosionForce, explosionOrigin, explosionRadius, explosionUpModifier, forceMode);
+
+            targetRigidbody.AddExplosionForce(
+                explosionForce, explosionOrigin, explosionRadius, explosionUpModifier, forceMode);
+        }
+
+        /// <summary>
+        /// Overridden only to be able to fail. This node does its work in <c>OnEnter</c> and inherited
+        /// <c>OnUpdate</c>'s default of <c>Success</c> — so a node that had found no Rigidbody and applied
+        /// no force would still have reported that it did, which is worse than the exception it used to
+        /// throw, not better.
+        /// </summary>
+        public override ExecutionStatus OnUpdate()
+        {
+            return targetRigidbody == null ? ExecutionStatus.Failure : ExecutionStatus.Success;
         }
     }
 }

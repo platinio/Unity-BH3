@@ -449,6 +449,55 @@ namespace ArcaneOnyx.BehaviorTree
 
             return component;
         }
+
+        /// <summary>
+        /// Resolves a component from a port, and says so when it cannot find one.
+        ///
+        /// <para>
+        /// <b>Call this when the node is entered, not at wake and not per tick.</b> A port is not a fixed
+        /// reference — what it points at can differ between one entry and the next — so a component resolved
+        /// once in <c>OnAwake</c> answers with whatever the port held the first time and never looks again,
+        /// which is a node quietly ignoring its own wire for the lifetime of the object. Resolving in
+        /// <c>OnUpdate</c> is correct but pays the lookup on every tick of a node that may run for many.
+        /// <c>OnEnter</c> is the one that is both. <c>PortReadConventionTests</c> enforces it.
+        /// </para>
+        ///
+        /// <para>
+        /// The failure is the point of the method existing rather than callers writing
+        /// <see cref="GetComponent{T}(ValueInput)"/> and a null check. A tree dropped onto a prefab that has
+        /// no <c>Rigidbody</c> — or no <c>NavMeshAgent</c>, or no <c>AudioSource</c> — is an ordinary
+        /// authoring mistake, and the honest answer to it is one line naming the node and the port, followed
+        /// by a failed node. The alternative, which several nodes shipped, is a
+        /// <c>NullReferenceException</c> thrown from inside the node that takes the branch down saying
+        /// nothing about why.
+        /// </para>
+        ///
+        /// <para>
+        /// The message names the port through <c>port.key</c> rather than a hard-coded word, so it cannot
+        /// drift from the port it is describing — which had already happened once, in a copied comment that
+        /// called <c>PlayAudio</c>'s <c>AudioSource</c> port "Target".
+        /// </para>
+        ///
+        /// <para>
+        /// <paramref name="component"/> is written on every path, so a caller holding it in a field always
+        /// has this entry's answer and never the previous entry's. A node whose work happens in
+        /// <c>OnUpdate</c> may therefore ignore the return value and test that field there instead — the
+        /// report has already been made either way, and the field cannot be a previous entry's component.
+        /// </para>
+        /// </summary>
+        /// <returns>False when nothing was found, in which case the node should fail rather than continue.</returns>
+        protected bool TryResolve<T>(ValueInput port, out T component) where T : Component
+        {
+            component = GetComponent<T>(port);
+
+            if (component != null) return true;
+
+            Debug.LogError(
+                $"'{NodeName}' found no {typeof(T).Name} on its {port.key} or on the agent itself.",
+                gameObject);
+
+            return false;
+        }
         
         public IReadOnlyCollection<ConditionalExecution> ConditionalExecutions => Guards;
         
@@ -477,7 +526,7 @@ namespace ArcaneOnyx.BehaviorTree
             return index;
         }
         
-        public int CountConditionalExection()
+        public int CountConditionalExecutions()
         {
             int count = 0;
             
@@ -495,7 +544,7 @@ namespace ArcaneOnyx.BehaviorTree
             return count;
         }
 
-        public void ClearConditionalExecutionInexCache()
+        public void ClearConditionalExecutionIndexCache()
         {
             ConditionalExecutionIndexCache.Clear();
         }

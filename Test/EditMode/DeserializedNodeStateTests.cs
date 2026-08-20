@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Runtime.Serialization;
 using NUnit.Framework;
@@ -56,7 +56,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(0, index, "no guards are armed on it, so the one asked about counts as first");
 
-            Assert.DoesNotThrow(() => node.ClearConditionalExecutionInexCache(),
+            Assert.DoesNotThrow(() => node.ClearConditionalExecutionIndexCache(),
                 "clearing a cache that was never created is not an error, it is nothing to do");
         }
 

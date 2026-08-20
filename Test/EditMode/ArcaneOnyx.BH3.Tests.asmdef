@@ -6,6 +6,7 @@
         "ArcaneOnyx.BehaviorTree.Editor",
         "ArcaneOnyx.VisualScriptingExtension.Runtime",
         "ArcaneOnyx.GraphCore",
+        "ArcaneOnyx.GraphCore.Editor",
         "ArcaneOnyx.UnityExtensions.Runtime",
         "GUID:21b0c8d1703a94250bfac916590cea4f",
         "GUID:ea715009a4efd4c6cbc85be3ae097dd3",

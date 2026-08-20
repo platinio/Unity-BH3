@@ -47,9 +47,35 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public BehaviorTreeGraph RunningGraph => behaviorTreeGraph;
 
+        /// <summary>
+        /// True once the root has returned Success or Failure, which is final: a tree that has finished is
+        /// not ticked again, and the only way back is <see cref="Switch"/>, which replaces the tree
+        /// outright.
+        ///
+        /// <para>
+        /// Every shipped tree parks a Repeater under Entry, so in practice the root never returns anything
+        /// terminal and this stays false forever -- which is why the three Unity callbacks were free to
+        /// disagree about it. Update stopped; LateUpdate and FixedUpdate kept forwarding to the graph after
+        /// the halt. They ask the same question now.
+        /// </para>
+        /// </summary>
+        public bool HasFinished =>
+            lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure;
+
         public BehaviorTreeGraphAsset GraphInstance => graphInstance;
         public BehaviorTreeGraphAsset GraphAsset => nest.macro;
         public BehaviorTreeGraphAsset OriginalMacro { get; private set; }
+
+        /// <summary>
+        /// The agent variable every machine publishes itself under, so a tree can read the GameObject it is
+        /// running on.
+        ///
+        /// <para>
+        /// A const because it is a contract between this line and every read site, and a misspelling on
+        /// either side of a string literal compiles and then simply finds nothing.
+        /// </para>
+        /// </summary>
+        public const string SelfVariableKey = "This";
 
         /// <summary>
         /// This agent's black box, or null outside the editor and dev builds. Assigned through
@@ -66,7 +92,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Awake();
             Variables = GetComponent<Variables>();
-            Variables.declarations.Set("This", gameObject);
+            Variables.declarations.Set(SelfVariableKey, gameObject);
 
             if (!hasGraph) return;
 
@@ -291,7 +317,8 @@ namespace ArcaneOnyx.BehaviorTree
                     node.CanvasUpdate();
                 }
 #endif
-                if (lastExecutionStatus == ExecutionStatus.Success || lastExecutionStatus == ExecutionStatus.Failure) return;
+                // After the canvas refresh on purpose: a finished tree still draws, it just stops running.
+                if (HasFinished) return;
 
                 // Opens the tick before the tree runs, so everything the tree does this frame is stamped with
                 // the same tick and ordered within it.
@@ -304,7 +331,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void LateUpdate()
         {
-            if (hasGraph && behaviorTreeGraph != null)
+            if (hasGraph && behaviorTreeGraph != null && !HasFinished)
             {
                 behaviorTreeGraph.OnLateUpdate();
             }
@@ -312,7 +339,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void FixedUpdate()
         {
-            if (hasGraph && behaviorTreeGraph != null)
+            if (hasGraph && behaviorTreeGraph != null && !HasFinished)
             {
                 behaviorTreeGraph.OnFixedUpdate();
             }

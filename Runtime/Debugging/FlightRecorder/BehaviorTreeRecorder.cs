@@ -50,12 +50,24 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             BehaviorTreeFlightRecorders.Register(recorder);
         }
 
+        /// <summary>
+        /// Takes the recorder off a machine and out of the registry.
+        ///
+        /// <para>
+        /// The machine's own reference is cleared as well as the registration, so "detached" and "still
+        /// holding a recording" stop being possible at the same time. Unregistering alone left the
+        /// recorder reachable through <c>machine.FlightRecorder</c> -- which is a plain auto-property and
+        /// so keeps answering on a destroyed machine -- and every editor-side check for "is this agent
+        /// recording" reads exactly that.
+        /// </para>
+        /// </summary>
         [Conditional(Editor), Conditional(DevToolsDefine)]
         public static void Detach(BehaviorTreeMachine machine)
         {
             if (machine == null) return;
 
             BehaviorTreeFlightRecorders.Unregister(machine.FlightRecorder);
+            machine.SetFlightRecorder(null);
         }
 
         /// <summary>Hands every node in a graph the recorder to report to.</summary>
