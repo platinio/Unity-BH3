@@ -57,6 +57,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected const float TITLE_HEIGHT = 25.0f;
 
+        /// <summary>How far the dark outline behind a node extends past it, in total across each axis.</summary>
+        private const float OUTSIDE_BOX_BORDER = 10.0f;
+
         /// <summary>
         /// What a node reserves above and below its port rows: the icon or title band at the top, and the
         /// name drawn across the bottom of the box.
@@ -379,27 +382,38 @@ namespace ArcaneOnyx.BehaviorTree
             BehaviorTreePriorityBadge.Draw(position, element);
         }
 
-        public static Texture2D outsideTexture;
-        
+        /// <summary>The near-black an outside box is tinted with, so the node reads as sitting on top of it.</summary>
+        private static readonly Color OutsideBoxTint = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+
+        /// <summary>
+        /// The dark outline behind a node: the node's own sprite, drawn <see cref="OUTSIDE_BOX_BORDER"/> px
+        /// larger on each axis and tinted near-black.
+        ///
+        /// <para>
+        /// This used to build a 1x1 <c>Texture2D</c> every call and then never draw with it — a null
+        /// assignment above the lazy-create guard made the guard always true, and the draw below used the
+        /// shared style regardless. A <c>Texture2D</c> is a native object the GC does not collect and nothing
+        /// destroyed the previous one, so a graph window open on a 166-element tree orphaned several thousand
+        /// textures <em>per second</em> until a domain reload. The texture is gone rather than cached,
+        /// because nothing ever read it.
+        /// </para>
+        ///
+        /// <para>
+        /// Assigning the background here is the other half of the same bug. The draw took whichever sprite the
+        /// <em>previous</em> node had left in the shared style — correct only because every node loads the
+        /// same one, and blank for the first node drawn after a reload.
+        /// </para>
+        /// </summary>
         protected virtual void DrawOutsideBox(Rect p)
         {
-            float borderSize = 10;
-                    
             Rect outsideBox = p;
-            outsideBox.position += new Vector2(-borderSize / 2.0f, -borderSize / 2.0f);
-            outsideBox.width += borderSize;
-            outsideBox.height += borderSize;
+            outsideBox.position += new Vector2(-OUTSIDE_BOX_BORDER / 2.0f, -OUTSIDE_BOX_BORDER / 2.0f);
+            outsideBox.width += OUTSIDE_BOX_BORDER;
+            outsideBox.height += OUTSIDE_BOX_BORDER;
 
-            outsideTexture = null;
-            if (outsideTexture == null)
-            {
-                outsideTexture = new Texture2D(1, 1);
-                outsideTexture.wrapMode = TextureWrapMode.Repeat;
-                outsideTexture.SetPixel(0, 0, new Color(0.1f, 0.1f, 0.1f, 1));
-                outsideTexture.Apply();
-            }
+            Styles.background.normal.background = element.NodeBackground;
 
-            using (LudiqGUI.color.Override(new Color(0.1f, 0.1f, 0.1f, 1)))
+            using (LudiqGUI.color.Override(OutsideBoxTint))
             {
                 Styles.background.Draw(outsideBox, false, IsSelected, false, false);
             }
