@@ -535,7 +535,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         /// </summary>
         private static ReactiveGuard RunningGuard(BehaviorTreeMachine machine)
         {
-            var guard = machine.GraphInstance.graph.Nodes.OfType<ReactiveGuard>().FirstOrDefault();
+            var guard = machine.RunningGraph.Nodes.OfType<ReactiveGuard>().FirstOrDefault();
             Assert.IsNotNull(guard, "The running graph must contain the reactive guard.");
 
             return guard;

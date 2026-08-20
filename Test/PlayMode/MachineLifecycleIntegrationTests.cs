@@ -61,6 +61,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.AreSame(tree, machine.OriginalMacro, "while the original is still remembered as authored.");
 
             var authoredWait = tree.graph.Nodes.OfType<WaitTime>().First();
+
+            // Deliberately the clone rather than RunningGraph: this assertion is *about* the clone, and
+            // reading it through the accessor that abstracts the two apart would stop testing that Awake
+            // instantiates anything.
             var runningWait = machine.GraphInstance.graph.Nodes.OfType<WaitTime>().First();
 
             Assert.AreNotSame(authoredWait, runningWait, "The running nodes are clones,");

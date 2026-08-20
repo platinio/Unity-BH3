@@ -27,6 +27,27 @@ namespace ArcaneOnyx.BehaviorTree
         public ExecutionStatus LastExecutionStatus => lastExecutionStatus;
 
         /// <summary>
+        /// The tree this agent is actually ticking, or null before <see cref="Awake"/> and after teardown.
+        ///
+        /// <para>
+        /// The one answer to "what graph is this machine running", and not the same question as
+        /// <see cref="GraphInstance"/>. That property is the private <em>clone of an asset</em>, which an
+        /// agent whose tree is authored into the scene never has: <see cref="AwakenTree"/> takes the
+        /// null-macro path, leaves <c>graphInstance</c> null, and runs <c>nest.embed</c> directly. Asking
+        /// the clone what is running therefore answers "nothing" for a perfectly ordinary agent — which is
+        /// how an embedded-graph agent came to have an empty topology in the why-inspector and an event log
+        /// of bare guids in the flight recorder window.
+        /// </para>
+        ///
+        /// <para>
+        /// For a macro-backed agent the two agree by construction, because <c>AwakenTree</c> switches the
+        /// nest to the clone's graph before reading it back. So this is the general answer rather than a
+        /// second one.
+        /// </para>
+        /// </summary>
+        public BehaviorTreeGraph RunningGraph => behaviorTreeGraph;
+
+        /// <summary>
         /// True once the root has returned Success or Failure, which is final: a tree that has finished is
         /// not ticked again, and the only way back is <see cref="Switch"/>, which replaces the tree
         /// outright.

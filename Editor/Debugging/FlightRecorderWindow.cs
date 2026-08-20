@@ -327,10 +327,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             nodesByGuid.Clear();
             indexedFor = recorder;
 
+            // Through the machine's own answer rather than its cloned asset: a tree authored into the scene
+            // has no clone, and this window used to equate the two independently of everything else that
+            // asks. An embedded-graph agent's whole event log read as truncated guids because of it.
             var machine = FindMachine(recorder);
-            if (machine == null || machine.GraphInstance == null) return;
+            if (machine == null) return;
 
-            Index(machine.GraphInstance.graph, 0);
+            Index(machine.RunningGraph, 0);
         }
 
         private void Index(BehaviorTreeGraph graph, int depth)
