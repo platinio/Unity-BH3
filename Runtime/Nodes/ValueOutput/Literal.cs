@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     {
         [Serialize, Inspectable] protected string NodeComment;
         
-        public override bool DrawInSubTree => false;
+        public override bool DrawInSubTree => true;
         public override int MaxChildrenLimit => 0;
         public override bool CanBeUsedAsTransitionDestination => false;
         public override bool CanBeUsedAsTransitionSource => false;

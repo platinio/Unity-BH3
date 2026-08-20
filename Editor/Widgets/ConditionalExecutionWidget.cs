@@ -186,15 +186,21 @@ namespace ArcaneOnyx.BehaviorTree
             
             if (IsRepaint)
             {
-                DrawOutsideBox(position);
-                
+                // Shifted like every other rect here: a sub-tree preview passes the translation into its
+                // frame, and a box drawn from the bare position lands at the guard's raw sub-graph
+                // coordinates — outside the frame — while its own title follows the offset.
+                Rect p = position;
+                p.position += offset;
+
+                DrawOutsideBox(p);
+
                 using (LudiqGUI.color.Override(element.Color))
                 {
                     Styles.background.normal.background = element.NodeBackground;
-                    Styles.background.Draw(position, false, IsSelected, false, false);
+                    Styles.background.Draw(p, false, IsSelected, false, false);
                 }
 
-                if (useSelection) GraphDrawer.DrawSelectionBox(position, GetBorderThickness(), Color.cyan);
+                if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
 
                 if (node.ShowIcon)
                 {
@@ -206,7 +212,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 // This override does not chain to the base, so the badge has to be asked for explicitly --
                 // which is why guards were the one node kind it never appeared on.
-                DrawProblemBadge(offset, position);
+                DrawProblemBadge(offset, p);
             }
         }
 

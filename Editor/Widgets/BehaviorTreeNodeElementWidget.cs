@@ -166,28 +166,24 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         /// <summary>
-        /// Stand-in port markers for the sub-tree preview.
+        /// Stand-in port markers for the sub-tree preview, at each port's real handle position rather than
+        /// evenly spread along the node's edge — the preview draws the wires between previewed nodes, and a
+        /// wire ends at the handle, so a marker anywhere else has a wire pointing beside it.
         /// </summary>
-        protected virtual void DrawPortPreviews(Rect p)
+        protected virtual void DrawPortPreviews(Vector2 offset)
         {
             const float size = 8.0f;
-            const float spacing = 4.0f;
 
-            DrawPortColumn(p.x - (size * 0.5f), p, element.valueInputs?.Count() ?? 0, size, spacing);
-            DrawPortColumn(p.xMax - (size * 0.5f), p, element.valueOutputs?.Count() ?? 0, size, spacing);
+            DrawPortHandlePreviews(inputs, offset, size);
+            DrawPortHandlePreviews(outputs, offset, size);
         }
 
-        private static void DrawPortColumn(float x, Rect p, int count, float size, float spacing)
+        private static void DrawPortHandlePreviews(List<IPortWidget> portWidgets, Vector2 offset, float size)
         {
-            if (count <= 0) return;
-
-            // centred on the node's edge, and clamped so a node with many ports does not spill past its box
-            float step = Mathf.Min(size + spacing, (p.height - size) / count);
-            float top = p.y + ((p.height - (step * (count - 1))) * 0.5f) - (size * 0.5f);
-
-            for (int i = 0; i < count; i++)
+            foreach (var portWidget in portWidgets)
             {
-                var dot = new Rect(x, top + (step * i), size, size);
+                var center = portWidget.handlePosition.center + offset;
+                var dot = new Rect(center.x - (size * 0.5f), center.y - (size * 0.5f), size, size);
                 Styles.background.Draw(dot, false, false, false, false);
             }
         }
@@ -257,7 +253,7 @@ namespace ArcaneOnyx.BehaviorTree
                         Styles.background.Draw(topConnection, false, IsSelected, false, false);
                     }
 
-                    if (previewPorts) DrawPortPreviews(p);
+                    if (previewPorts) DrawPortPreviews(offset);
                 }
 
                 if (useSelection) GraphDrawer.DrawSelectionBox(p, GetBorderThickness(), Color.cyan);
@@ -505,6 +501,24 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>Positions the child widgets — the ports among them — without the node box layout.</summary>
         protected void CacheChildWidgetPositions() => base.CachePosition();
+
+        /// <summary>
+        /// The full layout pass a sub-tree preview needs before this node can be drawn or wired into.
+        /// The canvas gives every widget it runs this same sequence; a preview drives widgets by hand,
+        /// and skipping any step shows: without the item caches the port list is empty and measuring a
+        /// port dereferences a description it does not have, and without the port position pass the
+        /// handle rects the wires and port markers read stay at the origin.
+        /// </summary>
+        public void CacheForPreview()
+        {
+            CacheItem();
+
+            foreach (var port in ports) port.CacheItem();
+
+            CachePosition();
+
+            foreach (var port in ports) port.CachePosition();
+        }
 
         /// <summary>Draws the child widgets, which is what puts ports on the canvas.</summary>
         protected void DrawChildWidgets() => base.DrawForeground();
