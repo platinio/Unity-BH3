@@ -16,6 +16,8 @@ namespace ArcaneOnyx.BehaviorTree
         public ForceMode forceMode;
 
         public override string NodeName => "Add Torque";
+        private Rigidbody targetRigidbody;
+
         public override string Description => "Applies torque to the target Rigidbody.";
 
         protected override void Definition()
@@ -26,12 +28,20 @@ namespace ArcaneOnyx.BehaviorTree
             Torque = ValueInput<Vector3>(nameof(Torque), Vector3.zero);
         }
 
+        public override void OnEnter()
+        {
+            base.OnEnter();
+
+            TryResolve(Target, out targetRigidbody);
+        }
+
         public override ExecutionStatus OnUpdate()
         {
-            var target = GetComponent<Rigidbody>(Target);
+            if (targetRigidbody == null) return ExecutionStatus.Failure;
+
             var torque = Torque.GetValue<Vector3>();
-            
-            target.AddTorque(torque, forceMode);
+
+            targetRigidbody.AddTorque(torque, forceMode);
             return ExecutionStatus.Success;
         }
     }

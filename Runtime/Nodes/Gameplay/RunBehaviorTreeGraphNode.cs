@@ -325,6 +325,39 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// Passes the frame's late hook down into the branch, the way <see cref="OnEnter"/> and
+        /// <see cref="OnUpdate"/> already pass theirs.
+        ///
+        /// <para>
+        /// Without this a node that overrides the hook works at the top level and silently stops the day
+        /// someone refactors its branch into a sub-tree — a behaviour change with no error, no warning, and
+        /// no diff at the node itself. The two hooks were the only ones the forwarding missed.
+        /// </para>
+        ///
+        /// <para>
+        /// Guarded on <see cref="HasBehaviorTreeGraphInstance"/> for the reason <see cref="OnExit"/> is:
+        /// reading the instance <em>clones the asset on first access</em>, so an unguarded read here would
+        /// make a per-frame hook instantiate a branch that had never run. The graph reached this way runs
+        /// the same <c>IsRunning</c> filter over its own nodes, so nesting costs a walk per running branch
+        /// rather than a hook on an idle one.
+        /// </para>
+        /// </summary>
+        public override void OnLateUpdate()
+        {
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            BehaviorTreeGraphInstance.OnLateUpdate();
+        }
+
+        /// <inheritdoc cref="OnLateUpdate"/>
+        public override void OnFixedUpdate()
+        {
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            BehaviorTreeGraphInstance.OnFixedUpdate();
+        }
+
+        /// <summary>
         /// Exits the branch's own nodes, the way <see cref="OnEnter"/> and <see cref="OnUpdate"/> reach into it.
         /// </summary>
         public override void OnExit()
