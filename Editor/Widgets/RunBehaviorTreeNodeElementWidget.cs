@@ -43,17 +43,20 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 position = new Rect(position.position, EmptyNodeSize);
                 base.CachePosition();
-                base.DrawForeground(Vector2.zero, e.IsRepaint);
+                base.DrawForeground(offset, IsRepaint, useSelection);
                 return;
             }
           
             position = CalculateSubBehaviorTreeBox();
             DrawSubGraphGroup(offset);
 
+            // The sub-tree's own coordinates mean nothing to this canvas, so the whole preview is drawn
+            // through one translation: its bounds' corner lands one padding inside the frame's. Everything
+            // in the preview — nodes, guards, wires — shifts by this same vector, which is what keeps them
+            // attached to each other no matter where the sub-tree was authored.
             BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
-            Vector2 entryOffset = behaviorTreeGraph.GetEntryNodeOffset() + offset;
-            Vector2 subBehaviorTreeOffset = position.position + (new Vector2(position.size.x / 2.0f, 0.0f)) + entryOffset;
-          
+            Vector2 subBehaviorTreeOffset = position.position + SubTreePadding - CalculateSubTreeBounds(behaviorTreeGraph).position + offset;
+
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
 
             DrawParameterPorts();
@@ -74,27 +77,68 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void DrawSubTreeNodes(BehaviorTreeGraph behaviorTreeGraph, Vector2 offset)
         {
+            var subCanvas = behaviorTreeGraph.Canvas();
+
+            // Every node is cached before anything draws: a wire reads port handle positions off the node
+            // widgets, and a guard anchors to its owner, so a single interleaved pass would hand some of
+            // them last frame's layout.
             foreach (var graphElement in behaviorTreeGraph.elements)
             {
                 if (!graphElement.DrawInSubTree) continue;
-                
-                if (graphElement is RunBehaviorTreeGraphNode runNode)
+
+                if (graphElement is BehaviorTreeNode node && subCanvas.Widget(node) is BehaviorTreeNodeElementWidget w)
                 {
-                    RunBehaviorTreeNodeElementWidget w = behaviorTreeGraph.Canvas().Widget(runNode) as RunBehaviorTreeNodeElementWidget;
-                    w.CachePosition();
+                    w.CacheForPreview();
+                }
+            }
+
+            // Nested frames first: a frame is the ground its siblings stand on, and its translucent fill
+            // painted after a wire or a node that happens to overlap it — a variable node beside a guard,
+            // say — buries them under the frame.
+            foreach (var graphElement in behaviorTreeGraph.elements)
+            {
+                if (!graphElement.DrawInSubTree) continue;
+
+                if (graphElement is RunBehaviorTreeGraphNode runNode && subCanvas.Widget(runNode) is RunBehaviorTreeNodeElementWidget w)
+                {
                     w.DrawSubTreePreview(offset);
                 }
-                else if (graphElement is BehaviorTreeNode node)
+            }
+
+            // Wires over the frames — their endpoints sit on guards and ports that overlap them — but
+            // under the nodes they connect.
+            foreach (var graphElement in behaviorTreeGraph.elements)
+            {
+                if (!graphElement.DrawInSubTree) continue;
+
+                if (graphElement is BehaviorTreeTransition transition)
                 {
-                    var w = behaviorTreeGraph.Canvas().Widget(node) as BehaviorTreeNodeElementWidget;
-                    w.CachePosition();
-                    w.DrawSubTreePreview(offset);
-                }
-                else if (graphElement is BehaviorTreeTransition transition)
-                {
-                    var w = behaviorTreeGraph.Canvas().Widget(transition) as BehaviorTreeTransitionWidget;
+                    var w = subCanvas.Widget(transition) as BehaviorTreeTransitionWidget;
                     w.CachePosition();
                     w.DrawConnection(offset);
+                }
+                else if (graphElement is IPortConnection connection)
+                {
+                    // Both ends have to be in the preview — a wire from a node kind that opts out of it
+                    // would point at empty space.
+                    if (!connection.source.behaviorTreeNode.DrawInSubTree) continue;
+                    if (!connection.destination.behaviorTreeNode.DrawInSubTree) continue;
+
+                    if (subCanvas.Widget(connection) is IPortConnectionWidget w)
+                    {
+                        w.CachePosition();
+                        w.DrawConnection(offset);
+                    }
+                }
+            }
+
+            foreach (var graphElement in behaviorTreeGraph.elements)
+            {
+                if (!graphElement.DrawInSubTree || graphElement is RunBehaviorTreeGraphNode) continue;
+
+                if (graphElement is BehaviorTreeNode node && subCanvas.Widget(node) is BehaviorTreeNodeElementWidget w)
+                {
+                    w.DrawSubTreePreview(offset);
                 }
             }
         }
@@ -107,7 +151,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             using (LudiqGUI.color.Override(Color.cyan))
             {
-                box.position += new Vector2(0, -40.0f) + offset;
+                box.position += new Vector2(0, -GROUP_HEADER_LIFT) + offset;
                 RunBehaviorTreeNodeElementWidgetStyles.group.Draw(box, false, false, true, false);
             }
             
@@ -150,74 +194,62 @@ namespace ArcaneOnyx.BehaviorTree
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
+        /// <summary>Room the frame keeps between its edges and the sub-tree's bounds, per side.</summary>
+        private static readonly Vector2 SubTreePadding = new Vector2(50.0f, 50.0f);
+
+        /// <summary>How far the group frame's header band is drawn above the frame's own rect.</summary>
+        private const float GROUP_HEADER_LIFT = 40.0f;
+
         private Rect CalculateSubBehaviorTreeBox()
         {
-            Vector2 margin = new Vector2(300, 200);
-            
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
 
-            var behaviorTreeGraph = runBehaviorTreeGraphNode.BehaviorTreeGraphAsset.graph;
-
-            float right = float.MinValue;
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (!graphElement.DrawInSubTree) continue;
-                if (graphElement is BehaviorTreeNode node && !(graphElement is PlaceHolderNode) && node.Position.x > right)
-                {
-                    right = node.Position.x;
-                }
-            }
-            
-            float left = float.MaxValue;
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (!graphElement.DrawInSubTree) continue;
-                if (graphElement is BehaviorTreeNode node && !(graphElement is PlaceHolderNode) && node.Position.x < left)
-                {
-                    left = node.Position.x;
-                }
-            }
-            
-            float up = float.MaxValue;
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (!graphElement.DrawInSubTree) continue;
-                if (graphElement is BehaviorTreeNode node && !(graphElement is PlaceHolderNode) && node.Position.y < up)
-                {
-                    up = node.Position.y;
-                }
-            }
-            
-            float down = float.MinValue;
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (!graphElement.DrawInSubTree) continue;
-                if (graphElement is BehaviorTreeNode node && !(graphElement is PlaceHolderNode) && node.Position.y > down)
-                {
-                    down = node.Position.y;
-                }
-            }
-
-            //TODO: address comment
-            /*
-             * in order to make this fast we are not taking into account offsets, we are just calculating the larger side and go with it
-             * this can cause blank spaces in the subgraph if it is not properly aligned 
-             */
-            
-            float largerHSide = Mathf.Abs(left) > Mathf.Abs(right)? left : right;
-            largerHSide = Mathf.Abs(largerHSide);
-            float w = largerHSide * 2.0f;
-            
-            float largerVSide = Mathf.Abs(down) > Mathf.Abs(up)? down : up;
-            largerVSide = Mathf.Abs(largerVSide);
-            float h = largerVSide;
+            var bounds = CalculateSubTreeBounds(GetBehaviorTreeGraph());
+            if (bounds.size == Vector2.zero) return new Rect(position.position, EmptyNodeSize);
 
             var r = position;
-            r.size = new Vector2(w, h);
-            r.size += margin;
-           
+            r.size = bounds.size + SubTreePadding * 2.0f;
+
             return r;
+        }
+
+        /// <summary>
+        /// The rectangle the sub-tree actually occupies, in its own graph's coordinates: full node rects,
+        /// the guard stacks above their owners, and a nested frame's header band. This is what sizes the
+        /// frame, so anything drawn in the preview has to be counted here or it leaks outside the box —
+        /// which is exactly what the "larger side times two" estimate this replaces did to any tree not
+        /// authored symmetrically around its own origin.
+        /// </summary>
+        private Rect CalculateSubTreeBounds(BehaviorTreeGraph behaviorTreeGraph)
+        {
+            var subCanvas = behaviorTreeGraph.Canvas();
+
+            float left = float.MaxValue, up = float.MaxValue;
+            float right = float.MinValue, down = float.MinValue;
+
+            foreach (var graphElement in behaviorTreeGraph.elements)
+            {
+                if (!graphElement.DrawInSubTree) continue;
+                if (!(graphElement is BehaviorTreeNode node) || graphElement is PlaceHolderNode) continue;
+
+                // A guard has no authored position — its widget anchors it to its owner — so its room is
+                // counted from the owner below via the same measured stack height the widgets place it with.
+                if (graphElement is ConditionalExecution) continue;
+
+                var nodePosition = node.Position;
+                var top = nodePosition.yMin - ConditionalExecutionWidget.StackHeightAbove(subCanvas, node);
+                if (node is RunBehaviorTreeGraphNode) top -= GROUP_HEADER_LIFT;
+
+                left = Mathf.Min(left, nodePosition.xMin);
+                right = Mathf.Max(right, nodePosition.xMax);
+                up = Mathf.Min(up, top);
+                down = Mathf.Max(down, nodePosition.yMax);
+            }
+
+            if (left > right) return default;
+
+            return Rect.MinMaxRect(left, up, right, down);
         }
 
         public override void CachePosition()

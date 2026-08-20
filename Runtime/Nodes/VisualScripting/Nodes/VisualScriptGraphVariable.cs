@@ -81,7 +81,11 @@ namespace ArcaneOnyx.BehaviorTree
         public IReadOnlyList<string> DeclaredWatchedKeys =>
             Function != null ? Function.WatchedKeys : Array.Empty<string>();
 
-        public override bool DrawInSubTree => false;
+        /// <summary>
+        /// Drawn in a parent tree's sub-tree preview, wires included, because a branch whose guards and
+        /// parameters are fed by these nodes reads as unconditional without them.
+        /// </summary>
+        public override bool DrawInSubTree => true;
 
         /// <summary>
         /// Points this node at the graph that produces its value. Only useful after the node has been added

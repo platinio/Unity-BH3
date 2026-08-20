@@ -140,6 +140,15 @@ namespace ArcaneOnyx.BehaviorTree
             GraphGUI.DrawConnection(color, sourceHandleEdgeCenter, destinationHandleEdgeCenter, Edge.Right, Edge.Left, null, Vector2.zero, UnitConnectionStyles.relativeBend, UnitConnectionStyles.minBend, thickness);
         }
 
+        /// <summary>
+        /// The same wire shifted into a parent tree's sub-tree preview. Hover, disconnect and droplet
+        /// state are skipped: a preview is not interactive, so none of them can occur there.
+        /// </summary>
+        public void DrawConnection(Vector2 offset)
+        {
+            GraphGUI.DrawConnection(color, sourceHandleEdgeCenter + offset, destinationHandleEdgeCenter + offset, Edge.Right, Edge.Left, null, Vector2.zero, UnitConnectionStyles.relativeBend, UnitConnectionStyles.minBend, 3);
+        }
+
         #endregion
 
 
