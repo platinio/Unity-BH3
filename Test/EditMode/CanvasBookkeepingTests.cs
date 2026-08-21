@@ -32,6 +32,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private Sequence owner;
         private ConditionalExecution guard;
 
+        /// <summary>Set by the test that disposes the canvas itself, so teardown does not close it twice.</summary>
+        private bool disposed;
+
         [SetUp]
         public void SetUp()
         {
@@ -43,12 +46,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, -200.0f, 0.0f);
 
             canvas = new BehaviorTreeCanvas(tree.graph);
+            disposed = false;
         }
 
         [TearDown]
         public void TearDown()
         {
-            canvas.Close();
+            if (!disposed) canvas.Close();
+
             AssetDatabase.DeleteAsset(Folder);
         }
 
@@ -106,6 +111,28 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(GraphStillHasTheGuard, Is.False,
                 "the flag re-arms a whole pass rather than tracking which element changed, so nothing is " +
                 "permanently invisible to the repair");
+        }
+
+        /// <summary>
+        /// A canvas is constructed and used without ever being opened by every sub-tree preview and every
+        /// test, so <c>Close</c> is not what releases it — <c>Dispose</c> is. Until it did, those canvases
+        /// stayed subscribed to two global editor events for the session.
+        /// </summary>
+        [Test]
+        public void ADisposedCanvas_StopsListeningToTheGraph()
+        {
+            canvas.SyncBookkeeping();
+            canvas.Dispose();
+
+            // Raises CollectionChanged, which is what would re-arm the pass if the handler were still on.
+            tree.graph.elements.Remove(owner);
+            canvas.SyncBookkeeping();
+
+            Assert.That(GraphStillHasTheGuard, Is.True,
+                "a disposed canvas that still repaired would be one still subscribed to Undo and " +
+                "projectChanged as well, which is what roots it for the session");
+
+            disposed = true;
         }
 
         [Test]

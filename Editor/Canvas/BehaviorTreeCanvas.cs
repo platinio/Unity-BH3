@@ -360,6 +360,31 @@ namespace ArcaneOnyx.BehaviorTree
 
             StopListeningForBookkeepingChanges();
         }
+
+        /// <summary>
+        /// The teardown every canvas gets, including the ones that are never opened.
+        ///
+        /// <para>
+        /// <see cref="Close"/> is not enough on its own: a canvas is constructed and used without ever being
+        /// opened by every sub-tree preview — <c>DrawSubTreeNodes</c> and <c>CalculateSubTreeBounds</c> both
+        /// reach for the sub-graph's canvas — and by every test. Those canvases would keep an instance method
+        /// subscribed to <see cref="Undo.undoRedoPerformed"/> and
+        /// <see cref="EditorApplication.projectChanged"/>, two globals, for the rest of the session.
+        /// </para>
+        ///
+        /// <para>
+        /// The cost today is near zero, because the provider caches those canvases anyway and the handler
+        /// only writes a bool. It is here because subscribing in one place and unsubscribing in another that
+        /// is not guaranteed to run is the pairing that produced the leak this batch already fixed once, in
+        /// <c>OpenBehaviorTreeCanvas</c>.
+        /// </para>
+        /// </summary>
+        public override void Dispose()
+        {
+            StopListeningForBookkeepingChanges();
+
+            base.Dispose();
+        }
         
         protected override void HandleLowPriorityInput()
         {
