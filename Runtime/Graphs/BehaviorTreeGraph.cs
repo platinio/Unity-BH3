@@ -327,20 +327,29 @@ namespace ArcaneOnyx.BehaviorTree
         /// removed without renumbering, and duplicates mean two children claim one priority. In both cases
         /// the recorded order is not trustworthy and position is the better answer.
         /// </para>
+        ///
+        /// <para>
+        /// Duplicates are found by comparing the indices against each other rather than by marking them off
+        /// in a scratch array. The array was one heap allocation per call, and the canvas priority badge
+        /// calls this for every node on every repaint. The pairwise scan is quadratic in the number of
+        /// children <em>one composite</em> has — a handful in any authored tree, and cheaper than the
+        /// allocation well past any realistic count — and it needs no buffer to own, share, or reset.
+        /// </para>
         /// </summary>
         private static bool RecordsAPriorityOrder(List<BehaviorTreeTransition> siblings)
         {
             if (siblings.Count == 0) return false;
 
-            var claimed = new bool[siblings.Count];
-
-            foreach (var transition in siblings)
+            for (int position = 0; position < siblings.Count; position++)
             {
-                int index = transition.TransitionIndex;
+                int index = siblings[position].TransitionIndex;
 
-                if (index < 0 || index >= siblings.Count || claimed[index]) return false;
+                if (index < 0 || index >= siblings.Count) return false;
 
-                claimed[index] = true;
+                for (int earlier = 0; earlier < position; earlier++)
+                {
+                    if (siblings[earlier].TransitionIndex == index) return false;
+                }
             }
 
             return true;
