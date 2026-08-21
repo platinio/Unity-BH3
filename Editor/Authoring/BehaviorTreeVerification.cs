@@ -370,10 +370,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             foreach (var node in asset.graph.Nodes)
             {
                 // A Function on a Script Graph node's lifecycle graph has no way to be given arguments:
-                // only a Script Graph Variable declares ports from a contract. Worth reporting because the
-                // inspector drawer is registered for BTScriptGraphVariable and so offers the Function field
-                // on all four of these too, and because the two failure shapes are both silent -- with no
-                // embedded graph beside it the Function never runs at all, and with one it runs unfed.
+                // only a Script Graph Variable declares ports from a contract. Worth reporting because
+                // BTScriptGraphVariableInspector is registered for BTScriptGraphVariable and so offers the
+                // Function picker on all four of these too, and because the two failure shapes are both
+                // silent -- with no embedded graph beside it the Function never runs at all, and with one it
+                // runs unfed.
                 if (node is VisualScriptingNode lifecycleNode)
                 {
                     foreach (var graph in lifecycleNode.LifecycleGraphs)

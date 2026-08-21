@@ -12,7 +12,10 @@ uses one. For the contract model, the evaluation seam and the performance rules,
 
 A **Script Graph Variable** node can read either an embedded graph, as it always could, or a Function.
 Assign a Function and the node evaluates it through the shared seam; leave it unset and nothing about the
-node changes. Both work today, so existing trees are unaffected.
+node changes. Existing trees are unaffected.
+
+New graphs, however, are Functions. The node's inspector no longer offers to create an embedded one-off --
+see [Embedded graphs are being retired](#embedded-graphs-are-being-retired).
 
 The gain is that the Function is one asset. Fix a predicate once and every tree referencing it is fixed —
 no copy to find, nothing to keep in step.
@@ -22,6 +25,57 @@ Assets/AI/Functions/HasTarget.asset
         ├── referenced by Zombie.asset
         └── referenced by Soldier.asset
 ```
+
+## Picking one
+
+Click the **Function** field on a Script Graph Variable node and you get a searchable dropdown of the
+Functions that can legally go there -- not every Function in the project.
+
+What "legally" means is decided by the port the node feeds. A node is deliberately untyped: it declares its
+output as `object` so that one node type can serve predicates, floats and queries alike. The requirement
+therefore lives downstream -- a reactive guard's `Value` port is a `bool`, and that port is the only thing
+that knows `bool` is required.
+
+| The node's output feeds | The dropdown offers |
+|---|---|
+| a `bool` port | Functions whose `Result` is a `bool` |
+| a `Component` port | Functions returning `Component` **or a subclass** -- a `Transform` Function is offered |
+| several ports | only what fills all of them |
+| nothing yet | everything that returns something, grouped by flavor |
+
+Entries are grouped **Predicates / Queries / Values**, and each row names the inputs the node will owe the
+Function -- `IsHurt -- needs threshold` -- so what you are signing up for is visible before you choose, not
+after. Two Functions sharing a name are qualified by their folder, because a choice between two identical
+rows is worse than no choice.
+
+A Function that declares **no `Result`** is never offered, at any port, even an unwired one: this node
+exists to read a value, and a Function with no result has none to give.
+
+### When the list is empty
+
+Two different things look the same and are not:
+
+* **"No Function returns X yet."** The project is missing one. **Create new Function...** asks where to save
+  and makes one that already declares the right `Result`, so it is valid the moment it exists.
+* **"This node feeds bool and Transform, which no value can be at once."** The *wiring* is the problem. No
+  Function will ever fix it; disconnect one of the ports.
+
+### A Function that stopped fitting
+
+If a Function's `Result` type changes after it was assigned, the node keeps the reference and draws it in
+error, naming the mismatch. It is not silently cleared -- destroying an authored assignment to enforce a
+rule you cannot yet see would be worse than showing it broken.
+
+### Embedded graphs are being retired
+
+The inspector used to create an anonymous embedded graph whenever a node had nothing assigned, which is how
+most embedded graphs in this project came to exist. It no longer does; **Create new Function...** replaces
+it.
+
+A node that **already** holds an embedded graph is unaffected: **Open Graph** still opens it, and
+**Extract to Function** promotes it to a project asset and re-points the node at it -- the same operation
+`fn_extract` performs from the CLI. The original sub-asset stays in the tree and `bt_verify` reports it as
+an orphan, because deletion has exactly one owner at a time.
 
 ## Declared inputs are ports
 
@@ -133,6 +187,9 @@ expect — a missing `Result` output is reported by name rather than failing at 
 
 ## What has not moved yet
 
-Functions currently sit beside the older embedded-graph machinery rather than replacing it. Embedded
-one-off graphs, the script-graph repository and its canvas sweep all still work as before. Retiring them is
-sequenced separately, so that there is never more than one thing deleting graphs at a time.
+Functions sit beside the older embedded-graph machinery rather than having replaced it. Embedded graphs
+that already exist, the script-graph repository and its canvas sweep all still work as before.
+
+What has changed is the direction: **no surface creates a new embedded graph any more.** Retiring the rest
+-- migrating the graphs that exist, then removing the repository and the sweep -- is sequenced separately,
+so that there is never more than one thing deleting graphs at a time.
