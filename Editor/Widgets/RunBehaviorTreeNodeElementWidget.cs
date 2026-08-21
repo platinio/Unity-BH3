@@ -37,25 +37,45 @@ namespace ArcaneOnyx.BehaviorTree
             return runBehaviorTreeGraphNode.BehaviorTreeGraphAsset;
         }
 
+        /// <summary>
+        /// The recursion verdict for the draw currently in progress, so the title does not ask again.
+        ///
+        /// <para>
+        /// <see cref="DrawTitle"/> is only ever reached through one of the <c>DrawForeground</c> overloads,
+        /// and every one of them writes this before calling the base. Asking a second time meant a second
+        /// <c>Stack</c> and a second walk of the nested asset chain, per node per repaint, to re-derive an
+        /// answer that cannot have changed since a few lines earlier.
+        /// </para>
+        /// </summary>
+        private bool willCauseRecursion;
+
         public override void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
-            if (GetBehaviorTreeGraphAsset() == null || GraphWillCauseRecursion())
+            willCauseRecursion = GraphWillCauseRecursion();
+
+            if (GetBehaviorTreeGraphAsset() == null || willCauseRecursion)
             {
                 position = new Rect(position.position, EmptyNodeSize);
                 base.CachePosition();
                 base.DrawForeground(offset, IsRepaint, useSelection);
                 return;
             }
-          
-            position = CalculateSubBehaviorTreeBox();
-            DrawSubGraphGroup(offset);
+
+            // Measured once and then reused. The frame's size, the translation the preview is drawn through
+            // and the group header all derive from the same bounds, and each used to recompute them --
+            // three walks of the sub-graph per repaint for one answer, each of which asks every node for the
+            // guard stack above it, so the walk is quadratic in the sub-tree's size.
+            BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
+            var bounds = CalculateSubTreeBounds(behaviorTreeGraph);
+
+            position = BoxFor(bounds);
+            DrawSubGraphGroup(offset, position);
 
             // The sub-tree's own coordinates mean nothing to this canvas, so the whole preview is drawn
             // through one translation: its bounds' corner lands one padding inside the frame's. Everything
             // in the preview — nodes, guards, wires — shifts by this same vector, which is what keeps them
             // attached to each other no matter where the sub-tree was authored.
-            BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
-            Vector2 subBehaviorTreeOffset = position.position + SubTreePadding - CalculateSubTreeBounds(behaviorTreeGraph).position + offset;
+            Vector2 subBehaviorTreeOffset = position.position + SubTreePadding - bounds.position + offset;
 
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
 
@@ -64,7 +84,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected override void DrawTitle(Vector2 offset, string title)
         {
-            base.DrawTitle(offset, GraphWillCauseRecursion()? "RECURSION ERROR!" : element.NodeName);
+            base.DrawTitle(offset, willCauseRecursion ? "RECURSION ERROR!" : element.NodeName);
         }
 
         private bool GraphWillCauseRecursion()
@@ -143,12 +163,21 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private void DrawSubGraphGroup(Vector2 offset)
+        /// <summary>
+        /// Reused rather than allocated per repaint. Only its text changes, and <c>CalcSize</c> reads it and
+        /// keeps nothing.
+        /// </summary>
+        private readonly GUIContent labelContent = new GUIContent();
+
+        /// <param name="box">
+        /// The frame's rect, passed in rather than recomputed: the caller has just measured the sub-tree to
+        /// derive it, and measuring again is a second quadratic walk for the same number.
+        /// </param>
+        private void DrawSubGraphGroup(Vector2 offset, Rect box)
         {
             string name = GetBehaviorTreeGraphAsset().name;
             AdjustLabelFontSize();
-            var box = CalculateSubBehaviorTreeBox();
-            
+
             using (LudiqGUI.color.Override(Color.cyan))
             {
                 box.position += new Vector2(0, -GROUP_HEADER_LIFT) + offset;
@@ -159,7 +188,7 @@ namespace ArcaneOnyx.BehaviorTree
             (
                 box.x + RunBehaviorTreeNodeElementWidgetStyles.label.margin.left,
                 box.y + RunBehaviorTreeNodeElementWidgetStyles.label.margin.top,
-                RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(new GUIContent(name)).x + RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(maxHeadLabelSizeContent).x,
+                LabelWidth(name),
                 RunBehaviorTreeNodeElementWidgetStyles.group.border.top
             );
             
@@ -179,18 +208,23 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// /
+        /// The canvas's entry point. A node with no sub-tree referenced yet is drawn as a plain empty box
+        /// rather than as a frame around nothing.
         /// </summary>
         public override void DrawForeground()
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null)
             {
+                // Nothing referenced is nothing to recurse into, and the title below reads this rather than
+                // working it out again.
+                willCauseRecursion = false;
+
                 position = new Rect(position.position, EmptyNodeSize);
                 base.DrawForeground(Vector2.zero, e.IsRepaint);
                 return;
             }
-            
+
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
@@ -200,12 +234,40 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>How far the group frame's header band is drawn above the frame's own rect.</summary>
         private const float GROUP_HEADER_LIFT = 40.0f;
 
+        /// <summary>
+        /// The name label's width: the text plus one 'M' of slack so the editable field is never exactly the
+        /// width of what it already says.
+        /// <para>
+        /// The content object is reused, because this runs per repaint and <c>CalcSize</c> keeps nothing.
+        /// </para>
+        /// </summary>
+        private float LabelWidth(string name)
+        {
+            labelContent.text = name;
+
+            return RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(labelContent).x
+                 + RunBehaviorTreeNodeElementWidgetStyles.label.CalcSize(maxHeadLabelSizeContent).x;
+        }
+
         private Rect CalculateSubBehaviorTreeBox()
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
 
-            var bounds = CalculateSubTreeBounds(GetBehaviorTreeGraph());
+            return BoxFor(CalculateSubTreeBounds(GetBehaviorTreeGraph()));
+        }
+
+        /// <summary>
+        /// The frame's rect for a sub-tree that measures <paramref name="bounds"/> — its size plus a padding
+        /// on every side, anchored where the node already sits.
+        /// <para>
+        /// Split out from the measuring so a caller that has already measured can derive the box without
+        /// walking the sub-graph again. That walk asks every node for the guard stack above it, so it is
+        /// quadratic in the sub-tree's size and was being repeated three times per repaint.
+        /// </para>
+        /// </summary>
+        private Rect BoxFor(Rect bounds)
+        {
             if (bounds.size == Vector2.zero) return new Rect(position.position, EmptyNodeSize);
 
             var r = position;
