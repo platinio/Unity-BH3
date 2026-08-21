@@ -277,26 +277,10 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
-                DrawProblemBadge(offset, p);
+                DrawProblemBadge(p);
             }
         }
 
-        /// <summary>
-        /// Marks a node that is wrong before anyone runs it.
-        ///
-        /// <para>
-        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
-        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
-        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
-        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
-        /// counter rather than to a timer.
-        /// </para>
-        ///
-        /// <para>
-        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
-        /// thing as an error anywhere else in the editor.
-        /// </para>
-        /// </summary>
         /// <summary>#FF4747 — the red the badge and its border use for an error.</summary>
         private static readonly Color ErrorRed = new Color(1.0f, 0.28f, 0.28f);
 
@@ -315,7 +299,34 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Border weight of the problem outline, in pixels.</summary>
         private const int PROBLEM_BORDER_THICKNESS = 2;
 
-        protected void DrawProblemBadge(Vector2 offset, Rect nodeRect)
+        /// <summary>
+        /// Carries the badge's hover text. Static and reused: <c>GUI.Label</c> reads the content and keeps
+        /// nothing, and one instance per badge per repaint is the allocation this file is being cleaned of.
+        /// </summary>
+        private static readonly GUIContent tooltipContent = new GUIContent();
+
+        /// <summary>
+        /// Marks a node that is wrong before anyone runs it.
+        ///
+        /// <para>
+        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
+        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
+        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
+        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
+        /// counter rather than to a timer.
+        /// </para>
+        ///
+        /// <para>
+        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
+        /// thing as an error anywhere else in the editor.
+        /// </para>
+        /// </summary>
+        /// <param name="nodeRect">
+        /// The node's box <em>already shifted</em> by whatever offset the caller draws at — a sub-tree
+        /// preview passes a large one. Everything here is measured from this rect and nothing else, which is
+        /// why there is no separate offset parameter to forget to add.
+        /// </param>
+        protected void DrawProblemBadge(Rect nodeRect)
         {
             if (!Authoring.NodeProblemCache.TryGetWorst(element, out var severity, out var count)) return;
 
@@ -344,21 +355,13 @@ namespace ArcaneOnyx.BehaviorTree
 
             // Hovering is how the reader gets from "something is wrong" to "this is wrong and here is the
             // fix" without leaving the canvas or opening a console.
-            GUI.Label(badge, new GUIContent(string.Empty, DescribeProblems()));
-        }
-
-        private string DescribeProblems()
-        {
-            var problems = Authoring.NodeProblemCache.For(element);
-            var description = new System.Text.StringBuilder();
-
-            foreach (var problem in problems)
-            {
-                if (description.Length > 0) description.AppendLine();
-                description.Append(problem);
-            }
-
-            return description.ToString();
+            //
+            // The content object is reused: this runs for every problem-carrying node on every repaint, and
+            // a fresh GUIContent here would put back a per-node-per-repaint allocation on the same line the
+            // StringBuilder was just taken off. Only the tooltip is ever set; the label itself stays empty,
+            // because the badge is drawn as a texture above and this exists solely to carry hover text.
+            tooltipContent.tooltip = Authoring.NodeProblemCache.DescriptionOf(element);
+            GUI.Label(badge, tooltipContent);
         }
 
         /// <summary>
@@ -417,6 +420,42 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// One style per <see cref="ExecutionStatus"/>, built the first time that status is drawn.
+        ///
+        /// <para>
+        /// This is drawn for every node on every repaint, and it used to allocate a <see cref="GUIStyle"/>
+        /// and build a resource path by string interpolation each time — roughly 3,600 of each per second on
+        /// a 60-node tree. Both are constant per status, so both belong outside the draw call.
+        /// </para>
+        ///
+        /// <para>
+        /// Entries are kept even when the texture resolves to null: <c>Inactive</c> and <c>Running</c> have no
+        /// art, and re-asking <see cref="Resources"/> for a file that is not there every repaint is the cost
+        /// this removes. The styles hold their textures alive, so an unused-asset sweep cannot pull one out
+        /// from under a cached entry, and a domain reload clears the whole array anyway.
+        /// </para>
+        /// </summary>
+        private static readonly GUIStyle[] executionStatusStyles =
+            new GUIStyle[Enum.GetValues(typeof(ExecutionStatus)).Length];
+
+        private static GUIStyle ExecutionStatusStyle(ExecutionStatus status)
+        {
+            var index = (int)status;
+
+            if (index < 0 || index >= executionStatusStyles.Length) return null;
+
+            if (executionStatusStyles[index] == null)
+            {
+                executionStatusStyles[index] = new GUIStyle
+                {
+                    normal = { background = Resources.Load<Texture2D>($"ExecutionStatus/{status}") }
+                };
+            }
+
+            return executionStatusStyles[index];
+        }
+
         protected void DrawLastExecutionIcon(Vector2 offset)
         {
             // While the timeline scrubber is parked on a tick this is the node's status *then*, not now. The
@@ -425,8 +464,9 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (status == ExecutionStatus.None) return;
 
-            GUIStyle style = new GUIStyle();
-            style.normal.background = Resources.Load<Texture2D>($"ExecutionStatus/{status.ToString()}");
+            var style = ExecutionStatusStyle(status);
+
+            if (style == null) return;
 
             Rect p = LastExecutionStateIconRect;
             p.position += offset + new Vector2(-10, 20);
@@ -447,15 +487,27 @@ namespace ArcaneOnyx.BehaviorTree
             return borderThickness;
         }
 
+        /// <summary>
+        /// One shared style whose background is swapped per node, the way <c>Styles.background</c> already
+        /// works — a node's icon varies, so there is nothing to cache per node, but the style around it does
+        /// not and used to be allocated for every node on every repaint.
+        ///
+        /// <para>
+        /// Assigned immediately before the draw and read nowhere else. A shared style read after some other
+        /// node wrote it is exactly how the outside-box border came to be drawn from whatever sprite the
+        /// previous node left behind, so the write and the use stay in the same two lines.
+        /// </para>
+        /// </summary>
+        private static readonly GUIStyle iconStyle = new GUIStyle();
+
         protected void DrawIcon(Vector2 offset)
         {
-            GUIStyle style = new GUIStyle();
-            style.normal.background = element.NodeIcon;
+            iconStyle.normal.background = element.NodeIcon;
 
             Rect p = IconRect;
             p.position += offset;
-            
-            style.Draw(p, false, IsSelected, false, false);
+
+            iconStyle.Draw(p, false, IsSelected, false, false);
         }
 
         protected virtual void DrawTitle(Vector2 offset, string title)

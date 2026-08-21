@@ -50,6 +50,19 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     {
         private static readonly Dictionary<BehaviorTreeNode, IReadOnlyList<NodeProblem>> Cache = new();
 
+        /// <summary>
+        /// The joined, human-readable form of each cached list, built on first ask and dropped with the
+        /// entries it describes.
+        ///
+        /// <para>
+        /// It exists because the badge's tooltip is built on every repaint of every problem-carrying node,
+        /// for text that is only ever read on hover — a <c>StringBuilder</c> and a string per node per frame.
+        /// The text is a pure function of the list, so it goes stale on exactly the same signal, and this
+        /// class is where "computed rarely, read every frame" already lives.
+        /// </para>
+        /// </summary>
+        private static readonly Dictionary<BehaviorTreeNode, string> Descriptions = new();
+
         private static readonly List<Func<BehaviorTreeNode, IEnumerable<NodeProblem>>> Providers = new();
 
         private static readonly List<NodeProblem> Scratch = new();
@@ -120,6 +133,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             Observed.Clear();
             Cache.Clear();
+            Descriptions.Clear();
         }
 
         /// <summary>
@@ -202,6 +216,41 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             if (canGoStale) Cache[node] = problems;
 
             return problems;
+        }
+
+        /// <summary>
+        /// This node's problems as one block of text, a problem per line, for a tooltip. Empty when the node
+        /// is fine.
+        ///
+        /// <para>
+        /// Cached under the same rule as <see cref="For"/>, including the refusal to store an answer for a
+        /// node with no graph: an entry nothing can invalidate is worse than recomputing one.
+        /// </para>
+        /// </summary>
+        public static string DescriptionOf(BehaviorTreeNode node)
+        {
+            // First, because it is what applies the version check and can drop everything below.
+            var problems = For(node);
+
+            if (problems.Count == 0) return string.Empty;
+
+            if (Descriptions.TryGetValue(node, out var cached)) return cached;
+
+            var description = new System.Text.StringBuilder();
+
+            foreach (var problem in problems)
+            {
+                if (description.Length > 0) description.AppendLine();
+                description.Append(problem);
+            }
+
+            var text = description.ToString();
+
+            // Only alongside a cached list. Storing text for a node whose list was not stored would outlive
+            // every signal that could correct it.
+            if (Cache.ContainsKey(node)) Descriptions[node] = text;
+
+            return text;
         }
 
         /// <summary>The worst severity present, so a caller can pick one icon without reading the list.</summary>
