@@ -67,7 +67,6 @@ namespace ArcaneOnyx.BehaviorTree
         private Edge sourceEdge;
         private Edge destinationEdge;
         private Rect sourcePosition;
-        private readonly List<BehaviorTreeTransition> siblingStateTransitions = new List<BehaviorTreeTransition>();
 
         private Rect destinationPosition;
         private GUIContent label { get; } = new GUIContent();
@@ -219,47 +218,28 @@ namespace ArcaneOnyx.BehaviorTree
             sourceEdgeCenter = sourcePosition.GetEdgeCenter(sourceEdge);
             destinationEdgeCenter = destinationPosition.GetEdgeCenter(destinationEdge);
 
-            siblingStateTransitions.Clear();
+            // The transitions sharing this pair of nodes, in either direction, in graph order. This used to
+            // be found by walking every transition in the graph and testing each one -- per transition, per
+            // repaint, so quadratic in the graph's transitions to answer a question whose answer is usually
+            // "just me". The index groups them once and re-groups when the graph changes.
+            var siblingStateTransitions = TransitionSiblingIndex.Of(canvas.graph, element.source, element.destination);
 
             var siblingIndex = 0;
 
-            // Assign one common axis for transition for all siblings,
-            // regardless of their inversion. The axis is arbitrarily
-            // chosen as the axis for the first transition.
-            var assignedTransitionAxis = false;
-            var transitionAxis = Vector2.zero;
-
-            foreach (var graphTransition in canvas.graph.Transitions)
+            for (var i = 0; i < siblingStateTransitions.Count; i++)
             {
-                var current = element == graphTransition;
+                if (!ReferenceEquals(siblingStateTransitions[i], element)) continue;
 
-                var analog =
-                    element.source == graphTransition.source &&
-                    element.destination == graphTransition.destination;
-
-                var inverted =
-                    element.source == graphTransition.destination &&
-                    element.destination == graphTransition.source;
-
-                if (current)
-                {
-                    siblingIndex = siblingStateTransitions.Count;
-                }
-
-                if (current || analog || inverted)
-                {
-                    if (!assignedTransitionAxis)
-                    {
-                        var siblingStateTransitionDrawer = canvas.Widget<BehaviorTreeTransitionWidget>(graphTransition);
-
-                        transitionAxis = siblingStateTransitionDrawer.sourceEdge.Normal();
-
-                        assignedTransitionAxis = true;
-                    }
-
-                    siblingStateTransitions.Add(graphTransition);
-                }
+                siblingIndex = i;
+                break;
             }
+
+            // One common axis for the whole sibling set regardless of any member's inversion, taken from the
+            // first of them -- arbitrary, but it has to be the same choice for every sibling or they spread
+            // along different lines and cross.
+            var transitionAxis = siblingStateTransitions.Count > 0
+                ? canvas.Widget<BehaviorTreeTransitionWidget>(siblingStateTransitions[0]).sourceEdge.Normal()
+                : Vector2.zero;
 
             // Fix the edge case where the source and destination perfectly overlap
 
