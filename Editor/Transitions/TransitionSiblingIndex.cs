@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -30,10 +29,9 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// Invalidated by <c>graph.elements.CollectionChanged</c> and by undo, the same signals
-    /// <see cref="Authoring.NodeProblemCache"/> and <see cref="GuardIndex"/> use. Transitions are merged into
-    /// <c>graph.elements</c>, so connecting or deleting one raises it; and a transition's endpoints are
-    /// written by <c>SetupTransition</c> at construction, before it is added.
+    /// Staleness is <see cref="GraphIndex"/>'s rule. Transitions are merged into <c>graph.elements</c>, so
+    /// connecting or deleting one raises the change; and a transition's endpoints are written by
+    /// <c>SetupTransition</c> at construction, before it is added.
     /// </para>
     /// </summary>
     public static class TransitionSiblingIndex
@@ -70,18 +68,36 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private static readonly Dictionary<BehaviorTreeGraph, Dictionary<EndpointPair, List<BehaviorTreeTransition>>>
-            ByGraph = new();
+        private sealed class Index : GraphIndex<Dictionary<EndpointPair, List<BehaviorTreeTransition>>>
+        {
+            protected override Dictionary<EndpointPair, List<BehaviorTreeTransition>> Build(BehaviorTreeGraph graph)
+            {
+                var index = new Dictionary<EndpointPair, List<BehaviorTreeTransition>>();
+
+                foreach (var transition in graph.Transitions)
+                {
+                    if (transition?.source == null || transition.destination == null) continue;
+
+                    var key = new EndpointPair(transition.source, transition.destination);
+
+                    if (!index.TryGetValue(key, out var siblings))
+                    {
+                        siblings = new List<BehaviorTreeTransition>();
+                        index[key] = siblings;
+                    }
+
+                    siblings.Add(transition);
+                }
+
+                return index;
+            }
+
+            public Dictionary<EndpointPair, List<BehaviorTreeTransition>> Of(BehaviorTreeGraph graph) => For(graph);
+        }
+
+        private static readonly Index Instance = new Index();
 
         private static readonly List<BehaviorTreeTransition> None = new();
-
-        [InitializeOnLoadMethod]
-        private static void Hook()
-        {
-            // Undo re-instantiates elements rather than adding to the collection, so the collection event
-            // alone would leave groups keyed on nodes nothing points at any more.
-            Undo.undoRedoPerformed += Invalidate;
-        }
 
         /// <summary>
         /// Every transition drawn between <paramref name="source"/> and <paramref name="destination"/>,
@@ -90,53 +106,16 @@ namespace ArcaneOnyx.BehaviorTree
         public static List<BehaviorTreeTransition> Of(
             BehaviorTreeGraph graph, BehaviorTreeNode source, BehaviorTreeNode destination)
         {
-            if (graph == null || source == null || destination == null) return None;
+            if (source == null || destination == null) return None;
 
-            if (!ByGraph.TryGetValue(graph, out var index))
-            {
-                index = Build(graph);
-                ByGraph[graph] = index;
+            var index = Instance.Of(graph);
 
-                graph.elements.CollectionChanged += Invalidate;
-            }
+            if (index == null) return None;
 
             return index.TryGetValue(new EndpointPair(source, destination), out var siblings) ? siblings : None;
         }
 
-        /// <summary>
-        /// Drops every graph's groups and the subscriptions with them, so nothing here holds a graph nobody
-        /// has open.
-        /// </summary>
-        public static void Invalidate()
-        {
-            foreach (var graph in ByGraph.Keys)
-            {
-                if (graph != null) graph.elements.CollectionChanged -= Invalidate;
-            }
-
-            ByGraph.Clear();
-        }
-
-        private static Dictionary<EndpointPair, List<BehaviorTreeTransition>> Build(BehaviorTreeGraph graph)
-        {
-            var index = new Dictionary<EndpointPair, List<BehaviorTreeTransition>>();
-
-            foreach (var transition in graph.Transitions)
-            {
-                if (transition?.source == null || transition.destination == null) continue;
-
-                var key = new EndpointPair(transition.source, transition.destination);
-
-                if (!index.TryGetValue(key, out var siblings))
-                {
-                    siblings = new List<BehaviorTreeTransition>();
-                    index[key] = siblings;
-                }
-
-                siblings.Add(transition);
-            }
-
-            return index;
-        }
+        /// <summary>Drops the groups and the subscriptions with them. See <see cref="GraphIndex"/>.</summary>
+        public static void Invalidate() => Instance.Invalidate();
     }
 }
