@@ -17,12 +17,23 @@ namespace ArcaneOnyx.BehaviorTree
 
         #region Positioning
 
+        /// <summary>
+        /// Both endpoints, because <c>CachePosition</c> reads <c>handlePosition</c> off both of them.
+        /// <para>
+        /// This listed the source twice and the destination never. Nothing showed, because the widgets
+        /// re-lay out every repaint in a stable order anyway — so a wire that was positioned before its
+        /// destination port simply read a rect that a previous frame had already made correct. Remove that
+        /// per-frame relayout and the omission becomes a wire lagging one frame behind the node it lands
+        /// on. The dependency is declared here so the ordering is a property of the widget rather than of
+        /// how often the canvas happens to re-run.
+        /// </para>
+        /// </summary>
         public override IEnumerable<GraphCore.IWidget> positionDependencies
         {
             get
             {
                 yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
-                yield return GraphCore.XCanvasProvider.Widget(canvas, connection.source);
+                yield return GraphCore.XCanvasProvider.Widget(canvas, connection.destination);
             }
         }
 
