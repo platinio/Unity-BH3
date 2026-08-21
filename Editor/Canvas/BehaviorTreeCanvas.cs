@@ -20,9 +20,30 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public BehaviorTreeCanvas(BehaviorTreeGraph graph) : base(graph) { }
 
-        public static BehaviorTreeCanvas OpenBehaviorTreeCanvas;
-        public static BehaviorTreeGraphAsset OpenBehaviorTreeGraphAsset;
-        
+        /// <summary>
+        /// Whether a behaviour tree canvas is currently open, and a handle to reach the ambient edited
+        /// context through — which is what <see cref="GetBehaviorTreeGraphAsset"/> and
+        /// <see cref="GetSelectedBehaviorTreeMachine"/> answer from, so property drawers outside the canvas
+        /// can ask which tree the user is looking at.
+        ///
+        /// <para>
+        /// Cleared in <see cref="Close"/>, and only by the canvas that claimed it. Left set, it rooted the
+        /// whole canvas — every widget, port and the graph itself — for the rest of the session, and with
+        /// domain reload disabled that survives play cycles too. It also kept both accessors answering with
+        /// a tree nobody is editing any more, because <c>context</c> is the ambient edited context rather
+        /// than this canvas's own: a non-null static was the only thing standing between a closed window
+        /// and a confident wrong answer.
+        /// </para>
+        ///
+        /// <para>
+        /// Private setter so the lifetime is a property of this class rather than of whoever assigns last;
+        /// the identity check on clear is what keeps a canvas closing after another one opened from
+        /// retracting the newer canvas's claim.
+        /// </para>
+        /// </summary>
+        public static BehaviorTreeCanvas OpenBehaviorTreeCanvas { get; private set; }
+
+
         public Vector2 ConnectionEnd { get; set; }
         public bool IsCreatingConnection => ConnectionSource != null &&
                                             ConnectionSource.behaviorTreeNode != null;        
@@ -86,6 +107,9 @@ namespace ArcaneOnyx.BehaviorTree
             if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
         }
 
+        /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>
+        private readonly List<GraphCore.IGraphElement> dangling = new List<GraphCore.IGraphElement>();
+
         /// <summary>
         /// Deletes the elements whose anchor has gone, with an undo record.
         ///
@@ -98,8 +122,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// iterating the very collection it was mutating.
         /// </para>
         /// </summary>
-        private readonly List<GraphCore.IGraphElement> dangling = new List<GraphCore.IGraphElement>();
-
         private void RemoveDanglingElements()
         {
             UndoUtility.RecordEditedObject("Delete Graph Element");
@@ -176,7 +198,12 @@ namespace ArcaneOnyx.BehaviorTree
             var gameObject = OpenBehaviorTreeCanvas.context.reference.gameObject;
             if (gameObject != null)
             {
-                return gameObject.GetComponent<BehaviorTreeMachine>().GraphAsset;
+                // A reference can name a GameObject whose machine component has since been removed, and the
+                // drawers calling this run on whatever the inspector is showing. Unguarded, that is an NRE
+                // in a property drawer -- which draws as a broken inspector row rather than as a message
+                // anyone can act on.
+                var machine = gameObject.GetComponent<BehaviorTreeMachine>();
+                return machine != null ? machine.GraphAsset : null;
             }
 
             return OpenBehaviorTreeCanvas.context.reference.scriptableObject as BehaviorTreeGraphAsset;
@@ -214,6 +241,11 @@ namespace ArcaneOnyx.BehaviorTree
             base.Close();
 
             CancelConnection();
+
+            // Only this canvas's own claim. Opening another tree can run Open on the new canvas before Close
+            // on the old one, and an unconditional null there would retract the newer canvas's claim and
+            // leave the accessors answering null while a window is plainly open.
+            if (OpenBehaviorTreeCanvas == this) OpenBehaviorTreeCanvas = null;
         }
         
         protected override void HandleLowPriorityInput()
