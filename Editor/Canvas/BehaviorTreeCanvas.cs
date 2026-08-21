@@ -18,7 +18,10 @@ namespace ArcaneOnyx.BehaviorTree
     [Canvas(typeof(BehaviorTreeGraph))]
     public class BehaviorTreeCanvas : BaseCanvas<BehaviorTreeGraph, BehaviorTreeNode, BehaviorTreeTransition>
     {
-        public BehaviorTreeCanvas(BehaviorTreeGraph graph) : base(graph) { }
+        public BehaviorTreeCanvas(BehaviorTreeGraph graph) : base(graph)
+        {
+            ListenForBookkeepingChanges();
+        }
 
         /// <summary>
         /// Whether a behaviour tree canvas is currently open, and a handle to reach the ambient edited
@@ -86,25 +89,130 @@ namespace ArcaneOnyx.BehaviorTree
             typeof(Condition)
         };
 
+        /// <summary>
+        /// Whether the dangling-element repair and the script-graph-asset sync still have work to do.
+        ///
+        /// <para>
+        /// Both used to run unconditionally in <see cref="OnGUI"/>, which is not once per frame — it runs for
+        /// <em>every</em> GUI event: layout, repaint, every mouse-move. So a mouse crossing the canvas paid,
+        /// several times a frame, for a full walk of the graph's elements, a resync of the project-wide
+        /// script-graph repository, a re-add of every element's assets, and a sweep for unused ones. None of
+        /// that is repaint work; all of it is change-driven bookkeeping that answers the same way until
+        /// something actually changes.
+        /// </para>
+        ///
+        /// <para>
+        /// The work still happens <em>in</em> <c>OnGUI</c> rather than in the change handlers, deliberately.
+        /// The repair deletes elements, and doing that from inside a <c>CollectionChanged</c> notification
+        /// would edit the collection while something is enumerating it — the same mistake as culling
+        /// transitions from the layout pass. The flag defers the work to a safe moment instead of moving it
+        /// to a dangerous one, and the repair setting the flag again as it mutates is fine: one more pass
+        /// next event, then it settles.
+        /// </para>
+        /// </summary>
+        private bool bookkeepingIsStale = true;
+
+        /// <summary>
+        /// Play-mode state is polled rather than subscribed to. It gates
+        /// <c>DestroyUnusedScriptGraphAssets</c>, so leaving play has to re-run the sweep — and one bool
+        /// comparison per event is cheaper than another global subscription to unhook correctly.
+        /// </summary>
+        private bool wasPlaying;
+
+        /// <summary>
+        /// The asset the last sync ran against. Polled for the same reason as <see cref="wasPlaying"/>:
+        /// the repository half of the pass needs an asset, and there is no event for "the edited context
+        /// finally resolved", so a null turning into a tree has to re-arm the pass or the repository would
+        /// stay unsynced until the next unrelated edit.
+        /// </summary>
+        private BehaviorTreeGraphAsset lastSyncedAsset;
+
+        /// <summary>
+        /// The things that can change what the bookkeeping would conclude: the graph gaining or losing an
+        /// element, undo restoring one, and the project's assets changing underneath the repository — a
+        /// script graph deleted in the Project window invalidates a repository entry without touching this
+        /// graph at all.
+        /// </summary>
+        private void ListenForBookkeepingChanges()
+        {
+            // Subtract first so this is idempotent: Open calls it again, and a canvas is cached per graph and
+            // can be opened more than once.
+            graph.elements.CollectionChanged -= MarkBookkeepingStale;
+            graph.elements.CollectionChanged += MarkBookkeepingStale;
+
+            Undo.undoRedoPerformed -= MarkBookkeepingStale;
+            Undo.undoRedoPerformed += MarkBookkeepingStale;
+
+            EditorApplication.projectChanged -= MarkBookkeepingStale;
+            EditorApplication.projectChanged += MarkBookkeepingStale;
+
+            bookkeepingIsStale = true;
+        }
+
+        private void StopListeningForBookkeepingChanges()
+        {
+            graph.elements.CollectionChanged -= MarkBookkeepingStale;
+
+            // These two are global and would otherwise root this canvas for the session.
+            Undo.undoRedoPerformed -= MarkBookkeepingStale;
+            EditorApplication.projectChanged -= MarkBookkeepingStale;
+        }
+
+        private void MarkBookkeepingStale() => bookkeepingIsStale = true;
+
         public override void OnGUI()
         {
             base.OnGUI();
-            
+
+            SyncBookkeeping();
+        }
+
+        /// <summary>
+        /// Brings the graph and the script-graph repository back into agreement, if anything has happened
+        /// that could have put them out of it. Cheap and does nothing on the overwhelming majority of calls.
+        ///
+        /// <para>
+        /// Separate from <see cref="OnGUI"/> so the rule about <em>when</em> this work happens can be read,
+        /// changed and tested without a graph window: the base <c>OnGUI</c> needs a live GUI context, and
+        /// this does not.
+        /// </para>
+        /// </summary>
+        public void SyncBookkeeping()
+        {
+            var asset = GetBehaviorTreeGraphAsset();
+
+            if (wasPlaying != EditorApplication.isPlaying || lastSyncedAsset != asset)
+            {
+                wasPlaying = EditorApplication.isPlaying;
+                lastSyncedAsset = asset;
+                bookkeepingIsStale = true;
+            }
+
+            if (!bookkeepingIsStale) return;
+
+            bookkeepingIsStale = false;
+
             if (HasDanglingElements())
             {
                 RemoveDanglingElements();
             }
 
+            // The repair above is about the graph and needs nothing else. Everything below is about this
+            // tree's script graph assets, and there is no tree to attribute them to until the edited context
+            // resolves -- which it has not while a canvas exists but no window is editing it. Passing the
+            // null on regardless throws inside the repository, on a key it uses to group assets by asset.
+            if (asset == null) return;
+
             ScriptGraphAssetsRepository.Instance.RemoveInvalid();
-            
+
             //read new script graph assets
             foreach (var graphElement in graph.elements)
             {
-                if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
-                graph.AddScriptGraphAssets(GetBehaviorTreeGraphAsset(), graphElement.scriptGraphAssets);
+                if (graphElement.scriptGraphAssets == null || !graphElement.scriptGraphAssets.Any()) continue;
+                graph.AddScriptGraphAssets(asset, graphElement.scriptGraphAssets);
             }
-            
-            if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(GetBehaviorTreeGraphAsset());
+
+            if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(asset);
         }
 
         /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>
@@ -189,6 +297,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Open();
             OpenBehaviorTreeCanvas = this;
+
+            // A canvas is cached per graph and can be closed and reopened; Close drops the subscriptions.
+            ListenForBookkeepingChanges();
         }
 
         public static BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
@@ -246,6 +357,33 @@ namespace ArcaneOnyx.BehaviorTree
             // on the old one, and an unconditional null there would retract the newer canvas's claim and
             // leave the accessors answering null while a window is plainly open.
             if (OpenBehaviorTreeCanvas == this) OpenBehaviorTreeCanvas = null;
+
+            StopListeningForBookkeepingChanges();
+        }
+
+        /// <summary>
+        /// The teardown every canvas gets, including the ones that are never opened.
+        ///
+        /// <para>
+        /// <see cref="Close"/> is not enough on its own: a canvas is constructed and used without ever being
+        /// opened by every sub-tree preview — <c>DrawSubTreeNodes</c> and <c>CalculateSubTreeBounds</c> both
+        /// reach for the sub-graph's canvas — and by every test. Those canvases would keep an instance method
+        /// subscribed to <see cref="Undo.undoRedoPerformed"/> and
+        /// <see cref="EditorApplication.projectChanged"/>, two globals, for the rest of the session.
+        /// </para>
+        ///
+        /// <para>
+        /// The cost today is near zero, because the provider caches those canvases anyway and the handler
+        /// only writes a bool. It is here because subscribing in one place and unsubscribing in another that
+        /// is not guaranteed to run is the pairing that produced the leak this batch already fixed once, in
+        /// <c>OpenBehaviorTreeCanvas</c>.
+        /// </para>
+        /// </summary>
+        public override void Dispose()
+        {
+            StopListeningForBookkeepingChanges();
+
+            base.Dispose();
         }
         
         protected override void HandleLowPriorityInput()
