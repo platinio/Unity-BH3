@@ -212,7 +212,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 // This override does not chain to the base, so the badge has to be asked for explicitly --
                 // which is why guards were the one node kind it never appeared on.
-                DrawProblemBadge(offset, p);
+                DrawProblemBadge(p);
             }
         }
 

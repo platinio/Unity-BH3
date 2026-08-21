@@ -265,26 +265,10 @@ namespace ArcaneOnyx.BehaviorTree
                 
                 DrawTitle(offset, element.NodeName);
                 DrawLastExecutionIcon(offset);
-                DrawProblemBadge(offset, p);
+                DrawProblemBadge(p);
             }
         }
 
-        /// <summary>
-        /// Marks a node that is wrong before anyone runs it.
-        ///
-        /// <para>
-        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
-        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
-        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
-        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
-        /// counter rather than to a timer.
-        /// </para>
-        ///
-        /// <para>
-        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
-        /// thing as an error anywhere else in the editor.
-        /// </para>
-        /// </summary>
         /// <summary>#FF4747 — the red the badge and its border use for an error.</summary>
         private static readonly Color ErrorRed = new Color(1.0f, 0.28f, 0.28f);
 
@@ -303,7 +287,28 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Border weight of the problem outline, in pixels.</summary>
         private const int PROBLEM_BORDER_THICKNESS = 2;
 
-        protected void DrawProblemBadge(Vector2 offset, Rect nodeRect)
+        /// <summary>
+        /// Marks a node that is wrong before anyone runs it.
+        ///
+        /// <para>
+        /// Contract drift, an unfed required port and a missing reference were all previously invisible until
+        /// Play threw — which meant the canvas showed a healthy node for a tree that could not work. The
+        /// badge is drawn from <see cref="Authoring.NodeProblemCache"/>, which computes rarely and is read
+        /// per frame; see that class for why the freshness is tied to the evaluator's own invalidation
+        /// counter rather than to a timer.
+        /// </para>
+        ///
+        /// <para>
+        /// Unity's own console icons are used rather than new art, so an error here reads as the same kind of
+        /// thing as an error anywhere else in the editor.
+        /// </para>
+        /// </summary>
+        /// <param name="nodeRect">
+        /// The node's box <em>already shifted</em> by whatever offset the caller draws at — a sub-tree
+        /// preview passes a large one. Everything here is measured from this rect and nothing else, which is
+        /// why there is no separate offset parameter to forget to add.
+        /// </param>
+        protected void DrawProblemBadge(Rect nodeRect)
         {
             if (!Authoring.NodeProblemCache.TryGetWorst(element, out var severity, out var count)) return;
 
