@@ -171,13 +171,18 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>
         /// The owner's guards, in the order <see cref="BehaviorTreeNode.GetConditionalIndex"/> numbers them —
         /// graph order, so a guard's place in the stack matches the index everything else quotes.
+        ///
+        /// <para>
+        /// Answered from <see cref="GuardIndex"/> rather than by filtering the graph. This used to walk every
+        /// element in the graph and allocate an iterator to do it, once per guard and once per transition per
+        /// repaint, plus twice more inside the line drawer — a question about three guards costing a pass over
+        /// ninety elements, tens of thousands of times a second. The rule about what counts as a guard of this
+        /// owner is unchanged and still stated once; only where the answer is kept has moved.
+        /// </para>
         /// </summary>
-        private static System.Collections.Generic.IEnumerable<ConditionalExecution> GuardsOf(BehaviorTreeNode owner)
+        private static System.Collections.Generic.List<ConditionalExecution> GuardsOf(BehaviorTreeNode owner)
         {
-            foreach (var graphElement in owner.graph.elements)
-            {
-                if (graphElement is ConditionalExecution guard && guard.Owner == owner) yield return guard;
-            }
+            return GuardIndex.Of(owner);
         }
 
         public override void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
