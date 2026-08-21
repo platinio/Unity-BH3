@@ -288,6 +288,12 @@ namespace ArcaneOnyx.BehaviorTree
         private const int PROBLEM_BORDER_THICKNESS = 2;
 
         /// <summary>
+        /// Carries the badge's hover text. Static and reused: <c>GUI.Label</c> reads the content and keeps
+        /// nothing, and one instance per badge per repaint is the allocation this file is being cleaned of.
+        /// </summary>
+        private static readonly GUIContent tooltipContent = new GUIContent();
+
+        /// <summary>
         /// Marks a node that is wrong before anyone runs it.
         ///
         /// <para>
@@ -337,7 +343,13 @@ namespace ArcaneOnyx.BehaviorTree
 
             // Hovering is how the reader gets from "something is wrong" to "this is wrong and here is the
             // fix" without leaving the canvas or opening a console.
-            GUI.Label(badge, new GUIContent(string.Empty, Authoring.NodeProblemCache.DescriptionOf(element)));
+            //
+            // The content object is reused: this runs for every problem-carrying node on every repaint, and
+            // a fresh GUIContent here would put back a per-node-per-repaint allocation on the same line the
+            // StringBuilder was just taken off. Only the tooltip is ever set; the label itself stays empty,
+            // because the badge is drawn as a texture above and this exists solely to carry hover text.
+            tooltipContent.tooltip = Authoring.NodeProblemCache.DescriptionOf(element);
+            GUI.Label(badge, tooltipContent);
         }
 
         /// <summary>
