@@ -100,7 +100,32 @@ namespace ArcaneOnyx.BehaviorTree
 
             GUI.color = previousColor;
 
-            GUI.Label(badge, (priority + 1).ToString(), LabelStyle());
+            GUI.Label(badge, Label(priority + 1), LabelStyle());
+        }
+
+        /// <summary>
+        /// The badge numbers, as strings, built once.
+        ///
+        /// <para>
+        /// <c>ToString()</c> on the priority allocated a string per badge per repaint, for a number that is
+        /// one of a very small set. Sized past any composite a person would author; anything beyond it falls
+        /// back to <c>ToString</c> rather than pretending the label does not exist.
+        /// </para>
+        /// </summary>
+        private static readonly string[] Labels = BuildLabels(32);
+
+        private static string[] BuildLabels(int count)
+        {
+            var labels = new string[count];
+
+            for (int number = 0; number < count; number++) labels[number] = number.ToString();
+
+            return labels;
+        }
+
+        private static string Label(int number)
+        {
+            return number >= 0 && number < Labels.Length ? Labels[number] : number.ToString();
         }
 
         /// <summary>
