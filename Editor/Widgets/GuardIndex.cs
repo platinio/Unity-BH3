@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -17,12 +16,12 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// <b>The invalidation signal is the same one <see cref="Authoring.NodeProblemCache"/> uses</b>, and for
-    /// the same reason: <c>graph.elements</c> already raises a change for every add and delete, so no editing
-    /// path has to remember to call anything. Ownership cannot drift without one — every place that calls
+    /// <b>Ownership cannot drift without a collection change</b>, which is what makes
+    /// <see cref="GraphIndex"/>'s staleness rule the right one here: every place that calls
     /// <c>ConditionalExecution.UpdateOwner</c> outside the tests adds the guard to <c>graph.elements</c> in
-    /// the same breath, so there is no re-parent that this would miss. Undo is hooked separately because it
-    /// re-instantiates elements rather than adding or removing them.
+    /// the same breath, so there is no re-parent this would miss. See <see cref="GraphIndex"/> for the
+    /// standing rule that nothing may read an index from inside a <c>CollectionChanged</c> dispatch, which
+    /// is what keeps the gap between those two statements safe.
     /// </para>
     ///
     /// <para>
@@ -42,19 +41,41 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public static class GuardIndex
     {
-        private static readonly Dictionary<BehaviorTreeGraph, Dictionary<BehaviorTreeNode, List<ConditionalExecution>>>
-            ByGraph = new();
+        private sealed class Index : GraphIndex<Dictionary<BehaviorTreeNode, List<ConditionalExecution>>>
+        {
+            protected override Dictionary<BehaviorTreeNode, List<ConditionalExecution>> Build(BehaviorTreeGraph graph)
+            {
+                var index = new Dictionary<BehaviorTreeNode, List<ConditionalExecution>>();
+
+                foreach (var graphElement in graph.elements)
+                {
+                    if (graphElement is not ConditionalExecution guard) continue;
+
+                    var owner = guard.Owner;
+
+                    // A guard whose owner has gone is dangling; the canvas repair deletes it. Indexing it
+                    // under null would only invent a bucket nothing asks for.
+                    if (owner == null) continue;
+
+                    if (!index.TryGetValue(owner, out var guards))
+                    {
+                        guards = new List<ConditionalExecution>();
+                        index[owner] = guards;
+                    }
+
+                    guards.Add(guard);
+                }
+
+                return index;
+            }
+
+            public Dictionary<BehaviorTreeNode, List<ConditionalExecution>> Of(BehaviorTreeGraph graph) => For(graph);
+        }
+
+        private static readonly Index Instance = new Index();
 
         /// <summary>Handed back for a node with no guards, so the common case allocates nothing either.</summary>
         private static readonly List<ConditionalExecution> None = new();
-
-        [InitializeOnLoadMethod]
-        private static void Hook()
-        {
-            // Undo restores elements by re-instantiating them rather than by adding to the collection, so the
-            // collection event alone would leave the map keyed on objects nothing points at any more.
-            Undo.undoRedoPerformed += Invalidate;
-        }
 
         /// <summary>
         /// <paramref name="owner"/>'s guards in graph order. Empty when it has none, or when it is not in a
@@ -64,60 +85,14 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (owner == null) return None;
 
-            var graph = owner.graph;
+            var index = Instance.Of(owner.graph);
 
-            if (graph == null) return None;
-
-            if (!ByGraph.TryGetValue(graph, out var index))
-            {
-                index = Build(graph);
-                ByGraph[graph] = index;
-
-                graph.elements.CollectionChanged += Invalidate;
-            }
+            if (index == null) return None;
 
             return index.TryGetValue(owner, out var guards) ? guards : None;
         }
 
-        /// <summary>
-        /// Drops every graph's map and the subscriptions with it, so nothing here holds a graph nobody has
-        /// open. A change in one graph drops all of them: at the scale a canvas edits, one extra walk on the
-        /// next repaint is cheaper than tracking which graph raised what.
-        /// </summary>
-        public static void Invalidate()
-        {
-            foreach (var graph in ByGraph.Keys)
-            {
-                if (graph != null) graph.elements.CollectionChanged -= Invalidate;
-            }
-
-            ByGraph.Clear();
-        }
-
-        private static Dictionary<BehaviorTreeNode, List<ConditionalExecution>> Build(BehaviorTreeGraph graph)
-        {
-            var index = new Dictionary<BehaviorTreeNode, List<ConditionalExecution>>();
-
-            foreach (var graphElement in graph.elements)
-            {
-                if (graphElement is not ConditionalExecution guard) continue;
-
-                var owner = guard.Owner;
-
-                // A guard whose owner has gone is dangling; the canvas repair deletes it. Indexing it under
-                // null would only invent a bucket nothing asks for.
-                if (owner == null) continue;
-
-                if (!index.TryGetValue(owner, out var guards))
-                {
-                    guards = new List<ConditionalExecution>();
-                    index[owner] = guards;
-                }
-
-                guards.Add(guard);
-            }
-
-            return index;
-        }
+        /// <summary>Drops the map and the subscriptions with it. See <see cref="GraphIndex"/>.</summary>
+        public static void Invalidate() => Instance.Invalidate();
     }
 }
