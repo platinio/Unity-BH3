@@ -21,8 +21,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected NodeShape shape => NodeShape.Hex;
         
-        public override IEnumerable<GraphCore.IWidget> positionDependers => ports.Cast<GraphCore.IWidget>();
-        
+        /// <summary>
+        /// The port widgets, as widgets. Kept as its own list rather than produced by <c>Cast</c> on each
+        /// read: <c>Reposition</c> walks this, and while the widgets invalidate their layout every frame that
+        /// is one LINQ enumerator per widget per frame. Filled beside <see cref="ports"/> in
+        /// <see cref="CacheDefinition"/>, which is the one place the port set changes.
+        /// </summary>
+        public override IEnumerable<GraphCore.IWidget> positionDependers => portDependers;
+
+        private readonly List<GraphCore.IWidget> portDependers = new List<GraphCore.IWidget>();
+
         protected readonly List<IPortWidget> ports = new List<IPortWidget>();
 
         protected readonly List<IPortWidget> inputs = new List<IPortWidget>();
@@ -117,6 +125,10 @@ namespace ArcaneOnyx.BehaviorTree
             outputs.AddRange(node.outputs.Select(port => canvas.Widget<IPortWidget>(port)));
             ports.AddRange(inputs);
             ports.AddRange(outputs);
+
+            // Same set, kept as widgets so positionDependers does not have to build one per read.
+            portDependers.Clear();
+            foreach (var port in ports) portDependers.Add(port);
 
             Reposition();
         }
