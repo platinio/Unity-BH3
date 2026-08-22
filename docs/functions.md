@@ -62,6 +62,25 @@ rows is worse than no choice.
 A Function that declares **no `Result`** is never offered, at any port, even an unwired one: this node
 exists to read a value, and a Function with no result has none to give.
 
+### The port takes the Function's type
+
+Until a Function is assigned, the node's **Output** is generic (`object`) -- nothing is known yet, and it may
+be wired to any port. The moment a Function is assigned the port **retypes to the Function's `Result`**, and
+from then on the connection gate does the rest: a `bool` Function's output simply cannot be dragged onto a
+`Transform` port. The wire is refused when drawn, not discovered at the first tick.
+
+If the node was **already wired** when the Function was assigned, any connection the new type cannot feed is
+not deleted -- it is demoted to an **invalid connection**, drawn red on the canvas and named by `bt_verify`
+(`invalid connection -- 'hasTarget'.Output (Boolean) no longer fits 'Face Target'.TransformTarget
+(Transform)`). Assigning a Function that fits brings the wire back without rewiring. A connection the new
+type *can* still feed is untouched: a `float` Function replacing a generic one keeps its wire to a `float`
+port.
+
+The type is remembered on the node, the same way its input ports are, rather than read from the Function
+each time. So a Function whose `Result` changes after it was assigned does not silently retype the port; the
+node reports it as contract drift (`Result: this node declares its Output as Boolean, but the Function now
+returns Single`) until you **Refresh Ports**, exactly as a renamed input would.
+
 ### When the list is empty
 
 Two different things look the same and are not:

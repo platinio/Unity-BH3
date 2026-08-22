@@ -67,6 +67,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(GuardProblems(asset, name));
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
+                findings.AddRange(InvalidConnections(asset, name));
                 findings.AddRange(OrphanedScriptGraphSubAssets(asset, path, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
@@ -413,12 +414,12 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 // this node's wiring rather than of the Function: the same Function can be right on one node
                 // and wrong on another.
                 //
-                // Nothing else catches this. The port-level connection lint cannot, because the node's Output
-                // is declared as object and object -> bool is a permitted downcast, so the wire is legal at
-                // the port layer no matter what the Function returns. Before this, a float Function feeding a
-                // bool guard was reported by the inspector's help box and by nothing else -- not on the
-                // canvas badge, not here -- which made the picker the only place the mistake was visible and
-                // left the CLI blind to it.
+                // This is the drift case, and since step 2d it is the only case: the Output now takes the
+                // Function's result type, so a non-fitting Function assigned to a wired node demotes the wire
+                // (InvalidConnections below reports that). What the gate cannot see is a Function whose
+                // Result changed AFTER the wire was drawn and the node not refreshed -- the port still
+                // declares the old type, the wire is still valid, and the Function hands back something else.
+                // Only comparing the live Result against the fed ports catches that.
                 var constraint = FunctionPortConstraint.For(variableNode);
 
                 if (function.ResultType != null && !constraint.Satisfies(function.ResultType))
@@ -505,6 +506,39 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// orphans visible while the existing deleter is still the one acting on them.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Wires the canvas draws red: connections whose ports no longer accept each other.
+        ///
+        /// <para>
+        /// A connection is validated when it is drawn and then trusted, so one that stops fitting later is
+        /// not removed -- <c>NodePreservation</c> demotes it to an invalid connection on the next
+        /// <c>Define()</c>. The case that produces those now is a Script Graph Variable whose Output retyped
+        /// when its Function changed: an <c>object</c> output that fed a Transform port becomes a <c>bool</c>
+        /// output that cannot. The canvas shows it; this is what lets the CLI see the same thing, since the
+        /// result-type lint above reads valid connections only and goes quiet the moment the wire is demoted.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> InvalidConnections(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            foreach (var connection in asset.graph.invalidConnections)
+            {
+                if (!connection.sourceExists || !connection.destinationExists) continue;
+
+                var source = connection.source;
+                var destination = connection.destination;
+
+                var from = source.behaviorTreeNode is BehaviorTreeNode sourceNode ? sourceNode.NodeName : "?";
+                var to = destination.behaviorTreeNode is BehaviorTreeNode destinationNode ? destinationNode.NodeName : "?";
+
+                var sourceType = source is ValueOutput valueOutput ? valueOutput.Type.Name : "control";
+                var destinationType = destination is ValueInput valueInput ? valueInput.Type.Name : "control";
+
+                yield return
+                    $"{treeName}: invalid connection -- '{from}'.{source.key} ({sourceType}) no longer fits " +
+                    $"'{to}'.{destination.key} ({destinationType}). Rewire it or change the Function.";
+            }
+        }
+
         private static IEnumerable<string> OrphanedScriptGraphSubAssets(
             BehaviorTreeGraphAsset asset,
             string assetPath,

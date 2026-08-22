@@ -62,8 +62,13 @@ namespace ArcaneOnyx.BehaviorTree
                 UndoUtility.RecordEditedObject(function == null ? "Clear Function" : "Assign Function");
 
                 // SetFunction refreshes the contract copy and re-declares the ports, which is what makes the
-                // assignment usable without a second action.
-                node.SetFunction(function);
+                // assignment usable without a second action. The Output retypes with them, so a wire the new
+                // type cannot feed is demoted to an invalid connection -- visible red on the canvas, and said
+                // here too, because a change the author did not ask for deserves a sentence.
+                foreach (var line in node.SetFunction(function))
+                {
+                    UnityEngine.Debug.LogWarning($"[BehaviorTree] {line}");
+                }
             }
 
             Authoring.ContractPortLayout.ResizeToFitPorts(node);

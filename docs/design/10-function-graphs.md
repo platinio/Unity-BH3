@@ -888,6 +888,12 @@ is no way to feed a declared input from a call site, so every BH3 Function is pu
 - **What happens to a connection when a refresh removes its port?** The sub-tree node has the same question
   and answers it by silence — the port disappears and the connection with it. Drift reporting names it
   first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
+  **Partly answered by step 2d (2026-08-22) for the output side:** a connection the retyped Output can no
+  longer feed is *demoted* rather than removed — `NodePreservation.RestoreTo` re-validates it on
+  `Define()` and turns it into a `PortInvalidConnection`, which the canvas draws red and `bt_verify` names.
+  Reassigning a Function that fits revalidates it without rewiring. Inputs still vanish by silence; the
+  difference is that an output port keeps its key across a retype and an input port does not exist at all
+  once the contract drops it.
 - **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
   clearly right; discarding a deliberate manual size is less obviously so.
 
@@ -1425,3 +1431,84 @@ Pre-existing failures, unchanged and unrelated (both in TacticalPositionSelectio
   predicates; `Vector3`, `Transform`, `GameObject` and query ports offer nothing (none exist yet); `object`
   ports offer everything.
 - The undo defect and its fix, both directions.
+
+***
+
+## Step 2d landed — the Output port takes the Function's type, 2026-08-22
+
+Requested by the tool owner after 2c: with the picker in place, a node whose Output fed nothing could still
+be pointed at a `Single` Function and then wired to a `GameObject` port, because the Output port was declared
+`object` and `object` converts to nearly everything. The picker stops the wrong *Function*; nothing stopped
+the wrong *wire* afterwards. The owner's requirement, verbatim in spirit: creating the node generic is fine
+since the Function is not known yet, but once one is chosen the port must update immediately so there is no
+way to connect a `bool` Function to a port requiring a `Transform`.
+
+Branch `feature/function-picker-by-contract`, same PRs as 2c. BH3 only.
+
+### What was wrong, mechanically
+
+Step 2b typed the **inputs** from the contract copy and left the output alone: `Definition()` declared
+`ValueOutput<object>` unconditionally. Three consequences, all *verified* on the live showcase tree before
+building:
+
+- `ValueOutput.CanConnectToValid` is `source.Type.IsConvertibleTo(destination.Type, false)`, and with a
+  source of `object` that answered `true` for a `GameObject` port, a `Transform` port and a `float` port alike.
+- The contract copy (`FunctionParameter.ReadContract`) reads `function.Inputs` **only**. The result type was
+  never remembered, so `RefreshParameters` had nothing to retype and `DescribeContractDrift` nothing to
+  compare. There was no "stale" signal because the node never recorded the thing that went stale.
+- Connections resolve by `(unit, key)` and are type-checked only in the `PortValueConnection` constructor, so
+  an existing wire is never re-examined by anything.
+
+### What shipped
+
+- **`VisualScriptGraphVariable.resultType`** — a serialized `Type` beside `parameters`, set by
+  `RefreshParameters` from `Function.ResultType` (null when there is no Function or no `Result`).
+  `Definition()` declares `Output` as `resultType ?? typeof(object)`. **Remembered rather than read live for
+  the same reason the inputs are:** `Definition()` runs during deserialization, and an unresolved asset would
+  retype the port to `object` and silently re-accept every connection on one machine and not another.
+- **Immediate retype on assignment.** `SetFunction` → `RefreshParameters` → `Define()`, which is the
+  path the picker, `fn_refresh_ports`, the canvas context menu and the CLI all already take. Nothing new had
+  to learn to call it.
+- **Wires the new type cannot feed are demoted, not deleted.** This fell out of machinery that already
+  existed: `Define()` runs `NodePreservation.RestoreTo`, which re-validates every preserved connection and
+  calls `InvalidlyConnectTo` for one that no longer fits. The canvas already drew those red
+  (`InvalidConnectionWidget`). The decision here was only *not to delete them instead*, and the reason is that
+  a demoted wire comes back by itself when a fitting Function is assigned — an author who picked the wrong
+  Function and then the right one should not also have to rewire.
+- **The cost is said out loud.** `RefreshParameters` returns one line per wire it invalidates, alongside the
+  lost-input lines it already returned; `SetFunction` now returns that list instead of `void`, and
+  `FunctionAssignment` logs it, so the picker says what the retype did.
+- **`DescribeContractDrift` includes the result.** A Function whose `Result` changes after assignment is
+  reported as drift (`Result: this node declares its Output as Boolean, but the Function now returns Single`)
+  until refreshed — one staleness story, not two (locked decision 5).
+- **`bt_verify` reports invalid connections**, naming both nodes, both ports and both types. Needed because
+  the 2c result-type lint reads *valid* connections only and therefore goes quiet at exactly the moment the
+  wire is demoted; without this the canvas saw something the CLI could not.
+
+### Decisions
+
+1. **Generic until assigned.** `object` with no Function, `object` with a Function that declares no `Result`.
+   The alternative — no output at all until a Function is chosen — would stop an author wiring up first and
+   choosing second, which 2c explicitly decided to allow.
+2. **Demote, don't delete.** Stated above. The reviewer's question from 2b about connections lost to a
+   refresh is now answered differently for outputs than inputs, and the asymmetry is real rather than
+   accidental: an output keeps its key across a retype, an input port ceases to exist when the contract drops
+   it.
+3. **The `Not` decorator keeps working.** `GuardOnFunction` wires a predicate through `Not` for the negated
+   case; `bool → Not.Value` is unaffected by typing, and the tests cover it indirectly through
+   `BooleanReactiveGuard.Value`.
+
+### Tests
+
+13 new in `FunctionOutputTypeTests`: generic when unassigned, typed immediately on assignment, generic again
+on clear and for a result-less Function; the gate refusing `bool → Transform` and `bool → GameObject`
+while still allowing `float → float`; a wired generic output retyped to `bool` demoting its Transform wire
+and reporting it, keeping a float wire that still fits, and revalidating a demoted wire when a fitting
+Function is assigned; drift reported when the Function's `Result` changes after assignment; the type
+surviving a serialization round trip; and `bt_verify` naming an invalid connection with both types.
+
+### Known gap
+
+Inputs still lose their connections silently on a contract refresh (the 2b question, unchanged). The
+output side now demotes instead; doing the same for inputs would mean keeping a port alive that the contract
+no longer declares, which is a different design and not this step.
