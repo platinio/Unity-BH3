@@ -165,49 +165,114 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Adds the containing folder to entries whose name is not unique, and only to those.
+        /// Qualifies entries whose name is not unique, and only those, with the shortest folder suffix that
+        /// actually tells them apart.
         ///
         /// <para>
-        /// This project already has two Functions called <c>IsLowHealth</c> in different folders
-        /// (<i>verified</i>), which the picker would otherwise draw as two identical rows — a choice
-        /// between indistinguishable options is worse than no choice, because the author cannot even tell
-        /// they picked the wrong one afterwards. Qualifying every entry instead would be the easy version and
-        /// the wrong one: it makes the common row longer to solve a problem the common row does not have.
+        /// The immediate parent folder is not enough on its own. Under the layout spec 10 step 7 proposes,
+        /// <c>Soldier/Functions/IsLowHealth</c> and <c>Archer/Functions/IsLowHealth</c> would both qualify as
+        /// <c>(Functions)</c> - two identical rows again, which is the whole problem this exists to solve,
+        /// and identical rows also tie the sort comparator's last tie-break so they can swap places between
+        /// openings.
+        /// </para>
+        ///
+        /// <para>
+        /// Qualifying every entry instead would be the easy version and the wrong one: it lengthens the
+        /// common row to solve a problem the common row does not have. So the qualifier grows only for the
+        /// entries that need it, and only until it distinguishes them.
         /// </para>
         /// </summary>
         private static void Disambiguate(List<FunctionPickerEntry> entries)
         {
-            var counts = new Dictionary<string, int>();
-
-            foreach (var entry in entries)
-            {
-                counts.TryGetValue(entry.Name, out var seen);
-                counts[entry.Name] = seen + 1;
-            }
+            var byName = new Dictionary<string, List<int>>();
 
             for (var i = 0; i < entries.Count; i++)
             {
-                if (counts[entries[i].Name] < 2) continue;
+                if (!byName.TryGetValue(entries[i].Name, out var indices))
+                {
+                    indices = new List<int>();
+                    byName.Add(entries[i].Name, indices);
+                }
 
-                entries[i] = Describe(entries[i].Function, FolderOf(entries[i].Function));
+                indices.Add(i);
+            }
+
+            foreach (var group in byName.Values)
+            {
+                if (group.Count < 2) continue;
+
+                var qualifiers = ShortestDistinguishingFolders(entries, group);
+
+                for (var i = 0; i < group.Count; i++)
+                {
+                    entries[group[i]] = Describe(entries[group[i]].Function, qualifiers[i]);
+                }
             }
         }
 
-        /// <summary>The folder a Function lives in, which is what tells two same-named ones apart.</summary>
-        private static string FolderOf(FunctionGraphAsset function)
+        /// <summary>
+        /// The fewest trailing folder segments that make every entry in the group distinct, or the whole
+        /// folder path when even that does not (two assets cannot share a path, so that is unreachable in
+        /// practice and answered rather than asserted).
+        /// </summary>
+        private static List<string> ShortestDistinguishingFolders(
+            List<FunctionPickerEntry> entries, List<int> group)
         {
-            // Unity asset paths are always forward-slashed regardless of platform, so there is no separator
-            // normalisation to do here and none is attempted.
+            var folders = new List<string[]>(group.Count);
+            var deepest = 1;
+
+            foreach (var index in group)
+            {
+                var segments = FolderSegmentsOf(entries[index].Function);
+                folders.Add(segments);
+
+                if (segments.Length > deepest) deepest = segments.Length;
+            }
+
+            for (var depth = 1; depth <= deepest; depth++)
+            {
+                var candidates = new List<string>(group.Count);
+                var distinct = new HashSet<string>();
+
+                foreach (var segments in folders)
+                {
+                    var qualifier = LastSegments(segments, depth);
+                    candidates.Add(qualifier);
+                    distinct.Add(qualifier);
+                }
+
+                if (distinct.Count == candidates.Count) return candidates;
+            }
+
+            var full = new List<string>(group.Count);
+            foreach (var segments in folders) full.Add(LastSegments(segments, segments.Length));
+
+            return full;
+        }
+
+        /// <summary>
+        /// The folder a Function lives in, split into segments. Unity asset paths are always
+        /// forward-slashed regardless of platform, so there is no separator normalisation to do here and
+        /// none is attempted.
+        /// </summary>
+        private static string[] FolderSegmentsOf(FunctionGraphAsset function)
+        {
             var path = UnityEditor.AssetDatabase.GetAssetPath(function);
-            if (string.IsNullOrEmpty(path)) return null;
+            if (string.IsNullOrEmpty(path)) return System.Array.Empty<string>();
 
             var lastSlash = path.LastIndexOf('/');
-            if (lastSlash < 0) return null;
+            if (lastSlash < 0) return System.Array.Empty<string>();
 
-            var folder = path.Substring(0, lastSlash);
-            var parent = folder.LastIndexOf('/');
+            return path.Substring(0, lastSlash).Split('/');
+        }
 
-            return parent < 0 ? folder : folder.Substring(parent + 1);
+        private static string LastSegments(string[] segments, int count)
+        {
+            if (segments.Length == 0) return string.Empty;
+
+            if (count >= segments.Length) return string.Join("/", segments);
+
+            return string.Join("/", segments, segments.Length - count, count);
         }
 
         /// <summary>

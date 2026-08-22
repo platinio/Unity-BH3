@@ -38,10 +38,16 @@ that knows `bool` is required.
 
 | The node's output feeds | The dropdown offers |
 |---|---|
-| a `bool` port | Functions whose `Result` is a `bool` |
+| a `bool` port | Functions whose `Result` can be read as a `bool` |
 | a `Component` port | Functions returning `Component` **or a subclass** -- a `Transform` Function is offered |
+| an `int` port | a `float` Function too, because the port converts on read |
 | several ports | only what fills all of them |
 | nothing yet | everything that returns something, grouped by flavor |
+
+The rule is **exactly what the port itself accepts** -- the same test that decides whether you may draw the
+wire (`IsConvertibleTo`), not stricter. So it is wider than "the same type": subclasses fit, numeric
+conversions fit, and an `object` Function is offered at a `bool` port for the same reason the node's own
+`object` output may feed one. Anything narrower would hide Functions that demonstrably work.
 
 Entries are grouped **Predicates / Queries / Values**, and each row names the inputs the node will owe the
 Function -- `IsHurt -- needs threshold` -- so what you are signing up for is visible before you choose, not
@@ -71,6 +77,11 @@ rule you cannot yet see would be worse than showing it broken.
 The inspector used to create an anonymous embedded graph whenever a node had nothing assigned, which is how
 most embedded graphs in this project came to exist. It no longer does; **Create new Function...** replaces
 it.
+
+> **Two CLI commands still make them.** `bt_add_variable_read` and `bt_guard_on_variable` go through
+> `CreateVariableReadGraph`, which still welds a graph into the tree as a sub-asset. So the honest statement
+> today is that no *editor* surface creates one -- migrating those two commands is part of
+> [step 7](design/10-function-graphs.md).
 
 A node that **already** holds an embedded graph is unaffected: **Open Graph** still opens it, and
 **Extract to Function** promotes it to a project asset and re-points the node at it -- the same operation
@@ -190,6 +201,8 @@ expect — a missing `Result` output is reported by name rather than failing at 
 Functions sit beside the older embedded-graph machinery rather than having replaced it. Embedded graphs
 that already exist, the script-graph repository and its canvas sweep all still work as before.
 
-What has changed is the direction: **no surface creates a new embedded graph any more.** Retiring the rest
--- migrating the graphs that exist, then removing the repository and the sweep -- is sequenced separately,
-so that there is never more than one thing deleting graphs at a time.
+What has changed is the direction: **no editor surface creates a new embedded graph any more.** Two CLI
+commands still do -- `bt_add_variable_read` and `bt_guard_on_variable`, through `CreateVariableReadGraph` --
+and migrating them is part of step 7. Retiring the rest -- the graphs that already exist, then the
+repository and the sweep -- is sequenced separately, so that there is never more than one thing deleting
+graphs at a time.

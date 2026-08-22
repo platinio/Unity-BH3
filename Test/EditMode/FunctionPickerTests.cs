@@ -88,8 +88,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             if (subFolder != null)
             {
-                folder = $"{Folder}/{subFolder}";
-                if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(Folder, subFolder);
+                folder = Folder;
+
+                // Created a segment at a time: CreateFolder takes one leaf, not a path, and the collision
+                // cases need nested folders like Soldier/Functions.
+                foreach (var segment in subFolder.Split('/'))
+                {
+                    var next = $"{folder}/{segment}";
+                    if (!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(folder, segment);
+                    folder = next;
+                }
             }
 
             AssetDatabase.CreateAsset(function, $"{folder}/{assetName}.asset");
@@ -322,6 +330,138 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             CollectionAssert.IsEmpty(offered,
                 "each Function fills one of the two ports, and filling one is not filling both");
+        }
+
+        // ------------------------------------------------------------------ the rule, at its edges
+
+        [Test]
+        public void AConvertibleButUnassignableResult_IsOffered()
+        {
+            var constraint = FunctionPortConstraint.Requiring(typeof(int));
+
+            Assert.IsTrue(constraint.Satisfies(typeof(float)),
+                "the port converts on read, so a float Function works at an int port -- this is the case "
+                + "that makes convertibility rather than assignability the right rule");
+        }
+
+        [Test]
+        public void AnObjectResult_IsOfferedAtATypedPort()
+        {
+            Assert.IsTrue(FunctionPortConstraint.Requiring(typeof(bool)).Satisfies(typeof(object)),
+                "the node's own Output is object and may feed a bool port; a Function returning object is "
+                + "offered by that same rule, and pretending otherwise would make the picker stricter than "
+                + "the wire it is filling");
+        }
+
+        [Test]
+        public void AnInvalidConnection_DoesNotConstrainTheNode()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Invalid.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(tree, 200.0f, 0.0f);
+
+            node.Output.InvalidlyConnectTo(guard.Value);
+
+            Assert.IsTrue(FunctionPortConstraint.For(node).IsUnconstrained,
+                "already-broken wiring must not dictate what is offered; fixing the wire is the repair, and "
+                + "bt_verify reports it");
+        }
+
+        // ------------------------------------------------------------------ telling entries apart
+
+        [Test]
+        public void SameNamedFunctionsUnderSameNamedFolders_AreQualifiedByEnoughOfThePath()
+        {
+            Function("IsLowHealth", typeof(bool), "Soldier/Functions");
+            Function("IsLowHealth", typeof(bool), "Archer/Functions");
+
+            var offered = FunctionPickerCatalog.Offer(
+                FunctionPortConstraint.For(NodeFeedingABooleanGuard()), AllFunctions());
+
+            Assert.AreEqual(2, offered.Count);
+            Assert.AreNotEqual(offered[0].Label, offered[1].Label,
+                "the immediate parent folder is 'Functions' for both, so the qualifier has to reach further "
+                + "up before it distinguishes anything");
+
+            CollectionAssert.AreEquivalent(
+                new[] { "Soldier/Functions", "Archer/Functions" },
+                offered.Select(entry => entry.Qualifier).ToList());
+        }
+
+        [Test]
+        public void DescribeAll_QualifiesWithoutFilteringOrSorting()
+        {
+            var predicate = Function("IsHurt", typeof(bool));
+            var value = Function("ReadHp", typeof(float));
+
+            var described = FunctionPickerCatalog.DescribeAll(new[] { predicate, value });
+
+            CollectionAssert.AreEqual(new[] { "IsHurt", "ReadHp" }, NamesOf(described),
+                "DescribeAll keeps the caller's order -- it exists for a list that has already been decided, "
+                + "such as what a node refused");
+        }
+
+        // ------------------------------------------------------------------ the assignment records an undo
+
+        [Test]
+        public void AssigningRecordsAgainstTheOwnerItIsGiven_AndDirtiesAnAssetOwner()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Owned.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var function = Function("IsHurt", typeof(bool));
+
+            EditorUtility.ClearDirty(tree);
+
+            Assert.IsTrue(FunctionAssignment.Apply(node, function, tree));
+            Assert.AreSame(function, node.Function);
+            Assert.IsTrue(EditorUtility.IsDirty(tree),
+                "an assignment that does not dirty its owner is lost on the next domain reload, with nothing "
+                + "shown as unsaved");
+        }
+
+        /// <summary>
+        /// The machine-embedded case, which is the one that regressed: resolving the tree <em>asset</em>
+        /// yields null for an embedded nest, so the owner has to be passed in.
+        /// </summary>
+        [Test]
+        public void AssigningRecordsAgainstASceneOwner_ForAMachineEmbeddedTree()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Embedded.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var function = Function("IsHurt", typeof(bool));
+
+            var host = new GameObject("Agent");
+
+            try
+            {
+                var machine = host.AddComponent<BehaviorTreeMachine>();
+
+                Assert.IsNull(machine.GraphAsset,
+                    "an embedded nest has no macro, which is exactly why resolving the tree asset was the "
+                    + "wrong way to find the undo target");
+
+                Assert.IsTrue(FunctionAssignment.Apply(node, function, machine),
+                    "the component is a legitimate owner even though it is not an asset");
+
+                Assert.AreSame(function, node.Function);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void AssigningWithNoOwner_RefusesRatherThanMutatingUnrecorded()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Ownerless.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var function = Function("IsHurt", typeof(bool));
+
+            Assert.IsFalse(FunctionAssignment.Apply(node, function, null));
+            Assert.IsNull(node.Function,
+                "mutating without recording is the silent-loss failure: it would look assigned and be gone "
+                + "on the next reload");
         }
 
         // ------------------------------------------------------------------ helpers

@@ -407,7 +407,28 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 }
 
                 var function = variableNode.Function;
-                if (function == null || !reported.Add(function)) continue;
+                if (function == null) continue;
+
+                // Checked per NODE, above the per-function dedupe below, because a mismatch is a property of
+                // this node's wiring rather than of the Function: the same Function can be right on one node
+                // and wrong on another.
+                //
+                // Nothing else catches this. The port-level connection lint cannot, because the node's Output
+                // is declared as object and object -> bool is a permitted downcast, so the wire is legal at
+                // the port layer no matter what the Function returns. Before this, a float Function feeding a
+                // bool guard was reported by the inspector's help box and by nothing else -- not on the
+                // canvas badge, not here -- which made the picker the only place the mistake was visible and
+                // left the CLI blind to it.
+                var constraint = FunctionPortConstraint.For(variableNode);
+
+                if (function.ResultType != null && !constraint.Satisfies(function.ResultType))
+                {
+                    yield return
+                        $"{treeName}: node '{variableNode.NodeName}' reads Function '{function.name}', which " +
+                        $"returns {function.ResultType.Name}, but the node feeds {constraint.Describe()}.";
+                }
+
+                if (!reported.Add(function)) continue;
 
                 var plan = ArcaneOnyx.VisualScriptingExtension.FunctionBindingPlan.Resolve(function);
                 if (!plan.IsUsable)

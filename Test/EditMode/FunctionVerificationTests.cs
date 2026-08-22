@@ -116,6 +116,55 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 .ToList();
         }
 
+        // ------------------------------------------------------------------ result type vs the port fed
+
+        /// <summary>
+        /// Nothing else catches this. The node's <c>Output</c> is declared <c>object</c>, so the port-level
+        /// connection lint sees a legal wire whatever the Function returns; before this check the mismatch
+        /// was visible only in the picker's own help box, which left the CLI blind to it.
+        /// </summary>
+        [Test]
+        public void AFunctionWhoseResultCannotFillThePortTheNodeFeeds_IsNamedWithBothTypes()
+        {
+            var function = NewFunction("ReturnsFloat", typeof(float));
+
+            var path = $"{Folder}/MismatchTree.asset";
+            var tree = BehaviorTreeAuthoring.CreateTree(path);
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(tree, 200.0f, 0.0f);
+
+            node.Output.ValidlyConnectTo(guard.Value);
+            node.SetFunction(function);
+
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+
+            var findings = FunctionFindings(path);
+
+            Assert.That(findings, Has.Some.Contains("ReturnsFloat"), "the report must name the Function");
+            Assert.That(findings, Has.Some.Contains("Single").And.Some.Contains("Boolean"),
+                "and both sides of the mismatch, or it does not say what to change");
+        }
+
+        [Test]
+        public void AFunctionThatFitsThePort_IsNotReportedAsAMismatch()
+        {
+            var function = NewFunction("ReturnsBool", typeof(bool));
+
+            var path = $"{Folder}/FittingTree.asset";
+            var tree = BehaviorTreeAuthoring.CreateTree(path);
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(tree, 200.0f, 0.0f);
+
+            node.Output.ValidlyConnectTo(guard.Value);
+            node.SetFunction(function);
+
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+
+            Assert.That(FunctionFindings(path), Has.None.Contains("but the node feeds"));
+        }
+
         // ------------------------------------------------------------------ purity
 
         [Test]

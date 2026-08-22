@@ -96,8 +96,12 @@ distinction is that nobody named them.
 
 So the target state is: **a node references a Function, and that is the only way a node gets a graph.**
 
-- **No new embedded graphs are created, by any surface.** Step 2c removes the last UI that created one
-  (the drawer's *Open Graph* button, which minted a sub-asset whenever nothing was assigned).
+- **No new embedded graphs are created by any editor surface.** Step 2c removes the last UI that created
+  one (the drawer's *Open Graph* button, which minted a sub-asset whenever nothing was assigned).
+  **`bt_add_variable_read` and `bt_guard_on_variable` still create them**, through
+  `BehaviorTreeAuthoring.CreateVariableReadGraph`; migrating those two is item 2 of *Step 7*. Until then the
+  CLI is the looser surface, which is the inversion of what 2c set out to fix and should not be left
+  unstated.
 - **Existing embedded graphs keep working and stay openable**, with **Extract to Function** as the
   one-click way out — the action spec 03 already requires for suggested-guard conditions.
 - **The remaining embedded graphs are migrated and the field deleted** in the step that follows the
@@ -1157,7 +1161,11 @@ exist yet.
 - ~~**Whether the drawer should also refuse a mismatch already assigned.**~~ — **no: it keeps the
   reference and draws it in error, naming the mismatch.** A picker that silently dropped an assignment
   because a `Result` type changed underneath it would destroy authored work to enforce a rule the author
-  cannot yet see. Showing it broken is what lets them fix it.
+  cannot yet see. Showing it broken is what lets them fix it. **`bt_verify` reports it too** — it did not
+  when this was written, and the claim that it did was corrected by making it true: `FunctionProblems` now
+  compares the Function's `ResultType` against the ports the node feeds, per node. Nothing else can catch
+  it, because the node's `Output` is `object` and the port-level lint therefore sees a legal wire whatever
+  the Function returns.
 - **Where a new Function goes** (decided with the tool owner, 2026-08-21) — **a save-file dialog**
   (`EditorUtility.SaveFilePanelInProject`), defaulting to the folder beside the tree. A naming convention
   such as `<TreeFolder>/Functions/<Tree>.<Node>.asset` would have to be shared with `bt_add_variable_read`

@@ -23,13 +23,30 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         // ------------------------------------------------------------------ C# API
 
         /// <summary>Creates a Function asset with a runnable default graph.</summary>
-        public static FunctionGraphAsset CreateFunction(string path)
+        public static FunctionGraphAsset CreateFunction(string path, Type resultType = null)
         {
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("A Function needs an asset path.");
 
             var normalized = NormalizePath(path);
             var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+
+            // DefaultGraph() gives Enter wired to Exit and no result, because it cannot know what the
+            // Function is for. A caller that does know says so here rather than building the graph itself:
+            // this is the one place that decides what a new Function contains, and it had grown a second
+            // copy in the inspector's picker before this parameter existed.
             function.graph = function.DefaultGraph();
+
+            if (resultType != null)
+            {
+                function.graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+                {
+                    key = FunctionGraphAsset.ResultKey,
+                    label = FunctionGraphAsset.ResultKey,
+                    type = resultType
+                });
+
+                function.graph.PortDefinitionsChanged();
+            }
 
             AssetDatabase.CreateAsset(function, normalized);
             EditorUtility.SetDirty(function);
@@ -141,9 +158,27 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "Create a Function — a named, contracted, reusable Visual Scripting graph. The new asset ships " +
             "with Enter wired to Exit so it runs before you have declared anything.")]
         public static object CreateFunctionCommand(
-            [CliArg("path", "Asset path for the new Function, e.g. Assets/AI/Functions/HasTarget.asset.", Required = true)] string path)
+            [CliArg("path", "Asset path for the new Function, e.g. Assets/AI/Functions/HasTarget.asset.", Required = true)] string path,
+            [CliArg("result", "Type name of the Result this Function returns, e.g. System.Boolean or " +
+                              "UnityEngine.Vector3. Omit for a Function that declares no result yet.")] string result = null)
         {
-            var function = CreateFunction(path);
+            Type resultType = null;
+
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                resultType = Unity.VisualScripting.RuntimeCodebase.TryDeserializeType(result, out var deserialized)
+                    ? deserialized
+                    : Type.GetType(result);
+
+                if (resultType == null)
+                {
+                    throw new ArgumentException(
+                        $"'{result}' is not a type this project can resolve. Use an assembly-qualified or " +
+                        "full type name, e.g. System.Boolean or UnityEngine.Vector3.");
+                }
+            }
+
+            var function = CreateFunction(path, resultType);
             return DescribeContract(function);
         }
 

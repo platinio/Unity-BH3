@@ -51,6 +51,24 @@ namespace ArcaneOnyx.BehaviorTree
 
         private readonly AdvancedDropdownState dropdownState = new AdvancedDropdownState();
 
+        /// <summary>
+        /// The object Visual Scripting is editing, captured while drawing.
+        ///
+        /// <para>
+        /// Captured rather than looked up because it is only knowable <em>inside</em> <c>OnGUI</c>:
+        /// <c>GraphContext.BeginEdit</c> pushes <c>reference.serializedObject</c> onto
+        /// <c>LudiqEditorUtility.editedObject</c> for the duration of the draw and pops it afterwards. The
+        /// dropdown's callback runs later, from its own popup window, where the stack is empty again.
+        /// </para>
+        ///
+        /// <para>
+        /// It is the asset for a macro graph and the <c>BehaviorTreeMachine</c> component for an embedded
+        /// one, which is exactly the distinction that makes resolving the tree asset instead the wrong
+        /// answer.
+        /// </para>
+        /// </summary>
+        private UnityEngine.Object editedOwner;
+
         private BTScriptGraphVariable Variable => metadata?.value as BTScriptGraphVariable;
 
         /// <summary>
@@ -121,24 +139,30 @@ namespace ArcaneOnyx.BehaviorTree
 
         protected override void OnGUI(Rect position, GUIContent label)
         {
-            BeginLabeledBlock(metadata, position, label);
+            // BeginLabeledBlock draws the label and hands back what is left of the row. Using that rect is
+            // what keeps every row in the value column; drawing a second EditorGUI.PrefixLabel here instead
+            // overlaid two labels sized by two different rules, which only looked right while they agreed.
+            var content = BeginLabeledBlock(metadata, position, label);
+
+            // Valid only inside this draw -- see the field's own note.
+            editedOwner = LudiqEditorUtility.editedObject.value;
 
             var rows = Describe();
             var constraint = FunctionPortConstraint.For(Node);
 
-            DrawPickerRow(position.VerticalSection(ref y, Row), label, constraint);
+            DrawPickerRow(content.VerticalSection(ref y, Row), constraint);
 
             if (rows.HasButtons)
             {
                 y += Spacing;
-                DrawButtonRow(position.VerticalSection(ref y, Row), rows);
+                DrawButtonRow(content.VerticalSection(ref y, Row), rows);
             }
 
             if (rows.Mismatched)
             {
                 y += Spacing;
                 EditorGUI.HelpBox(
-                    position.VerticalSection(ref y, Row * 2.0f),
+                    content.VerticalSection(ref y, Row * 2.0f),
                     $"'{Variable.Function.name}' returns "
                     + $"{Variable.Function.ResultType?.Name ?? "nothing"}, but this node feeds "
                     + $"{constraint.Describe()}. It is kept, not cleared — pick another or fix the Function.",
@@ -149,7 +173,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 y += Spacing;
                 EditorGUI.HelpBox(
-                    position.VerticalSection(ref y, Row * 2.0f),
+                    content.VerticalSection(ref y, Row * 2.0f),
                     "The Function runs; the embedded graph is editable but dead. Clear one.",
                     MessageType.Warning);
             }
@@ -159,9 +183,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         // ------------------------------------------------------------------ the picker
 
-        private void DrawPickerRow(Rect row, GUIContent label, FunctionPortConstraint constraint)
+        private void DrawPickerRow(Rect valueRect, FunctionPortConstraint constraint)
         {
-            var valueRect = EditorGUI.PrefixLabel(row, label);
             var function = Variable?.Function;
 
             var content = new GUIContent(
@@ -239,12 +262,13 @@ namespace ArcaneOnyx.BehaviorTree
         // ------------------------------------------------------------------ mutation
 
         /// <summary>
-        /// Points the node at a Function and grows its ports.
+        /// Points the node at a Function through <see cref="FunctionAssignment"/>, which owns the undo
+        /// decision, and then repairs everything the editor caches about the node.
         ///
         /// <para>
-        /// Runs from a dropdown callback rather than from inside <c>OnGUI</c>, so <c>GUI.changed</c> is not
-        /// the signal here — nothing is drawing. The repaint is asked for explicitly, and the problem cache
-        /// is invalidated because the badge this assignment fixes or causes is otherwise computed at import.
+        /// Runs from a dropdown callback rather than from inside <c>OnGUI</c>, so nothing here can rely on
+        /// being mid-draw: <c>GUI.changed</c> reaches no one, the repaint is asked for explicitly, and the
+        /// cached inspector height has to be invalidated by hand.
         /// </para>
         /// </summary>
         private void Assign(FunctionGraphAsset function)
@@ -262,65 +286,36 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            var label = function == null ? "Clear Function" : "Assign Function";
-            var tree = RecordTreeEdit(label);
+            if (!FunctionAssignment.Apply(node, function, editedOwner))
+            {
+                Debug.LogWarning(
+                    "[BehaviorTree] The Function picker could not identify the asset or scene object that "
+                    + "owns this tree, so the selection was not applied rather than applied without an undo "
+                    + "entry. Reopen the tree from its asset or its Behavior Tree Machine and try again.");
+                return;
+            }
 
-            // SetFunction refreshes the contract copy and re-declares the ports, which is what makes the
-            // assignment usable without a second action.
-            node.SetFunction(function);
-
-            Authoring.ContractPortLayout.ResizeToFitPorts(node);
-            Authoring.NodeProblemCache.Invalidate();
-
-            MarkDirty(tree);
-
-            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+            AfterMutation();
         }
 
         /// <summary>
-        /// Registers an undo step against the tree asset and returns it, or null when no tree is being
-        /// edited.
+        /// What every mutation raised from a callback owes the editor afterwards.
         ///
         /// <para>
-        /// <b>Not <c>UndoUtility.RecordEditedObject</c>, and that is the whole point.</b> That helper reads
-        /// the object to record from <c>LudiqEditorUtility.editedObject</c>, an override stack populated
-        /// only inside <c>GraphContext.BeginEdit()/EndEdit()</c> — which brackets each canvas and inspector
-        /// draw, frame by frame. Every mutation here runs from an <c>AdvancedDropdown</c> callback, raised
-        /// by the dropdown's own popup window <em>outside</em> that bracket, where the stack reads null and
-        /// the helper returns without recording or dirtying anything (<i>verified against the live
-        /// editor</i>).
-        /// </para>
-        ///
-        /// <para>
-        /// The failure that causes is the quiet kind: <c>SetFunction</c> still mutates the in-memory node,
-        /// so the assignment looks applied and survives the session — but the asset is never marked dirty,
-        /// so it has no undo entry, never shows as unsaved, and is gone after a domain reload unless some
-        /// unrelated edit happened to dirty the same tree. Naming the asset explicitly is what makes the
-        /// edit real.
+        /// <b>The height invalidation is the non-obvious one.</b> <c>Inspector</c> caches <c>GetHeight</c>
+        /// and recomputes only when <c>isHeightDirty</c> is set or the height hash changes, and that hash
+        /// covers width, label and wide mode, never the value. <c>isHeightDirty</c> comes from
+        /// <c>metadata.valueChanged</c>, which fires only when the observed value stops being equal to the
+        /// last one; <c>SetFunction</c> mutates the <em>same</em> <see cref="BTScriptGraphVariable"/>
+        /// instance, so it is reference-equal before and after and nothing fires. Without this call, going
+        /// from None to a Function leaves <c>GetHeight</c> reporting one row while <c>OnGUI</c> draws two or
+        /// three, and the extra rows paint over the member below until something else resizes the panel.
         /// </para>
         /// </summary>
-        private static BehaviorTreeGraphAsset RecordTreeEdit(string label)
+        private void AfterMutation()
         {
-            var tree = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
-
-            if (tree == null)
-            {
-                Debug.LogWarning(
-                    $"[BehaviorTree] '{label}' could not resolve the tree being edited, so the change has no "
-                    + "undo entry and the asset was not marked dirty. Save the tree from the canvas.");
-                return null;
-            }
-
-            Undo.RegisterCompleteObjectUndo(tree, label);
-            return tree;
-        }
-
-        /// <summary>Marks the edited tree dirty after the mutation, so the change is actually saved.</summary>
-        private static void MarkDirty(BehaviorTreeGraphAsset tree)
-        {
-            if (tree == null) return;
-
-            EditorUtility.SetDirty(tree);
+            SetHeightDirty();
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
         }
 
         private void CreateAndAssign(FunctionPortConstraint constraint)
@@ -332,13 +327,29 @@ namespace ArcaneOnyx.BehaviorTree
             OpenGraph(function);
         }
 
+        /// <summary>Where a Function made for this node belongs: beside the tree being edited.</summary>
+        private static string DefaultFunctionFolder()
+        {
+            var tree = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
+            if (tree == null) return "Assets";
+
+            var path = AssetDatabase.GetAssetPath(tree);
+            if (string.IsNullOrEmpty(path)) return "Assets";
+
+            var lastSlash = path.LastIndexOf('/');
+            return lastSlash < 0 ? "Assets" : path.Substring(0, lastSlash);
+        }
+
         /// <summary>
         /// Creates a Function at a path the author picks, already declaring the result this port needs.
         ///
         /// <para>
-        /// The result declaration is the point. <c>DefaultGraph()</c> cannot know what a Function is for and
-        /// so declares Enter and Exit only; a Function created from a port does know, and one born without a
-        /// <c>Result</c> would immediately fail the very filter that offered to create it.
+        /// The graph is built by <c>FunctionGraphAuthoring.CreateFunction</c> rather than here. "What does a
+        /// new Function contain" is one decision, and it had three implementations before this parameter
+        /// existed - the CLI path, the project-window create menu, and this picker - of which only the
+        /// picker declared a <c>Result</c>. A Function created from the CLI was therefore born failing the
+        /// very filter this picker applies, which is the UI/CLI asymmetry the feature set out to remove,
+        /// reappearing on the create side.
         /// </para>
         /// </summary>
         private static FunctionGraphAsset CreateFunction(FunctionPortConstraint constraint)
@@ -352,39 +363,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (string.IsNullOrEmpty(path)) return null;
 
-            var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
-
-            // Macro<TGraph> starts with an empty graph and nothing calls DefaultGraph() for a macro asset,
-            // so a Function created without this has no input unit, no output unit and no Enter/Exit.
-            function.graph = function.DefaultGraph();
-
-            var resultType = constraint.SuggestedResultType ?? typeof(object);
-
-            function.graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
-            {
-                key = FunctionGraphAsset.ResultKey,
-                label = FunctionGraphAsset.ResultKey,
-                type = resultType
-            });
-
-            function.graph.PortDefinitionsChanged();
-
-            AssetDatabase.CreateAsset(function, AssetDatabase.GenerateUniqueAssetPath(path));
-            AssetDatabase.SaveAssets();
-
-            return function;
-        }
-
-        /// <summary>Beside the tree being edited, which is where a Function made for it belongs.</summary>
-        private static string DefaultFunctionFolder()
-        {
-            var tree = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
-            if (tree == null) return "Assets";
-
-            var path = AssetDatabase.GetAssetPath(tree);
-            if (string.IsNullOrEmpty(path)) return "Assets";
-
-            return System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/') ?? "Assets";
+            // The dialog has already asked about overwriting, so the answer given there is honoured rather
+            // than quietly turned into "New Function 1" by GenerateUniqueAssetPath.
+            return Authoring.FunctionGraphAuthoring.CreateFunction(
+                path, constraint.SuggestedResultType ?? typeof(object));
         }
 
         /// <summary>
@@ -416,7 +398,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (string.IsNullOrEmpty(path)) return;
 
-            RecordTreeEdit("Extract to Function");
+            using (LudiqEditorUtility.editedObject.Override(editedOwner == null ? tree : editedOwner))
+            {
+                UndoUtility.RecordEditedObject("Extract to Function");
+            }
 
             try
             {
@@ -439,9 +424,7 @@ namespace ArcaneOnyx.BehaviorTree
             Authoring.ContractPortLayout.ResizeToFitPorts(node);
             Authoring.NodeProblemCache.Invalidate();
 
-            MarkDirty(tree);
-
-            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+            AfterMutation();
         }
 
         // ------------------------------------------------------------------ the dropdown
@@ -530,12 +513,34 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 if (constraint.IsUnconstrained) return "No Functions in this project yet";
 
-                if (constraint.IsMultiplyConstrained && constraint.SuggestedResultType == null)
+                // Impossibility is asked of Satisfies, not of SuggestedResultType. Those two answer
+                // different questions on purpose, and using the stricter one here got the message wrong for
+                // numeric pairs: a node feeding a float port and an int port has no assignable common type,
+                // so SuggestedResultType is null -- but a float Function satisfies both, because float
+                // converts to int. Telling that author to rewire when what they need is a float Function
+                // sends them to fix something that is not broken.
+                if (constraint.IsMultiplyConstrained && !AnyValueCouldSatisfy())
                 {
                     return $"This node feeds {constraint.Describe()}, which no value can be at once";
                 }
 
                 return $"No Function returns {constraint.Describe()}";
+            }
+
+            /// <summary>
+            /// Whether any type at all could fill every port at once, tested over the required types
+            /// themselves plus <c>object</c>. Not a proof over all types -- there is no such enumeration --
+            /// but it is exact for the case that matters, since a value filling several ports is in practice
+            /// one of the types those ports declare.
+            /// </summary>
+            private bool AnyValueCouldSatisfy()
+            {
+                foreach (var required in constraint.RequiredTypes)
+                {
+                    if (constraint.Satisfies(required)) return true;
+                }
+
+                return constraint.Satisfies(typeof(object));
             }
 
             protected override void ItemSelected(AdvancedDropdownItem item)
