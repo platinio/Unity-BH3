@@ -81,9 +81,10 @@ and `RunnableScriptGraph`; it is their replacement, and the consumer census make
   `CreateRunnableScriptGraphVariable` method on BH3's `BaseVisualScriptingNode` is a name coincidence —
   it returns a `BTScriptGraphVariable` and never touches the VSE type.)
 - **`RunnableScriptGraph` has exactly one consumer**: `TacticalPositionSelectionQueryItem.generatorScriptGraph`
-  (*verified*, `TacticalPositionSelectionQueryItem.cs:12`). It is removed once that field migrates —
-  see open question 1 for the mechanics. No deprecation era, no wrapper maintained "just in case": a
-  seam with one caller does not earn a compatibility layer.
+  (*verified*, `TacticalPositionSelectionQueryItem.cs:12`). It is removed in the same change that
+  re-points that field at a Function — see *Step 3*. No deprecation era, no wrapper maintained "just in
+  case", and **no migration utility** (open question 1, closed 2026-08-22): a seam with one caller does
+  not earn a compatibility layer.
 
 ### Reference by default; embedding is being retired
 
@@ -289,8 +290,9 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
    ships its registry seam and graph hash, so the emitter lands behind an existing interface.
 9. Vocabulary: behaviors / functions / facts / queries.
 10. **`ParameterizedGraphAsset` is deleted** (zero consumers, *verified*) and **`RunnableScriptGraph`
-    is removed** once its single consumer (the TPS query item) migrates. Neither is wrapped,
-    deprecated, or maintained.
+    is removed** in the same change that re-points its single consumer (the TPS query item) at a
+    Function. Neither is wrapped, deprecated, or maintained, and — **amended 2026-08-22 by the tool
+    owner** — neither is migrated: existing query items are re-authored, not converted. See *Step 3*.
 11. **Tier 2's compilation target is C# codegen, not a flat op array.** Locked 2026-08-13, closing
     open question 4 ahead of the "revisit after use" schedule, because building multi-exit produced
     the deciding evidence rather than the profiler:
@@ -315,14 +317,17 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
 
 Blocking — decide before serializing anything:
 
-1. **Migration mechanics for `TacticalPositionSelectionQueryItem`.** Replacement is decided (see
-   *Function graphs replace the two existing wrappers*); what remains is how the one serialized field
-   moves. Options: an editor migration utility that rewrites existing query items in place (reads the
-   old `RunnableScriptGraph`'s asset reference and argument list, writes the Function reference and
-   args), or regeneration — query items are authored via `tps_create_query_item` and the demo content
-   is documented as regenerable. Recommended: the migration utility, plus a verify report naming any
-   unmigrated item, so hand-authored items in downstream projects are caught rather than silently
-   broken.
+1. ~~**Migration mechanics for `TacticalPositionSelectionQueryItem`.**~~ — **closed 2026-08-22 by the
+   tool owner: no migration.** Replacement was already decided (see *Function graphs replace the two
+   existing wrappers*); the question was how the one serialized field moves, and the answer is that it
+   does not. No editor migration utility, no two-release coexistence window, no YAML rewriter. The field
+   changes type, `RunnableScriptGraph` is deleted in the same change, and every existing query item —
+   in this repo and in downstream projects — stops resolving a graph and is re-authored with
+   `tps_create_query_item` when it is next needed. The reasons, so they are not re-litigated: the
+   utility would only help a downstream project that updates in two hops (to a commit where the old
+   type still deserializes, run it, then update again), which is a constraint on the owner's other
+   project rather than on this code; the existing items are few and regenerable; and a verify report
+   naming an item with no Function is all the safety net the owner wants. See *Step 3*.
 2. **Agent context mechanism** — per-agent cached reference (recommended) vs declared-inputs-only.
    Resolved by spike 2 below, then locked.
 3. ~~**Do new embedded one-offs become embedded `FunctionGraphAsset`s** (uniform tooling forever) **or
@@ -367,21 +372,22 @@ Revisit after use, not before:
 10. Watched-keys mismatch: Function whose declared keys omit a key its graph reads → verify reports;
     keys it declares but does not read → verify reports.
 11. Reentrancy under guard tracing: a Function pulled twice on a guard flip returns consistent results.
-12. Backward compatibility: existing trees, samples, and TPS query items load and run untouched.
+12. Backward compatibility: existing trees and samples load and run untouched. ~~and TPS query items~~ —
+    struck 2026-08-22; existing query items are deliberately broken by step 3 (open question 1).
 
 ## Files touched (expected)
 
 - **VisualScriptingExtension:** `FunctionGraphAsset.cs` (new), `FunctionEvaluator.cs` (new seam),
   binding-plan types; `ParameterizedScriptGraph/` folder deleted (asset, drawer, helper);
-  `RunnableScriptGraph/` folder deleted after the TPS migration (open question 1);
+  `RunnableScriptGraph/` folder deleted in step 3, together with the TPS field change (no migration);
   `ScriptGraphVariableExtension` removed with them; editor: create menu, contract inspector, Extract
   action.
 - **BH3:** `VisualScriptGraphVariable` re-point; `BehaviorTreeDump` / why-panel / `GuardTraceCapture`
   read contracts; verify lints (orphans, purity, watched keys, drift); save-time cleanup;
   `ScriptGraphAssetsRepository` + `DestroyUnusedScriptGraphAssets` + canvas sweep removed (step 3);
   authoring helpers + `fn_*` CLI.
-- **TacticalPositionSelection:** query item binding per open question 1; authoring lints for the query
-  contract.
+- **TacticalPositionSelection:** query item holds a `FunctionGraphAsset` plus arguments (step 3, no
+  migration); authoring lints for the query contract.
 - **Docs:** authoring skill (Function vocabulary, fn_ commands), spec 03 (cards consume contracts),
   `zombie-example.json` unaffected.
 
@@ -395,8 +401,9 @@ Revisit after use, not before:
    shared-file merge conflicts.
 4. The zero-allocation test and the two-agent reentrancy test are green and run in CI.
 5. A TPS query Function with a misdeclared output is refused at verify with a named error.
-6. Every existing tree, sample, and TPS query item in the repo loads and behaves identically before
-   migration begins.
+6. Every existing tree and sample in the repo loads and behaves identically before migration begins.
+   ~~and TPS query item~~ — struck 2026-08-22; step 3 breaks existing query items on purpose and the
+   verify report names them.
 
 ***
 
@@ -583,25 +590,196 @@ project, which made the UI looser than `bt_guard_on_function`; it is now a searc
 dropdown, and the property drawer behind it is deleted in favour of a registered Visual Scripting
 `Inspector`.
 
-### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
+### Step 3 — Re-point the TPS query item at a Function and delete the legacy wrappers
 
-Its single serialized `RunnableScriptGraph` field moves to a Function reference plus arguments. Recommended
-mechanics, per this spec: an editor migration utility that rewrites existing query items in place, **plus a
-verify report naming any unmigrated item**, so hand-authored items in downstream projects are caught rather
-than silently broken. `TacticalPositionSelectionAuthoring.SetGeneratorScriptGraph` is the touch point; it
-reaches the field through `SerializedObject` because both are private. Note the port-key constants there
-(`Result`, `_Evaluator`) — a query Function must match them, and the contract lint should say so by name.
+**Merged from the former steps 3 and 4 on 2026-08-22, by the tool owner, with the migration dropped.**
+The two were only separate because the old step 3 carried a migration utility that the deletion had to wait
+for. Without one there is nothing to wait for: the field change and the deletion are one change, across two
+submodules, landed together.
+
+**What changes, in order:**
+
+1. **TacticalPositionSelection.** `TacticalPositionSelectionQueryItem.generatorScriptGraph` stops being a
+   `RunnableScriptGraph` and becomes a `FunctionGraphAsset` reference plus serialized arguments.
+   `CreateTacticalPositionSelectionQuery` evaluates it through `FunctionEvaluator`, supplying `_Evaluator`
+   the way BH3's `ScriptGraphVariable` supplies the agent. `TacticalPositionSelectionAuthoring` follows:
+   `CreateQueryGraph` produces a `FunctionGraphAsset` whose contract is `Result :
+   TacticalPositionSelectionQuery` plus the `_Evaluator` input, `SetGeneratorScriptGraph` (and the
+   `tps_set_generator_script_graph` command) take a Function, and the port-key constants there (`Result`,
+   `_Evaluator`) become the contract lint's vocabulary — a query Function that does not match them is
+   refused by name. The `tps_*` commands keep their names; what they create changes type.
+2. **VisualScriptingExtension.** Delete `ParameterizedGraphAsset` (zero consumers, verified twice), its
+   drawer and helper; delete `RunnableScriptGraph` and its drawer. Neither is wrapped or deprecated: locked
+   decision 10.
+   **Corrected 2026-08-22 while implementing:** `ScriptGraphVariableExtension` does **not** go with them —
+   BH3's `ScriptGraphVariable` still runs its *embedded*-graph path through it, and embedded graphs are
+   step 7's business. Two files in those folders are name coincidences rather than consumers: the
+   `Editor/RunnableScriptGraph/MenuItems.cs` create-menu items (moved to `Editor/ScriptGraph/`, not deleted)
+   and BH3's `CreateRunnableScriptGraphVariable`, which never touched the type at all.
+3. **Verify report, not migration.** A query item whose Function is null, or whose Function does not
+   declare the query contract, is named by the TPS verify path. That is the whole safety net for existing
+   items, here and downstream.
+
+**What is deliberately not done.** No migration utility, no menu item, no coexistence release, no YAML
+reader. Existing query items — this repo's one item in `CommonTPSQueryDabatabase.asset` and any in
+downstream projects — lose their graph when the field's type changes and are re-authored with
+`tps_create_query_item` when next needed. The query *graph* assets they pointed at were `ScriptGraphAsset`s,
+not Functions, so even the graphs are regenerated rather than re-pointed; `tps_create_query_graph` is the
+path. The owner accepted this trade (open question 1) to keep moving.
+
+**Why this is bigger than "one field moves", stated so it is not discovered mid-change.** A Function is a
+`Macro<FlowGraph>`, not a `ScriptGraphAsset`; the TPS authoring helpers are typed against `ScriptGraphAsset`
+throughout (`GetGraphInput`, `GetGraphOutput`, `ConnectToResult`, `CreateQueryGraph`, every `tps_*` command
+that takes a graph path). Expect the TPS editor assembly to change wholesale, not at one touch point. The
+graph *contents* are compatible — `FunctionGraphAsset.DefaultGraph()` uses the same `ScriptGraphInput` /
+`ScriptGraphOutput` units the query graphs already use — so the unit-level helpers survive; only their
+asset-typed signatures move.
+
+~~Two defects die with the deleted code~~ — **corrected 2026-08-22: they outlive it, and belong to step 7.**
+`ScriptGraphOutput.executionIndex` is `[Serialize]`, so per-call bookkeeping is persisted into the asset, and
+the legacy `Run` paths never `Dispose()` their `Flow`. Both live in `ScriptGraphVariableExtension` and the
+node it reads, which survive this step for the reason given above. Neither should be fixed in place.
+
 TacticalPositionSelection is already branched (`feature/function-graphs`) and currently unchanged.
 
-### Step 4 — Delete `ParameterizedGraphAsset` and `RunnableScriptGraph`
+### Step 3 landed — the query item takes a Function, 2026-08-22
 
-Only after step 3. `ParameterizedGraphAsset` has **zero** consumers (verified twice) — delete it, its
-drawer and its helper outright. `RunnableScriptGraph` has exactly one consumer, which step 3 removes.
-`ScriptGraphVariableExtension` goes with them. Neither is wrapped or deprecated: locked decision 10.
+Branch `feature/tps-query-function` in TacticalPositionSelection, VisualScriptingExtension and BH3.
+EditMode 705 tests / 1 failure, PlayMode 84 / 3 — the same four that failed before the change
+(`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, and three
+`TacticalPositionSelectionPlayModeTests` NREs). No new failures.
 
-Two defects die with that code and should not be fixed in place: `ScriptGraphOutput.executionIndex` is
-`[Serialize]`, so per-call bookkeeping is persisted into the asset, and the `Run` paths never `Dispose()`
-their `Flow`.
+#### What shipped
+
+- **`TacticalPositionSelectionQueryContract`** (TPS runtime, new). One place spells out what a query Function
+  must declare — `Result : TacticalPositionSelectionQuery` and an `_Evaluator : GameEntity` input — and
+  `TryDescribeMismatch` produces the message everything else reports. The authoring constants
+  (`ResultPortKey`, `EvaluatorParameterKey`) now alias it instead of holding their own copies of the strings.
+- **`TacticalPositionSelectionQueryItem`** holds a `FunctionGraphAsset` plus `[SerializeReference]`
+  arguments, and evaluates through `FunctionEvaluator`. It caches one `FunctionBinding` per agent
+  GameObject, resolves argument names to plan indices once, and refuses to run with a message naming the
+  item when the contract fails, when the evaluator is null, or when a declared input has no argument.
+- **A contract-filtered picker.** `[QueryFunction]` on the field plus `QueryFunctionPropertyDrawer`: the
+  inspector offers only Functions that satisfy the contract, still shows a non-matching one that is already
+  assigned (marked as such) rather than silently reading "(none)", and explains the mismatch underneath.
+- **`TacticalPositionSelectionVerification`** (new): `Window ▸ Arcane Onyx ▸ Verify Tactical Position
+  Selection Queries` and a `tps_verify` command, over one database or the whole project.
+- **The legacy wrappers are gone**: `RunnableScriptGraph`, `ParameterizedGraphAsset`, `ParameterizedAttribute`
+  and both property drawers plus the helper, with their folders.
+- **Demo**: `BH3Demos/TpsQueryFunctions/` — three items in one database (healthy, wrong result type, no
+  Function), the two failures reported by name, and the verify report over the same database.
+
+#### Corrections to this spec, found by building it
+
+1. **`ScriptGraphVariableExtension` does not die here.** Both this step's text and the consumer census said
+   it goes with the wrappers. It does not: BH3's `ScriptGraphVariable` still routes its **embedded**-graph
+   path through `GetScriptGraphOutput` / `Run` extension methods on it (`ScriptGraphVariable.cs:277-331`),
+   and embedded graphs are retired in **step 7**, which is ordered after steps 5 and 6. Deleting it here
+   turned the project red. It stays, and `ScriptGraphOutput.executionIndex` — whose only reader is that
+   file — stays with it. **Step 7 inherits both.**
+2. **The wrappers had a third file living with them.** `VisualScriptingExtension/Editor/RunnableScriptGraph/
+   MenuItems.cs` is a folder-placement coincidence, not a consumer: it backs VSE's own *Return Float /
+   String / Int / Bool* create-menu items and TPS's *Return TPS Query*. Deleting the folder wholesale, as
+   the files-touched list says, would have taken it. It was **moved** to `Editor/ScriptGraph/` instead.
+   Retiring those raw-`ScriptGraphAsset` create items is step 7's business, not this step's.
+3. **TPS had no verify path to extend.** The step's safety net ("a query item whose Function is null … is
+   named by the TPS verify path") assumed one existed. Verification lived only in BH3 and never ran over TPS
+   databases, so the path was built here — a menu item, a `tps_verify` command, and a shared checker.
+4. **`TacticalPositionSelectionAuthoring` changed wholesale, as predicted.** The unit-level helpers survived
+   verbatim; every asset-typed signature and the single `ResolveQueryGraph` moved to `FunctionGraphAsset`.
+
+#### Decisions taken while implementing
+
+- **No new wrapper type.** The item holds two fields directly rather than a `RunnableScriptGraph`-shaped
+  container for `FunctionGraphAsset` + arguments. Locked decision 10's reasoning — a seam with one caller
+  does not earn a layer — applies to a replacement as much as to the thing replaced. Extracting one later,
+  if a second consumer appears, is a move rather than a redesign.
+- **The item does not implement `IFunctionArguments`.** That interface exists to split ports (owned by a BT
+  node) from the binding (owned by `ScriptGraphVariable`). The query item owns both, so it stages onto the
+  binding directly. Nothing is gained by implementing an interface for one caller that is also its only
+  implementer.
+- **One binding per agent, on a shared asset.** A query item is one asset used by every agent that runs that
+  query, so the per-agent binding `ScriptGraphVariable` can hold does not transfer: bindings live in a
+  `Dictionary<GameObject, FunctionBinding>`, and entries whose agent has been destroyed are reaped when a new
+  agent binds. The alternative — binding per call — would redo the reflection and graph-reference work that
+  `FunctionBinding` exists to do once.
+- **Argument indices are resolved once, and the evaluator is staged by index.** The staging mirrors
+  `ScriptGraphVariable.StageArguments`, including its invalidation rule (plan compared by reference, plus
+  argument count). Dynamic `parameters` are the exception: their keys vary per call, so they resolve by name.
+  That path is the inspector's test button, not the per-evaluation one, which reaches the graph with no
+  keyed lookup at all.
+- **A missing argument is refused, not left to Visual Scripting.** Same reasoning as
+  `ThrowIfAnInputHasNoArgument`: an unstaged input surfaces as a bare `KeyNotFoundException` thrown from
+  inside the graph, naming the key and nothing else.
+- **The picker is local to TPS rather than BH3's.** Step 2c's `FunctionPickerCatalog` lives in BH3's editor
+  assembly and resolves through Visual Scripting's `InspectorProvider`, which a plain `PropertyDrawer` cannot
+  reach. TPS's constraint is a single fixed type, so the filter is three lines. See *the finding worth
+  scheduling* below for the version of this that would be worth sharing.
+
+#### The defect the self-review caught
+
+**A stale argument map, and it would have been silent.** The index cache is rebuilt when the plan reference
+changes or the argument *count* changes — copied from `ScriptGraphVariable.StageArguments`, which is correct
+*there* because BH3 also calls `InvalidateArgumentMap()` explicitly from `SetFunction` and `RefreshParameters`.
+The query item had no equivalent, and it needs one for a case a BT node does not have: the arguments are an
+inspector-editable `[SerializeReference]` list, so a designer can **reorder** it (Unity gives every list a drag
+handle for free) or **rename** one entry's key. Either changes which plan slot position *i* belongs to while
+changing neither the plan nor the count.
+
+The cost is what makes it worth recording rather than just fixing: on an item that had already evaluated once
+in the session — the inspector's own "Calculate Position Score" button is enough — the next call stages each
+value into the *previous* occupant's slot. When the swapped types agree, which for a pair of floats they
+always do, it succeeds with the wrong numbers. No exception, no log, and `tps_verify` cannot see it: the
+report checks the authored arguments against the Function's declared inputs, never the live cache.
+
+Fixed with `OnValidate() => InvalidateBindings()`, which is the item's version of the explicit invalidation
+BH3 already does. Pinned by `RenamingAnArgumentOnAWarmItem_RebuildsTheIndexMap`, written before the fix and
+confirmed failing without it — and failing in the right way: with the stale map the renamed argument still
+satisfied `maxRange`, so the run reached the empty `Result` port instead of reporting the missing argument.
+
+#### Known gaps, stated rather than discovered
+
+- **Existing content is broken, by design.** `CommonTPSQueryDabatabase.asset`'s one item
+  (`CloseRangePosition`) no longer resolves a Function and is named by `tps_verify`. Its old query graph
+  (`GOWDraugr/Queries/ClosestRingPosition.asset`) is still a raw `ScriptGraphAsset` and is not offered by the
+  picker. Re-authoring it is game-content work the tool owner chose to defer.
+- **The serialized-arguments UI is Unity's default.** Arguments render as a plain `[SerializeReference]`
+  list; nothing filters the rows by what the Function actually declares, the way the old drawer's
+  `RemoveInvalidParameters` did. `tps_verify` reports the drift in both directions instead.
+- **No test covers the picker drawer or the menu item.** Both are editor GUI; the contract they filter on is
+  covered directly.
+- **`ScriptGraphOutput.executionIndex` still serializes per-call bookkeeping into assets**, and the legacy
+  `Run` paths in `ScriptGraphVariableExtension` still never `Dispose()` their `Flow`. Both were listed to die
+  with this step and now belong to step 7, per correction 1.
+
+#### The trap that cost the most time
+
+`EditorSceneManager.NewScene` unloads unused assets, so an asset reference held across that call comes back
+null — and the scene then serializes the null. The demo built cleanly and came up insisting none of its own
+query items existed. Load assets **after** creating the scene, not before.
+
+Second, for whoever writes the next demo scene involving `GameEntity`: `MODULE_ZENJECT_EXIST` is set in
+Player Settings project-wide, so `AIEntitiesServices` (the ServiceLocator fallback) is compiled out and
+`GameEntity.gameEntityDatabase` is `[Inject]`-ed. A scene with a `GameEntity` and no `SceneContext` throws in
+`GameEntity.Start`. That is also the cause of the three pre-existing PlayMode failures, which are not a TPS
+bug at all.
+
+#### A finding worth scheduling, not fixed here
+
+`FunctionPickerCatalog` and `FunctionPortConstraint` (BH3 editor) and this step's `QueryFunctionCatalog` (TPS
+editor) now answer the same question — *which Functions may fill this hole* — in two places. The knowledge
+duplicated is small today (TPS's constraint is one fixed type), so this is not yet a bug; it becomes one at
+the third consumer, when "how a Function is offered to a designer" is three implementations with three
+behaviours. The fix is to promote the catalogue and the constraint into **VisualScriptingExtension's** editor
+assembly, where locked decision 3 says shared Function machinery belongs, leaving BH3's Visual Scripting
+`Inspector` and TPS's `PropertyDrawer` as two thin front-ends. That is a BH3 refactor with its own test pass,
+which is why it was reported rather than taken.
+
+### Step 4 — folded into Step 3
+
+Was *Delete `ParameterizedGraphAsset` and `RunnableScriptGraph`*. Merged into step 3 on 2026-08-22 once the
+migration utility it was waiting on was dropped. Numbering of steps 5–7 is kept so the cross-references
+below and in the authoring skill stay valid.
 
 ### Step 5 — Move deletion to save time (repository removal, step 2 of 3)
 
