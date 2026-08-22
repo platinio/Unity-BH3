@@ -12,7 +12,10 @@ uses one. For the contract model, the evaluation seam and the performance rules,
 
 A **Script Graph Variable** node can read either an embedded graph, as it always could, or a Function.
 Assign a Function and the node evaluates it through the shared seam; leave it unset and nothing about the
-node changes. Both work today, so existing trees are unaffected.
+node changes. Existing trees are unaffected.
+
+New graphs, however, are Functions. The node's inspector no longer offers to create an embedded one-off --
+see [Embedded graphs are being retired](#embedded-graphs-are-being-retired).
 
 The gain is that the Function is one asset. Fix a predicate once and every tree referencing it is fixed —
 no copy to find, nothing to keep in step.
@@ -22,6 +25,97 @@ Assets/AI/Functions/HasTarget.asset
         ├── referenced by Zombie.asset
         └── referenced by Soldier.asset
 ```
+
+## Picking one
+
+Click the **Function** field on a Script Graph Variable node and you get a searchable dropdown of the
+Functions that can legally go there -- not every Function in the project.
+
+What "legally" means is decided by the port the node feeds. A node is deliberately untyped: it declares its
+output as `object` so that one node type can serve predicates, floats and queries alike. The requirement
+therefore lives downstream -- a reactive guard's `Value` port is a `bool`, and that port is the only thing
+that knows `bool` is required.
+
+| The node's output feeds | The dropdown offers |
+|---|---|
+| a `bool` port | Functions whose `Result` can be read as a `bool` |
+| a `Component` port | Functions returning `Component` **or a subclass** -- a `Transform` Function is offered |
+| an `int` port | a `float` Function too, because the port converts on read |
+| several ports | only what fills all of them |
+| nothing yet | everything that returns something, grouped by flavor |
+
+The rule is **exactly what the port itself accepts** -- the same test that decides whether you may draw the
+wire (`IsConvertibleTo`), not stricter. So it is wider than "the same type": subclasses fit, numeric
+conversions fit, and an `object` Function is offered at a `bool` port for the same reason the node's own
+`object` output may feed one. Anything narrower would hide Functions that demonstrably work.
+
+Entries are grouped **Predicates / Queries / Values**, and each row names the inputs the node will owe the
+Function -- `IsHurt -- needs threshold` -- so what you are signing up for is visible before you choose, not
+after.
+
+A **value** row also names what it returns -- `PickCoverSpot : Vector3` -- because *Values* is the one
+heading that covers every remaining type at once, and two rows under it would otherwise be
+indistinguishable. Predicates do not repeat it: their heading already says `bool`. The return type is part
+of the row text, so it is searchable too. Two Functions sharing a name are qualified by their folder, because a choice between two identical
+rows is worse than no choice.
+
+A Function that declares **no `Result`** is never offered, at any port, even an unwired one: this node
+exists to read a value, and a Function with no result has none to give.
+
+### The port takes the Function's type
+
+Until a Function is assigned, the node's **Output** is generic (`object`) -- nothing is known yet, and it may
+be wired to any port. The moment a Function is assigned the port **retypes to the Function's `Result`**, and
+from then on the connection gate does the rest: a `bool` Function's output simply cannot be dragged onto a
+`Transform` port. The wire is refused when drawn, not discovered at the first tick.
+
+If the node was **already wired** when the Function was assigned, any connection the new type cannot feed is
+not deleted -- it is demoted to an **invalid connection**, drawn red on the canvas and named by `bt_verify`
+(`invalid connection -- 'hasTarget'.Output (Boolean) no longer fits 'Face Target'.TransformTarget
+(Transform)`). Assigning a Function that fits brings the wire back without rewiring. A connection the new
+type *can* still feed is untouched: a `float` Function replacing a generic one keeps its wire to a `float`
+port.
+
+**Input ports behave the same way.** Refreshing a node against a Function that no longer declares an input,
+or declares it as a type its source can no longer feed, does not drop the wire: the port is kept as a ghost
+under its old name and the wire is demoted to an invalid connection, red on the canvas and named by
+`bt_verify`. Refresh against a Function that declares it again and the wire comes back.
+
+The type is remembered on the node, the same way its input ports are, rather than read from the Function
+each time. So a Function whose `Result` changes after it was assigned does not silently retype the port; the
+node reports it as contract drift (`Result: this node declares its Output as Boolean, but the Function now
+returns Single`) until you **Refresh Ports**, exactly as a renamed input would.
+
+### When the list is empty
+
+Two different things look the same and are not:
+
+* **"No Function returns X yet."** The project is missing one. **Create new Function...** asks where to save
+  and makes one that already declares the right `Result`, so it is valid the moment it exists.
+* **"This node feeds bool and Transform, which no value can be at once."** The *wiring* is the problem. No
+  Function will ever fix it; disconnect one of the ports.
+
+### A Function that stopped fitting
+
+If a Function's `Result` type changes after it was assigned, the node keeps the reference and draws it in
+error, naming the mismatch. It is not silently cleared -- destroying an authored assignment to enforce a
+rule you cannot yet see would be worse than showing it broken.
+
+### Embedded graphs are being retired
+
+The inspector used to create an anonymous embedded graph whenever a node had nothing assigned, which is how
+most embedded graphs in this project came to exist. It no longer does; **Create new Function...** replaces
+it.
+
+> **Two CLI commands still make them.** `bt_add_variable_read` and `bt_guard_on_variable` go through
+> `CreateVariableReadGraph`, which still welds a graph into the tree as a sub-asset. So the honest statement
+> today is that no *editor* surface creates one -- migrating those two commands is part of
+> [step 7](design/10-function-graphs.md).
+
+A node that **already** holds an embedded graph is unaffected: **Open Graph** still opens it, and
+**Extract to Function** promotes it to a project asset and re-points the node at it -- the same operation
+`fn_extract` performs from the CLI. The original sub-asset stays in the tree and `bt_verify` reports it as
+an orphan, because deletion has exactly one owner at a time.
 
 ## Declared inputs are ports
 
@@ -133,6 +227,11 @@ expect — a missing `Result` output is reported by name rather than failing at 
 
 ## What has not moved yet
 
-Functions currently sit beside the older embedded-graph machinery rather than replacing it. Embedded
-one-off graphs, the script-graph repository and its canvas sweep all still work as before. Retiring them is
-sequenced separately, so that there is never more than one thing deleting graphs at a time.
+Functions sit beside the older embedded-graph machinery rather than having replaced it. Embedded graphs
+that already exist, the script-graph repository and its canvas sweep all still work as before.
+
+What has changed is the direction: **no editor surface creates a new embedded graph any more.** Two CLI
+commands still do -- `bt_add_variable_read` and `bt_guard_on_variable`, through `CreateVariableReadGraph` --
+and migrating them is part of step 7. Retiring the rest -- the graphs that already exist, then the
+repository and the sweep -- is sequenced separately, so that there is never more than one thing deleting
+graphs at a time.

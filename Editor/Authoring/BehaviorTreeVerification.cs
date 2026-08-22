@@ -67,6 +67,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(GuardProblems(asset, name));
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
+                findings.AddRange(InvalidConnections(asset, name));
                 findings.AddRange(OrphanedScriptGraphSubAssets(asset, path, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
@@ -370,10 +371,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             foreach (var node in asset.graph.Nodes)
             {
                 // A Function on a Script Graph node's lifecycle graph has no way to be given arguments:
-                // only a Script Graph Variable declares ports from a contract. Worth reporting because the
-                // inspector drawer is registered for BTScriptGraphVariable and so offers the Function field
-                // on all four of these too, and because the two failure shapes are both silent -- with no
-                // embedded graph beside it the Function never runs at all, and with one it runs unfed.
+                // only a Script Graph Variable declares ports from a contract. Worth reporting because
+                // BTScriptGraphVariableInspector is registered for BTScriptGraphVariable and so offers the
+                // Function picker on all four of these too, and because the two failure shapes are both
+                // silent -- with no embedded graph beside it the Function never runs at all, and with one it
+                // runs unfed.
                 if (node is VisualScriptingNode lifecycleNode)
                 {
                     foreach (var graph in lifecycleNode.LifecycleGraphs)
@@ -406,7 +408,28 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 }
 
                 var function = variableNode.Function;
-                if (function == null || !reported.Add(function)) continue;
+                if (function == null) continue;
+
+                // Checked per NODE, above the per-function dedupe below, because a mismatch is a property of
+                // this node's wiring rather than of the Function: the same Function can be right on one node
+                // and wrong on another.
+                //
+                // This is the drift case, and since step 2d it is the only case: the Output now takes the
+                // Function's result type, so a non-fitting Function assigned to a wired node demotes the wire
+                // (InvalidConnections below reports that). What the gate cannot see is a Function whose
+                // Result changed AFTER the wire was drawn and the node not refreshed -- the port still
+                // declares the old type, the wire is still valid, and the Function hands back something else.
+                // Only comparing the live Result against the fed ports catches that.
+                var constraint = FunctionPortConstraint.For(variableNode);
+
+                if (function.ResultType != null && !constraint.Satisfies(function.ResultType))
+                {
+                    yield return
+                        $"{treeName}: node '{variableNode.NodeName}' reads Function '{function.name}', which " +
+                        $"returns {function.ResultType.Name}, but the node feeds {constraint.Describe()}.";
+                }
+
+                if (!reported.Add(function)) continue;
 
                 var plan = ArcaneOnyx.VisualScriptingExtension.FunctionBindingPlan.Resolve(function);
                 if (!plan.IsUsable)
@@ -483,6 +506,45 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// orphans visible while the existing deleter is still the one acting on them.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Wires the canvas draws red: connections whose ports no longer accept each other.
+        ///
+        /// <para>
+        /// A connection is validated when it is drawn and then trusted, so one that stops fitting later is
+        /// not removed -- <c>NodePreservation</c> demotes it to an invalid connection on the next
+        /// <c>Define()</c>. The case that produces those now is a Script Graph Variable whose Output retyped
+        /// when its Function changed: an <c>object</c> output that fed a Transform port becomes a <c>bool</c>
+        /// output that cannot. The canvas shows it; this is what lets the CLI see the same thing, since the
+        /// result-type lint above reads valid connections only and goes quiet the moment the wire is demoted.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<string> InvalidConnections(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            foreach (var connection in asset.graph.invalidConnections)
+            {
+                if (!connection.sourceExists || !connection.destinationExists) continue;
+
+                var source = connection.source;
+                var destination = connection.destination;
+
+                var from = source.behaviorTreeNode is BehaviorTreeNode sourceNode ? sourceNode.NodeName : "?";
+                var to = destination.behaviorTreeNode is BehaviorTreeNode destinationNode ? destinationNode.NodeName : "?";
+
+                // A ghost port is one NodePreservation recreated for a key the node no longer declares, so
+                // that the wire had somewhere to stay attached. Named as such: "(control)" here would send
+                // the reader looking for a flow port that does not exist.
+                var sourceType = source is ValueOutput valueOutput ? valueOutput.Type.Name
+                    : source is InvalidOutput ? "no longer declared" : "control";
+                var destinationType = destination is ValueInput valueInput ? valueInput.Type.Name
+                    : destination is InvalidInput ? "no longer declared" : "control";
+
+                yield return
+                    $"{treeName}: invalid connection -- '{from}'.{source.key} ({sourceType}) no longer fits " +
+                    $"'{to}'.{destination.key} ({destinationType}). Rewire it, or change the Function so it " +
+                    "fits again and the wire comes back by itself.";
+            }
+        }
+
         private static IEnumerable<string> OrphanedScriptGraphSubAssets(
             BehaviorTreeGraphAsset asset,
             string assetPath,

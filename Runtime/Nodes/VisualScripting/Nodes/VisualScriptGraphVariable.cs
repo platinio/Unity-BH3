@@ -22,6 +22,25 @@ namespace ArcaneOnyx.BehaviorTree
         private List<VisualScriptingExtension.FunctionParameter> parameters = new();
 
         /// <summary>
+        /// The Function's declared <c>Result</c> type as this node remembers it, and what <see cref="Output"/>
+        /// is declared as. Null means "no Function, or one with no Result", and the port falls back to
+        /// <c>object</c> -- generic, because nothing is known yet.
+        ///
+        /// <para>
+        /// Remembered for the same reason <see cref="parameters"/> is, and it is the half step 2b left out:
+        /// that step typed the inputs from the contract copy and left the output hard-coded to <c>object</c>.
+        /// An <c>object</c> output converts to nearly anything, so the connection gate could never refuse a
+        /// wire -- a Function returning <c>bool</c> could feed a <c>Transform</c> port and the failure arrived
+        /// at the first tick. Typing the port from the remembered result is what lets the gate do its job,
+        /// and remembering it rather than reading the asset live is what keeps the port's type stable during
+        /// deserialization, where an unresolved asset would otherwise retype the port to <c>object</c> and
+        /// silently re-accept every connection on one machine and not another.
+        /// </para>
+        /// </summary>
+        [Serialize]
+        private Type resultType;
+
+        /// <summary>
         /// The declared ports, in the same order as <see cref="parameters"/>. An array rather than a
         /// dictionary because it is indexed once per argument per evaluation and never looked up by name.
         /// </summary>
@@ -39,6 +58,10 @@ namespace ArcaneOnyx.BehaviorTree
 
         [DoNotSerialize]
         public ValueOutput Output { get; private set; }
+
+        /// <summary>What <see cref="Output"/> is declared as: the remembered result type, or <c>object</c>.</summary>
+        [DoNotSerialize]
+        public Type OutputType => resultType ?? typeof(object);
 
         /// <summary>The embedded graph this node reads, or null when it reads a Function.</summary>
         [DoNotSerialize]
@@ -109,12 +132,12 @@ namespace ArcaneOnyx.BehaviorTree
         /// step 2b exists to make unreachable.
         /// </para>
         /// </summary>
-        public void SetFunction(VisualScriptingExtension.FunctionGraphAsset asset)
+        public List<string> SetFunction(VisualScriptingExtension.FunctionGraphAsset asset)
         {
-            if (ScriptGraphVariable == null) return;
+            if (ScriptGraphVariable == null) return new List<string>();
 
             ScriptGraphVariable.SetFunction(asset);
-            RefreshParameters();
+            return RefreshParameters();
         }
         
         /// <summary>
@@ -129,7 +152,10 @@ namespace ArcaneOnyx.BehaviorTree
             DeclareParameterPorts();
 
             if (ScriptGraphVariable == null) ScriptGraphVariable = CreateGraphWithOutput(typeof(object));
-            Output = ValueOutput<object>(nameof(Output), () =>
+
+            // Typed from the remembered result, never from the asset -- see resultType. The getter still
+            // hands back object; the declared type is what the connection gate and the canvas read.
+            Output = ValueOutput(OutputType, nameof(Output), () =>
             {
                 // Announced for the duration of the call so a Set BT Variable unit inside the graph can be
                 // attributed to this node rather than to a bare name. Compiles out with the recorder.
@@ -213,6 +239,14 @@ namespace ArcaneOnyx.BehaviorTree
 
             parameters = VisualScriptingExtension.FunctionParameter.ReadContract(Function);
 
+            // The output retypes here too. Define() re-validates every connection through NodePreservation:
+            // one the new type can no longer feed is not removed but demoted to an invalid connection, drawn
+            // red on the canvas and reported by bt_verify, so the author sees exactly which wire stopped
+            // fitting. It is described before the rebuild for the same reason the lost inputs are.
+            var nextResultType = Function?.ResultType;
+            lost.AddRange(DescribeConnectionsOutputCanNoLongerFeed(nextResultType ?? typeof(object)));
+            resultType = nextResultType;
+
             // The staged-argument map is keyed on the plan and the argument count, neither of which changes
             // when a parameter is renamed but the count stays the same.
             ScriptGraphVariable?.InvalidateArgumentMap();
@@ -224,8 +258,19 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Which currently-connected ports a refresh would remove, named with what feeds them. Computed
-        /// before the rebuild, because afterwards the connection is already gone.
+        /// Which currently-fed input ports a refresh will stop fitting, named with what feeds them. Computed
+        /// before the rebuild, because afterwards the connection has already changed shape.
+        ///
+        /// <para>
+        /// "Stop fitting" covers two things, and neither deletes the wire. A port the new contract no longer
+        /// declares: <c>Define()</c> runs <c>NodePreservation.RestoreTo</c>, which recreates the port as an
+        /// invalid ghost under the same key and reattaches the wire to it as an invalid connection, drawn red.
+        /// A port the new contract retypes so its source can no longer feed it: the same pass finds the wire
+        /// no longer valid and demotes it likewise. Both come back by themselves when a later contract fits
+        /// again (<i>verified</i> against the live editor: valid 1 \u2192 0 \u2192 1 across remove-then-restore).
+        /// This used to be described as "dropped", which was never what happened; the wording now matches
+        /// the output side, which was built knowing this.
+        /// </para>
         /// </summary>
         private List<string> DescribeConnectionsLostByRefresh()
         {
@@ -237,12 +282,52 @@ namespace ArcaneOnyx.BehaviorTree
             for (var i = 0; i < parameterPorts.Length; i++)
             {
                 var name = parameterNames[i];
-                if (current.Exists(candidate => candidate.Name == name)) continue;
+                var port = parameterPorts[i];
 
-                var source = ContractPorts.DescribeWhatFeeds(parameterPorts[i]);
+                var source = ContractPorts.DescribeWhatFeeds(port);
                 if (source == null) continue;
 
-                lost.Add($"'{NodeName}': removing input '{name}' dropped its connection from {source}.");
+                var next = current.Find(candidate => candidate.Name == name);
+
+                if (next == null)
+                {
+                    lost.Add(
+                        $"'{NodeName}': input '{name}' is no longer declared; its connection from {source} is " +
+                        "invalid until the Function declares it again or it is rewired.");
+                    continue;
+                }
+
+                var feeder = port.connection?.source;
+                if (next.Type == null || feeder == null || feeder.Type.IsConvertibleTo(next.Type, false)) continue;
+
+                lost.Add(
+                    $"'{NodeName}': input '{name}' is now {next.Type.Name}, which {source} ({feeder.Type.Name}) " +
+                    "cannot feed; that connection is invalid until it is rewired.");
+            }
+
+            return lost;
+        }
+
+        /// <summary>
+        /// Which currently-fed ports a retyped output will stop fitting, named with what they belong to.
+        /// Uses the same rule the connection gate uses, so this says "will become invalid" only when the gate
+        /// would now refuse the wire.
+        /// </summary>
+        private List<string> DescribeConnectionsOutputCanNoLongerFeed(Type nextType)
+        {
+            var lost = new List<string>();
+            if (Output == null || graph == null || nextType == OutputType) return lost;
+
+            foreach (var connection in Output.validConnections)
+            {
+                var destination = connection.destination;
+                if (destination == null || nextType.IsConvertibleTo(destination.Type, false)) continue;
+
+                var owner = destination.behaviorTreeNode is BehaviorTreeNode node ? $"'{node.NodeName}'" : "a node";
+
+                lost.Add(
+                    $"'{NodeName}': Output is now {nextType.Name}, which cannot feed {owner}'s '{destination.key}' " +
+                    $"({destination.Type.Name}); that connection is invalid until it is rewired.");
             }
 
             return lost;
@@ -261,6 +346,17 @@ namespace ArcaneOnyx.BehaviorTree
             foreach (var line in VisualScriptingExtension.FunctionParameter.DescribeDrift(Function, parameters))
             {
                 drift.Add(line);
+            }
+
+            // The result is part of the contract too; a Function that changed what it returns has retyped
+            // nothing on this node until it is refreshed, and until then the port is lying about its type.
+            var declared = Function.ResultType;
+
+            if (declared != resultType)
+            {
+                drift.Add(
+                    $"Result: this node declares its Output as {OutputType.Name}, but the Function now returns " +
+                    $"{(declared == null ? "nothing" : declared.Name)}.");
             }
 
             return drift;

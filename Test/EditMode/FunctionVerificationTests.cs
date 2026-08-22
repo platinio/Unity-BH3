@@ -116,6 +116,67 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 .ToList();
         }
 
+        // ------------------------------------------------------------------ result type vs the port fed
+
+        /// <summary>
+        /// The drift case: a Function assigned and wired while it returned <c>bool</c>, whose <c>Result</c>
+        /// was then changed to <c>float</c> without the node being refreshed. The port still says
+        /// <c>bool</c>, the wire is still valid, and the Function will hand back a float -- nothing at the
+        /// port layer can see it. (Assigning a non-fitting Function to an already-wired node is the other
+        /// order, and that one is caught at the wire: the Output retypes and the connection is demoted, which
+        /// the invalid-connection lint reports.)
+        /// </summary>
+        [Test]
+        public void AFunctionWhoseResultCannotFillThePortTheNodeFeeds_IsNamedWithBothTypes()
+        {
+            var function = NewFunction("ReturnsFloat", typeof(bool));
+
+            var path = $"{Folder}/MismatchTree.asset";
+            var tree = BehaviorTreeAuthoring.CreateTree(path);
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(tree, 200.0f, 0.0f);
+
+            node.SetFunction(function);
+            node.Output.ValidlyConnectTo(guard.Value);
+
+            // The Function changes what it returns after the wire was drawn; the node is not refreshed.
+            function.graph.valueOutputDefinitions.Clear();
+            function.graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = FunctionGraphAsset.ResultKey, label = FunctionGraphAsset.ResultKey, type = typeof(float)
+            });
+            function.graph.PortDefinitionsChanged();
+            EditorUtility.SetDirty(function);
+
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+
+            var findings = FunctionFindings(path);
+
+            Assert.That(findings, Has.Some.Contains("ReturnsFloat"), "the report must name the Function");
+            Assert.That(findings, Has.Some.Contains("Single").And.Some.Contains("Boolean"),
+                "and both sides of the mismatch, or it does not say what to change");
+        }
+
+        [Test]
+        public void AFunctionThatFitsThePort_IsNotReportedAsAMismatch()
+        {
+            var function = NewFunction("ReturnsBool", typeof(bool));
+
+            var path = $"{Folder}/FittingTree.asset";
+            var tree = BehaviorTreeAuthoring.CreateTree(path);
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(tree, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(tree, 200.0f, 0.0f);
+
+            node.Output.ValidlyConnectTo(guard.Value);
+            node.SetFunction(function);
+
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+
+            Assert.That(FunctionFindings(path), Has.None.Contains("but the node feeds"));
+        }
+
         // ------------------------------------------------------------------ purity
 
         [Test]

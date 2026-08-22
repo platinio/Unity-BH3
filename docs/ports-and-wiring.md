@@ -201,7 +201,14 @@ Here's the whole loop on a small tree — `Entry → Repeater → Sequence → (
 
 ![A behavior tree: Entry connects to a Repeater, then a Sequence whose children are a Wait node and an Add Force node with Target and Force ports](images/entry-repeater-sequence-example.png)
 
-**1. Create the node** — `Unity/Visual Scripting/Script Graph Variable`. Select it and click **Open Graph**.
+**1. Create the node** — `Unity/Visual Scripting/Script Graph Variable`. Select it, click its **Function**
+field, and choose **Create new Function…**. Save it somewhere in the project; it opens for editing.
+
+> **This step changed.** The node used to hold an anonymous graph welded inside the tree asset, created by
+> an **Open Graph** button. It now references a **Function** — a named project asset any tree can reuse —
+> and the picker only lists Functions that fit the port you are feeding. See
+> [Functions](functions.md#picking-one). Trees that already hold an embedded graph keep working and still
+> open it; there is an **Extract to Function** button beside it when you want it out.
 
 ![The Graph Inspector for a selected Script Graph Variable node, with its Open Graph button highlighted, and the node on the canvas showing a single Output port](images/script-graph-variable-open-graph.png)
 
@@ -230,6 +237,11 @@ value from anywhere in the game. Neither needs to know about the other.
 
 > Nodes holding a Visual Scripting graph **cannot be copied or duplicated**, because they reference their
 > Script Graph directly. Create a new node and copy the graph contents by hand.
+>
+> This restriction exists for *embedded* graphs, which a copy would share and a deletion would take from
+> under the original. A node that references a **Function** has no such problem — the restriction is
+> currently applied to the node type rather than to what it holds, and lifting it is part of retiring
+> embedded graphs.
 
 ### Reading and writing variables from a graph
 

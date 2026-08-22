@@ -85,11 +85,30 @@ and `RunnableScriptGraph`; it is their replacement, and the consumer census make
   see open question 1 for the mechanics. No deprecation era, no wrapper maintained "just in case": a
   seam with one caller does not earn a compatibility layer.
 
-### Reference by default, embed as convenience
+### Reference by default; embedding is being retired
 
-A Function in the project is shareable by anyone. An embedded one-off (the three-unit variable read)
-remains legal, owned **structurally** as a sub-asset. The bridge is one action — **Extract to project
-asset** — which spec 03 already requires for suggested-guard conditions; this spec generalizes it.
+**Amended 2026-08-21 by the tool owner: we do not want any more embedded graphs.** The original decision
+below let an embedded one-off stay legal indefinitely. That is what the rest of this section was written
+against, and it is the source of every lifetime problem in *Problem* above — an anonymous sub-asset with no
+identity needs a deleter, and a deleter is what the repository, the OnGUI sweep and the orphan lint all
+exist to be. Keeping embedding alive means keeping that machinery alive forever, for graphs whose only
+distinction is that nobody named them.
+
+So the target state is: **a node references a Function, and that is the only way a node gets a graph.**
+
+- **No new embedded graphs are created by any editor surface.** Step 2c removes the last UI that created
+  one (the drawer's *Open Graph* button, which minted a sub-asset whenever nothing was assigned).
+  **`bt_add_variable_read` and `bt_guard_on_variable` still create them**, through
+  `BehaviorTreeAuthoring.CreateVariableReadGraph`; migrating those two is item 2 of *Step 7*. Until then the
+  CLI is the looser surface, which is the inversion of what 2c set out to fix and should not be left
+  unstated.
+- **Existing embedded graphs keep working and stay openable**, with **Extract to Function** as the
+  one-click way out — the action spec 03 already requires for suggested-guard conditions.
+- **The remaining embedded graphs are migrated and the field deleted** in the step that follows the
+  repository removal. See *Step 7*, which is no longer an open question.
+
+A Function in the project is shareable by anyone; an embedded graph is shareable by no one, which was
+never a feature.
 
 Callers hold a **copy of the contract**, for the same deserialization reason `RunBehaviorTreeGraphNode`
 does (`Definition()` runs during deserialize; a connection to a port key that does not exist yet is
@@ -258,7 +277,10 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
 1. One asset type + declared contract; flavor by output type. Name: **Function** (`FunctionGraphAsset`).
 2. Contract = the graph's own port definitions + asset metadata (purity, watched keys, description).
 3. Lives in **VisualScriptingExtension**; BH3 and TPS depend on it, never the reverse.
-4. Reference by default; embedding stays legal; **Extract to project asset** is the bridge.
+4. Reference by default. ~~Embedding stays legal~~ — **amended 2026-08-21: embedding is retired.** No
+   surface creates a new embedded graph; existing ones keep working and are migrated out via **Extract to
+   project asset**, after which the field is deleted. See *Reference by default; embedding is being
+   retired* and *Step 7*.
 5. Caller-side contract copies reuse `RefreshParameters` / `DescribeContractDrift` — no second
    staleness mechanism.
 6. The repository is removed via the three-step sequencing above; never two deleters at once.
@@ -303,9 +325,10 @@ Blocking — decide before serializing anything:
    broken.
 2. **Agent context mechanism** — per-agent cached reference (recommended) vs declared-inputs-only.
    Resolved by spike 2 below, then locked.
-3. **Do new embedded one-offs become embedded `FunctionGraphAsset`s** (uniform tooling forever) **or
-   stay raw `ScriptGraphAsset`** (less churn)? Recommended: new ones are Functions, existing raw ones
-   keep working with a verify nudge ("promote available").
+3. ~~**Do new embedded one-offs become embedded `FunctionGraphAsset`s** (uniform tooling forever) **or
+   stay raw `ScriptGraphAsset`** (less churn)?~~ — **closed 2026-08-21 by the tool owner: neither. There
+   are no new embedded one-offs.** A one-off becomes a standalone Function like any other; existing raw
+   ones keep working, get a verify nudge, and are migrated out. See *Step 7*.
 
 Revisit after use, not before:
 
@@ -553,11 +576,12 @@ worth more once the contract is visible on the node.
 section *Step 2b — Declared inputs become ports* at the end of this document is what was built; both of its
 open questions were settled by the tool owner and are recorded there.
 
-**2c — Picking a Function by contract.** Designed 2026-08-14, not yet built — see *Step 2c — Picking a
-Function by contract* at the end of this document. A dropdown that offers only the Functions that can
-legally fill the port being wired, the way Unreal offers Blueprint functions matching a signature. Today's
-inspector field is a plain object field, so it offers every Function in the project — which makes the UI
-looser than `bt_guard_on_function`, which already refuses a non-boolean condition by name.
+**2c — Picking a Function by contract.** ✅ **Done, 2026-08-21** — see *Step 2c landed* below. A dropdown
+that offers only the Functions that can legally fill the port being wired, the way Unreal offers Blueprint
+functions matching a signature. The inspector field was a plain object field offering every Function in the
+project, which made the UI looser than `bt_guard_on_function`; it is now a searchable, contract-filtered
+dropdown, and the property drawer behind it is deleted in favour of a registered Visual Scripting
+`Inspector`.
 
 ### Step 3 — Migrate `TacticalPositionSelectionQueryItem` (open question 1)
 
@@ -592,11 +616,33 @@ Delete `ScriptGraphAssetsRepository`, its `.asset`, `BehaviorTreeGraph.DestroyUn
 the canvas sweep. Acceptance criterion 3 becomes checkable: editing unrelated trees produces no shared-file
 merge conflicts.
 
-### Step 7 — Open question 3
+### Step 7 — Retire embedded graphs (open question 3, closed)
 
-Do new embedded one-offs become embedded `FunctionGraphAsset`s, or stay raw `ScriptGraphAsset`s?
-Recommended: new ones are Functions; existing raw ones keep working with a verify nudge
-("promote available"). `fn_extract` already provides the promotion path.
+**Decided 2026-08-21 by the tool owner: no more embedded graphs.** The open question asked what a *new*
+one-off should be; the answer is that there are no new one-offs. What remains is finishing the job.
+
+Step 2c does the first half by removing the last creating surface. This step does the second:
+
+1. **Migrate what exists.** A batch extract over the trees that still hold script-graph sub-assets —
+   `fn_extract` is already the per-node path, so this is a loop plus an asset-path convention, and the
+   demo content is documented as regenerable. `bt_verify` names anything left, so a hand-authored tree in
+   a downstream project is caught rather than silently broken.
+2. **Delete the field and its seam.** `ScriptGraphVariable.scriptGraphAsset`, the ambiguity state it
+   creates with `function` (and the warning row that exists only to explain it), and the
+   `AddObjectToAsset` calls in `BehaviorTreeAuthoring.CreateVariableReadGraph` and the old drawer.
+3. **What dies with it, for free:** the orphan lint, the save-time structural cleanup built in step 5, and
+   the cross-tree deletion bug class — all of them answer a question that can no longer be asked. Steps
+   5 and 6 stay worth doing first regardless: they are what makes the intermediate state safe while trees
+   still hold sub-assets, and *never two deleters at once* still applies.
+
+**Ordering:** after steps 5 and 6. Doing it before them would leave the repository deleting graphs that
+the migration is concurrently re-pointing, which is exactly the two-deleters state locked decision 6
+forbids.
+
+**The cost, stated so it is not discovered later.** Every one-off variable read becomes a project asset
+with a path, so a tree that used to be self-contained now depends on a folder of small Functions. That is
+the trade being taken deliberately: a named asset a designer can find, reuse and delete, in place of an
+anonymous sub-asset that only a garbage collector knew about.
 
 ### Not scheduled
 
@@ -842,6 +888,12 @@ is no way to feed a declared input from a call site, so every BH3 Function is pu
 - **What happens to a connection when a refresh removes its port?** The sub-tree node has the same question
   and answers it by silence — the port disappears and the connection with it. Drift reporting names it
   first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
+  **Answered by step 2d (2026-08-22), and the premise was wrong:** nothing vanishes, and never did. A
+  connection whose port the refresh removes or retypes is *demoted*, not removed — `NodePreservation.
+  RestoreTo` recreates a removed port as an invalid ghost under the same key, reattaches the wire to it as a
+  `PortInvalidConnection`, and does the same for a retyped port its source can no longer feed. The canvas
+  draws both red, `bt_verify` names them, and a later refresh that fits again revalidates the wire without
+  rewiring. Verified on the live editor. The silence was only in the report, which said "dropped".
 - **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
   clearly right; discarding a deliberate manual size is less obviously so.
 
@@ -1104,15 +1156,57 @@ is about to owe the node is visible before they choose. Plus **None** to clear, 
 **Create new Function…**, which is the moment an author most often discovers the one they want does not
 exist yet.
 
-### Open, and worth settling before building
+### Open, and worth settling before building — all settled 2026-08-21
 
 - ~~**Reaching the owning node from a `PropertyDrawer`.**~~ — **spiked 2026-08-16, answered below.**
-- **Whether an unconnected node should offer everything or nothing.** Everything is proposed above, on the
-  grounds that authors wire up in whatever order they like. The opposite argument is that a node with no
-  constraint is exactly where a wrong choice is cheapest to make and hardest to notice.
-- **Whether the drawer should also refuse a mismatch already assigned** — for instance a Function that was
-  valid until its `Result` type changed. `bt_verify` reports it, and a picker that silently dropped an
-  existing reference would be worse than one that shows it in error.
+- ~~**Whether an unconnected node should offer everything or nothing.**~~ — **everything, grouped by
+  flavor.** Authors wire up in whatever order they like, and a picker that refuses to list anything until
+  the node is connected teaches them that the feature is broken. The counter-argument — that an
+  unconstrained node is where a wrong choice hides longest — is answered by the grouping and by
+  `bt_verify`, not by an empty list.
+- ~~**Whether the drawer should also refuse a mismatch already assigned.**~~ — **no: it keeps the
+  reference and draws it in error, naming the mismatch.** A picker that silently dropped an assignment
+  because a `Result` type changed underneath it would destroy authored work to enforce a rule the author
+  cannot yet see. Showing it broken is what lets them fix it. **`bt_verify` reports it too** — it did not
+  when this was written, and the claim that it did was corrected by making it true: `FunctionProblems` now
+  compares the Function's `ResultType` against the ports the node feeds, per node. Nothing else can catch
+  it, because the node's `Output` is `object` and the port-level lint therefore sees a legal wire whatever
+  the Function returns.
+- **Where a new Function goes** (decided with the tool owner, 2026-08-21) — **a save-file dialog**
+  (`EditorUtility.SaveFilePanelInProject`), defaulting to the folder beside the tree. A naming convention
+  such as `<TreeFolder>/Functions/<Tree>.<Node>.asset` would have to be shared with `bt_add_variable_read`
+  and step 7's migration to be worth anything; inventing it here, in the one surface where the author is
+  present and can just say where, is the wrong place to start.
+- **Whether this step still offers to create an embedded graph** (decided with the tool owner, 2026-08-21)
+  — **no.** The old drawer's *Open Graph* button minted a sub-asset whenever the node had nothing
+  assigned, which is how most embedded graphs in this project came to exist. It is replaced by *Create new
+  Function…*. A node that **already** holds an embedded graph keeps *Open Graph* and gains *Extract to
+  Function*, so nothing existing becomes unreachable. This is the first half of *Step 7*; see
+  *Reference by default; embedding is being retired*.
+
+### The dropdown is Unity's `AdvancedDropdown`, not this project's module
+
+The project has a first-party `Assets/ArcaneOnyx/Modules/AdvancedDropdown`, and it was the obvious
+candidate — `ShowDropdown<T>(List<DropdownItem<T>>, Action<T>)` with a search field is close to the
+required shape. **It is the wrong choice here, for a reason that is about BH3 rather than about the
+control:** `ArcaneOnyx.BehaviorTree.Editor` does not reference that module today (*verified* — its asmdef
+lists BehaviorTree, GraphCore, GraphCore.Editor, UnityExtensions and VisualScriptingExtension, and nothing
+else first-party). BH3 is a tool other projects consume, so every asmdef reference it grows is a submodule
+its consumers must also take. Paying that for a picker, when Unity ships
+`UnityEditor.IMGUI.Controls.AdvancedDropdown` in the editor itself, is a dependency bought with nothing.
+
+Three things follow from using Unity's, and they shape the entries rather than merely permitting them:
+
+- **Grouping is native.** `AdvancedDropdownItem` nests, so *predicate / query / value* become parent nodes
+  and the flavor is read off the group the entry sits in. The project module is a flat list, so the same
+  grouping would have had to be faked into every row's text.
+- **It is IMGUI**, like the Visual Scripting inspector that hosts it. The project module is a UIElements
+  `EditorWindow`, which is a second UI framework opened from inside an `OnGUI` call.
+- **Search is built in** and matches the item name, so putting the required inputs in the row makes
+  `Agent` a usable query for free.
+
+An entry therefore reads `HasTarget — needs Agent, Radius` under a `Predicates (bool)` group: name,
+flavor and required inputs, which is what this step promises to show, without a custom row renderer.
 
 ### Spike: how a Function field reaches its owning node — resolved 2026-08-16
 
@@ -1196,3 +1290,237 @@ Three practical notes for whoever writes it:
   lowercase `type` as Visual Scripting's own ports use. Guessing the VS spelling silently returns nothing.
 - `Output.connectedPorts` is the direct route; walking `connections` and reading `destination` works too but
   yields nulls for the control-flow entries mixed into the same list.
+
+***
+
+## Step 2c landed — picking a Function by contract, 2026-08-21
+
+Branch `feature/function-picker-by-contract`, cut from `main` in **BH3** and the **superproject**.
+VisualScriptingExtension and TacticalPositionSelection are untouched — the filter reads
+`FunctionGraphAsset.ResultType` and `FunctionGraphAuthoring.DescribeFlavor`, both of which already shipped.
+
+Acceptance: a Script Graph Variable node now offers only the Functions that can legally fill the port it
+feeds. The UI is no longer looser than `bt_guard_on_function`.
+
+### What shipped
+
+| File | What it is |
+|---|---|
+| `Editor/Function/FunctionPortConstraint.cs` | **new** — what a node's value is required to be, read off what its `Output` feeds |
+| `Editor/Function/FunctionPickerCatalog.cs` | **new** — which Functions satisfy that, and how each row reads |
+| `Editor/Inspector/BTScriptGraphVariableInspector.cs` | **new** — the VS `Inspector`, the dropdown, and the buttons |
+| `Editor/VisualScripting/BTScriptGraphVariablePropertyDrawer.cs` | **deleted** — replaced outright |
+| `Editor/Authoring/BehaviorTreeVerification.cs` | comment correction the spike required |
+| `Test/EditMode/FunctionPickerTests.cs` | **new** — 16 tests |
+| `docs/functions.md`, `docs/ports-and-wiring.md` | documentation |
+| `BH3Demos/FunctionPicker/` *(superproject)* | showcase tree, six Functions, builder, window, README |
+
+### Decisions taken while implementing
+
+1. **The dropdown is Unity's `AdvancedDropdown`, not the project's `AdvancedDropdown` module.** The design
+   section originally said the opposite and was corrected during implementation: `ArcaneOnyx.BehaviorTree.Editor`
+   does not reference that module (*verified* — its asmdef lists BehaviorTree, GraphCore, GraphCore.Editor,
+   UnityExtensions, VisualScriptingExtension and nothing else first-party). BH3 is consumed as a tool, so an
+   asmdef reference it grows is a submodule its consumers must take. Unity's also nests, giving the
+   flavor grouping for free, and is IMGUI like the inspector hosting it.
+
+2. **`Satisfies` uses convertibility; `SuggestedResultType` uses strict assignability.** Deliberately
+   different rules for different questions. `Satisfies` answers *may an author wire this up*, so it calls the
+   same `IsConvertibleTo(type, false)` that `ValueInput.CanConnectToValid` uses — anything narrower would hide
+   Functions that demonstrably work. `SuggestedResultType` answers *what should a Function created right now
+   declare*, where a permitted downcast is a coin flip taken on the author's behalf. **A test caught this**:
+   `Requiring(Component, Transform)` first suggested `Component`, which fills the `Transform` port only when
+   the value happens to be one.
+
+3. **A Function with no `Result` is refused everywhere, including at an unconnected node.** The spec's table
+   says an unconstrained node offers "everything". This is the one exception: the node exists to read a value,
+   and a Function with no result has none to give at any wiring.
+
+4. **Two Functions sharing a name are qualified by folder, and only then.** The project already has two
+   `IsLowHealth.asset` (*verified* — `BH3Demos/FpsTeams/Trees` and `BH3Demos/FunctionPorts`), which rendered as
+   two identical rows. Qualifying every row would lengthen the common case to solve a problem it does not
+   have. Disambiguation runs over the rows actually shown, not the project.
+
+5. **Sorting falls back to the label when names tie.** `List.Sort` is not stable, so two same-named entries
+   could swap places between openings of the same dropdown.
+
+6. **"Create new Function…" declares the `Result` the port needs.** `DefaultGraph()` declares Enter and Exit
+   and no result, so a Function created without this would fail the very filter that offered to create it.
+
+7. **No new embedded graphs, per the tool owner (2026-08-21).** The deleted drawer minted a sub-asset
+   whenever a node had nothing assigned. A node that already holds one keeps *Open Graph* and gains *Extract
+   to Function*. This closes open question 3 and is the first half of step 7; locked decision 4 is amended.
+
+8. **A save-file dialog, not a naming convention.** A convention like `<TreeFolder>/Functions/<Tree>.<Node>.asset`
+   only pays off if `bt_add_variable_read` and step 7's migration share it; inventing it in the one surface
+   where the author is present to say where is the wrong place to start.
+
+### The defect the self-review caught, and why it mattered
+
+**`UndoUtility.RecordEditedObject` does nothing when called from a dropdown callback.** It resolves the
+object to record from `LudiqEditorUtility.editedObject`, an override stack populated only inside
+`GraphContext.BeginEdit()/EndEdit()` — which brackets canvas and inspector draws frame by frame. Unity's
+`AdvancedDropdown` raises `ItemSelected` from its own popup window, outside that bracket.
+
+Verified against the live editor rather than argued: from outside the bracket `editedObject.value` is
+`null`, and `RecordEditedObject` leaves a tree's dirty flag `false`.
+
+The failure was the quiet kind. `SetFunction` still mutates the in-memory node, so the assignment looked
+applied and survived the session — but the asset was never dirtied, so it had **no undo entry, never showed
+as unsaved, and would be gone after a domain reload** unless some unrelated edit happened to dirty the same
+tree. Assigning a Function is the one thing this feature exists to do.
+
+Fixed by naming the asset explicitly: `RecordTreeEdit` resolves the tree via
+`BehaviorTreeCanvas.GetBehaviorTreeGraphAsset()` and calls `Undo.RegisterCompleteObjectUndo`, with
+`MarkDirty` after the mutation. Both verified live.
+
+**This generalises.** Any BH3 editor code that mutates from a callback raised outside the canvas's own
+event loop has the same hole. `Widget.OnContext` avoids it by deferring through `canvas.delayCall`, which is
+why `VisualScriptGraphVariableWidget`'s "Refresh Function Ports" works. Anything reached from a Unity popup,
+an `EditorApplication.delayCall`, or an async import does not get that for free.
+
+### Two findings reported rather than fixed
+
+1. **The repository accumulates duplicate null entries and never dedupes.** Rebuilding the demo content a
+   few times added **64 entries to `ScriptGraphAssetsRepository.asset`, 51 of them duplicates of 13 keys, all
+   `{fileID: 0}`** — the residue of sub-assets the sweep destroyed, left in the ledger. `RemoveInvalid()`
+   then removed **109** entries, 45 of which were already committed, so the ledger has been carrying dead
+   weight for some time. The working copy was reverted so this change does not touch a generated file
+   unrelated to it. **Principle: make bad states unrepresentable** — a ledger that can hold a key twice with a
+   null value is a data structure permitting a state nothing wants. **Cost:** the file grows without bound,
+   every tree edit dirties it, and it is a version-control chokepoint for a second contributor. **This is
+   evidence for steps 5 and 6, not a separate task** — structural containment cannot express the state at all.
+
+2. **`BaseVisualScriptingNode.CanCopy/CanCut/CanDuplicate` are all `false`,** with a comment saying copies
+   would share a script graph asset that a deletion could take away. That reasoning applies only to *embedded*
+   graphs; a node referencing a Function has no such problem. **Principle: one reason to change** — the
+   restriction is applied to the node type rather than to what it holds. **Cost:** designers cannot duplicate a
+   Function-backed node today, which is a routine operation, and the workaround is rebuilding it by hand.
+   **Fix:** make the three properties conditional on holding an embedded graph, or delete them with step 7.
+   Left alone here because it changes canvas behaviour for existing trees and belongs with the migration.
+
+### Known gaps, stated rather than discovered
+
+- **The dropdown itself has no automated test.** The filter does — 16 tests over
+  `FunctionPortConstraint` and `FunctionPickerCatalog`, which is where every decision lives. What is untested
+  is the IMGUI on top: `GetHeight`/`OnGUI` agreement, the button row, and that `ItemSelected` reaches
+  `Assign`. Verified by hand and by the demo window instead. **The undo defect above lived exactly in that
+  untested gap**, so this is the real risk area of the change, not a formality.
+- **A mismatched assignment is shown in error but not auto-repaired.** Deliberate (see the settled open
+  question), but there is no one-click "pick a valid one" from the error box.
+- **`Extract to Function` leaves the original sub-asset**, as `fn_extract` does, and `bt_verify` reports it
+  as an orphan. Correct under locked decision 6, and it will look like a leak until step 5 lands.
+- **The demo is an editor window, not a Play-mode scene.** 2c changes what a dropdown lists; there is no
+  runtime behaviour to press Play on. The window calls `FunctionPortConstraint` and `FunctionPickerCatalog`
+  directly — the same two calls the dropdown makes — so it cannot flatter the filter.
+
+### Tests
+
+16 new, all passing. EditMode went 648 → 664 with no new failures.
+
+Pre-existing failures, unchanged and unrelated (both in TacticalPositionSelection):
+`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable` (EditMode), and three
+`TacticalPositionSelectionPlayModeTests` failing on an NRE in `GameEntity.Awake`.
+
+### Verified against the live editor, not assumed
+
+- `InspectorProvider` now resolves `BTScriptGraphVariable` to `BTScriptGraphVariableInspector`, where it
+  previously resolved to `CustomPropertyDrawerInspector`. The bridge is gone, which is the load-bearing claim
+  of the 2026-08-16 spike.
+- The filter was run over **all 49** Script Graph Variable nodes in the project: boolean ports offer the four
+  predicates; `Vector3`, `Transform`, `GameObject` and query ports offer nothing (none exist yet); `object`
+  ports offer everything.
+- The undo defect and its fix, both directions.
+
+***
+
+## Step 2d landed — the Output port takes the Function's type, 2026-08-22
+
+Requested by the tool owner after 2c: with the picker in place, a node whose Output fed nothing could still
+be pointed at a `Single` Function and then wired to a `GameObject` port, because the Output port was declared
+`object` and `object` converts to nearly everything. The picker stops the wrong *Function*; nothing stopped
+the wrong *wire* afterwards. The owner's requirement, verbatim in spirit: creating the node generic is fine
+since the Function is not known yet, but once one is chosen the port must update immediately so there is no
+way to connect a `bool` Function to a port requiring a `Transform`.
+
+Branch `feature/function-picker-by-contract`, same PRs as 2c. BH3 only.
+
+### What was wrong, mechanically
+
+Step 2b typed the **inputs** from the contract copy and left the output alone: `Definition()` declared
+`ValueOutput<object>` unconditionally. Three consequences, all *verified* on the live showcase tree before
+building:
+
+- `ValueOutput.CanConnectToValid` is `source.Type.IsConvertibleTo(destination.Type, false)`, and with a
+  source of `object` that answered `true` for a `GameObject` port, a `Transform` port and a `float` port alike.
+- The contract copy (`FunctionParameter.ReadContract`) reads `function.Inputs` **only**. The result type was
+  never remembered, so `RefreshParameters` had nothing to retype and `DescribeContractDrift` nothing to
+  compare. There was no "stale" signal because the node never recorded the thing that went stale.
+- Connections resolve by `(unit, key)` and are type-checked only in the `PortValueConnection` constructor, so
+  an existing wire is never re-examined by anything.
+
+### What shipped
+
+- **`VisualScriptGraphVariable.resultType`** — a serialized `Type` beside `parameters`, set by
+  `RefreshParameters` from `Function.ResultType` (null when there is no Function or no `Result`).
+  `Definition()` declares `Output` as `resultType ?? typeof(object)`. **Remembered rather than read live for
+  the same reason the inputs are:** `Definition()` runs during deserialization, and an unresolved asset would
+  retype the port to `object` and silently re-accept every connection on one machine and not another.
+- **Immediate retype on assignment.** `SetFunction` → `RefreshParameters` → `Define()`, which is the
+  path the picker, `fn_refresh_ports`, the canvas context menu and the CLI all already take. Nothing new had
+  to learn to call it.
+- **Wires the new type cannot feed are demoted, not deleted.** This fell out of machinery that already
+  existed: `Define()` runs `NodePreservation.RestoreTo`, which re-validates every preserved connection and
+  calls `InvalidlyConnectTo` for one that no longer fits. The canvas already drew those red
+  (`InvalidConnectionWidget`). The decision here was only *not to delete them instead*, and the reason is that
+  a demoted wire comes back by itself when a fitting Function is assigned — an author who picked the wrong
+  Function and then the right one should not also have to rewire.
+- **The cost is said out loud.** `RefreshParameters` returns one line per wire it invalidates, alongside the
+  lost-input lines it already returned; `SetFunction` now returns that list instead of `void`, and
+  `FunctionAssignment` logs it, so the picker says what the retype did.
+- **`DescribeContractDrift` includes the result.** A Function whose `Result` changes after assignment is
+  reported as drift (`Result: this node declares its Output as Boolean, but the Function now returns Single`)
+  until refreshed — one staleness story, not two (locked decision 5).
+- **`bt_verify` reports invalid connections**, naming both nodes, both ports and both types. Needed because
+  the 2c result-type lint reads *valid* connections only and therefore goes quiet at exactly the moment the
+  wire is demoted; without this the canvas saw something the CLI could not.
+
+### Decisions
+
+1. **Generic until assigned.** `object` with no Function, `object` with a Function that declares no `Result`.
+   The alternative — no output at all until a Function is chosen — would stop an author wiring up first and
+   choosing second, which 2c explicitly decided to allow.
+2. **Demote, don't delete.** Stated above. The reviewer's question from 2b about connections lost to a
+   refresh is now answered differently for outputs than inputs, and the asymmetry is real rather than
+   accidental: an output keeps its key across a retype, an input port ceases to exist when the contract drops
+   it.
+3. **The `Not` decorator keeps working.** `GuardOnFunction` wires a predicate through `Not` for the negated
+   case; `bool → Not.Value` is unaffected by typing, and the tests cover it indirectly through
+   `BooleanReactiveGuard.Value`.
+
+### Tests
+
+13 new in `FunctionOutputTypeTests`: generic when unassigned, typed immediately on assignment, generic again
+on clear and for a result-less Function; the gate refusing `bool → Transform` and `bool → GameObject`
+while still allowing `float → float`; a wired generic output retyped to `bool` demoting its Transform wire
+and reporting it, keeping a float wire that still fits, and revalidating a demoted wire when a fitting
+Function is assigned; drift reported when the Function's `Result` changes after assignment; the type
+surviving a serialization round trip; and `bt_verify` naming an invalid connection with both types.
+
+### Inputs — corrected the same day
+
+The first draft of this section said inputs still lose their connections silently on a contract refresh,
+and the 2b open question was answered the same way. **Both were wrong, and had been since 2b shipped.**
+Probed against the live editor: a refresh that removes a declared input turns its wire into an invalid
+connection attached to a ghost `InvalidInput` port under the same key (valid 1 → 0, invalid 0 → 1),
+a refresh that retypes it so its source cannot feed it demotes the wire the same way, and a later refresh
+that fits again brings it back (valid 1) — all of it by `NodePreservation.RestoreTo`, with
+`InvalidInputWidget` already drawing the ghost. Nothing was ever dropped.
+
+What *was* wrong was the reporting, in three places, now fixed: `DescribeConnectionsLostByRefresh` said
+"dropped its connection" for a removed input and said nothing at all for a retyped one; the new invalid
+connection lint would have labelled a ghost port "(control)". So inputs and outputs now behave and report
+the same way, and there is no asymmetry to state.
+
+The lesson is the one spec 10 keeps re-learning: a sentence in a design doc about what the code does is a
+claim, and the cheap way to check it was one `eval` against a real tree.
