@@ -250,6 +250,29 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void AValueRow_NamesWhatItReturns_AndAPredicateRowDoesNot()
+        {
+            Function("PickCoverSpot", typeof(Vector3));
+            Function("ReadStamina", typeof(float));
+            Function("IsHurt", typeof(bool));
+
+            var offered = FunctionPickerCatalog.Offer(
+                FunctionPortConstraint.For(NodeFeedingNothing()), AllFunctions());
+
+            var vector = offered.Single(entry => entry.Name == "PickCoverSpot");
+            var number = offered.Single(entry => entry.Name == "ReadStamina");
+            var predicate = offered.Single(entry => entry.Name == "IsHurt");
+
+            Assert.That(vector.Label, Does.Contain("Vector3"));
+            Assert.That(number.Label, Does.Contain("Single"),
+                "Values covers every non-bool type at once, so two value rows are indistinguishable without "
+                + "the type -- and the unconnected node is the only place the sections are all there is");
+
+            Assert.That(predicate.Label, Does.Not.Contain("Boolean"),
+                "the Predicates (bool) header already says it; repeating it on every row is noise");
+        }
+
+        [Test]
         public void TwoFunctionsWithTheSameName_AreToldApartByTheirFolder()
         {
             Function("IsLowHealth", typeof(bool), "Here");

@@ -55,6 +55,16 @@ namespace ArcaneOnyx.BehaviorTree
 
             var label = string.IsNullOrEmpty(qualifier) ? name : $"{name} ({qualifier})";
 
+            // Value rows carry their return type; predicate and query rows do not, because their group
+            // header already states it. Values is the one heading that covers every remaining type at once,
+            // so without this a Vector3 Function and a float Function are two indistinguishable rows -- and
+            // the only node where the sections are all a designer has to go on is the unconnected one, which
+            // is exactly where that matters. It also makes "Vector3" something the search field can find.
+            if (group == FunctionPickerCatalog.ValueGroup && function != null && function.ResultType != null)
+            {
+                label = $"{label} : {function.ResultType.Name}";
+            }
+
             Label = requiredInputs.Count == 0
                 ? label
                 : $"{label} — needs {string.Join(", ", requiredInputs)}";

@@ -51,7 +51,12 @@ conversions fit, and an `object` Function is offered at a `bool` port for the sa
 
 Entries are grouped **Predicates / Queries / Values**, and each row names the inputs the node will owe the
 Function -- `IsHurt -- needs threshold` -- so what you are signing up for is visible before you choose, not
-after. Two Functions sharing a name are qualified by their folder, because a choice between two identical
+after.
+
+A **value** row also names what it returns -- `PickCoverSpot : Vector3` -- because *Values* is the one
+heading that covers every remaining type at once, and two rows under it would otherwise be
+indistinguishable. Predicates do not repeat it: their heading already says `bool`. The return type is part
+of the row text, so it is searchable too. Two Functions sharing a name are qualified by their folder, because a choice between two identical
 rows is worse than no choice.
 
 A Function that declares **no `Result`** is never offered, at any port, even an unwired one: this node
