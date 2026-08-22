@@ -737,6 +737,25 @@ BH3 already does. Pinned by `RenamingAnArgumentOnAWarmItem_RebuildsTheIndexMap`,
 confirmed failing without it — and failing in the right way: with the stale map the renamed argument still
 satisfied `maxRange`, so the run reached the empty `Result` port instead of reporting the missing argument.
 
+#### The review pass, and one thing it settled about module dependencies
+
+An independent review of the two PRs found a gap worth recording because the *shape* of it recurs: the
+arguments list had no authoring path. `[SerializeReference] List<IBlockVariable>` is drawn by Unity's
+default inspector unless something overrides it, and the item's editor chain never did — so the designer
+could see the list, and fill in nothing. The drawers that used to do this job were deleted by the same
+change that created the need for them. Fixed with `QueryArgumentsInspector`, which derives every row from
+the Function's declared inputs rather than letting a key be typed.
+
+The review also proposed reusing BH3's `FunctionPickerCatalog` from TPS Editor, and **the tool owner
+rejected it on dependency grounds**: TPS → BH3 is an edge to be *removed*, with BH3 taking an optional
+dependency on TPS instead. That reverses the direction the reuse would have deepened, so the duplicate
+picker stays until a generic catalog moves into VisualScriptingExtension Editor — which is what locked
+decision 3 already says, and is now the scheduled fix rather than a preference.
+
+Worth knowing for that work: the entire TPS → BH3 edge is one file, `Runtime/BehaviorTreeGraph/
+TacticalPositionSelection.cs` — a BH3 node living in the TPS module. Moving it into BH3 behind an optional
+dependency removes the reference outright.
+
 #### Known gaps, stated rather than discovered
 
 - **Existing content is broken, by design.** `CommonTPSQueryDabatabase.asset`'s one item
