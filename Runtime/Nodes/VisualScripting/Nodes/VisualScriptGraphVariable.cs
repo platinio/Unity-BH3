@@ -258,8 +258,19 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Which currently-connected ports a refresh would remove, named with what feeds them. Computed
-        /// before the rebuild, because afterwards the connection is already gone.
+        /// Which currently-fed input ports a refresh will stop fitting, named with what feeds them. Computed
+        /// before the rebuild, because afterwards the connection has already changed shape.
+        ///
+        /// <para>
+        /// "Stop fitting" covers two things, and neither deletes the wire. A port the new contract no longer
+        /// declares: <c>Define()</c> runs <c>NodePreservation.RestoreTo</c>, which recreates the port as an
+        /// invalid ghost under the same key and reattaches the wire to it as an invalid connection, drawn red.
+        /// A port the new contract retypes so its source can no longer feed it: the same pass finds the wire
+        /// no longer valid and demotes it likewise. Both come back by themselves when a later contract fits
+        /// again (<i>verified</i> against the live editor: valid 1 \u2192 0 \u2192 1 across remove-then-restore).
+        /// This used to be described as "dropped", which was never what happened; the wording now matches
+        /// the output side, which was built knowing this.
+        /// </para>
         /// </summary>
         private List<string> DescribeConnectionsLostByRefresh()
         {
@@ -271,12 +282,27 @@ namespace ArcaneOnyx.BehaviorTree
             for (var i = 0; i < parameterPorts.Length; i++)
             {
                 var name = parameterNames[i];
-                if (current.Exists(candidate => candidate.Name == name)) continue;
+                var port = parameterPorts[i];
 
-                var source = ContractPorts.DescribeWhatFeeds(parameterPorts[i]);
+                var source = ContractPorts.DescribeWhatFeeds(port);
                 if (source == null) continue;
 
-                lost.Add($"'{NodeName}': removing input '{name}' dropped its connection from {source}.");
+                var next = current.Find(candidate => candidate.Name == name);
+
+                if (next == null)
+                {
+                    lost.Add(
+                        $"'{NodeName}': input '{name}' is no longer declared; its connection from {source} is " +
+                        "invalid until the Function declares it again or it is rewired.");
+                    continue;
+                }
+
+                var feeder = port.connection?.source;
+                if (next.Type == null || feeder == null || feeder.Type.IsConvertibleTo(next.Type, false)) continue;
+
+                lost.Add(
+                    $"'{NodeName}': input '{name}' is now {next.Type.Name}, which {source} ({feeder.Type.Name}) " +
+                    "cannot feed; that connection is invalid until it is rewired.");
             }
 
             return lost;

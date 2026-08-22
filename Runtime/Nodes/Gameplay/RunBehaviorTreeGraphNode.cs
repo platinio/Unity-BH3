@@ -115,8 +115,16 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Which currently-connected ports a refresh would remove, named with what feeds them. Computed
-        /// before the rebuild, because afterwards the connection is already gone.
+        /// Which currently-connected ports a refresh will stop declaring, named with what feeds them. Computed
+        /// before the rebuild, because afterwards the connection has already changed shape.
+        ///
+        /// <para>
+        /// Not dropped: Define() runs NodePreservation.RestoreTo, which keeps the removed port as an invalid
+        /// ghost under the same key and reattaches the wire to it as an invalid connection, drawn red, and
+        /// a later contract that declares the parameter again brings the wire back. The previous wording
+        /// said "dropped", which was never what happened -- see VisualScriptGraphVariable, where the same
+        /// refresh was probed against the live editor.
+        /// </para>
         /// </summary>
         private List<string> DescribeConnectionsLostByRefresh()
         {
@@ -134,8 +142,8 @@ namespace ArcaneOnyx.BehaviorTree
                 var source = ContractPorts.DescribeWhatFeeds(port);
                 if (source == null) continue;
 
-                lost.Add($"'{NodeName}': removing parameter '{parameter.Name}' dropped its connection " +
-                         $"from {source}.");
+                lost.Add($"'{NodeName}': parameter '{parameter.Name}' is no longer declared; its connection " +
+                         $"from {source} is invalid until the sub-tree declares it again or it is rewired.");
             }
 
             return lost;

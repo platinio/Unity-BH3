@@ -97,15 +97,24 @@ namespace ArcaneOnyx.BehaviorTree
         /// What this inspector is going to draw, decided once so <see cref="GetHeight"/> and
         /// <see cref="OnGUI"/> cannot disagree. Two methods computing the same row list independently is the
         /// standard way an IMGUI inspector ends up drawing over the control below it.
+        ///
+        /// <para>
+        /// The help-box <em>texts</em> live here too, not just the flags, because a box's height is a
+        /// function of its text and the width it is drawn at. Measuring one string in <c>GetHeight</c> and
+        /// drawing another in <c>OnGUI</c> is the same disagreement in a different place.
+        /// </para>
         /// </summary>
         private struct Rows
         {
             public bool HasFunction;
             public bool HasEmbedded;
-            public bool Ambiguous;
-            public bool Mismatched;
 
-            public int HelpBoxes => (Ambiguous ? 1 : 0) + (Mismatched ? 1 : 0);
+            /// <summary>The mismatch message, or null when the Function fits what the node feeds.</summary>
+            public string Mismatch;
+
+            /// <summary>The both-assigned message, or null when only one source is set.</summary>
+            public string Ambiguity;
+
             public bool HasButtons => HasFunction || HasEmbedded;
         }
 
@@ -120,11 +129,45 @@ namespace ArcaneOnyx.BehaviorTree
                 HasEmbedded = variable?.ScriptGraphAsset != null,
             };
 
-            rows.Ambiguous = rows.HasFunction && rows.HasEmbedded;
-            rows.Mismatched = rows.HasFunction && !FunctionPortConstraint.For(Node).Satisfies(function.ResultType);
+            if (rows.HasFunction && rows.HasEmbedded)
+            {
+                rows.Ambiguity = "The Function runs; the embedded graph is editable but dead. Clear one.";
+            }
+
+            if (rows.HasFunction)
+            {
+                var constraint = FunctionPortConstraint.For(Node);
+
+                if (!constraint.Satisfies(function.ResultType))
+                {
+                    rows.Mismatch =
+                        $"'{function.name}' returns {function.ResultType?.Name ?? "nothing"}, but this node " +
+                        $"feeds {constraint.Describe()}. It is kept, not cleared, pick another or fix the " +
+                        "Function.";
+                }
+            }
 
             return rows;
         }
+
+        /// <summary>
+        /// How tall a help box is for this text at this width. Measured with the icon in the content,
+        /// because <c>EditorGUI.HelpBox</c> draws one and it takes a column off the text, so a text-only
+        /// measurement wraps one line too few. The floor is the icon's own height, or a one-line message
+        /// draws a box too short for its own picture.
+        /// </summary>
+        private static float HelpBoxHeight(string text, float width, MessageType type)
+        {
+            var icon = type == MessageType.Error
+                ? EditorGUIUtility.IconContent("console.erroricon").image
+                : EditorGUIUtility.IconContent("console.warnicon").image;
+
+            var measured = EditorStyles.helpBox.CalcHeight(new GUIContent(text, icon), width);
+
+            return Mathf.Max(measured, MinHelpBoxHeight);
+        }
+
+        private const float MinHelpBoxHeight = 38.0f;
 
         protected override float GetHeight(float width, GUIContent label)
         {
@@ -132,7 +175,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             var height = Row;
             if (rows.HasButtons) height += Spacing + Row;
-            height += rows.HelpBoxes * (Spacing + Row * 2.0f);
+
+            // The boxes span the full block width, so this is exactly the width they are drawn at.
+            if (rows.Mismatch != null) height += Spacing + HelpBoxHeight(rows.Mismatch, width, MessageType.Error);
+            if (rows.Ambiguity != null) height += Spacing + HelpBoxHeight(rows.Ambiguity, width, MessageType.Warning);
 
             return height;
         }
@@ -158,24 +204,21 @@ namespace ArcaneOnyx.BehaviorTree
                 DrawButtonRow(content.VerticalSection(ref y, Row), rows);
             }
 
-            if (rows.Mismatched)
+            // Help boxes take the whole block width rather than the value column: they are annotations on
+            // the field, not values of it, and a message that has to explain two types and what to do about
+            // them needs the room. It is also what makes the height measured in GetHeight the truth.
+            if (rows.Mismatch != null)
             {
                 y += Spacing;
-                EditorGUI.HelpBox(
-                    content.VerticalSection(ref y, Row * 2.0f),
-                    $"'{Variable.Function.name}' returns "
-                    + $"{Variable.Function.ResultType?.Name ?? "nothing"}, but this node feeds "
-                    + $"{constraint.Describe()}. It is kept, not cleared — pick another or fix the Function.",
-                    MessageType.Error);
+                var height = HelpBoxHeight(rows.Mismatch, position.width, MessageType.Error);
+                EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Mismatch, MessageType.Error);
             }
 
-            if (rows.Ambiguous)
+            if (rows.Ambiguity != null)
             {
                 y += Spacing;
-                EditorGUI.HelpBox(
-                    content.VerticalSection(ref y, Row * 2.0f),
-                    "The Function runs; the embedded graph is editable but dead. Clear one.",
-                    MessageType.Warning);
+                var height = HelpBoxHeight(rows.Ambiguity, position.width, MessageType.Warning);
+                EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Ambiguity, MessageType.Warning);
             }
 
             EndBlock(metadata);

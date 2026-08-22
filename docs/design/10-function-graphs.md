@@ -888,12 +888,12 @@ is no way to feed a declared input from a call site, so every BH3 Function is pu
 - **What happens to a connection when a refresh removes its port?** The sub-tree node has the same question
   and answers it by silence — the port disappears and the connection with it. Drift reporting names it
   first, which is the mitigation, but a `bt_verify` finding is not the same as an undo.
-  **Partly answered by step 2d (2026-08-22) for the output side:** a connection the retyped Output can no
-  longer feed is *demoted* rather than removed — `NodePreservation.RestoreTo` re-validates it on
-  `Define()` and turns it into a `PortInvalidConnection`, which the canvas draws red and `bt_verify` names.
-  Reassigning a Function that fits revalidates it without rewiring. Inputs still vanish by silence; the
-  difference is that an output port keeps its key across a retype and an input port does not exist at all
-  once the contract drops it.
+  **Answered by step 2d (2026-08-22), and the premise was wrong:** nothing vanishes, and never did. A
+  connection whose port the refresh removes or retypes is *demoted*, not removed — `NodePreservation.
+  RestoreTo` recreates a removed port as an invalid ghost under the same key, reattaches the wire to it as a
+  `PortInvalidConnection`, and does the same for a retyped port its source can no longer feed. The canvas
+  draws both red, `bt_verify` names them, and a later refresh that fits again revalidates the wire without
+  rewiring. Verified on the live editor. The silence was only in the report, which said "dropped".
 - **Whether `ResizeToFitPorts` should ever shrink a node an author widened by hand.** Growing to fit is
   clearly right; discarding a deliberate manual size is less obviously so.
 
@@ -1507,8 +1507,20 @@ and reporting it, keeping a float wire that still fits, and revalidating a demot
 Function is assigned; drift reported when the Function's `Result` changes after assignment; the type
 surviving a serialization round trip; and `bt_verify` naming an invalid connection with both types.
 
-### Known gap
+### Inputs — corrected the same day
 
-Inputs still lose their connections silently on a contract refresh (the 2b question, unchanged). The
-output side now demotes instead; doing the same for inputs would mean keeping a port alive that the contract
-no longer declares, which is a different design and not this step.
+The first draft of this section said inputs still lose their connections silently on a contract refresh,
+and the 2b open question was answered the same way. **Both were wrong, and had been since 2b shipped.**
+Probed against the live editor: a refresh that removes a declared input turns its wire into an invalid
+connection attached to a ghost `InvalidInput` port under the same key (valid 1 → 0, invalid 0 → 1),
+a refresh that retypes it so its source cannot feed it demotes the wire the same way, and a later refresh
+that fits again brings it back (valid 1) — all of it by `NodePreservation.RestoreTo`, with
+`InvalidInputWidget` already drawing the ghost. Nothing was ever dropped.
+
+What *was* wrong was the reporting, in three places, now fixed: `DescribeConnectionsLostByRefresh` said
+"dropped its connection" for a removed input and said nothing at all for a retyped one; the new invalid
+connection lint would have labelled a ghost port "(control)". So inputs and outputs now behave and report
+the same way, and there is no asymmetry to state.
+
+The lesson is the one spec 10 keeps re-learning: a sentence in a design doc about what the code does is a
+claim, and the cheap way to check it was one `eval` against a real tree.

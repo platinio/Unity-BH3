@@ -76,6 +76,11 @@ not deleted -- it is demoted to an **invalid connection**, drawn red on the canv
 type *can* still feed is untouched: a `float` Function replacing a generic one keeps its wire to a `float`
 port.
 
+**Input ports behave the same way.** Refreshing a node against a Function that no longer declares an input,
+or declares it as a type its source can no longer feed, does not drop the wire: the port is kept as a ghost
+under its old name and the wire is demoted to an invalid connection, red on the canvas and named by
+`bt_verify`. Refresh against a Function that declares it again and the wire comes back.
+
 The type is remembered on the node, the same way its input ports are, rather than read from the Function
 each time. So a Function whose `Result` changes after it was assigned does not silently retype the port; the
 node reports it as contract drift (`Result: this node declares its Output as Boolean, but the Function now

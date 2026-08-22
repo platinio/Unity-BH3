@@ -530,12 +530,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 var from = source.behaviorTreeNode is BehaviorTreeNode sourceNode ? sourceNode.NodeName : "?";
                 var to = destination.behaviorTreeNode is BehaviorTreeNode destinationNode ? destinationNode.NodeName : "?";
 
-                var sourceType = source is ValueOutput valueOutput ? valueOutput.Type.Name : "control";
-                var destinationType = destination is ValueInput valueInput ? valueInput.Type.Name : "control";
+                // A ghost port is one NodePreservation recreated for a key the node no longer declares, so
+                // that the wire had somewhere to stay attached. Named as such: "(control)" here would send
+                // the reader looking for a flow port that does not exist.
+                var sourceType = source is ValueOutput valueOutput ? valueOutput.Type.Name
+                    : source is InvalidOutput ? "no longer declared" : "control";
+                var destinationType = destination is ValueInput valueInput ? valueInput.Type.Name
+                    : destination is InvalidInput ? "no longer declared" : "control";
 
                 yield return
                     $"{treeName}: invalid connection -- '{from}'.{source.key} ({sourceType}) no longer fits " +
-                    $"'{to}'.{destination.key} ({destinationType}). Rewire it or change the Function.";
+                    $"'{to}'.{destination.key} ({destinationType}). Rewire it, or change the Function so it " +
+                    "fits again and the wire comes back by itself.";
             }
         }
 
