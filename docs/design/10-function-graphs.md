@@ -293,6 +293,10 @@ submodule branches plus a superproject pointer bump; commit order per repo rules
     is removed** in the same change that re-points its single consumer (the TPS query item) at a
     Function. Neither is wrapped, deprecated, or maintained, and — **amended 2026-08-22 by the tool
     owner** — neither is migrated: existing query items are re-authored, not converted. See *Step 3*.
+    **Amended again 2026-08-22:** the call-site type that replaces them is `FunctionCall<TResult>` in
+    VisualScriptingExtension. It is not a wrapper around a raw graph — it is a contracted call with a second
+    consumer in hand (`HasLineOfSight` on a component), which is what a shared type has to earn. See *Step 3
+    redesigned*.
 11. **Tier 2's compilation target is C# codegen, not a flat op array.** Locked 2026-08-13, closing
     open question 4 ahead of the "revisit after use" schedule, because building multi-exit produced
     the deciding evidence rather than the profiler:
@@ -644,6 +648,10 @@ TacticalPositionSelection is already branched (`feature/function-graphs`) and cu
 
 ### Step 3 landed — the query item takes a Function, 2026-08-22
 
+> **Superseded in part by *Step 3 redesigned* below, the same day.** The item's arguments, picker and drawer
+> described here moved out of TPS into VisualScriptingExtension as `FunctionCall<TResult>`; what remains true
+> of this section is the contract, the verify path and the deletions.
+
 Branch `feature/tps-query-function` in TacticalPositionSelection, VisualScriptingExtension and BH3.
 EditMode 705 tests / 1 failure, PlayMode 84 / 3 — the same four that failed before the change
 (`TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable`, and three
@@ -793,6 +801,119 @@ behaviours. The fix is to promote the catalogue and the constraint into **Visual
 assembly, where locked decision 3 says shared Function machinery belongs, leaving BH3's Visual Scripting
 `Inspector` and TPS's `PropertyDrawer` as two thin front-ends. That is a BH3 refactor with its own test pass,
 which is why it was reported rather than taken.
+
+### Step 3 redesigned — `FunctionCall<TResult>`, 2026-08-22
+
+**Why, in one paragraph.** The review found the query item's arguments list had no authoring path, and
+building one made the real shape visible: nothing about "a Function reference plus authored arguments,
+editable in Unity's inspector, invoked from C#" is query-specific. The tool owner named the second consumer
+— `HasLineOfSight` on a perception component, with its own arguments in the inspector — and that flips the
+rule that had kept the machinery local: build for the second caller. The owner then asked whether the first
+design was the best this stack allows, and it was not. Three upgrades were taken rather than deferred,
+because they are the ones that are hard to change after fifty call sites exist.
+
+#### What shipped, in VisualScriptingExtension
+
+- **`FunctionCall<TResult>`** (runtime, `[Serializable]`): Function + `List<FunctionArgument>`. `Bind(agent)`
+  returns a `Bound` handle you own; `For(agent)` keeps one per agent for a call living on a shared asset and
+  reaps destroyed agents; `InvokeOnce` is the convenience path and is named as the slow one.
+  `Bound.Input<T>(key)` resolves a per-call slot once; `Bound.Set(slot, value)` skips unchanged values and
+  writes by index; `Bound.Invoke()` returns `TResult`. Errors throw `InvalidOperationException` naming the
+  call site; `TryInvoke` is the non-throwing form.
+- **`FunctionArgument`** (runtime, `struct`): a value-type variant — key, kind, one slot per kind, typed
+  accessors. Serializes as plain data, draws with one drawer, and is the staging format generated code reads.
+- **`FunctionCallContract`**: the generic contract check (result type, per-call inputs) and argument drift,
+  asked by runtime, drawer and verification alike. **`[PerCallInput(key, type)]`** on a field declares an
+  input the code supplies every call; the drawer hides it and the picker requires it.
+- **`FunctionCallDrawer`** (editor, `PropertyDrawer` on the base): an `AdvancedDropdown` picker filtered by
+  `TResult` and per-call inputs, the mismatch reason under it, one row per declared input synced to the
+  declaration, *Create new Function…* producing one that already satisfies the field's contract.
+- **`FunctionCatalog`** (editor): the project's Functions scanned once, invalidated on import, names qualified
+  with the shortest distinguishing folder suffix only where they collide. **`FunctionCallVerification`**
+  (editor): every `FunctionCall` field on a ScriptableObject or prefab component, verified; *Window ▸ Arcane
+  Onyx ▸ Verify Function Calls*.
+- **TPS shrank to a consumer.** The item holds one `FunctionCall<TacticalPositionSelectionQuery>` with
+  `[PerCallInput(_Evaluator)]`; `CreateTacticalPositionSelectionQuery` is `For` + one `Set` + `Invoke`.
+  `QueryFunctionAttribute`, `QueryFunctionPropertyDrawer`, `QueryFunctionCatalog` and `QueryArgumentsInspector`
+  are deleted; `TacticalPositionSelectionQueryContract` delegates to the generic contract with the query's
+  values; `tps_verify` runs the shared checks. `TacticalPositionSelectionAuthoring`'s property path is
+  `query.function`.
+- **Demo**: `BH3Demos/FunctionCalls/` — a MonoBehaviour with `FunctionCall<bool> hasLineOfSight`, an authored
+  `maxDistance` and a per-call `_Target`, against three targets (clear, behind a wall, out of range). The
+  Function is built in code by the builder. Verified in Play mode with a capture.
+
+#### The three upgrades, and what each cost
+
+1. **`FunctionCall<TResult>` rather than an attribute.** The first sketch was `[FunctionContract(typeof(bool))]
+   FunctionCall` + `Invoke<bool>()` — the type stated twice, checked at runtime. The generic states it once,
+   the compiler enforces it, the picker filters on it, and a compiled Function gets a typed entry point
+   (`ICompiledFunction<TResult>`) with no cast. Cost: a generic serialized field; Unity handles it, and the
+   drawer sees through arrays and lists.
+2. **Zero-alloc is the default, not the opt-in.** The first sketch's `Invoke(agent, params tuples)` allocated
+   by default and hid a fast path behind `Bind`. Now binding is the only runtime path and the slot API is the
+   one you write without thinking. **Stated precisely**: reference types, unchanged values and authored
+   arguments cost nothing per invoke; a value-type per-call input that changes boxes once per change, because
+   `Flow` takes `object` — the same contract BH3 nodes have — and not at all once compiled, because generated
+   code reads the variant's typed accessors. `ASteadyStateInvoke_DoesNotAllocate` pins the steady state with a
+   control that must fail.
+3. **A value-type variant instead of BlockVariables.** BlockVariables are a class per type under
+   `[SerializeReference]`, boxing on every read and coupled to Visual Scripting's variables through
+   `UpdateVariable`. For a hot path and for codegen that is the wrong carrier; the closed type set (what VS can
+   hold inline, plus enums and Object references) is a closed union with one drawer and no managed references.
+   BlockVariables themselves are untouched — `EntityFactions` and the TPS inspector's dynamic-parameter test
+   field still use them — so this is "not used here", not "deleted".
+
+#### Decisions taken while implementing
+
+- **Per-call is a convention plus an optional declaration.** A key starting with `_` is per-call everywhere
+  (hidden from authoring); `[PerCallInput]` additionally lets the picker refuse a Function that does not
+  accept it. Both exist because the runtime cannot see field attributes — `Bind` enforces what the code asks
+  for through `Input<T>`, loudly; the attribute is what makes it refusable at pick time.
+- **Declared defaults make an input optional.** The item used to require every input; BH3 already treated an
+  input with a default as optional (`FunctionParameter.Optional`). `Bound` stages declared defaults first and
+  authored arguments over them, so the two paths agree, and drift reports only what nothing supplies.
+- **A version bump on deserialize replaces the owner's `OnValidate`.** The stale-argument-map bug is now
+  prevented inside the type: `OnAfterDeserialize` bumps a version, and every bound handle re-stages when it
+  moves — one integer compare per invoke. No owner has to remember to invalidate.
+  `RenamingAnArgumentThroughTheInspector_RestagesAWarmHandle` pins it through a `SerializedObject` edit on a host
+  ScriptableObject, the inspector's own path.
+- **The ABI rule is locked and pinned.** The staged slots, indexed by declared inputs in declaration order,
+  are the only thing a compiled Function may depend on. `PlanIndexLayout_IsDeclarationOrder` exists for the
+  emitter to stand on.
+- **No `MakeGenericType` anywhere in the call path.** `FunctionCall<bool>` is declared in user code, so AOT
+  sees it; everything inside is constructed with `new`. Recorded because it is the kind of thing that breaks
+  only on device.
+- **Locked decision 10's "no new wrapper type" is reversed for a reason, not forgotten.** It was decided for a
+  seam with one caller. `FunctionCall` has two real callers on the day it lands and is designed against both —
+  which is the condition the rule itself names.
+- **The picker duplication is half closed.** TPS no longer has its own catalog or picker; the shared one is
+  in VSE, which is where locked decision 3 says it belongs. BH3's `FunctionPickerCatalog` still exists
+  separately, because moving it touches BH3's Visual Scripting `Inspector` and its flavor groups — a BH3
+  change with its own test pass. It can now consume `FunctionCatalog` rather than reimplement it; that is the
+  follow-up.
+
+#### Known gaps, stated rather than discovered
+
+- `FunctionCallVerification.FindCallSites` finds direct `FunctionCall` fields and lists of them on
+  ScriptableObjects and prefab components. A call nested inside another serializable class, and scene objects,
+  are not found. Both are stated in the type's doc.
+- The variant's type set is closed: bool, int, float, string, Vector2/3/4, Color, enums, `UnityEngine.Object`.
+  An input of any other type draws as "supply per call" and is never authored. Extending it is one field and
+  one accessor per kind; it is deliberately not open-ended.
+- `tps_set_argument` does not exist; `FunctionCall.SetArgument` is the code path and the demo builder uses
+  it. A CLI command over it is a small follow-up.
+- The module's own sample, `CommonTPSQueryDabatabase.asset`, is still broken by design and named by
+  `tps_verify`; unchanged by this redesign.
+
+#### Tests
+
+VisualScriptingExtension: `FunctionCallTests` (14) — typed result, authored argument, per-call slot, refusal
+naming input and call site, wrong result type by both names, declared default, `InvokeOnce`, re-staging after
+an inspector rename, rebinding after a Function reassignment, the index layout, `For` identity, the
+allocation contract with a control, `FunctionArgument` round trips, argument drift, catalog disambiguation.
+TacticalPositionSelection: the 17 query-function tests unchanged in intent, re-pointed at the new serialized
+shape; all green. EditMode 36/36 in VSE, 58/59 in TPS — the one failure is the pre-existing
+`TpsArchitectureTests` one.
 
 ### Step 4 — folded into Step 3
 
