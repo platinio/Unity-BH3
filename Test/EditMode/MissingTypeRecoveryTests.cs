@@ -161,6 +161,41 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, reloaded.graph.Nodes.OfType<RetargetSourceNode>().Count());
         }
 
+        [Test]
+        public void NodesAreTheOnlyThingReplacedByAPlaceholder()
+        {
+            // A placeholder is a node, so it can only stand in for a node. The rewrite this replaced was
+            // blanket: it turned a deleted *value* type -- a graph variable's value, a member of a
+            // [Serializable] class -- into a node type too, which is never assignable to the slot it was
+            // written for and so could only ever fail. This pins what a deleted non-node type does instead,
+            // because "what happens when a type disappears" is the one thing this feature must not leave to
+            // assumption.
+            var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
+            var source = BehaviorTreeAuthoring.AddNode<RetargetSourceNode>(asset, 0.0f, 200.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, source);
+            BehaviorTreeAuthoring.Declare(asset, "ammo", 7);
+            BehaviorTreeAuthoring.Save(asset);
+
+            // The declaration's value type, not any node's type.
+            var loaded = RewriteTypeAndReload(
+                TreePath, TypeKey("System.Int32"), TypeKey("ArcaneOnyx.BehaviorTree.Tests.NoSuchValueType"));
+
+            Assert.IsFalse(MissingTypeRecovery.HasPlaceholder(loaded.graph),
+                "a node placeholder in a value slot could only ever fail, so nothing should have been "
+                + "replaced here.");
+
+            Assert.AreEqual(1, loaded.graph.Nodes.OfType<RetargetSourceNode>().Count(),
+                "the rest of the tree has to survive a deleted value type: " + string.Join(
+                    ", ", loaded.graph.Nodes.Select(n => n.GetType().Name)));
+            Assert.AreEqual(1, loaded.graph.Transitions.Count, "and so does its wiring.");
+
+            var declaration = loaded.declarations.SingleOrDefault(d => d.name == "ammo");
+            Assert.IsNotNull(declaration, "the declaration itself survives; only the value it held cannot.");
+            Assert.IsNull(declaration.value,
+                "a value whose type is gone degrades to null -- which is recoverable by retyping it, unlike "
+                + "an asset that failed to load.");
+        }
+
         // ------------------------------------------------------------------ restoring itself
 
         [Test]
@@ -318,6 +353,85 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             CollectionAssert.Contains(preview.KeptMembers, nameof(RetargetSourceNode.Speed));
             CollectionAssert.Contains(preview.DroppedMembers, nameof(RetargetSourceNode.Label));
             CollectionAssert.Contains(preview.StrandedConnections, nameof(RetargetSourceNode.Beta));
+        }
+
+        [Test]
+        public void AnInlineValueTypedIntoAPortCarriesOverAndIsShownInThePreview()
+        {
+            // A value typed straight into a port lives in defaultValues rather than among the node's
+            // members, so it is invisible to anything reasoning about members alone. An author whose node
+            // was all port literals would otherwise be told "keeps 0 values" while their values quietly
+            // carried or vanished.
+            var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
+            var source = BehaviorTreeAuthoring.AddNode<RetargetSourceNode>(asset, 0.0f, 200.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, source);
+
+            // Tuning and Legacy, because they declare defaults -- SetValue only writes an inline value on a
+            // port that does, and wires a literal node into any port that does not. On a bare port there is
+            // no inline value to carry in the first place.
+            BehaviorTreeAuthoring.SetValue(asset, source.Tuning, 4.5f, -300.0f, 150.0f);
+            BehaviorTreeAuthoring.SetValue(asset, source.Legacy, 6.5f, -300.0f, 300.0f);
+            BehaviorTreeAuthoring.Save(asset);
+
+            var broken = RewriteTypeAndReload(
+                TreePath, TypeKey(typeof(RetargetSourceNode).FullName), TypeKey(GoneTypeName));
+
+            var placeholder = SinglePlaceholder(broken);
+
+            var preview = MissingTypeRetarget.PreviewRetarget(placeholder, typeof(RetargetTargetNode));
+
+            Assert.IsTrue(preview.CanApply, preview.Failure);
+            Assert.IsTrue(preview.KeptMembers.Any(m => m.Contains(nameof(RetargetSourceNode.Tuning))),
+                "an inline value on a port the replacement still declares carries over, and the preview has "
+                + "to say so: " + string.Join(", ", preview.KeptMembers));
+            Assert.IsTrue(preview.DroppedMembers.Any(m => m.Contains(nameof(RetargetSourceNode.Legacy))),
+                "and one on a port it does not declare is lost, which is exactly what an author needs told "
+                + "before committing: " + string.Join(", ", preview.DroppedMembers));
+
+            var replacement = (RetargetTargetNode)MissingTypeRecovery.Retarget(
+                broken.graph, placeholder, typeof(RetargetTargetNode), out var failure);
+
+            Assert.IsNotNull(replacement, "retarget failed: " + failure);
+            Assert.AreEqual(4.5f, replacement.defaultValues[nameof(RetargetTargetNode.Tuning)],
+                "the preview promised this value would carry, so it must actually carry.");
+            Assert.IsFalse(replacement.defaultValues.ContainsKey(nameof(RetargetSourceNode.Legacy)),
+                "and the one it said would be dropped must not silently reappear.");
+        }
+
+        [Test]
+        public void RetargetingRefusesAPlaceholderThatIsNoLongerInTheTree()
+        {
+            // The picker is a non-modal window holding a placeholder across arbitrary editor time. A reimport
+            // swaps the graph out from under it with no domain reload to null the reference, leaving a stale
+            // placeholder that looks fine and shares its guid with the live one. Nodes is keyed by guid, so
+            // proceeding is either a duplicate-key throw mid-swap or a rebuild from state nobody is looking
+            // at.
+            var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
+            var source = BehaviorTreeAuthoring.AddNode<RetargetSourceNode>(asset, 0.0f, 200.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, source);
+            BehaviorTreeAuthoring.Save(asset);
+
+            var broken = RewriteTypeAndReload(
+                TreePath, TypeKey(typeof(RetargetSourceNode).FullName), TypeKey(GoneTypeName));
+
+            var stale = SinglePlaceholder(broken);
+
+            // A second, independent load of the same asset: same guid, different object -- exactly what the
+            // window is left holding after a reimport.
+            var reloaded = BehaviorTreeVerification.Reload(TreePath);
+            var live = reloaded.graph.Nodes.OfType<MissingType>().Single();
+
+            Assert.AreEqual(stale.guid, live.guid, "the fixture is only meaningful if the guids match.");
+            Assert.AreNotSame(stale, live, "and only if the objects do not.");
+
+            var replacement = MissingTypeRecovery.Retarget(
+                reloaded.graph, stale, typeof(RetargetTargetNode), out var failure);
+
+            Assert.IsNull(replacement, "a placeholder the graph does not hold must be refused, not applied.");
+            StringAssert.Contains("no longer in the tree", failure,
+                "and the refusal has to say what to do about it: " + failure);
+            Assert.IsTrue(MissingTypeRecovery.HasPlaceholder(reloaded.graph),
+                "the live graph must be left exactly as it was.");
         }
 
         [Test]
@@ -537,6 +651,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [DoNotSerialize] public ValueInput Alpha { get; private set; }
         [DoNotSerialize] public ValueInput Beta { get; private set; }
 
+        /// <summary>
+        /// Declared <b>with</b> defaults, unlike <see cref="Alpha"/> and <see cref="Beta"/>. Only a port that
+        /// declares one can hold an inline value across serialization — on a bare port the value lives until
+        /// the next reload and no further, which is what <c>SetValue</c> exists to work around. So these are
+        /// the only ports that can exercise inline-value carry-over at all.
+        /// </summary>
+        [DoNotSerialize] public ValueInput Tuning { get; private set; }
+        [DoNotSerialize] public ValueInput Legacy { get; private set; }
+
         public override string NodeName => "Retarget Source";
 
         protected override void Definition()
@@ -545,6 +668,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Alpha = ValueInput<float>(nameof(Alpha));
             Beta = ValueInput<float>(nameof(Beta));
+            Tuning = ValueInput<float>(nameof(Tuning), 1.0f);
+            Legacy = ValueInput<float>(nameof(Legacy), 2.0f);
         }
     }
 
@@ -560,6 +685,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [DoNotSerialize] public ValueInput Alpha { get; private set; }
         [DoNotSerialize] public ValueInput Gamma { get; private set; }
 
+        /// <summary>Shared with the source. <c>Legacy</c> deliberately is not, so an inline value can be dropped.</summary>
+        [DoNotSerialize] public ValueInput Tuning { get; private set; }
+
         public override string NodeName => "Retarget Target";
 
         protected override void Definition()
@@ -568,6 +696,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Alpha = ValueInput<float>(nameof(Alpha));
             Gamma = ValueInput<float>(nameof(Gamma));
+            Tuning = ValueInput<float>(nameof(Tuning), 1.0f);
         }
     }
 

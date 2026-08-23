@@ -32,6 +32,20 @@ namespace ArcaneOnyx.BehaviorTree
 
         private bool showPreservedState = true;
 
+        /// <summary>
+        /// The parsed preserved members, cached against the string they came from.
+        ///
+        /// <para>
+        /// Parsing the whole preserved document is not free, and IMGUI would pay for it three times per
+        /// event — <c>GetHeight</c>, the foldout title and the body each ask — across a layout and a repaint
+        /// pass, for every event the inspector sees. <c>formerValue</c> never changes for the life of a
+        /// placeholder, so keying on it needs no invalidation: a different placeholder is a different
+        /// string, and the same one is the same answer.
+        /// </para>
+        /// </summary>
+        private string cachedFor;
+        private List<KeyValuePair<string, string>> cachedMembers;
+
         private MissingType Placeholder => metadata.value as MissingType;
 
         protected override float GetHeight(float width, GUIContent label)
@@ -52,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree
             return height;
         }
 
-        private static float PreservedStateHeight(MissingType placeholder)
+        private float PreservedStateHeight(MissingType placeholder)
         {
             int rows = placeholder.HasPreservedState
                 ? PreservedMembers(placeholder).Count + (placeholder.formerObjects?.Count ?? 0)
@@ -107,17 +121,21 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
-        private static string PreservedStateTitle(MissingType placeholder)
+        private string PreservedStateTitle(MissingType placeholder)
         {
             if (!placeholder.HasPreservedState) return "Preserved state — nothing was kept for this node";
 
             int members = PreservedMembers(placeholder).Count;
-            int objects = placeholder.formerObjects?.Count ?? 0;
 
-            return $"Preserved state — {members} value(s), {objects} object reference(s)";
+            // Deliberately not "N object references". formerObjects is the asset's whole object table, kept
+            // because a reference inside the preserved document is a bare index into it and there is no way
+            // to tell which entries were this node's -- so calling the count the node's own references would
+            // read as a node that held dozens of things, and on a big tree as data loss waiting to happen.
+            return $"Preserved state — {members} value(s), + the asset object table this node's references "
+                   + "index into";
         }
 
-        private static void DrawPreservedState(ref Rect row, MissingType placeholder)
+        private void DrawPreservedState(ref Rect row, MissingType placeholder)
         {
             using (new EditorGUI.DisabledScope(true))
             {
@@ -155,7 +173,19 @@ namespace ArcaneOnyx.BehaviorTree
         /// The node's own serialized members, read straight out of what was preserved. Shown because the
         /// first question anyone asks a placeholder is whether their work is still in there.
         /// </summary>
-        private static List<KeyValuePair<string, string>> PreservedMembers(MissingType placeholder)
+        private List<KeyValuePair<string, string>> PreservedMembers(MissingType placeholder)
+        {
+            if (cachedMembers != null && ReferenceEquals(cachedFor, placeholder.formerValue)) return cachedMembers;
+
+            var members = ParsePreservedMembers(placeholder);
+
+            cachedFor = placeholder.formerValue;
+            cachedMembers = members;
+
+            return members;
+        }
+
+        private static List<KeyValuePair<string, string>> ParsePreservedMembers(MissingType placeholder)
         {
             var members = new List<KeyValuePair<string, string>>();
 

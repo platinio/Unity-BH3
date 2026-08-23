@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
+using UnityEngine;
 using UnityObject = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -109,6 +111,42 @@ namespace ArcaneOnyx.BehaviorTree
         // Although this unit will have no ports, the already existing graph
         // connections will create invalid ones to connect themselves to.
         protected override void Definition() { }
+
+        [DoNotSerialize]
+        private bool hasAnnouncedItself;
+
+        /// <summary>
+        /// Says once, out loud, that a node which no longer exists just reported success.
+        ///
+        /// <para>
+        /// The status itself is deliberately unchanged — see the design doc; whether a gap should read as
+        /// <c>Success</c> or <c>Failure</c> depends on whether its parent is a Sequence or a Selector, and
+        /// that is its own decision. What is not defensible either way is doing it <em>silently</em>: a
+        /// placeholder has nothing to run and nothing to fail, so a Sequence walks straight past it and the
+        /// branch quietly does less than it used to, with no exception and nothing in the log. This is the
+        /// feature's whole premise, and until now it was the one place the premise was not acted on.
+        /// </para>
+        ///
+        /// <para>
+        /// Once per node per run, behind a flag, and only on a node that exists solely in a broken tree — so
+        /// nothing on the healthy path pays for it, and a tree with a hole in it says so in a build's log
+        /// rather than only in the editor.
+        /// </para>
+        /// </summary>
+        public override ExecutionStatus OnUpdate()
+        {
+            if (!hasAnnouncedItself)
+            {
+                hasAnnouncedItself = true;
+
+                Debug.LogWarning(
+                    $"[BH3] A node whose type no longer exists ('{(string.IsNullOrEmpty(formerType) ? "unknown" : formerType)}') "
+                    + "just ran and reported success, because there is nothing left of it to run. Whatever "
+                    + "this branch used to do here, it is not doing.");
+            }
+
+            return base.OnUpdate();
+        }
 
         /// <summary>
         /// A node standing in for a type that no longer exists is wrong in every configuration, so it says

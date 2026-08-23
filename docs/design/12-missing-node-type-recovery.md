@@ -259,10 +259,9 @@ Each taken with the tool owner on 2026-08-23.
 - **Stand-ins saved by the old loader** have no `formerType`/`formerValue`. They retarget through the
   fallback (defaults only) and their inspector says the former type is unknown. Nothing can recover what was
   already dropped.
-- **Non-node types** with an unresolvable `$type` (variable values, declaration types) still get the blanket
-  `MissingType` rewrite, which produces a node object in a non-node slot. Harmless so far, but it is the
-  wrong stand-in for those and the right one (leave `$type` alone and let VS warn) should be its own pass
-  once this one proves the `fsData` walk.
+- **Non-node types** with an unresolvable `$type` (variable values, declaration types). ~~Still get the
+  blanket rewrite.~~ **Superseded while building — see correction 4 below.** They are now left alone
+  deliberately, which is the better of the two behaviours and is pinned by a test.
 - **A remap table for types you cannot annotate** (a third-party package node retired upstream). Decision 3
   keeps it out; the project-wide batch covers existing assets, and the gap only bites if the old type keeps
   arriving in new assets.
@@ -334,7 +333,7 @@ All inside the BH3 submodule unless stated.
 # Implementation — landed 2026-08-23
 
 Branch `feature/missing-type-recovery` in the BH3 submodule; the demo lives in the superproject on a branch
-of the same name. All 16 new tests pass. The project EditMode suite is 746/747, the one failure being the
+of the same name. All 19 new tests pass. The project EditMode suite is 749/750, the one failure being the
 pre-existing `TpsArchitectureTests.All_concrete_PositionEvaluators_are_marked_Serializable` that was already
 failing before this change; PlayMode is 81/84, the three failures being TPS PlayMode tests whose assembly
 does not reference BH3 at all and whose own fixture documents the `GameEntity` exceptions they trip on.
@@ -464,7 +463,7 @@ Everything under *Known gaps* above still stands, plus:
 | Recovery | `Runtime/Preservation/MissingTypeRecovery.cs` (new) |
 | Editor operation | `Editor/Authoring/MissingTypeRetarget.cs` (new) |
 | Doors | `Editor/Window/MissingTypeRetargetWindow.cs` (new), `Editor/Inspector/MissingTypeInspector.cs` (new), `Editor/Widgets/BehaviorTreeNodeElementWidget.cs`, `Editor/BrokenBehaviorTreeGraphFinder.cs`, `Editor/Authoring/BehaviorTreeAuthoring.cs`, `Editor/Authoring/BehaviorTreeVerification.cs` |
-| Tests | `Test/EditMode/MissingTypeRecoveryTests.cs` (new, 16 tests) |
+| Tests | `Test/EditMode/MissingTypeRecoveryTests.cs` (new, 19 tests) |
 | Docs | `docs/renaming-and-deleting-nodes.md` (new), `docs/SUMMARY.md`, `docs/custom-nodes.md`, this file |
 | Superproject | `Assets/ArcaneOnyx/BH3Demos/MissingTypeRecovery/` (new), `.claude/skills/behavior-trees-unity-authoring/SKILL.md` |
 
@@ -525,3 +524,75 @@ bounded (single digits in practice), exists only while the tree is broken, is se
 price of an invariant that holds by construction instead of by detection. The alternative considered and
 rejected was one shared table on the asset, which trades this for a second lifetime to manage and a field
 that exists only for a broken state.
+
+## The PR review round
+
+Eight findings on [#74](https://github.com/platinio/Unity-BH3/pull/74). All eight acted on; one changed the
+design, and one of the small ones turned out to be hiding a second bug underneath it.
+
+### Correction 4 — the blanket rewrite for non-node types was silently dropped
+
+Stated as a locked decision (#7) and again under *Known gaps*: "anything else keeps the blanket rewrite it
+had before, one level up". **There is no such rewrite.** Replacing `OnBeforeDeserialize` removed the only
+one, and `TryConvertNode` returns false for a non-node dictionary without any fallback. The comment asserted
+an invariant that did not exist, in the one file a maintainer would trust about data survival.
+
+Measured rather than assumed before deciding what to do: deleting a graph variable's *value* type leaves the
+tree completely intact — every node, every transition — with the declaration surviving and its value
+degraded to `null`. That is strictly better than what the blanket rewrite did, which was to put a
+`MissingType` **node** into a value slot where it could never be assignable and could only ever fail.
+
+So the code was right and the claim was wrong. The comment now says what actually happens and why, and
+`NodesAreTheOnlyThingReplacedByAPlaceholder` pins it. The locked decision above is superseded.
+
+### A stale placeholder is now refused instead of applied
+
+The picker is a non-modal window holding a `MissingType` across arbitrary editor time. A domain reload nulls
+it and is handled; a **reimport without a reload** is not — it swaps `asset.graph` wholesale while the
+window's reference stays non-null and stale. That placeholder shares its guid with the live one, and
+`Nodes` is guid-keyed, so applying it is either a duplicate-key throw mid-swap or a rebuild from state
+nobody is looking at. `Retarget` now checks the graph actually holds *that object* and fails with an
+instruction instead. Pinned by `RetargetingRefusesAPlaceholderThatIsNoLongerInTheTree`.
+
+### Inline port values were invisible — and the first fix was wrong
+
+The preview listed members and connections but never inline values, so an author whose node was all port
+literals read "keeps 0 values" while their data quietly carried or vanished.
+
+The obvious fix — read `placeholder.defaultValues` — produces an empty list every time, and the test caught
+it. **A placeholder never has any inline values.** `Define()` clears `defaultValues` and then restores only
+the keys the node's own `Definition` declares, and `MissingType` declares none. The only surviving copy is
+inside `formerValue`, which is where the preview now reads them from.
+
+The values themselves were carrying correctly all along — `Rebuild` deserializes them out of the preserved
+document and `NodePreservation` lands them on matching ports. It was only the reporting that was blind.
+`AnInlineValueTypedIntoAPortCarriesOverAndIsShownInThePreview` pins both halves. Note this also means the
+existing doubles could not test it: a port must *declare* a default to hold an inline value across
+serialization at all, which is why two such ports were added to the fixtures.
+
+### `SaveAssets()` → `SaveAssetIfDirty(asset)`
+
+`ApplyToProject` documented itself as saving "only the trees that changed" and then called
+`AssetDatabase.SaveAssets()`, which flushes **every** dirty asset in the project — silently committing a
+scene or prefab someone had deliberately left unsaved, as a side effect of a node rename. Same call was in
+the tree-scoped CLI branch. Both now save exactly the assets they converted, which also makes the
+documentation true.
+
+### Smaller
+
+- **One undo step for a project-wide retarget**, via `IncrementCurrentGroup` / `CollapseUndoOperations`.
+  One rename is one decision however many trees it reached; N undo steps with no way to know when to stop
+  is the same per-tree/one-decision asymmetry the batch API exists to remove.
+- **The inspector cached its parse.** `PreservedMembers` ran `fsJsonParser.Parse` over the whole preserved
+  document from three call sites per IMGUI event, across layout and repaint passes. `formerValue` is
+  immutable for a placeholder's life, so the cache keys on it and never needs invalidating.
+- **The preserved-state foldout stopped calling the object table "object reference(s)".** By design it is
+  the *asset's whole table*, so on a large tree the count read as a node that had held dozens of things —
+  precisely the data-loss impression the panel exists to dispel.
+- **`bt_retarget_missing` reports the paths it wrote**, not just a count. It writes across the project; the
+  first question about the result is which files moved. The project-wide default scope was kept — the docs
+  and README already state it, and the command is aimed at agents with git underneath.
+- **A placeholder now says so when it ticks**, once per node per run, naming the former type. The status is
+  still `Success` and that decision is still deferred, but doing it *silently* was never the defensible
+  half: this is the feature's own premise, and it was the one place the premise was not acted on. Costs a
+  flag check on a node that only exists in a broken tree.

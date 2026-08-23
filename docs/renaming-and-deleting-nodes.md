@@ -33,8 +33,9 @@ them do is lose your work: the node keeps its guid, so every transition still po
 Sequence or Selector above it still has a child in that slot.
 
 At **runtime** a placeholder ticks as **Success**. It has no behaviour to run and nothing to fail, so a
-Sequence walks straight past it and the branch quietly does less than it used to, with no exception. That
-silence is why this page exists — a deleted node type does not announce itself at play time.
+Sequence walks straight past it and the branch quietly does less than it used to, with no exception. It logs
+a warning naming the former type the first time it runs, so the hole is at least audible — but the branch
+still carries on. A deleted node type does not stop anything; it just stops doing something.
 
 ---
 
@@ -148,7 +149,8 @@ leave them in a shipping tree.
 - **A placeholder standing in for a node that referenced other nodes** may refuse to restore automatically.
   It stays a placeholder and the Console says why; retargeting it by hand reports the same reason.
 - **Only nodes are recovered.** A missing type somewhere other than a node — a variable's value type, say —
-  is still reported by the serializer but has no placeholder and nothing preserved.
+  gets no placeholder, because a placeholder is a node and could never fit the slot. The rest of the tree
+  loads intact and the value degrades to `null`, so you retype the value rather than rebuild the tree.
 
 ---
 

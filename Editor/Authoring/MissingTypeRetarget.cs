@@ -138,7 +138,37 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 else preview.StrandedConnections.Add(port.key);
             }
 
+            // A value typed straight into a port lives in defaultValues, not among the node's members, so
+            // without this it is user data the preview never mentions -- an author whose node was all port
+            // literals would read "keeps 0 values" and be wrong.
+            //
+            // Read from the preserved document rather than from the live placeholder, which never has any:
+            // Define() clears defaultValues and then restores only the keys the node's own Definition
+            // declares, and MissingType declares none. So the placeholder's dictionary is always empty and
+            // the only surviving copy of an inline value is the one inside formerValue.
+            var targetPorts = rebuilt.valueInputs.ToDictionary(port => port.key, port => port.key);
+
+            foreach (var key in PreservedInlineValueKeys(placeholder))
+            {
+                if (targetPorts.ContainsKey(key)) preview.KeptMembers.Add(key + " (inline value)");
+                else preview.DroppedMembers.Add(key + " (inline value)");
+            }
+
             return preview;
+        }
+
+        /// <summary>
+        /// The port keys the missing node had an inline value on, read out of the preserved document — the
+        /// only place they still exist. See the note in <see cref="PreviewRetarget"/> for why the live
+        /// placeholder cannot answer this.
+        /// </summary>
+        private static IEnumerable<string> PreservedInlineValueKeys(MissingType placeholder)
+        {
+            if (!placeholder.HasPreservedState) yield break;
+            if (!fsJsonParser.Parse(placeholder.formerValue, out var data).Succeeded || !data.IsDictionary) yield break;
+            if (!data.AsDictionary.TryGetValue("defaultValues", out var defaults) || !defaults.IsDictionary) yield break;
+
+            foreach (var key in defaults.AsDictionary.Keys) yield return key;
         }
 
         private static HashSet<string> MemberNames(string json)
@@ -219,9 +249,21 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public struct ProjectResult
         {
             public int Nodes;
-            public int Trees;
 
-            public override string ToString() => $"{Nodes} node(s) in {Trees} tree(s)";
+            /// <summary>
+            /// The trees that changed, by path. Paths rather than a count because this operation writes to
+            /// disk across the whole project, and a reviewer's first question is which files moved.
+            /// </summary>
+            public List<string> Trees;
+
+            public override string ToString()
+            {
+                int trees = Trees?.Count ?? 0;
+
+                return trees == 0
+                    ? "nothing to convert"
+                    : $"{Nodes} node(s) in {trees} tree(s): {string.Join(", ", Trees)}";
+            }
         }
 
         /// <summary>
@@ -230,8 +272,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// </summary>
         public static ProjectResult ApplyToProject(string formerType, Type target)
         {
-            var result = new ProjectResult();
+            var result = new ProjectResult { Trees = new List<string>() };
             var guids = AssetDatabase.FindAssets("t:" + nameof(BehaviorTreeGraphAsset));
+
+            // One rename is one decision however many trees it reached, so it is one undo step. Without the
+            // group, undoing it means pressing Ctrl+Z once per asset and having no way to know when to stop.
+            Undo.IncrementCurrentGroup();
+            int undoGroup = Undo.GetCurrentGroup();
 
             try
             {
@@ -252,15 +299,19 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     if (converted == 0) continue;
 
                     result.Nodes += converted;
-                    result.Trees++;
+                    result.Trees.Add(path);
+
+                    // Only this asset. AssetDatabase.SaveAssets() would flush every dirty asset in the
+                    // project, so a retarget would quietly commit a half-finished scene or prefab the author
+                    // had deliberately left unsaved -- a side effect nobody asked this command for.
+                    AssetDatabase.SaveAssetIfDirty(asset);
                 }
             }
             finally
             {
                 EditorUtility.ClearProgressBar();
+                Undo.CollapseUndoOperations(undoGroup);
             }
-
-            if (result.Trees > 0) AssetDatabase.SaveAssets();
 
             return result;
         }

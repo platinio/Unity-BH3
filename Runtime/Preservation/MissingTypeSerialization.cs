@@ -149,7 +149,14 @@ namespace ArcaneOnyx.BehaviorTree
             if (RuntimeCodebase.TryDeserializeType(typeName, out _)) return false;
 
             // Not every unresolvable type is a node, and a placeholder that is a node cannot stand in for one
-            // that is not. Anything else keeps the blanket rewrite it had before, one level up.
+            // that is not.
+            //
+            // Anything else is deliberately left alone for the serializer to handle, which is a change from
+            // the blanket rewrite this replaced: that one turned a deleted *value* type -- a graph
+            // variable's value, a member of a [Serializable] class -- into a node type, which is never
+            // assignable to the slot it was written for and so could only ever fail. Left alone, the
+            // serializer warns and the value degrades to null while the rest of the asset loads intact.
+            // NodesAreTheOnlyThingReplacedByAPlaceholder pins that.
             if (!IsNode(dictionary)) return false;
 
             // Printed before the dictionary is touched, so it is the node exactly as it was written. Object

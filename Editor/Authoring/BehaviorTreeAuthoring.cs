@@ -728,7 +728,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             {
                 var result = MissingTypeRetarget.ApplyToProject(former, target);
 
-                return new { former, to = target.FullName, scope = "project", nodes = result.Nodes, trees = result.Trees };
+                // The paths, not just the count. This writes to disk across the whole project, so the first
+                // thing anyone reviewing the result needs is which files it touched.
+                return new
+                {
+                    former, to = target.FullName, scope = "project",
+                    nodes = result.Nodes, trees = result.Trees.Count, paths = result.Trees.ToArray(),
+                };
             }
 
             string path = ResolveTreePath(tree);
@@ -736,9 +742,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             if (asset == null) throw new ArgumentException($"No behavior tree at '{path}'.");
 
             int converted = MissingTypeRetarget.ApplyToTree(asset, former, target);
-            if (converted > 0) AssetDatabase.SaveAssets();
 
-            return new { former, to = target.FullName, scope = path, nodes = converted, trees = converted > 0 ? 1 : 0 };
+            // Only this tree. SaveAssets() would flush every dirty asset in the project, committing unrelated
+            // half-finished edits as a side effect of a command that named one tree.
+            if (converted > 0) AssetDatabase.SaveAssetIfDirty(asset);
+
+            return new
+            {
+                former, to = target.FullName, scope = path,
+                nodes = converted, trees = converted > 0 ? 1 : 0,
+                paths = converted > 0 ? new[] { path } : Array.Empty<string>(),
+            };
         }
 
         [CliCommand("bt_list_nodes",

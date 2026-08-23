@@ -68,6 +68,21 @@ namespace ArcaneOnyx.BehaviorTree
             return restored;
         }
 
+        /// <summary>
+        /// The node the graph actually holds under this guid, or null. By identity rather than by lookup
+        /// alone, because the question callers need answered is "is this the object in the graph", and a
+        /// guid match on a different instance is exactly the case worth catching.
+        /// </summary>
+        private static BehaviorTreeNode FindLiveNode(BehaviorTreeGraph graph, Guid guid)
+        {
+            foreach (var node in graph.Nodes)
+            {
+                if (node.guid == guid) return node;
+            }
+
+            return null;
+        }
+
         /// <summary>Whether any node in the graph is a placeholder, without allocating to find out.</summary>
         public static bool HasPlaceholder(BehaviorTreeGraph graph)
         {
@@ -94,6 +109,18 @@ namespace ArcaneOnyx.BehaviorTree
             if (graph == null) { failure = "no graph."; return null; }
             if (placeholder == null) { failure = "no placeholder node."; return null; }
             if (target == null) { failure = "no target type."; return null; }
+
+            // The picker is a non-modal window holding this reference across arbitrary editor time, and a
+            // reimport swaps the whole graph out from under it without a domain reload to null it. The stale
+            // placeholder then looks fine and shares its guid with the live one -- and Nodes is keyed by
+            // guid, so proceeding either throws mid-swap on a duplicate key or rebuilds from state nothing
+            // is showing. Refusing is the only outcome that is not silently wrong.
+            if (!ReferenceEquals(FindLiveNode(graph, placeholder.guid), placeholder))
+            {
+                failure = "this placeholder is no longer in the tree -- the asset was reloaded. "
+                          + "Reopen it and pick the replacement again.";
+                return null;
+            }
 
             var replacement = Rebuild(placeholder, target, out failure);
             if (replacement == null) return null;
