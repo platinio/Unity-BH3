@@ -284,6 +284,246 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return function;
         }
 
+        /// <summary>
+        /// Where a migrated one-off lands: <c>&lt;TreeFolder&gt;/Functions/&lt;Tree&gt;.&lt;Graph&gt;.asset</c>.
+        ///
+        /// <para>
+        /// The convention had to be invented here — step 2c deferred it to the migration that needed it. Two
+        /// things decided the shape. It sits <b>beside the tree</b> rather than in one project-wide folder,
+        /// because a central folder is what the deleted repository was, in spirit: a place every tree writes
+        /// to and nobody owns. And it is <b>named for where it came from</b>, because after this runs a
+        /// designer meets a folder of small assets with no other clue about which tree once contained them.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Three sources for the name, in the order that yields a name worth reading.</b> The graph's own
+        /// name comes first, because <c>CreateVariableReadGraph</c> named it after the variable it reads
+        /// (<c>hpRead</c>). Graphs authored by hand in the canvas have <em>no</em> name at all, but their
+        /// node usually does — BH3's own FPS sample is full of <c>Is Enemy On Range?</c> and
+        /// <c>Safe Position Query</c>, which are the best names available anywhere. Only when both are
+        /// missing is the variable the graph reads used to build one.
+        /// </para>
+        ///
+        /// <para>
+        /// The order matters more than it looks: getting it wrong turns a sample's eight meaningful graphs
+        /// into <c>Soldier.Graph3</c> through <c>Soldier.Graph8</c>, which is a migration a designer cannot
+        /// undo by reading it.
+        /// </para>
+        /// </summary>
+        public static string MigrationPathFor(BehaviorTreeGraphAsset tree, VisualScriptGraphVariable node)
+        {
+            var treePath = AssetDatabase.GetAssetPath(tree);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/') ?? "Assets";
+            var treeName = System.IO.Path.GetFileNameWithoutExtension(treePath);
+
+            return $"{folder}/Functions/{treeName}.{Sanitize(NameFor(node))}.asset";
+        }
+
+        /// <summary>The best available name for what a node's embedded graph does. See MigrationPathFor.</summary>
+        private static string NameFor(VisualScriptGraphVariable node)
+        {
+            var embedded = node.EmbeddedScriptGraph;
+
+            if (embedded != null && !string.IsNullOrWhiteSpace(embedded.name)) return embedded.name;
+
+            // NodeName falls back to the type's display name when the node carries no comment, and every
+            // such node in a tree would share it -- so that default is exactly what must not be used.
+            var nodeName = node.NodeName;
+            if (!string.IsNullOrWhiteSpace(nodeName) && nodeName != DefaultScriptGraphVariableNodeName)
+            {
+                return nodeName;
+            }
+
+            if (embedded?.graph != null)
+            {
+                foreach (var unit in embedded.graph.units)
+                {
+                    if (unit is not Unity.VisualScripting.GetVariable read) continue;
+                    if (!read.name.unit.defaultValues.TryGetValue("name", out var key)) continue;
+
+                    var variable = key as string;
+                    if (!string.IsNullOrWhiteSpace(variable)) return variable + "Read";
+                }
+            }
+
+            return "Graph";
+        }
+
+        /// <summary>What <c>VisualScriptGraphVariable.NodeName</c> answers when the node has no comment.</summary>
+        private const string DefaultScriptGraphVariableNodeName = "Script Graph Variable";
+
+        /// <summary>
+        /// A node name turned into a file name. Punctuation is <em>dropped</em> rather than substituted:
+        /// "Is Enemy On Range?" reads as <c>IsEnemyOnRange</c>, where mapping to underscores would leave the
+        /// trailing <c>IsEnemyOnRange_</c> on every question a designer ever named a node with. The dot goes
+        /// too, since it is this convention's own separator.
+        /// </summary>
+        private static string Sanitize(string name)
+        {
+            var kept = new System.Text.StringBuilder(name.Length);
+            var invalid = System.IO.Path.GetInvalidFileNameChars();
+
+            foreach (var character in name)
+            {
+                if (char.IsWhiteSpace(character) || character == '.') continue;
+                if (Array.IndexOf(invalid, character) >= 0) continue;
+
+                kept.Append(character);
+            }
+
+            return kept.Length == 0 ? "Graph" : kept.ToString();
+        }
+
+        /// <summary>
+        /// Promotes every embedded graph still held by the given trees into a standalone Function.
+        ///
+        /// <para>
+        /// The one-shot half of retiring embedding. It is a loop over <see cref="ExtractToProjectAsset"/>
+        /// rather than a second implementation of it, so a migrated node is indistinguishable from one a
+        /// designer extracted by hand, and any fix to extraction reaches the migration for free.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Collisions are resolved rather than refused.</b> A tree may read the same variable from two
+        /// nodes, and both sub-assets are then called <c>hpRead</c>. Failing the whole migration over a name
+        /// clash in the middle of it would leave the project half-converted, which is the worst of the
+        /// available outcomes; a numeric suffix is the least surprising alternative.
+        /// </para>
+        /// </summary>
+        /// <param name="dryRun">
+        /// Report what would happen and change nothing. Worth having for its own sake: this rewrites every
+        /// tree it touches, and the paths it picks are a convention worth reading before it is applied to
+        /// dozens of assets at once.
+        /// </param>
+        public static List<object> MigrateEmbeddedGraphs(IEnumerable<string> treePaths, bool dryRun)
+        {
+            var results = new List<object>();
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var treePath in treePaths)
+            {
+                var tree = AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(treePath);
+                if (tree == null) continue;
+
+                // Collected before extracting: extraction re-points the node it is given, and enumerating a
+                // graph while its nodes are being rewritten is the kind of thing that works until it does not.
+                var pending = tree.graph.Nodes
+                    .OfType<VisualScriptGraphVariable>()
+                    .Where(node => node.EmbeddedScriptGraph != null)
+                    .ToList();
+
+                foreach (var node in pending)
+                {
+                    var path = MigrationPathFor(tree, node);
+
+                    var candidate = path;
+                    var suffix = 2;
+                    while (taken.Contains(candidate) || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(candidate) != null)
+                    {
+                        candidate = path.Substring(0, path.Length - ".asset".Length) + suffix + ".asset";
+                        suffix++;
+                    }
+
+                    taken.Add(candidate);
+
+                    if (dryRun)
+                    {
+                        results.Add(new
+                        {
+                            tree = treePath,
+                            node = node.guid.ToString(),
+                            graph = node.EmbeddedScriptGraph.name,
+                            function = candidate
+                        });
+
+                        continue;
+                    }
+
+                    EnsureFolder(System.IO.Path.GetDirectoryName(candidate)?.Replace('\\', '/'));
+
+                    try
+                    {
+                        var function = ExtractToProjectAsset(tree, node, candidate);
+
+                        // Purity defaults to true, which is right for a Function somebody wrote deliberately
+                        // and wrong for one that arrived by migration: an embedded graph was never asked to
+                        // declare anything, and BH3's own FPS sample has several that write. Declaring them
+                        // pure would manufacture a batch of verify warnings the migration itself caused, and
+                        // teach the first reader that the warning is noise.
+                        var writes = function.DeriveWrites();
+                        if (writes.Count > 0) function.SetPure(false);
+
+                        // Same reasoning for watched keys: a guard reading this Function inherits them, and
+                        // an empty declaration on a migrated condition is the silent-stale-guard failure the
+                        // watched-key work exists to prevent.
+                        var readKeys = function.DeriveReadKeys();
+                        if (readKeys.Count > 0) function.SetWatchedKeys(readKeys);
+
+                        EditorUtility.SetDirty(function);
+                        AssetDatabase.SaveAssets();
+
+                        results.Add(new
+                        {
+                            tree = treePath,
+                            node = node.guid.ToString(),
+                            function = AssetDatabase.GetAssetPath(function),
+                            pure = function.Pure,
+                            watchedKeys = readKeys
+                        });
+                    }
+                    catch (Exception exception)
+                    {
+                        // Reported rather than thrown: one bad node must not abandon the migration partway
+                        // through and leave the project in a state nobody chose.
+                        results.Add(new { tree = treePath, node = node.guid.ToString(), error = exception.Message });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>Creates a folder and any missing parent, since <c>CreateAsset</c> will not.</summary>
+        private static void EnsureFolder(string folder)
+        {
+            if (string.IsNullOrEmpty(folder) || AssetDatabase.IsValidFolder(folder)) return;
+
+            var parent = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
+            EnsureFolder(parent);
+
+            AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
+        }
+
+        /// <summary>Every behavior tree in the project, or under one folder.</summary>
+        public static List<string> FindTrees(string folder)
+        {
+            var search = string.IsNullOrWhiteSpace(folder)
+                ? AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}")
+                : AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}", new[] { NormalizePath(folder) });
+
+            return search.Select(AssetDatabase.GUIDToAssetPath).Distinct().OrderBy(path => path).ToList();
+        }
+
+        [CliCommand("fn_migrate_embedded",
+            "Promote every embedded one-off graph still held by a tree into a standalone Function, at " +
+            "<TreeFolder>/Functions/<Tree>.<Graph>.asset. Pass --dry_run true first: this rewrites every " +
+            "tree it touches. Omit --folder to migrate the whole project.")]
+        public static object MigrateEmbeddedGraphsCommand(
+            [CliArg("folder", "Limit to trees under this folder, e.g. Assets/ArcaneOnyx/BH3Demos.")] string folder,
+            [CliArg("dry_run", "Report what would happen and change nothing.")] bool dryRun = false)
+        {
+            var trees = FindTrees(folder);
+            var migrated = MigrateEmbeddedGraphs(trees, dryRun);
+
+            return new
+            {
+                dryRun,
+                treesScanned = trees.Count,
+                graphs = migrated.Count,
+                migrated
+            };
+        }
+
         private static BehaviorTreeGraphAsset ResolveTreeAsset(string path, out string normalized)
         {
             normalized = NormalizePath(path);
