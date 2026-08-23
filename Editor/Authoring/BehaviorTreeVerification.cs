@@ -68,7 +68,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
                 findings.AddRange(InvalidConnections(asset, name));
-                findings.AddRange(OrphanedScriptGraphSubAssets(asset, path, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -225,14 +224,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in asset.graph.Nodes)
             {
-                var scriptGraphs = node?.scriptGraphAssets;
-                if (scriptGraphs == null) continue;
-
-                foreach (var scriptGraph in scriptGraphs)
+                foreach (var functionGraph in FunctionGraphsReadBy(node))
                 {
-                    if (scriptGraph?.graph == null) continue;
-
-                    foreach (var unit in scriptGraph.graph.units)
+                    foreach (var unit in functionGraph.units)
                     {
                         // The stock unit specifically. BH3's own writes through AgentVariableWriter and is
                         // fine, and it is not a subclass of this one, so an exact type test is right.
@@ -245,7 +239,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                         findings.Add(
                             $"{name}: '{key}' is watched by a Reactive Guard but written by Unity's stock Set "
-                            + $"Variable unit in '{scriptGraph.name}', which cannot wake it. Use Set Behavior "
+                            + $"Variable unit in '{functionGraph.title ?? "a Function"}', which cannot wake it. Use Set Behavior "
                             + "Tree Variable, or write it through AgentVariableWriter.");
                     }
                 }
@@ -302,21 +296,37 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
+        /// The Functions a node reads, as graphs to walk.
+        ///
+        /// <para>
+        /// These lints used to walk <c>scriptGraphAssets</c> — the embedded sub-assets a node owned. Nothing
+        /// embeds any more, so that property answers empty and every lint reading it would have gone quiet
+        /// without failing. A lint that silently stops checking is worse than one that is deleted, so both
+        /// were re-pointed at where the graphs actually live.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<Unity.VisualScripting.FlowGraph> FunctionGraphsReadBy(BehaviorTreeNode node)
+        {
+            if (node is not BaseVisualScriptingNode holder) yield break;
+
+            foreach (var slot in holder.GraphSlots)
+            {
+                var function = slot?.Function;
+                if (function?.graph != null) yield return function.graph;
+            }
+        }
+
+        /// <summary>
         /// Names of write units inside a guard's script graphs. The key-derivation walk already visits every
         /// unit, so spotting the ones that write is free.
         /// </summary>
         private static IEnumerable<string> WriteUnitsInside(ConditionalExecution guard)
         {
             var found = new List<string>();
-            var assets = guard.scriptGraphAssets;
 
-            if (assets == null) return found;
-
-            foreach (var scriptGraph in assets)
+            foreach (var functionGraph in FunctionGraphsReadBy(guard))
             {
-                if (scriptGraph?.graph == null) continue;
-
-                foreach (var element in scriptGraph.graph.units)
+                foreach (var element in functionGraph.units)
                 {
                     string unit = element?.GetType().Name;
                     if (string.IsNullOrEmpty(unit)) continue;
@@ -391,11 +401,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 if (node is not VisualScriptGraphVariable variableNode) continue;
 
-                if (variableNode.HasAmbiguousGraphSource)
+                // A node that reads nothing. Before embedding was retired this could only be reported as an
+                // ambiguity — Function *and* embedded graph — because "no Function" was a legitimate state
+                // meaning "reads the embedded one". Now it is simply broken, and this is what catches a tree
+                // that arrives from an older version with its embedded graphs no longer readable.
+                if (variableNode.Function == null)
                 {
                     yield return
-                        $"{treeName}: node '{variableNode.NodeName}' has both a Function and an embedded graph " +
-                        "assigned. The Function is what runs, so the embedded graph is editable but dead.";
+                        $"{treeName}: node '{variableNode.NodeName}' has no Function assigned, so it reads " +
+                        "nothing. A tree written before embedded graphs were retired needs its reads " +
+                        "re-authored as Functions.";
+
+                    continue;
                 }
 
                 // Per node, not per Function: two nodes referencing one Function can be at different points
@@ -534,36 +551,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     $"{treeName}: invalid connection -- '{from}'.{source.key} ({sourceType}) no longer fits " +
                     $"'{to}'.{destination.key} ({destinationType}). Rewire it, or change the Function so it " +
                     "fits again and the wire comes back by itself.";
-            }
-        }
-
-        /// <summary>
-        /// Script-graph sub-assets of this tree that nothing in it references any more.
-        ///
-        /// <para>
-        /// <b>Reports; never deletes.</b> <c>OrphanedScriptGraphCleanup</c> owns deletion, at save time, and
-        /// is the only thing allowed to destroy a graph. Both read the same
-        /// <see cref="OrphanedScriptGraphs.Of"/>, so what this names and what that removes cannot drift
-        /// apart.
-        /// </para>
-        ///
-        /// <para>
-        /// What is left to report, now that saving cleans up: a tree that arrived on disk already carrying
-        /// an orphan — written by an older version of this tool, or by another project — and which nothing
-        /// in this session has dirtied. <see cref="Reload"/> saves before it reads, so a tree with unsaved
-        /// changes has already been cleaned by the time this looks at it.
-        /// </para>
-        /// </summary>
-        private static IEnumerable<string> OrphanedScriptGraphSubAssets(
-            BehaviorTreeGraphAsset asset,
-            string assetPath,
-            string treeName)
-        {
-            foreach (var orphan in OrphanedScriptGraphs.Of(asset, assetPath))
-            {
-                yield return
-                    $"{treeName}: orphaned sub-asset — script graph '{orphan.name}' is stored in this tree " +
-                    "but nothing in it references the graph any more.";
             }
         }
 

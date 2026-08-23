@@ -1,4 +1,4 @@
-# Function graphs — named, contracted, reusable Visual Scripting logic
+﻿# Function graphs — named, contracted, reusable Visual Scripting logic
 
 **Status:** design spec for implementation by an AI or engineer with access to the BH3,
 VisualScriptingExtension and TacticalPositionSelection sources. Decided with the tool owner (2026-08-11).
@@ -1082,6 +1082,8 @@ its number so the cross-references stay valid; its ordering rule now reads "afte
 
 ### Step 7 — Retire embedded graphs (open question 3, closed)
 
+✅ **Done, 2026-08-23** — see *Step 7 landed* below.
+
 **Decided 2026-08-21 by the tool owner: no more embedded graphs.** The open question asked what a *new*
 one-off should be; the answer is that there are no new one-offs. What remains is finishing the job.
 
@@ -1106,6 +1108,91 @@ is concurrently re-pointing, which is exactly the two-deleters state locked deci
 with a path, so a tree that used to be self-contained now depends on a folder of small Functions. That is
 the trade being taken deliberately: a named asset a designer can find, reuse and delete, in place of an
 anonymous sub-asset that only a garbage collector knew about.
+
+### Step 7 landed — embedding is gone, 2026-08-23
+
+Branch `feature/repository-removal` in BH3, VisualScriptingExtension and the superproject — the same branch
+as step 5, folded in at the tool owner's request, so the two ship as one change.
+
+EditMode 722 tests / 1 failure, the pre-existing `TpsArchitectureTests` one. The count fell from 733 because
+eleven tests covered machinery this step deletes: step 5's save-time cleanup, and `fn_extract`.
+
+#### What shipped
+
+- **46 embedded graphs migrated** to Functions at `<TreeFolder>/Functions/<Tree>.<Name>.asset` — BH3's FPS
+  and FlightRecorder samples, nine demo trees, and GOWDraugr's Draugr. No tree in the project holds an
+  embedded graph or a script-graph sub-asset any more.
+- **The field and its seam are deleted**: `ScriptGraphVariable.scriptGraphAsset`, the six dual-path
+  `GetValue`/`Run` overloads collapsed to Function-only, `EmbeddedScriptGraph`, `SetScriptGraph`,
+  `HasAmbiguousGraphSource` and the three surfaces that reported it, and — in VisualScriptingExtension —
+  `ScriptGraphVariableExtension` and `ScriptGraphOutput.executionIndex`, exactly as step 3 predicted.
+- **Step 5's machinery is gone with it**: `OrphanedScriptGraphs`, `OrphanedScriptGraphCleanup`, the orphan
+  lint and their tests. Nothing can be orphaned when nothing is contained.
+- **Copy, cut and duplicate work again** on nodes holding graphs. The restriction existed because two copies
+  shared one sub-asset; a Function is referenced, so it does not apply.
+- **`CreateVariableReadGraph` became `CreateVariableReadFunction`**, so `bt_add_variable_read` and
+  `bt_guard_on_variable` produce named assets. It reuses an existing Function at the same path, so two guards
+  in one tree reading `hp` share one asset rather than minting two identical graphs.
+- **The four raw create-menu items make Functions**, delegating to `FunctionGraphAssetCreator.Create` rather
+  than building a graph a second way.
+
+#### Corrections to this spec, found by building it
+
+1. **`VisualScriptGraphVariable` is not the only holder of an embedded graph, and the spec never says so.**
+   `VisualScriptingNode` carries four — `OnAwake`, `OnEnter`, `OnUpdate`, `OnExit` — and BH3's own FPS sample
+   runs its entire Shoot / Aim at Target / Do Damage behaviour out of them. Step 7's text names only
+   `ScriptGraphVariable.scriptGraphAsset`, so migrating what it describes left eleven graphs in place and the
+   field still in use. Found by verifying the migration rather than by reading, which is the argument for
+   checking the count afterwards.
+2. **Those four lifecycle hooks could never have run a Function anyway.** Each gated on
+   `?.ScriptGraphAsset == null` — the embedded field specifically — so a slot holding a Function was skipped
+   entirely and did nothing, silently. The inspector has offered a Function there since Functions existed.
+   This is a live bug predating the step, fixed by asking `HasGraph`.
+3. **Step 7's "what dies with it, for free" list is a third of the real total.** It names the orphan lint,
+   the save-time cleanup and the cross-tree deletion bug class. Also dead: two `bt_verify` write lints, the
+   dump's graph writer, the why-panel's graph resolver, its topology walk, and the guard-trace harvester —
+   six surfaces that read `scriptGraphAssets`. **They were re-pointed at Functions, not deleted**: a debugger
+   that silently shows nothing is worse than one that is missing.
+4. **The step is silent on `CanCopy`/`CanCut`/`CanDuplicate`**, though `ports-and-wiring.md` already promised
+   that lifting them was part of retiring embedded graphs. It is a user-visible feature restoration rather
+   than cleanup, and belongs in the step's description.
+5. **The asset-path convention had to be invented here**, as step 2c deferred it to whoever needed it. The
+   name has three sources in order — the graph's own name, the node's, then the variable it reads — because
+   hand-authored graphs have no name at all while their nodes are called *Is Enemy On Range?* and *Safe
+   Position Query*. Getting that order wrong turns the FPS sample into `Soldier.Graph3` through
+   `Soldier.Graph8`.
+6. **`ScriptGraphVariableExtension` dies exactly as step 3 predicted**, and its census was right: after the
+   embedded branch went, nothing referenced it.
+
+#### Decisions taken while implementing
+
+- **Migrated Functions derive purity and watched keys rather than accepting the defaults.** An embedded graph
+  was never asked to declare anything. Purity defaults to true and several sample graphs write, so accepting
+  it would have manufactured a batch of verify warnings the migration itself caused — and taught the first
+  reader that the warning is noise. Watched keys are the same bet in the other direction: an empty
+  declaration on a migrated guard condition is the stale-guard failure the watched-key work exists to prevent.
+- **The migration tool is deleted along with the field.** `fn_migrate_embedded` cannot work once nothing can
+  be embedded, and keeping it would only help a downstream project that updated in two hops — the same
+  reasoning open question 1 used to refuse a TPS converter. It exists in this branch's history, at the commit
+  that ran it, which is where a downstream project would have to be anyway.
+- **Test fixtures are excluded from a project-wide migration.** `LegacyPlaceholders.asset` exists to hold a
+  serialization shape older than the current writer, so re-saving it destroys what it is kept for while
+  leaving a green suite that tests nothing. Its guard test caught this.
+- **GraphCore is not touched.** `IGraphElement.scriptGraphAssets` loses its only implementer, but GraphCore
+  itself never consumes it, so removing it would open a third submodule for two vestigial lines. Left, and
+  reported.
+
+#### Known gaps, stated rather than discovered
+
+- **`IGraphElement.scriptGraphAssets` is now a zero-implementer seam** in GraphCore, returning null forever.
+  Harmless, and worth removing the next time GraphCore is opened for its own reasons.
+- **A tree written before this change reads nothing.** Its embedded graphs no longer deserialize, so every
+  read node comes up empty and `bt_verify` names each one. This is the accepted trade, matching step 3's for
+  TPS query items — but it is a bigger blast radius, since every downstream tree is affected rather than
+  every downstream query item.
+- **`BTScriptGraphVariable.returnType` has no readers anywhere** — a pre-existing dead field noticed while
+  working in that file, left alone as unrelated.
+- **Nothing tests the create-menu items or the inspector's button row**, both editor GUI, as before.
 
 ### Not scheduled
 

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.VisualScriptingExtension;
@@ -9,8 +9,7 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
     /// <summary>
-    /// Covers what <c>bt_verify</c> reports about Functions, and the extract command that promotes an
-    /// embedded one-off into a shared asset.
+    /// Covers what <c>bt_verify</c> reports about Functions.
     /// <para>
     /// Every lint here replaces something that previously failed at runtime or not at all, so each test's
     /// real subject is "does this get <em>named</em>", not merely "does it get noticed".
@@ -112,7 +111,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private static List<string> FunctionFindings(string treePath)
         {
             return BehaviorTreeVerification.Verify(treePath)
-                .Where(f => f.Contains("Function") || f.Contains("orphaned sub-asset"))
+                .Where(f => f.Contains("Function"))
                 .ToList();
         }
 
@@ -270,105 +269,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(findings, Has.Some.Contains(FunctionGraphAsset.ResultKey));
         }
 
-        [Test]
-        public void NodeWithBothAFunctionAndAnEmbeddedGraph_IsReported()
-        {
-            var function = NewFunction("Winner", typeof(bool));
-            AddRead(function, "hp");
-            function.SetWatchedKeys(new[] { "hp" });
-
-            var (tree, node, path) = TreeReading("AmbiguousTree", function);
-            node.SetScriptGraph(BehaviorTreeAuthoring.CreateVariableReadGraph(tree, "hp", false));
-            EditorUtility.SetDirty(tree);
-            AssetDatabase.SaveAssets();
-
-            var findings = FunctionFindings(path);
-
-            Assert.That(findings, Has.Some.Contains("both a Function and an embedded graph"));
-        }
-
-        // ------------------------------------------------------------------ fn_extract
-
-        [Test]
-        public void Extract_MovesAnEmbeddedGraphIntoAProjectAssetAndRepointsTheNode()
-        {
-            var (tree, node, _) = TreeReading("ExtractTree", null);
-            node.SetScriptGraph(BehaviorTreeAuthoring.CreateVariableReadGraph(tree, "hp", false));
-            EditorUtility.SetDirty(tree);
-            AssetDatabase.SaveAssets();
-
-            Assert.That(node.EmbeddedScriptGraph, Is.Not.Null, "precondition: the node starts embedded");
-
-            var extractedPath = $"{Folder}/Extracted.asset";
-            var function = FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, extractedPath);
-
-            Assert.That(function, Is.Not.Null);
-            Assert.That(AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(extractedPath), Is.Not.Null,
-                "the Function must exist as a standalone project asset");
-            Assert.That(node.Function, Is.SameAs(function), "the node must now read the Function");
-            Assert.That(node.EmbeddedScriptGraph, Is.Null,
-                "the embedded reference must be cleared, or the node reports as ambiguous");
-            Assert.That(function.graph.units.Count, Is.GreaterThan(0), "the graph must have been copied, not emptied");
-        }
-
         /// <summary>
-        /// Extract still never destroys a graph itself — it clears the node's reference and saves, and the
-        /// save-time cleanup is what removes the sub-asset that just became unreferenced. So promoting an
-        /// embedded one-off to a shared Function now tidies up after itself, through the single deleter,
-        /// rather than leaving a leftover for someone to notice later.
-        /// <para>
-        /// This used to assert that <c>bt_verify</c> <em>reported</em> that leftover, which was correct
-        /// while nothing deleted it. The lint still exists for the case that reaches it — a tree that
-        /// arrived on disk already carrying an orphan — which <c>OrphanedScriptGraphCleanupTests</c> covers
-        /// through the finder the lint and the cleanup share.
-        /// </para>
+        /// What an un-migrated tree looks like after embedded graphs were retired: a read node with nothing
+        /// assigned. This replaces the both-sources-assigned test — a node had two possible sources and the
+        /// Function silently won; now there is one source, and its absence is the whole failure.
         /// </summary>
         [Test]
-        public void Extract_LeavesNoOrphanedSubAssetBehind()
+        public void NodeWithNoFunction_IsReportedByName()
         {
-            var (tree, node, path) = TreeReading("OrphanTree", null);
-            node.SetScriptGraph(BehaviorTreeAuthoring.CreateVariableReadGraph(tree, "hp", false));
-            EditorUtility.SetDirty(tree);
-            AssetDatabase.SaveAssets();
+            var (_, _, path) = TreeReading("NothingAssigned", null);
 
-            Assert.That(
-                AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
-                    .Any(representation => representation is Unity.VisualScripting.ScriptGraphAsset),
-                Is.True,
-                "precondition: the embedded graph must be stored in the tree before extraction");
-
-            FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, $"{Folder}/Promoted.asset");
-
-            Assert.That(OrphanedScriptGraphs.Of(tree, path), Is.Empty,
-                "extract's own save must leave the tree with nothing orphaned in it");
-            Assert.That(
-                AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
-                    .Any(representation => representation is Unity.VisualScripting.ScriptGraphAsset),
-                Is.False,
-                "the sub-asset the node stopped referencing must be gone after extraction");
+            Assert.That(FunctionFindings(path), Has.Some.Contains("has no Function assigned"),
+                "a node that reads nothing must be named, not left to fail at runtime");
         }
 
-        [Test]
-        public void Extract_RefusesANodeWithNoEmbeddedGraph()
-        {
-            var function = NewFunction("AlreadyShared", typeof(bool));
-            var (tree, node, _) = TreeReading("RefuseTree", function);
-
-            Assert.That(() => FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, $"{Folder}/Nope.asset"),
-                Throws.ArgumentException);
-        }
-
-        [Test]
-        public void Extract_RefusesToOverwriteAnExistingAsset()
-        {
-            var occupied = $"{Folder}/Occupied.asset";
-            NewFunction("Occupied", typeof(bool));
-
-            var (tree, node, _) = TreeReading("OverwriteTree", null);
-            node.SetScriptGraph(BehaviorTreeAuthoring.CreateVariableReadGraph(tree, "hp", false));
-
-            Assert.That(() => FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, occupied),
-                Throws.ArgumentException);
-        }
     }
 }

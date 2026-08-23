@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using ArcaneOnyx.BehaviorTree.Debugging;
@@ -375,14 +375,13 @@ namespace ArcaneOnyx.BehaviorTree
             BehaviorTreeGuardSnapshotWindow.Open(trace, snapshot, ResolveGraphAsset(snapshot), node.Name);
         }
 
-        private ScriptGraphAsset ResolveGraphAsset(GuardGraphSnapshot snapshot)
+        private ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset ResolveGraphAsset(GuardGraphSnapshot snapshot)
         {
-            var owner = FindOnCanvas(snapshot.OwnerNodeGuid);
-            if (owner?.scriptGraphAssets == null) return null;
+            if (FindOnCanvas(snapshot.OwnerNodeGuid) is not BaseVisualScriptingNode owner) return null;
 
-            ScriptGraphAsset first = null;
+            ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset first = null;
 
-            foreach (var asset in owner.scriptGraphAssets)
+            foreach (var asset in owner.Functions)
             {
                 if (asset == null) continue;
 

@@ -1,4 +1,4 @@
-# Authoring From Code
+﻿# Authoring From Code
 
 Generating behavior trees and Visual Scripting graphs programmatically — for tooling, bulk edits, and
 generated content.
@@ -298,10 +298,11 @@ branch.condition.SetDefaultValue(true);            // inline value
 > A port typed `object` — Unity's `GetVariable.fallback`, for one — fails `SupportsDefaultValue`, so
 > `SetDefaultValue` on it is a silent no-op. Feed it a `Unity.VisualScripting.Literal` unit instead.
 
-Generated `ScriptGraphAsset`s owned by a tree need no registration anywhere. Being a sub-asset of the tree
-*is* the record of ownership. What that costs you is one ordering rule: **wire the graph to a node before
-you save.** A graph stored in a tree that nothing in the tree references is an orphan by definition, and
-saving removes it.
+A generated graph is a **Function**: an ordinary asset at its own path, referenced by the node that reads
+it. `BehaviorTreeAuthoring.CreateVariableReadFunction` makes one at
+`<TreeFolder>/Functions/<Tree>.<variable>Read.asset` and reuses it if it is already there, so two guards in
+one tree reading `hp` share a single asset. Nothing registers it and nothing collects it — a Function is
+deleted the way any asset is.
 
 ---
 

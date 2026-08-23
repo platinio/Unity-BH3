@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -209,7 +209,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
 
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y + 90.0f);
-            read.SetScriptGraph(CreateVariableReadGraph(asset, variableName, fallback));
+            read.SetFunction(CreateVariableReadFunction(asset, variableName, fallback));
             SetComment(read, (expected ? "" : "not ") + variableName);
 
             ConditionalExecution guard;
@@ -338,19 +338,33 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// A graph that reads one Object variable off the agent and returns it, falling back when the agent
-        /// does not declare it. Stored as a sub-asset of the tree that owns it.
+        /// A Function that reads one Object variable off the agent and returns it, falling back when the
+        /// agent does not declare it.
+        ///
         /// <para>
-        /// Nothing registers it anywhere: containment in the tree's asset is what says it belongs to that
-        /// tree, and <c>OrphanedScriptGraphCleanup</c> reads that directly at save time. Assign it to a node
-        /// before saving — a graph nothing references when the tree is written is an orphan by definition
-        /// and is removed.
+        /// <b>A named project asset, beside the tree that asked for it</b>, at
+        /// <c>&lt;TreeFolder&gt;/Functions/&lt;Tree&gt;.&lt;variable&gt;Read.asset</c>. This used to mint an
+        /// anonymous sub-asset of the tree, which is what made these graphs findable by nobody and
+        /// deletable only by a garbage collector. The cost is the one spec 10 named and accepted: a tree
+        /// that used to be self-contained now depends on a folder of small Functions.
+        /// </para>
+        ///
+        /// <para>
+        /// Reusing an existing Function at the same path is deliberate. Two guards in one tree reading
+        /// <c>hp</c> asked for two identical sub-assets before; now they share one asset, which is what a
+        /// named, shared thing is for. The fallback of the first one wins — they are the same read.
         /// </para>
         /// </summary>
-        public static ScriptGraphAsset CreateVariableReadGraph(BehaviorTreeGraphAsset owner, string variableName, object fallback)
+        public static FunctionGraphAsset CreateVariableReadFunction(
+            BehaviorTreeGraphAsset owner, string variableName, object fallback)
         {
-            var scriptGraph = ScriptableObject.CreateInstance<ScriptGraphAsset>();
-            var graph = scriptGraph.graph;
+            var path = VariableReadFunctionPath(owner, variableName);
+
+            var existing = AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(path);
+            if (existing != null) return existing;
+
+            var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = function.graph;
 
             var input = new ScriptGraphInput { position = new Vector2(-420.0f, 0.0f) };
             var output = new ScriptGraphOutput { position = new Vector2(320.0f, 0.0f) };
@@ -388,12 +402,40 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             input.controlOutputs["Enter"].ValidlyConnectTo(output.controlInputs["Exit"]);
             getVariable.value.ValidlyConnectTo(output.valueInputs["Result"]);
 
-            AssetDatabase.AddObjectToAsset(scriptGraph, owner);
-            scriptGraph.name = variableName + "Read";
+            EnsureFunctionsFolder(owner);
+            AssetDatabase.CreateAsset(function, path);
 
-            EditorUtility.SetDirty(scriptGraph);
+            // Derived rather than defaulted, for the same reason the migration derives them: this graph
+            // reads exactly one key, and a guard whose condition is this Function inherits that key to
+            // decide when it may recompute. Leaving the list empty is the stale-guard failure.
+            function.SetWatchedKeys(new[] { variableName });
 
-            return scriptGraph;
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
+
+            FunctionEvaluator.Invalidate(function);
+
+            return function;
+        }
+
+        /// <summary>Where <see cref="CreateVariableReadFunction"/> puts what it makes.</summary>
+        public static string VariableReadFunctionPath(BehaviorTreeGraphAsset owner, string variableName)
+        {
+            var treePath = AssetDatabase.GetAssetPath(owner);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/') ?? "Assets";
+            var treeName = System.IO.Path.GetFileNameWithoutExtension(treePath);
+
+            return $"{folder}/Functions/{treeName}.{variableName}Read.asset";
+        }
+
+        private static void EnsureFunctionsFolder(BehaviorTreeGraphAsset owner)
+        {
+            var treePath = AssetDatabase.GetAssetPath(owner);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder)) return;
+
+            var functions = folder + "/Functions";
+            if (!AssetDatabase.IsValidFolder(functions)) AssetDatabase.CreateFolder(folder, "Functions");
         }
 
         /// <summary>
@@ -1057,7 +1099,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             var asset = ResolveTree(tree, out _);
 
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y);
-            read.SetScriptGraph(CreateVariableReadGraph(asset, variable, ParseNamedType(fallback, fallbackType, "fallback")));
+            read.SetFunction(CreateVariableReadFunction(asset, variable, ParseNamedType(fallback, fallbackType, "fallback")));
             SetComment(read, variable);
 
             Save(asset);

@@ -63,24 +63,9 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public Type OutputType => resultType ?? typeof(object);
 
-        /// <summary>The embedded graph this node reads, or null when it reads a Function.</summary>
-        [DoNotSerialize]
-        public ScriptGraphAsset EmbeddedScriptGraph => ScriptGraphVariable?.ScriptGraphAsset;
-
-        /// <summary>The Function this node reads, or null when it reads an embedded graph.</summary>
+        /// <summary>The Function this node reads, or null when it reads nothing.</summary>
         [DoNotSerialize]
         public VisualScriptingExtension.FunctionGraphAsset Function => ScriptGraphVariable?.Function;
-
-        /// <summary>
-        /// True when both a Function and an embedded graph are assigned. The Function wins at runtime, so
-        /// this is not a crash — it is the worse kind of problem, where the graph an author is editing is not
-        /// the one being evaluated. Verification reports it.
-        /// </summary>
-        [DoNotSerialize]
-        public bool HasAmbiguousGraphSource =>
-            ScriptGraphVariable != null &&
-            ScriptGraphVariable.Function != null &&
-            ScriptGraphVariable.ScriptGraphAsset != null;
 
         /// <summary>
         /// The keys the referenced Function declares, so a guard fed by this node inherits its schedule.
@@ -93,12 +78,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// during deserialization; nothing about a key list has that problem, so nothing here needs the cure.
         /// </para>
         ///
-        /// <para>
-        /// An <b>embedded</b> graph declares nothing and yields nothing: it has no asset-level metadata to
-        /// declare with. That is the honest answer rather than a walk of its units, which would report derived
-        /// keys where every other implementer reports declared ones and quietly make the two mean the same
-        /// thing.
-        /// </para>
         /// </summary>
         [DoNotSerialize]
         public IReadOnlyList<string> DeclaredWatchedKeys =>
@@ -111,19 +90,6 @@ namespace ArcaneOnyx.BehaviorTree
         public override bool DrawInSubTree => true;
 
         /// <summary>
-        /// Points this node at the graph that produces its value. Only useful after the node has been added
-        /// to a graph, since <see cref="Definition"/> is what creates the variable this assigns into.
-        /// Needed to author a node's Visual Scripting from code.
-        /// </summary>
-        public void SetScriptGraph(ScriptGraphAsset asset)
-        {
-            ScriptGraphVariable?.SetScriptGraphAsset(asset);
-        }
-
-        /// <summary>
-        /// Points this node at a Function — a named, shared, contracted graph — instead of an anonymous
-        /// sub-asset. The counterpart of <see cref="SetScriptGraph"/> for the new seam.
-        /// </summary>
         /// <summary>
         /// Points this node at a Function and grows a port per declared input.
         /// <para>
@@ -372,21 +338,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.CollectProblems(into);
 
-            if (Function == null && EmbeddedScriptGraph == null)
+            if (Function == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    "No Function or graph assigned, so this node has nothing to read."));
+                    "No Function assigned, so this node has nothing to read."));
                 return;
             }
-
-            if (HasAmbiguousGraphSource)
-            {
-                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
-                    "Both a Function and an embedded graph are assigned. The Function is what runs.",
-                    "Clear whichever one is not wanted — the other is editable but dead."));
-            }
-
-            if (Function == null) return;
 
             foreach (var line in DescribeContractDrift())
             {

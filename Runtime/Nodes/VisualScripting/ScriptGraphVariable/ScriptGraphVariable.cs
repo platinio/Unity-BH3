@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -8,15 +8,13 @@ namespace ArcaneOnyx.BehaviorTree
     [System.Serializable]
     public class ScriptGraphVariable
     {
-        [SerializeField] protected ScriptGraphAsset scriptGraphAsset;
-
         /// <summary>
-        /// The Function this variable reads, when it reads one.
+        /// The Function this variable reads. The only way it gets a graph.
         /// <para>
-        /// Assigning a Function routes evaluation through <see cref="FunctionEvaluator"/>: ports resolved once,
-        /// a graph reference cached per agent, no reflection and no scans in the call path. Leaving it null
-        /// keeps the legacy <see cref="ScriptGraphAsset"/> path exactly as it was, which is what lets every
-        /// existing tree and sample load and behave identically while the two seams coexist.
+        /// Evaluation goes through <see cref="FunctionEvaluator"/>: ports resolved once, a graph reference
+        /// cached per agent, no reflection and no scans in the call path. This used to be one of two routes,
+        /// the other being a graph embedded in the owning tree as an anonymous sub-asset; that route is gone,
+        /// and with it the ambiguity of a variable that had both.
         /// </para>
         /// </summary>
         [SerializeField] protected FunctionGraphAsset function;
@@ -36,29 +34,26 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         [System.NonSerialized] private int[] argumentIndices;
 
-        public ScriptGraphAsset ScriptGraphAsset => scriptGraphAsset;
-
         public FunctionGraphAsset Function => function;
 
-        /// <summary>True when this reads a Function rather than a bare script graph.</summary>
+        /// <summary>True when a Function is assigned. Kept as the name every caller already uses.</summary>
         public bool ReadsFunction => function != null;
 
         /// <summary>
-        /// Whether there is anything here to run at all, by either route.
+        /// Whether there is anything here to run at all.
         ///
         /// <para>
-        /// Callers that gate on "is a graph assigned" must ask this rather than testing
-        /// <see cref="ScriptGraphAsset"/>, which answers only for the embedded route.
-        /// <c>VisualScriptingNode</c>'s four lifecycle hooks tested the field directly and therefore
-        /// skipped a slot holding a Function entirely — assigning one did nothing, silently, which is
-        /// exactly the failure the two-route split invites.
+        /// The same question as <see cref="ReadsFunction"/> now that a Function is the only route, and kept
+        /// separate because it is the one callers should ask. While there were two routes,
+        /// <c>VisualScriptingNode</c>'s four lifecycle hooks gated on the embedded field specifically, so a
+        /// slot holding a Function was skipped entirely and did nothing, silently. Asking "is anything
+        /// assigned" rather than "is this particular route assigned" is what made that unrepresentable.
         /// </para>
         /// </summary>
-        public bool HasGraph => function != null || scriptGraphAsset != null;
+        public bool HasGraph => function != null;
 
         /// <summary>
-        /// Points this variable at a Function. Mutually exclusive with <see cref="SetScriptGraphAsset"/> in
-        /// practice — the Function wins when both are set, and verification reports the ambiguity.
+        /// Points this variable at a Function.
         /// </summary>
         public void SetFunction(FunctionGraphAsset asset)
         {
@@ -240,16 +235,6 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Assigns the graph this variable reads from. Needed to build a node's Visual Scripting graph from
-        /// code, where the inspector is not involved — the counterpart of
-        /// <see cref="RunBehaviorTreeGraphNode.SetBehaviorTreeGraphAsset"/> for sub-trees.
-        /// </summary>
-        public void SetScriptGraphAsset(ScriptGraphAsset asset)
-        {
-            scriptGraphAsset = asset;
-        }
-
-        /// <summary>
         /// Evaluates the Function this variable reads, with the arguments the call site supplies.
         /// <para>
         /// This is the entry point for a node that declares ports from the Function's contract. The
@@ -263,8 +248,8 @@ namespace ArcaneOnyx.BehaviorTree
             if (!ReadsFunction)
             {
                 throw new System.InvalidOperationException(
-                    "Arguments were supplied but this Script Graph Variable reads an embedded graph, not a " +
-                    "Function. Embedded graphs have no declared contract to bind them to.");
+                    "Arguments were supplied but this Script Graph Variable has no Function assigned, so " +
+                    "there is no declared contract to bind them to.");
             }
 
             return EvaluateFunction<T>(gameObject, arguments);
@@ -276,73 +261,27 @@ namespace ArcaneOnyx.BehaviorTree
             if (!ReadsFunction)
             {
                 throw new System.InvalidOperationException(
-                    "Arguments were supplied but this Script Graph Variable reads an embedded graph, not a " +
-                    "Function. Embedded graphs have no declared contract to bind them to.");
+                    "Arguments were supplied but this Script Graph Variable has no Function assigned, so " +
+                    "there is no declared contract to bind them to.");
             }
 
             RunFunction(gameObject, arguments);
         }
 
-        public T GetValue<T>(Variables input = null)
-        {
-            if (ReadsFunction) return EvaluateFunction<T>(null, null);
-
-            return scriptGraphAsset.GetScriptGraphOutput<T>(input);
-        }
+        public T GetValue<T>(Variables input = null) => EvaluateFunction<T>(null, null);
 
         public T GetValue<T>(GameObject gameObject, Variables input = null)
-        {
-            if (ReadsFunction) return EvaluateFunction<T>(gameObject, null);
-
-            return scriptGraphAsset.GetScriptGraphOutput<T>(input, gameObject);
-        }
+            => EvaluateFunction<T>(gameObject, null);
 
         public T GetValue<T>(GameObject gameObject, VariableDeclarations variableDeclarations)
-        {
-            if (ReadsFunction) return EvaluateFunction<T>(gameObject, null);
+            => EvaluateFunction<T>(gameObject, null);
 
-            Dictionary<string, object> dynamicParameters = new();
+        public void Run(Variables input = null) => RunFunction(null, null);
 
-            foreach (var variableDeclaration in variableDeclarations)
-            {
-                dynamicParameters[variableDeclaration.name] = variableDeclaration.value;
-            }
-
-            return scriptGraphAsset.GetScriptGraphOutput<T>(dynamicParameters, gameObject);
-        }
-
-        public void Run(Variables input = null)
-        {
-            if (ReadsFunction)
-            {
-                RunFunction(null, null);
-                return;
-            }
-
-            scriptGraphAsset.Run(input);
-        }
-
-        public void Run(GameObject gameObject, Variables input = null)
-        {
-            if (ReadsFunction)
-            {
-                RunFunction(gameObject, null);
-                return;
-            }
-
-            scriptGraphAsset.Run(input, gameObject);
-        }
+        public void Run(GameObject gameObject, Variables input = null) => RunFunction(gameObject, null);
 
         public void Run(GameObject gameObject, VariableDeclarations input = null)
-        {
-            if (ReadsFunction)
-            {
-                RunFunction(gameObject, null);
-                return;
-            }
-
-            scriptGraphAsset.Run(input, gameObject);
-        }
+            => RunFunction(gameObject, null);
 
     }
 }

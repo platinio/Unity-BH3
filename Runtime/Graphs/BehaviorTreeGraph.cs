@@ -60,9 +60,6 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize] 
         private Entry entryNode;
 
-        [SerializeAs(nameof(scriptGraphAssets))]
-        private List<ScriptGraphAsset> scriptGraphAssets = new();
-
         public Entry EntryNode => entryNode;
       
         public BehaviorTreeGraph() : base()

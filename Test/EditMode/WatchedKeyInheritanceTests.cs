@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.VisualScriptingExtension;
@@ -170,14 +170,17 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void AGuardReadingAnEmbeddedGraph_InheritsNothing()
+        public void AGuardReadingAFunctionThatDeclaresNothing_InheritsNothing()
         {
-            // Declared, not derived. An embedded graph has no asset-level metadata to declare with, and
-            // walking its units instead would quietly make "declares" and "happens to read" the same word.
-            var (tree, _) = NewTree("Embedded");
+            // Declared, not derived: a Function that reads a key without declaring it contributes nothing,
+            // because walking its units instead would quietly make "declares" and "happens to read" the same
+            // word. This used to be stated with an embedded graph, which had no metadata to declare with at
+            // all; an undeclared Function is the same case and the only one left.
+            var (tree, _) = NewTree("Undeclared");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("DeclaresNothing");
 
-            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, true, 0.0f, 0.0f);
 
             Assert.That(InheritedWatchedKeys.Resolve(guard), Is.Empty);
         }
@@ -345,12 +348,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var (tree, _) = NewTree("NothingToInherit");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("DeclaresNothing");
 
-            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, true, 0.0f, 0.0f);
             ((ReactiveGuard)guard).ClearTriggers();
 
             Assert.That(BehaviorTreeAuthoring.SeedMissingGuardTriggers(tree), Is.Empty,
-                "an embedded graph declares nothing, so there is no schedule to invent from it");
+                "a Function that declares no keys offers no schedule to invent from");
             Assert.That(guard.Triggers, Is.Empty);
         }
 
@@ -458,8 +462,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var (tree, path) = NewTree("PlainUnseeded");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("DeclaresNothing");
 
-            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, true, 0.0f, 0.0f);
             ((ReactiveGuard)guard).ClearTriggers();
             Save(tree);
 
@@ -493,9 +498,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // silently deleted a lint.
             var (tree, path) = NewTree("WatchesNothing");
             var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var function = NewPredicate("DeclaresNothing");
 
-            var guard = BehaviorTreeAuthoring.GuardOnVariable(tree, owner, "hasTarget", true, false, 0.0f, 0.0f);
-            KeyTriggerOf(guard).Keys.Clear();
+            var guard = BehaviorTreeAuthoring.GuardOnFunction(tree, owner, function, true, 0.0f, 0.0f);
+            ((ReactiveGuard)guard).AddTrigger(GuardTrigger.KeyChanged(string.Empty));
             Save(tree);
 
             Assert.That(GuardFindings(path), Has.Some.Contains("watches no keys"));

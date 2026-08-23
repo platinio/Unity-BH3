@@ -1,4 +1,4 @@
-# Ports and Wiring
+﻿# Ports and Wiring
 
 The idea BH3 is built around: a node's logic and its data are two separate things.
 
@@ -207,8 +207,8 @@ field, and choose **Create new Function…**. Save it somewhere in the project; 
 > **This step changed.** The node used to hold an anonymous graph welded inside the tree asset, created by
 > an **Open Graph** button. It now references a **Function** — a named project asset any tree can reuse —
 > and the picker only lists Functions that fit the port you are feeding. See
-> [Functions](functions.md#picking-one). Trees that already hold an embedded graph keep working and still
-> open it; there is an **Extract to Function** button beside it when you want it out.
+> [Functions](functions.md#picking-one). Embedded graphs are gone entirely, so a tree written before that
+> change comes up with its reads empty; `bt_verify` names each one.
 
 ![The Graph Inspector for a selected Script Graph Variable node, with its Open Graph button highlighted, and the node on the canvas showing a single Output port](images/script-graph-variable-open-graph.png)
 
@@ -227,21 +227,17 @@ value from anywhere in the game. Neither needs to know about the other.
 
 ---
 
-## Where BH3 embeds Visual Scripting
+## Where BH3 reaches Visual Scripting
 
-| Node | What it holds |
+| Node | What it reads |
 |---|---|
-| **Script Graph Variable** | One graph that produces a value for a port |
-| **Script Graph** | Four graphs, one per lifecycle hook (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`). The `OnUpdate` graph must output an `ExecutionStatus` |
+| **Script Graph Variable** | One Function that produces a value for a port |
+| **Script Graph** | Four Functions, one per lifecycle hook (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`). The `OnUpdate` Function must return an `ExecutionStatus` |
 | **Run Script Graph** | One `ScriptGraphAsset`, executed on enter |
 
-> Nodes holding a Visual Scripting graph **cannot be copied or duplicated**, because they reference their
-> Script Graph directly. Create a new node and copy the graph contents by hand.
->
-> This restriction exists for *embedded* graphs, which a copy would share and a deletion would take from
-> under the original. A node that references a **Function** has no such problem — the restriction is
-> currently applied to the node type rather than to what it holds, and lifting it is part of retiring
-> embedded graphs.
+> **These nodes can be copied and duplicated.** They could not while a graph was welded inside the tree: two
+> copies shared one sub-asset, and deleting either destroyed the graph the other still used. A Function is
+> referenced rather than owned, so two copies referencing one is exactly what sharing means.
 
 ### Reading and writing variables from a graph
 

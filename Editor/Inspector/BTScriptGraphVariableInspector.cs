@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
@@ -107,15 +107,11 @@ namespace ArcaneOnyx.BehaviorTree
         private struct Rows
         {
             public bool HasFunction;
-            public bool HasEmbedded;
 
             /// <summary>The mismatch message, or null when the Function fits what the node feeds.</summary>
             public string Mismatch;
 
-            /// <summary>The both-assigned message, or null when only one source is set.</summary>
-            public string Ambiguity;
-
-            public bool HasButtons => HasFunction || HasEmbedded;
+            public bool HasButtons => HasFunction;
         }
 
         private Rows Describe()
@@ -126,13 +122,7 @@ namespace ArcaneOnyx.BehaviorTree
             var rows = new Rows
             {
                 HasFunction = function != null,
-                HasEmbedded = variable?.ScriptGraphAsset != null,
             };
-
-            if (rows.HasFunction && rows.HasEmbedded)
-            {
-                rows.Ambiguity = "The Function runs; the embedded graph is editable but dead. Clear one.";
-            }
 
             if (rows.HasFunction)
             {
@@ -178,7 +168,6 @@ namespace ArcaneOnyx.BehaviorTree
 
             // The boxes span the full block width, so this is exactly the width they are drawn at.
             if (rows.Mismatch != null) height += Spacing + HelpBoxHeight(rows.Mismatch, width, MessageType.Error);
-            if (rows.Ambiguity != null) height += Spacing + HelpBoxHeight(rows.Ambiguity, width, MessageType.Warning);
 
             return height;
         }
@@ -214,13 +203,6 @@ namespace ArcaneOnyx.BehaviorTree
                 EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Mismatch, MessageType.Error);
             }
 
-            if (rows.Ambiguity != null)
-            {
-                y += Spacing;
-                var height = HelpBoxHeight(rows.Ambiguity, position.width, MessageType.Warning);
-                EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Ambiguity, MessageType.Warning);
-            }
-
             EndBlock(metadata);
         }
 
@@ -249,34 +231,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void DrawButtonRow(Rect row, Rows rows)
         {
-            // An embedded graph gets two buttons — open it, or leave the embedded world — and a Function one.
-            var count = rows.HasEmbedded ? (rows.HasFunction ? 3 : 2) : 1;
-            var width = (row.width - Spacing * (count - 1)) / count;
-            var next = row.x;
+            // One button. There used to be a row of up to three, because an embedded graph could be opened
+            // or extracted to a Function, and a node could hold both at once.
+            if (!rows.HasFunction) return;
 
-            Rect Slot()
-            {
-                var slot = new Rect(next, row.y, width, row.height);
-                next += width + Spacing;
-                return slot;
-            }
-
-            if (rows.HasFunction && GUI.Button(Slot(), "Open Function"))
-            {
-                OpenGraph(Variable.Function);
-            }
-
-            if (!rows.HasEmbedded) return;
-
-            if (GUI.Button(Slot(), "Open Graph"))
-            {
-                OpenGraph(Variable.ScriptGraphAsset);
-            }
-
-            if (GUI.Button(Slot(), "Extract to Function"))
-            {
-                Extract();
-            }
+            if (GUI.Button(row, "Open Function")) OpenGraph(Variable.Function);
         }
 
         /// <summary>
@@ -412,63 +371,6 @@ namespace ArcaneOnyx.BehaviorTree
                 path, constraint.SuggestedResultType ?? typeof(object));
         }
 
-        /// <summary>
-        /// Promotes this node's embedded graph to a project asset and re-points the node at it — the one-way
-        /// door out of the embedded world, and the same operation <c>fn_extract</c> performs from the CLI.
-        /// </summary>
-        private void Extract()
-        {
-            var node = Node;
-            var tree = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
-
-            if (node == null || tree == null)
-            {
-                Debug.LogWarning(
-                    "[BehaviorTree] Extract needs the tree that owns this node, and no tree is being edited.");
-                return;
-            }
-
-            var suggested = node.EmbeddedScriptGraph == null || string.IsNullOrEmpty(node.EmbeddedScriptGraph.name)
-                ? "New Function"
-                : node.EmbeddedScriptGraph.name;
-
-            var path = EditorUtility.SaveFilePanelInProject(
-                "Extract to Function",
-                suggested,
-                "asset",
-                "The embedded graph is copied into a Function this node then references.",
-                DefaultFunctionFolder());
-
-            if (string.IsNullOrEmpty(path)) return;
-
-            using (LudiqEditorUtility.editedObject.Override(editedOwner == null ? tree : editedOwner))
-            {
-                UndoUtility.RecordEditedObject("Extract to Function");
-            }
-
-            try
-            {
-                var function = Authoring.FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, path);
-
-                // The original sub-asset is deliberately left in place rather than destroyed here: deletion
-                // has exactly one owner at a time (spec 10, locked decision 6), and bt_verify reports the
-                // leftover as an orphan.
-                Debug.Log(
-                    $"[BehaviorTree] Extracted '{node.NodeName}' to '{AssetDatabase.GetAssetPath(function)}'. "
-                    + "The embedded copy is still stored in the tree and is now unreferenced; bt_verify "
-                    + "reports it as an orphan.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[BehaviorTree] Extract failed: {e.Message}");
-                return;
-            }
-
-            Authoring.ContractPortLayout.ResizeToFitPorts(node);
-            Authoring.NodeProblemCache.Invalidate();
-
-            AfterMutation();
-        }
 
         // ------------------------------------------------------------------ the dropdown
 

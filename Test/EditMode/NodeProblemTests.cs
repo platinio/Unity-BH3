@@ -39,6 +39,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             NodeProblemCache.Invalidate();
         }
 
+        /// <summary>
+        /// Adds a <c>GetVariable</c> reading <paramref name="key"/> without declaring it as a watched key,
+        /// which is what the undeclared-read warning reports.
+        /// </summary>
+        private static void AddUndeclaredRead(FunctionGraphAsset function, string key)
+        {
+            var read = new Unity.VisualScripting.GetVariable
+            {
+                kind = Unity.VisualScripting.VariableKind.Object
+            };
+
+            function.graph.units.Add(read);
+            read.name.SetDefaultValue(key);
+
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
+        }
+
         private static FunctionGraphAsset Predicate(string assetName, params string[] inputs)
         {
             var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
@@ -154,10 +172,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ErrorsAreListedBeforeWarnings()
         {
-            // Both sources assigned is a warning; the unfed required port is an error.
-            var function = Predicate("Ambiguous", "threshold");
+            // A key the Function reads but does not declare is a warning; the unfed required port is an
+            // error. This used to pair the error with the both-sources-assigned warning, which cannot happen
+            // any more -- a node has one source.
+            var function = Predicate("UndeclaredRead", "threshold");
+            AddUndeclaredRead(function, "hp");
+
             var node = NodeReading(function);
-            node.SetScriptGraph(ScriptableObject.CreateInstance<ScriptGraphAsset>());
 
             NodeProblemCache.Invalidate();
 

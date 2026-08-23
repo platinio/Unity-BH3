@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
@@ -34,7 +34,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void TearDown() => AssetDatabase.DeleteAsset(Folder);
 
         /// <summary>Entry -> Selector -> a guarded WaitTime, which is the shape every lint is about.</summary>
-        private BehaviorTreeGraphAsset GuardedTree(out ConditionalExecution guard, BehaviorTreeAuthoring.GuardKind kind)
+        /// <param name="conditionDeclaresKeys">
+        /// Whether the guard's condition declares what it reads. <c>bt_guard_on_variable</c> builds a
+        /// Function that does, and a guard reading one is re-seeded on save by <c>GuardScheduleSeeder</c> --
+        /// so a test about a guard with no schedule has to opt out, or the thing it is testing is repaired
+        /// underneath it.
+        /// </param>
+        private BehaviorTreeGraphAsset GuardedTree(
+            out ConditionalExecution guard,
+            BehaviorTreeAuthoring.GuardKind kind,
+            bool conditionDeclaresKeys = true)
         {
             var asset = BehaviorTreeAuthoring.CreateTree(treePath);
 
@@ -45,7 +54,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeAuthoring.FeedFloat(asset, branch.Time, 1.0f, 0.0f, 540.0f);
             BehaviorTreeAuthoring.Connect(asset, selector, branch, 0);
 
-            guard = BehaviorTreeAuthoring.GuardOnVariable(asset, branch, "hasTarget", true, false, 0.0f, 260.0f, kind);
+            guard = conditionDeclaresKeys
+                ? BehaviorTreeAuthoring.GuardOnVariable(asset, branch, "hasTarget", true, false, 0.0f, 260.0f, kind)
+                : BehaviorTreeAuthoring.GuardOnFunction(
+                    asset, branch,
+                    Authoring.FunctionGraphAuthoring.CreateFunction($"{Folder}/DeclaresNothing.asset", typeof(bool)),
+                    true, 0.0f, 260.0f, kind);
 
             BehaviorTreeAuthoring.Save(asset);
 
@@ -82,7 +96,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AGuardWithNoTriggersIsReported()
         {
-            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive);
+            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive, conditionDeclaresKeys: false);
             ((ReactiveGuard)guard).ClearTriggers();
             BehaviorTreeAuthoring.Save(guard.graph.Nodes.Any() ? AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(treePath) : null);
 
@@ -96,7 +110,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AKeyTriggerOfBlanksIsReportedAsWatchingNothing()
         {
-            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive);
+            // The condition must declare nothing, or the blanks are covered by inherited keys and the guard
+            // genuinely does wake -- which is the loosening step 2a made, not a hole in this lint.
+            GuardedTree(out var guard, BehaviorTreeAuthoring.GuardKind.Reactive, conditionDeclaresKeys: false);
 
             var reactive = (ReactiveGuard)guard;
             reactive.ClearTriggers();
@@ -132,7 +148,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var asset = GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Reactive);
 
             var writerNode = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(asset, 400.0f, 360.0f);
-            writerNode.SetScriptGraph(StockWriteGraph(asset, "hasTarget"));
+            writerNode.SetFunction(StockWriteFunction("hasTarget"));
 
             BehaviorTreeAuthoring.Save(asset);
 
@@ -147,7 +163,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var asset = GuardedTree(out _, BehaviorTreeAuthoring.GuardKind.Reactive);
 
             var writerNode = BehaviorTreeAuthoring.AddNode<VisualScriptGraphVariable>(asset, 400.0f, 360.0f);
-            writerNode.SetScriptGraph(StockWriteGraph(asset, "somethingElse"));
+            writerNode.SetFunction(StockWriteFunction("somethingElse"));
 
             BehaviorTreeAuthoring.Save(asset);
 
@@ -156,21 +172,21 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "a stock write is only a problem when a guard is relying on seeing it");
         }
 
-        /// <summary>A script graph containing one stock Set Variable writing <paramref name="key"/>.</summary>
-        private static Unity.VisualScripting.ScriptGraphAsset StockWriteGraph(BehaviorTreeGraphAsset owner, string key)
+        /// <summary>A Function containing one stock Set Variable writing <paramref name="key"/>.</summary>
+        private static ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset StockWriteFunction(string key)
         {
-            var graphAsset = ScriptableObject.CreateInstance<Unity.VisualScripting.ScriptGraphAsset>();
-            graphAsset.name = "StockWrite";
+            var function = Authoring.FunctionGraphAuthoring.CreateFunction($"{Folder}/StockWrite{key}.asset");
 
             var stock = new Unity.VisualScripting.SetVariable { kind = Unity.VisualScripting.VariableKind.Object };
-            graphAsset.graph.units.Add(stock);
+            function.graph.units.Add(stock);
 
             // The key as an inline value on the port, which is how a designer types it in.
             stock.name.SetDefaultValue(key);
 
-            AssetDatabase.AddObjectToAsset(graphAsset, owner);
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
 
-            return graphAsset;
+            return function;
         }
     }
 }

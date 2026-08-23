@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using Unity.VisualScripting;
@@ -37,7 +37,7 @@ namespace ArcaneOnyx.BehaviorTree
         private static readonly Color NotEvaluated = new(0.42f, 0.42f, 0.46f, 1.0f);
 
         private GuardGraphSnapshot snapshot;
-        private ScriptGraphAsset asset;
+        private ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset asset;
         private int tick;
         private int sequence;
         private bool result;
@@ -52,7 +52,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// asset to lay out against, the window falls back to a wire list, which carries the same values
         /// without the geometry.
         /// </summary>
-        public static void Open(GuardTrace trace, GuardGraphSnapshot snapshot, ScriptGraphAsset asset, string guardName)
+        public static void Open(GuardTrace trace, GuardGraphSnapshot snapshot,
+            ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset asset, string guardName)
         {
             if (trace == null || snapshot == null) return;
 
