@@ -865,10 +865,21 @@ because they are the ones that are hard to change after fifty call sites exist.
 
 #### Decisions taken while implementing
 
-- **Per-call is a convention plus an optional declaration.** A key starting with `_` is per-call everywhere
-  (hidden from authoring); `[PerCallInput]` additionally lets the picker refuse a Function that does not
-  accept it. Both exist because the runtime cannot see field attributes — `Bind` enforces what the code asks
-  for through `Input<T>`, loudly; the attribute is what makes it refusable at pick time.
+- **Per-call is decided by the call site, not by the name — amended the same day.** The first cut kept
+  the project's old habit that a key starting with `_` is per-call and hidden from authoring. The tool owner
+  asked whether that was the best rule and it is not: it encodes semantics in a name, renaming an input
+  silently changes who may supply it, and no engine tooling does it — in Unreal and in VS subgraphs an input
+  is an input and *who* wires it is the caller's business. Now `[PerCallInput]` on the field (and
+  `Input<T>`/`TryInput<T>` in code) are the only things that make an input per-call; the drawer shows such
+  inputs as *supplied by code* rather than hiding them, so the designer sees the whole signature; a code-written
+  slot wins over an authored value for the same input and keeps winning after a restage. `_` survives as a
+  naming habit for "context" with no semantics. `_Evaluator` keeps its string for now — renaming the input on
+  every query Function is content churn for a later touch. The alternative the owner floated — every input
+  authorable, code overrides — was declined because it turns "nothing supplies it" into a stale authored value
+  used quietly, the failure class this design exists to remove.
+- **Optional per-call inputs are asked, not declared.** `TryInput<T>` returns false for an input the Function
+  does not take; a call site that supplies an input only when the Function has it uses that and leaves the
+  input out of `[PerCallInput]`, so the picker stays as wide as the field's real requirements.
 - **Declared defaults make an input optional.** The item used to require every input; BH3 already treated an
   input with a default as optional (`FunctionParameter.Optional`). `Bound` stages declared defaults first and
   authored arguments over them, so the two paths agree, and drift reports only what nothing supplies.
