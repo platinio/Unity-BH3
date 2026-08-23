@@ -1196,6 +1196,32 @@ hand-authored tree in a downstream project is caught rather than silently broken
 a deleted node type lands. Closed: `MissingType` now reports itself on the canvas, and `bt_verify` names
 each one with its position and former type. Pinned by `VerifyNamesANodeWhoseTypeNoLongerExists`.
 
+#### The FPS sample's Functions cannot be entered, and did not start that way here
+
+Twenty-six of the project's Functions -- every one migrated out of BH3's `Sample/FPS` and `Patrol` -- have
+no `ScriptGraphInput` unit, so `FunctionBindingPlan` refuses them and they cannot run. Found by running
+`bt_verify` over the sample, which names all of them.
+
+**The migration did not cause it.** The pre-migration `Soldier.asset` contains zero `ScriptGraphInput` and
+zero `ScriptGraphOutput`; those graphs never had either. The deleted legacy seam required the same unit --
+`GetNodeOfType<ScriptGraphInput>(graph)` then `inputNode.controlOutputs[0]` -- so it would have thrown a
+`NullReferenceException` on exactly these graphs. The sample's Visual Scripting content was already dead;
+migrating it faithfully carried that forward, and the contract check now says so out loud instead of
+failing at the first tick.
+
+**Left unrepaired, by the tool owner's decision.** Re-authoring twenty-three-unit graphs nobody has run in
+a long time is game-content work, and the same trade step 3 took for TPS query items: named by verify
+rather than silently broken.
+
+**The real gap is coverage, not the lint.** The unusable-Function lint already existed and catches every
+one. Nothing runs `bt_verify` over BH3's shipped `Sample/` trees, so the suite stayed green while
+twenty-six assets were dead. A verify pass over shipped sample content is worth scheduling; it is what
+would have caught this the day it happened rather than years later.
+
+Two smaller things the same pass surfaced: `Soldier.asset` and `Zombie.asset` each carry a `MissingType`
+node from some type deleted long before this work (confirmed present before `RunScriptGraph` was removed),
+and `Soldier` has an unset `NavPosition` port. Both are named by verify now.
+
 #### Known gaps, stated rather than discovered
 
 - **`IGraphElement.scriptGraphAssets` is now a zero-implementer seam** in GraphCore, returning null forever.

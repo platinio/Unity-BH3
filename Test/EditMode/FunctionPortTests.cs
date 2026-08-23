@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.VisualScriptingExtension;
@@ -206,14 +206,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
-        /// A Function on a Script Graph node's lifecycle graph has no ports and so cannot be passed
-        /// arguments. Both shapes of that are silent at runtime — with no embedded graph beside it the
-        /// Function never runs, and with one it runs unfed — so verification is the only thing that can say
-        /// so. The inspector drawer is registered for <c>BTScriptGraphVariable</c>, which is what all four
-        /// lifecycle fields are, so this is a state a designer reaches by dragging.
+        /// A lifecycle slot cannot declare ports, so a Function needing an argument runs unfed there and
+        /// nothing at runtime says so. Verification is the only thing that can.
+        ///
+        /// <para>
+        /// The report used to be blanket — <em>any</em> Function on a lifecycle slot was named — which was
+        /// right while those slots could not run a Function at all. They can now, so the finding names the
+        /// specific input that can never be supplied, which is the thing an author has to act on. The
+        /// picker offers Functions on all four slots, so this is a state reached by choosing, not by
+        /// accident.
+        /// </para>
         /// </summary>
         [Test]
-        public void Verify_ReportsAFunctionAssignedToALifecycleGraph()
+        public void Verify_ReportsALifecycleFunctionWhoseInputCannotBeSupplied()
         {
             var function = EchoFloat("Echo", "threshold");
 
@@ -226,9 +231,57 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var findings = BehaviorTreeVerification.Verify($"{Folder}/Lifecycle.asset");
 
-            Assert.That(findings, Has.Some.Contains("lifecycle graph"),
-                "a Function that can never be given an argument has to be reported somewhere");
+            Assert.That(findings, Has.Some.Contains("threshold"),
+                "the input that can never be supplied is the thing to act on, so it has to be named");
             Assert.That(findings, Has.Some.Contains("Echo"), "the report must name the Function");
+        }
+
+        /// <summary>
+        /// A Function with no required input is fine on a lifecycle slot — it is run for its effects. The
+        /// blanket report this replaces would have named it, which is a false alarm on the shape the picker
+        /// now actively offers.
+        /// </summary>
+        [Test]
+        public void Verify_DoesNotReportALifecycleFunctionThatNeedsNothing()
+        {
+            var function = EchoFloat("Fine", "threshold", defaultValue: 1.0f);
+
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/LifecycleFine.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptingNode>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, node, 0);
+
+            // OnAwake: run for effects, so any result -- or none -- is right.
+            node.LifecycleGraphs.First().SetFunction(function);
+            BehaviorTreeAuthoring.Save(tree);
+
+            var findings = BehaviorTreeVerification.Verify($"{Folder}/LifecycleFine.asset");
+
+            Assert.That(findings, Has.None.Contains("Fine"),
+                "an input with a default is supplied, so there is nothing to report");
+        }
+
+        /// <summary>
+        /// <c>OnUpdate</c>'s Function is the node's verdict, so it has to return an <c>ExecutionStatus</c>.
+        /// Nothing else in the tree can catch this: the slot has no wire whose type would refuse it.
+        /// </summary>
+        [Test]
+        public void Verify_ReportsAnOnUpdateFunctionThatReturnsTheWrongType()
+        {
+            var function = EchoFloat("NotAVerdict", "threshold", defaultValue: 1.0f);
+
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/LifecycleUpdate.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptingNode>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, node, 0);
+
+            // Slots are in declaration order: OnAwake, OnEnter, OnUpdate, OnExit.
+            node.GraphSlots[2].SetFunction(function);
+            BehaviorTreeAuthoring.Save(tree);
+
+            var findings = BehaviorTreeVerification.Verify($"{Folder}/LifecycleUpdate.asset");
+
+            Assert.That(findings, Has.Some.Contains("NotAVerdict"), "the report must name the Function");
+            Assert.That(findings, Has.Some.Contains("ExecutionStatus"),
+                "and what the slot required, or it does not say what to change");
         }
 
         /// <summary>
