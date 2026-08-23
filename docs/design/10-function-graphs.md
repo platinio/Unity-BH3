@@ -1196,6 +1196,32 @@ hand-authored tree in a downstream project is caught rather than silently broken
 a deleted node type lands. Closed: `MissingType` now reports itself on the canvas, and `bt_verify` names
 each one with its position and former type. Pinned by `VerifyNamesANodeWhoseTypeNoLongerExists`.
 
+#### The FPS sample's Functions cannot be entered, and did not start that way here
+
+Twenty-six of the project's Functions -- every one migrated out of BH3's `Sample/FPS` and `Patrol` -- have
+no `ScriptGraphInput` unit, so `FunctionBindingPlan` refuses them and they cannot run. Found by running
+`bt_verify` over the sample, which names all of them.
+
+**The migration did not cause it.** The pre-migration `Soldier.asset` contains zero `ScriptGraphInput` and
+zero `ScriptGraphOutput`; those graphs never had either. The deleted legacy seam required the same unit --
+`GetNodeOfType<ScriptGraphInput>(graph)` then `inputNode.controlOutputs[0]` -- so it would have thrown a
+`NullReferenceException` on exactly these graphs. The sample's Visual Scripting content was already dead;
+migrating it faithfully carried that forward, and the contract check now says so out loud instead of
+failing at the first tick.
+
+**Left unrepaired, by the tool owner's decision.** Re-authoring twenty-three-unit graphs nobody has run in
+a long time is game-content work, and the same trade step 3 took for TPS query items: named by verify
+rather than silently broken.
+
+**The real gap is coverage, not the lint.** The unusable-Function lint already existed and catches every
+one. Nothing runs `bt_verify` over BH3's shipped `Sample/` trees, so the suite stayed green while
+twenty-six assets were dead. A verify pass over shipped sample content is worth scheduling; it is what
+would have caught this the day it happened rather than years later.
+
+Two smaller things the same pass surfaced: `Soldier.asset` and `Zombie.asset` each carry a `MissingType`
+node from some type deleted long before this work (confirmed present before `RunScriptGraph` was removed),
+and `Soldier` has an unset `NavPosition` port. Both are named by verify now.
+
 #### Known gaps, stated rather than discovered
 
 - **`IGraphElement.scriptGraphAssets` is now a zero-implementer seam** in GraphCore, returning null forever.
@@ -1207,6 +1233,24 @@ each one with its position and former type. Pinned by `VerifyNamesANodeWhoseType
 - **`BTScriptGraphVariable.returnType` has no readers anywhere** — a pre-existing dead field noticed while
   working in that file, left alone as unrelated.
 - **Nothing tests the create-menu items or the inspector's button row**, both editor GUI, as before.
+
+### Follow-up to step 7 — the Script Graph node's Function picker, 2026-08-23
+
+Found by the tool owner trying it: on a **Script Graph** node (`VisualScriptingNode`) the Function dropdown
+listed everything and selected nothing. The slot inspector is shared by both nodes, but it resolved its owner
+as a `VisualScriptGraphVariable` specifically — so on a lifecycle slot it found nothing and dropped the pick,
+with a warning nobody was looking at. Until step 7 fixed the hooks' `HasGraph` gate this was moot, since an
+assigned Function would not have run anyway; after it, the inspector was the last thing in the way.
+
+Fixed in three places that now share one rule: the inspector resolves either node; `FunctionPortConstraint`
+reads a lifecycle slot's requirement off the slot itself (`OnUpdate` was created requiring `ExecutionStatus`;
+the other three run for effects and accept a Function with no `Result`, which the picker refused everywhere
+before); and the verify lint that reported *every* Function on a lifecycle slot — true when they could not
+run — now reports the two things that can actually be wrong: a required input nothing can supply, and an
+`OnUpdate` Function that does not return a verdict. `BTScriptGraphVariable.returnType`, noted above as a dead
+field, turned out to be exactly the information this needed.
+
+Not test-run at the owner's request; compiles clean; three tests written.
 
 ### Not scheduled
 

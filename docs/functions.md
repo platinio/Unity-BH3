@@ -118,6 +118,17 @@ variable in the same tree reuses the one asset.
 > and the read has to be re-authored. There is no converter: it would only help a project that updated in
 > two hops, which is the same trade [spec 10](design/10-function-graphs.md) took for TPS query items.
 
+### Functions on a Script Graph node
+
+A **Script Graph** node's four lifecycle slots -- `OnAwake`, `OnEnter`, `OnUpdate`, `OnExit` -- take
+Functions too, through the same picker. Two differences from a Script Graph Variable:
+
+- **No ports.** A lifecycle slot cannot declare ports, so a Function there cannot be passed arguments.
+  `bt_verify` names one that has a required input.
+- **`OnUpdate` must return an `ExecutionStatus`** -- that is the node's verdict -- and the picker offers only
+  those. The other three run the Function for its effects, so any Function is offered, including one with
+  no `Result` at all.
+
 ## Declared inputs are ports
 
 Assigning a Function grows **one input port per input it declares**, typed the way the Function declared

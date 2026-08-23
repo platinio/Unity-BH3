@@ -25,12 +25,11 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// <b>This surface no longer creates embedded graphs.</b> The drawer it replaces minted a
+    /// <b>A slot holds a Function and nothing else.</b> The drawer this replaced minted a
     /// <c>ScriptGraphAsset</c> sub-asset whenever the node had nothing assigned, which is how most of the
     /// embedded graphs in this project came to exist — each one anonymous, owned by a garbage collector, and
-    /// the reason a repository, an OnGUI sweep and an orphan lint all have to exist. A node with nothing
-    /// assigned now gets a Function. One that already holds an embedded graph keeps opening it and gains
-    /// <i>Extract to Function</i>, so nothing existing becomes unreachable. See spec 10, step 7.
+    /// the reason a repository, an OnGUI sweep and an orphan lint all had to exist. Embedding is retired
+    /// (spec 10, step 7); a slot with nothing assigned gets a Function from this picker.
     /// </para>
     /// </summary>
     [Inspector(typeof(BTScriptGraphVariable))]
@@ -72,10 +71,16 @@ namespace ArcaneOnyx.BehaviorTree
         private BTScriptGraphVariable Variable => metadata?.value as BTScriptGraphVariable;
 
         /// <summary>
-        /// The node holding this variable, found by walking up rather than asked for: the value is a plain
+        /// The node holding this slot, found by walking up rather than asked for: the value is a plain
         /// serialized member with no back-reference, and <c>metadata.parent</c> is the only route to it.
+        ///
+        /// <para>
+        /// Either kind of node. This used to look for a <see cref="VisualScriptGraphVariable"/> specifically,
+        /// so on a Script Graph node -- whose four lifecycle slots draw with this same inspector -- it found
+        /// nothing, and a pick from a full dropdown was dropped with a warning the author was not looking at.
+        /// </para>
         /// </summary>
-        private VisualScriptGraphVariable Node
+        private BaseVisualScriptingNode Owner
         {
             get
             {
@@ -83,13 +88,23 @@ namespace ArcaneOnyx.BehaviorTree
 
                 for (var hops = 0; current != null && hops < MaxHopsToOwningNode; hops++)
                 {
-                    if (current.value is VisualScriptGraphVariable node) return node;
+                    if (current.value is BaseVisualScriptingNode node) return node;
                     current = current.parent;
                 }
 
                 return null;
             }
         }
+
+        /// <summary>The owner when it is the value-reading node, whose slot also owns ports. Null otherwise.</summary>
+        private VisualScriptGraphVariable Node => Owner as VisualScriptGraphVariable;
+
+        /// <summary>
+        /// What may go in this slot. A value-reading node's requirement is read off the wiring of its
+        /// Output; a lifecycle slot's is read off the slot itself, which knows whether it is run or read.
+        /// </summary>
+        private FunctionPortConstraint ConstraintForThisSlot() =>
+            Node != null ? FunctionPortConstraint.For(Node) : FunctionPortConstraint.For(Variable);
 
         // ------------------------------------------------------------------ layout
 
@@ -126,14 +141,14 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (rows.HasFunction)
             {
-                var constraint = FunctionPortConstraint.For(Node);
+                var constraint = ConstraintForThisSlot();
 
                 if (!constraint.Satisfies(function.ResultType))
                 {
                     rows.Mismatch =
-                        $"'{function.name}' returns {function.ResultType?.Name ?? "nothing"}, but this node " +
-                        $"feeds {constraint.Describe()}. It is kept, not cleared, pick another or fix the " +
-                        "Function.";
+                        $"'{function.name}' returns {function.ResultType?.Name ?? "nothing"}, but this " +
+                        $"{(Node != null ? "node feeds" : "slot requires")} {constraint.Describe()}. It is " +
+                        "kept, not cleared, pick another or fix the Function.";
                 }
             }
 
@@ -183,7 +198,7 @@ namespace ArcaneOnyx.BehaviorTree
             editedOwner = LudiqEditorUtility.editedObject.value;
 
             var rows = Describe();
-            var constraint = FunctionPortConstraint.For(Node);
+            var constraint = ConstraintForThisSlot();
 
             DrawPickerRow(content.VerticalSection(ref y, Row), constraint);
 
@@ -222,10 +237,13 @@ namespace ArcaneOnyx.BehaviorTree
             dropdown.Show(valueRect);
         }
 
-        private static string DescribeWhatIsOffered(FunctionPortConstraint constraint) =>
-            constraint.IsUnconstrained
-                ? "This node feeds nothing yet, so every Function is offered."
-                : $"Only Functions whose result fits {constraint.Describe()} are offered.";
+        private static string DescribeWhatIsOffered(FunctionPortConstraint constraint)
+        {
+            if (constraint.AllowsNoResult) return "This slot runs the Function for its effects, so every Function is offered.";
+            if (constraint.IsUnconstrained) return "This node feeds nothing yet, so every Function is offered.";
+
+            return $"Only Functions whose result fits {constraint.Describe()} are offered.";
+        }
 
         // ------------------------------------------------------------------ the buttons
 
@@ -275,9 +293,9 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private void Assign(FunctionGraphAsset function)
         {
-            var node = Node;
+            var owner = Owner;
 
-            if (node == null)
+            if (owner == null)
             {
                 // Reachable only if this type is ever inspected outside a live node's metadata chain. Said
                 // out loud rather than returned silently: the author just picked from a full dropdown, and a
@@ -288,7 +306,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            if (!FunctionAssignment.Apply(node, function, editedOwner))
+            if (!FunctionAssignment.Apply(owner, Variable, function, editedOwner))
             {
                 Debug.LogWarning(
                     "[BehaviorTree] The Function picker could not identify the asset or scene object that "
@@ -367,8 +385,10 @@ namespace ArcaneOnyx.BehaviorTree
 
             // The dialog has already asked about overwriting, so the answer given there is honoured rather
             // than quietly turned into "New Function 1" by GenerateUniqueAssetPath.
+            // A side-effect slot gets a Function with no Result at all, which is what it wants; anywhere
+            // else an unconstrained slot gets object, so an author who wires up afterwards still has a value.
             return Authoring.FunctionGraphAuthoring.CreateFunction(
-                path, constraint.SuggestedResultType ?? typeof(object));
+                path, constraint.AllowsNoResult ? null : constraint.SuggestedResultType ?? typeof(object));
         }
 
 
