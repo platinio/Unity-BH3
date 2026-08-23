@@ -1,4 +1,4 @@
-using ArcaneOnyx.VisualScriptingExtension;
+﻿using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityObject = UnityEngine.Object;
 
@@ -45,6 +45,36 @@ namespace ArcaneOnyx.BehaviorTree
         /// with no graph context — and one the caller must report rather than swallow.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Assigns <paramref name="function"/> to <paramref name="slot"/> on <paramref name="node"/>,
+        /// whichever kind of node that is.
+        ///
+        /// <para>
+        /// A Script Graph Variable's single slot also owns ports declared from the Function's contract, so
+        /// it goes through <see cref="Apply(VisualScriptGraphVariable, FunctionGraphAsset, UnityObject)"/>,
+        /// which refreshes them. A lifecycle slot on a Script Graph node has no ports: re-pointing the slot
+        /// is the whole job. Both record against <paramref name="owner"/> for the reason this type exists.
+        /// </para>
+        /// </summary>
+        public static bool Apply(
+            BaseVisualScriptingNode node, BTScriptGraphVariable slot, FunctionGraphAsset function, UnityObject owner)
+        {
+            if (node is VisualScriptGraphVariable valueNode) return Apply(valueNode, function, owner);
+
+            if (node == null || slot == null) return false;
+            if (owner == null) return false;
+
+            using (LudiqEditorUtility.editedObject.Override(owner))
+            {
+                UndoUtility.RecordEditedObject(function == null ? "Clear Function" : "Assign Function");
+                slot.SetFunction(function);
+            }
+
+            Authoring.NodeProblemCache.Invalidate();
+
+            return true;
+        }
+
         public static bool Apply(VisualScriptGraphVariable node, FunctionGraphAsset function, UnityObject owner)
         {
             if (node == null) return false;

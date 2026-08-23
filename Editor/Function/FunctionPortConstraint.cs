@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 
@@ -27,10 +27,40 @@ namespace ArcaneOnyx.BehaviorTree
         private static readonly Type[] NoTypes = Array.Empty<Type>();
 
         private readonly Type[] requiredTypes;
+        private readonly bool allowsNoResult;
 
-        private FunctionPortConstraint(Type[] requiredTypes)
+        private FunctionPortConstraint(Type[] requiredTypes, bool allowsNoResult = false)
         {
             this.requiredTypes = requiredTypes;
+            this.allowsNoResult = allowsNoResult;
+        }
+
+        /// <summary>
+        /// True for a slot that runs a Function for its effects and reads nothing back -- a Script Graph
+        /// node's <c>OnAwake</c>, <c>OnEnter</c> and <c>OnExit</c>. A Function with no <c>Result</c> is
+        /// exactly right there, where at every value port it would be a choice that throws on first read.
+        /// </summary>
+        public bool AllowsNoResult => allowsNoResult;
+
+        /// <summary>The constraint for a slot whose Function is run, not read.</summary>
+        public static FunctionPortConstraint ForSideEffects() => new FunctionPortConstraint(null, allowsNoResult: true);
+
+        /// <summary>
+        /// What a graph slot requires of the Function put in it, read off the slot itself.
+        ///
+        /// <para>
+        /// A slot on a Script Graph node is not a port and feeds nothing, so the wiring-derived
+        /// <see cref="For(ValueOutput)"/> has nothing to say about it. What it does carry is the return type
+        /// it was declared with: <c>OnUpdate</c> is created requiring <c>ExecutionStatus</c>, because that
+        /// is the node's verdict, and the other three are created with none. So the slot is the authority,
+        /// and the picker, the mismatch row and the verify lint all ask it rather than a table of slot
+        /// names kept somewhere else.
+        /// </para>
+        /// </summary>
+        public static FunctionPortConstraint For(BTScriptGraphVariable slot)
+        {
+            var required = slot?.ReturnType;
+            return required == null ? ForSideEffects() : Requiring(required);
         }
 
         /// <summary>
@@ -126,7 +156,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public bool Satisfies(Type resultType)
         {
-            if (resultType == null) return false;
+            if (resultType == null) return allowsNoResult;
 
             var required = RequiredTypes;
 
@@ -161,6 +191,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var required = RequiredTypes;
 
+                if (allowsNoResult) return null;
                 if (required.Count == 0) return typeof(object);
                 if (required.Count == 1) return required[0];
 
@@ -200,6 +231,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var required = RequiredTypes;
 
+            if (allowsNoResult) return "anything, or nothing";
             if (required.Count == 0) return "anything";
             if (required.Count == 1) return required[0].Name;
 

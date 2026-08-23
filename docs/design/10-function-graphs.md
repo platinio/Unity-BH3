@@ -1208,6 +1208,24 @@ each one with its position and former type. Pinned by `VerifyNamesANodeWhoseType
   working in that file, left alone as unrelated.
 - **Nothing tests the create-menu items or the inspector's button row**, both editor GUI, as before.
 
+### Follow-up to step 7 — the Script Graph node's Function picker, 2026-08-23
+
+Found by the tool owner trying it: on a **Script Graph** node (`VisualScriptingNode`) the Function dropdown
+listed everything and selected nothing. The slot inspector is shared by both nodes, but it resolved its owner
+as a `VisualScriptGraphVariable` specifically — so on a lifecycle slot it found nothing and dropped the pick,
+with a warning nobody was looking at. Until step 7 fixed the hooks' `HasGraph` gate this was moot, since an
+assigned Function would not have run anyway; after it, the inspector was the last thing in the way.
+
+Fixed in three places that now share one rule: the inspector resolves either node; `FunctionPortConstraint`
+reads a lifecycle slot's requirement off the slot itself (`OnUpdate` was created requiring `ExecutionStatus`;
+the other three run for effects and accept a Function with no `Result`, which the picker refused everywhere
+before); and the verify lint that reported *every* Function on a lifecycle slot — true when they could not
+run — now reports the two things that can actually be wrong: a required input nothing can supply, and an
+`OnUpdate` Function that does not return a verdict. `BTScriptGraphVariable.returnType`, noted above as a dead
+field, turned out to be exactly the information this needed.
+
+Not test-run at the owner's request; compiles clean; three tests written.
+
 ### Not scheduled
 
 Tier 2 compilation. The v1 registry seam (`FunctionEvaluator.TryGetCompiled`) and the graph hash ship and
