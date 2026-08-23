@@ -818,6 +818,11 @@ namespace ArcaneOnyx.BehaviorTree
                     yield return breakpointOption;
                 }
 
+                foreach (var recoveryOption in MissingTypeOptions())
+                {
+                    yield return recoveryOption;
+                }
+
                 if (selection.Count == 1)
                 {
                     var bNode = selection.First() as BehaviorTreeNode;
@@ -845,6 +850,36 @@ namespace ArcaneOnyx.BehaviorTree
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// The recovery verbs for a node whose type is gone, offered on the canvas because that is where the
+        /// broken node is seen first — the inspector has the same picker plus the preview and the batch
+        /// scopes, and this is the shortest path to it.
+        ///
+        /// <para>
+        /// The work is deferred through <c>canvas.delayCall</c>: the retarget removes the node this widget is
+        /// drawing, and the context menu's callback runs inside the canvas's own event loop.
+        /// </para>
+        /// </summary>
+        private IEnumerable<DropdownOption> MissingTypeOptions()
+        {
+            if (element is not MissingType placeholder) yield break;
+
+            yield return new DropdownOption((Action)(() =>
+            {
+                canvas.delayCall += () => MissingTypeRetargetWindow.Open(placeholder);
+            }), "Replace missing type…");
+
+            if (string.IsNullOrEmpty(placeholder.formerType)) yield break;
+
+            yield return new DropdownOption((Action)(() =>
+            {
+                EditorGUIUtility.systemCopyBuffer = $"[RenamedFrom(\"{placeholder.formerType}\")]";
+
+                Debug.Log($"[BH3] copied [RenamedFrom(\"{placeholder.formerType}\")] — put it on the class "
+                          + "that replaced this type and every tree still naming the old one restores itself.");
+            }), "Copy [RenamedFrom] attribute");
         }
 
         /// <summary>

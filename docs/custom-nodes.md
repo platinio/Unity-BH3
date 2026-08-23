@@ -202,8 +202,26 @@ Before writing a decorator, check the [Node Reference](node-reference.md#decorat
 
 ---
 
+## Renaming or deleting one later
+
+A node type is not free to rename once trees reference it — the asset stores the type's full name, so
+renaming the class, moving it between namespaces, or deleting it leaves every tree that used it holding a
+name nothing resolves.
+
+Nothing is lost when that happens, and the fix for a rename is one attribute:
+
+```csharp
+[RenamedFrom("ArcaneOnyx.BehaviorTree.TheOldName")]
+```
+
+See [Renaming and Deleting Node Types](renaming-and-deleting-nodes.md) for the whole picture, including how
+to put a node back onto a different type and what carries over when you do.
+
+---
+
 ## See also
 
 - [Ports and Wiring](ports-and-wiring.md) — declaring and reading ports in depth
 - [API Reference](api-reference.md) — the runtime contract
+- [Renaming and Deleting Node Types](renaming-and-deleting-nodes.md) — retiring a node type without breaking trees
 - [Authoring From Code](authoring-from-code.md) — generating whole trees programmatically

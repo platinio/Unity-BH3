@@ -40,6 +40,9 @@ namespace ArcaneOnyx.BehaviorTree
         private bool _showClean;
         private string _typeStatus = string.Empty;
 
+        /// <summary>Placeholders across the project, grouped by the type they stand in for.</summary>
+        private Dictionary<string, List<string>> _missingByType;
+
         [MenuItem("Window/Arcane Onyx/BH3/Find Broken Behavior Tree Graphs")]
         public static void Open()
         {
@@ -80,6 +83,8 @@ namespace ArcaneOnyx.BehaviorTree
             if (!string.IsNullOrEmpty(_typeStatus))
                 EditorGUILayout.HelpBox(_typeStatus, MessageType.Info);
 
+            DrawMissingNodeTypes();
+
             if (_results.Count == 0)
             {
                 if (string.IsNullOrEmpty(_typeStatus))
@@ -103,6 +108,68 @@ namespace ArcaneOnyx.BehaviorTree
                 DrawResult(r);
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        /// <summary>
+        /// Nodes whose type no longer exists, grouped by the type rather than by the tree they sit in.
+        ///
+        /// <para>
+        /// The grouping is the point. A renamed node type leaves one placeholder per use, scattered across
+        /// however many trees used it, and listed per-tree that reads as a dozen unrelated problems instead
+        /// of one rename with a dozen sites. Grouped, the fix is a single choice applied once.
+        /// </para>
+        /// </summary>
+        private void DrawMissingNodeTypes()
+        {
+            if (_missingByType == null) return;
+
+            if (_missingByType.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No nodes with a missing type in the project.", MessageType.Info);
+                return;
+            }
+
+            EditorGUILayout.LabelField("Missing node types", EditorStyles.boldLabel);
+
+            foreach (var group in _missingByType.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.LabelField(
+                            $"{group.Key}  —  {group.Value.Count} node(s) in {group.Value.Distinct().Count()} tree(s)",
+                            EditorStyles.boldLabel);
+
+                        if (GUILayout.Button("Replace…", GUILayout.Width(90)))
+                        {
+                            string formerType = group.Key;
+                            EditorApplication.delayCall += () =>
+                            {
+                                ArcaneOnyx.BehaviorTree.MissingTypeRetargetWindow.OpenForType(formerType);
+                            };
+                        }
+                    }
+
+                    foreach (var path in group.Value.Distinct().OrderBy(p => p, StringComparer.Ordinal))
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            GUILayout.Space(12.0f);
+
+                            if (GUILayout.Button(path, EditorStyles.linkLabel))
+                            {
+                                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+                                if (asset != null) Selection.activeObject = asset;
+                            }
+
+                            GUILayout.FlexibleSpace();
+                        }
+                    }
+                }
+            }
+
+            EditorGUILayout.Space();
         }
 
         private void DrawResult(GraphIssue r)
@@ -162,6 +229,7 @@ namespace ArcaneOnyx.BehaviorTree
             _results.Clear();
             _visited.Clear();
             _typeStatus = string.Empty;
+            _missingByType = Authoring.MissingTypeRetarget.FindAcrossProject();
 
             Type btType = FindBehaviorTreeGraphAssetType();
 

@@ -587,10 +587,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 var former = string.IsNullOrEmpty(missing.formerType) ? "unknown" : missing.formerType;
 
+                string fix = missing.HasPreservedState
+                    ? $"It does nothing, but what the node held was kept: re-add its script, add "
+                      + $"[RenamedFrom(\"{former}\")] to whatever replaced it, or run bt_retarget_missing "
+                      + $"--former {former} --to <type>."
+                    : "It does nothing, and nothing was preserved for it — replace it from the inspector, or "
+                      + "delete it and rebuild what it did.";
+
                 yield return
                     $"{treeName}: node at ({missing.Position.x:F0}, {missing.Position.y:F0}) has a type that " +
-                    $"no longer exists (formerly '{former}'). It does nothing; delete it and rebuild what it " +
-                    "did with a node that exists.";
+                    $"no longer exists (formerly '{former}'). {fix}";
             }
         }
 

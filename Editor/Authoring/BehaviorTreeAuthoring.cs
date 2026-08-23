@@ -702,6 +702,45 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return new { verified = paths, clean = findings.Count == 0, findings = findings.ToArray() };
         }
 
+        [CliCommand("bt_retarget_missing",
+            "Replace nodes whose C# type no longer exists with a type that does, keeping every value, object " +
+            "reference and connection the replacement still has a home for. This is the headless form of the " +
+            "inspector's picker; use it when a node type was renamed, moved between namespaces or " +
+            "assemblies, or replaced. Note that the durable fix for code you own is [RenamedFrom(\"old.name\")] " +
+            "on the new class -- trees restore themselves on load from that, including trees nobody has " +
+            "opened. Use this for types you cannot annotate, or to clean up assets now.")]
+        public static object RetargetMissingCommand(
+            [CliArg("former", "Full name of the type that went missing, e.g. ArcaneOnyx.BehaviorTree.OldNode", Required = true)] string former,
+            [CliArg("to", "Full name of the replacement node type, e.g. ArcaneOnyx.BehaviorTree.NewNode", Required = true)] string to,
+            [CliArg("tree", "One tree to convert. Omit to convert every tree in the project.")] string tree = null)
+        {
+            if (!RuntimeCodebase.TryDeserializeType(to, out var target))
+            {
+                throw new ArgumentException($"No type named '{to}' exists.");
+            }
+
+            if (!typeof(BehaviorTreeNode).IsAssignableFrom(target) || target.IsAbstract)
+            {
+                throw new ArgumentException($"'{to}' is not a concrete {nameof(BehaviorTreeNode)}.");
+            }
+
+            if (tree == null)
+            {
+                var result = MissingTypeRetarget.ApplyToProject(former, target);
+
+                return new { former, to = target.FullName, scope = "project", nodes = result.Nodes, trees = result.Trees };
+            }
+
+            string path = ResolveTreePath(tree);
+            var asset = LoadTree(path);
+            if (asset == null) throw new ArgumentException($"No behavior tree at '{path}'.");
+
+            int converted = MissingTypeRetarget.ApplyToTree(asset, former, target);
+            if (converted > 0) AssetDatabase.SaveAssets();
+
+            return new { former, to = target.FullName, scope = path, nodes = converted, trees = converted > 0 ? 1 : 0 };
+        }
+
         [CliCommand("bt_list_nodes",
             "Catalogue of the node types a tree can be built from: category, what each one does, how many " +
             "children it takes, and which of its ports MUST be connected because they declare no default and " +

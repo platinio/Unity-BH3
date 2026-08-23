@@ -18,6 +18,7 @@
 * [Node Reference](node-reference.md)
 * [API Reference](api-reference.md)
 * [Custom Nodes](custom-nodes.md)
+* [Renaming and Deleting Node Types](renaming-and-deleting-nodes.md)
 * [Authoring From Code](authoring-from-code.md)
 
 ## Debugging
