@@ -44,6 +44,19 @@ namespace ArcaneOnyx.BehaviorTree
         public bool ReadsFunction => function != null;
 
         /// <summary>
+        /// Whether there is anything here to run at all, by either route.
+        ///
+        /// <para>
+        /// Callers that gate on "is a graph assigned" must ask this rather than testing
+        /// <see cref="ScriptGraphAsset"/>, which answers only for the embedded route.
+        /// <c>VisualScriptingNode</c>'s four lifecycle hooks tested the field directly and therefore
+        /// skipped a slot holding a Function entirely — assigning one did nothing, silently, which is
+        /// exactly the failure the two-route split invites.
+        /// </para>
+        /// </summary>
+        public bool HasGraph => function != null || scriptGraphAsset != null;
+
+        /// <summary>
         /// Points this variable at a Function. Mutually exclusive with <see cref="SetScriptGraphAsset"/> in
         /// practice — the Function wins when both are set, and verification reports the ambiguity.
         /// </summary>

@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnAwake()
         {
-            if (OnAwakeGraph?.ScriptGraphAsset == null) return;
+            if (OnAwakeGraph == null || !OnAwakeGraph.HasGraph) return;
 
             // Each of these four announces this node for the duration of the graph it runs, so a
             // Set BT Variable unit inside any of them is attributed to a node the canvas can point at
@@ -62,7 +62,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnEnter()
         {
             base.OnEnter();
-            if (OnEnterGraph?.ScriptGraphAsset == null) return;
+            if (OnEnterGraph == null || !OnEnterGraph.HasGraph) return;
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
@@ -72,7 +72,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            if (OnUpdateGraph?.ScriptGraphAsset == null) return ExecutionStatus.Success;
+            if (OnUpdateGraph == null || !OnUpdateGraph.HasGraph) return ExecutionStatus.Success;
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
@@ -83,7 +83,7 @@ namespace ArcaneOnyx.BehaviorTree
         public override void OnExit()
         {
             base.OnExit();
-            if (OnExitGraph?.ScriptGraphAsset == null) return;
+            if (OnExitGraph == null || !OnExitGraph.HasGraph) return;
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 

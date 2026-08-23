@@ -319,6 +319,75 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return $"{folder}/Functions/{treeName}.{Sanitize(NameFor(node))}.asset";
         }
 
+        /// <summary>
+        /// Where a migrated lifecycle graph lands. Same convention as
+        /// <see cref="MigrationPathFor(BehaviorTreeGraphAsset, VisualScriptGraphVariable)"/>, but the slot
+        /// carries no name of its own, so the node's name plus the slot's position is all there is —
+        /// <c>Soldier.Shoot.OnEnter.asset</c>.
+        /// </summary>
+        public static string MigrationPathFor(
+            BehaviorTreeGraphAsset tree,
+            BehaviorTreeNode node,
+            ScriptGraphVariable slot,
+            string slotLabel)
+        {
+            var treePath = AssetDatabase.GetAssetPath(tree);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/') ?? "Assets";
+            var treeName = System.IO.Path.GetFileNameWithoutExtension(treePath);
+
+            var embedded = slot.ScriptGraphAsset;
+            var name = embedded != null && !string.IsNullOrWhiteSpace(embedded.name)
+                ? embedded.name
+                : $"{node.NodeName}.{slotLabel}";
+
+            return $"{folder}/Functions/{treeName}.{Sanitize(name)}.asset";
+        }
+
+        /// <summary>
+        /// Promotes the embedded graph in one slot into a standalone Function and re-points the slot.
+        ///
+        /// <para>
+        /// The general form of <see cref="ExtractToProjectAsset"/>. That one takes a
+        /// <c>VisualScriptGraphVariable</c> because it also has to rebuild the node's declared ports from
+        /// the Function's contract; a lifecycle slot has no ports, so re-pointing the slot is the whole job.
+        /// Both share the clone, which is the part that must not be written twice.
+        /// </para>
+        /// </summary>
+        public static FunctionGraphAsset ExtractSlotToProjectAsset(
+            BehaviorTreeGraphAsset tree,
+            ScriptGraphVariable slot,
+            string path)
+        {
+            if (tree == null) throw new ArgumentException("No tree given.");
+            if (slot == null) throw new ArgumentException("No graph slot given.");
+
+            var embedded = slot.ScriptGraphAsset;
+            if (embedded == null) throw new ArgumentException("That slot holds no embedded graph to extract.");
+
+            var normalized = NormalizePath(path);
+            if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalized) != null)
+            {
+                throw new ArgumentException($"'{normalized}' already exists. Pick a path that is free.");
+            }
+
+            var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            function.graph = Unity.VisualScripting.Cloning.CloneViaFakeSerialization(embedded.graph);
+
+            AssetDatabase.CreateAsset(function, normalized);
+
+            slot.SetScriptGraphAsset(null);
+            slot.SetFunction(function);
+
+            EditorUtility.SetDirty(function);
+            EditorUtility.SetDirty(tree);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            FunctionEvaluator.Invalidate(function);
+
+            return function;
+        }
+
         /// <summary>The best available name for what a node's embedded graph does. See MigrationPathFor.</summary>
         private static string NameFor(VisualScriptGraphVariable node)
         {
@@ -412,75 +481,131 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     .Where(node => node.EmbeddedScriptGraph != null)
                     .ToList();
 
+                // Every other node type that holds graphs, by slot. VisualScriptGraphVariable is the one the
+                // design talks about, but it is not the only holder: VisualScriptingNode carries four
+                // lifecycle graphs, and BH3's own FPS sample runs its whole Shoot/Aim/Do Damage behaviour
+                // out of them. Migrating only the value reads leaves the field still in use and the seam
+                // undeletable, which is how this was discovered.
+                var pendingSlots = new List<(BehaviorTreeNode node, ScriptGraphVariable slot, string label)>();
+
+                foreach (var node in tree.graph.Nodes)
+                {
+                    if (node is VisualScriptGraphVariable) continue;
+                    if (node is not BaseVisualScriptingNode holder) continue;
+
+                    var slots = holder.GraphSlots;
+                    for (var index = 0; index < slots.Count; index++)
+                    {
+                        if (slots[index]?.ScriptGraphAsset == null) continue;
+                        pendingSlots.Add((node, slots[index], SlotLabel(holder, index)));
+                    }
+                }
+
                 foreach (var node in pending)
                 {
-                    var path = MigrationPathFor(tree, node);
+                    Migrate(
+                        treePath,
+                        node.guid.ToString(),
+                        node.EmbeddedScriptGraph.name,
+                        MigrationPathFor(tree, node),
+                        candidate => ExtractToProjectAsset(tree, node, candidate));
+                }
 
-                    var candidate = path;
-                    var suffix = 2;
-                    while (taken.Contains(candidate) || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(candidate) != null)
-                    {
-                        candidate = path.Substring(0, path.Length - ".asset".Length) + suffix + ".asset";
-                        suffix++;
-                    }
-
-                    taken.Add(candidate);
-
-                    if (dryRun)
-                    {
-                        results.Add(new
-                        {
-                            tree = treePath,
-                            node = node.guid.ToString(),
-                            graph = node.EmbeddedScriptGraph.name,
-                            function = candidate
-                        });
-
-                        continue;
-                    }
-
-                    EnsureFolder(System.IO.Path.GetDirectoryName(candidate)?.Replace('\\', '/'));
-
-                    try
-                    {
-                        var function = ExtractToProjectAsset(tree, node, candidate);
-
-                        // Purity defaults to true, which is right for a Function somebody wrote deliberately
-                        // and wrong for one that arrived by migration: an embedded graph was never asked to
-                        // declare anything, and BH3's own FPS sample has several that write. Declaring them
-                        // pure would manufacture a batch of verify warnings the migration itself caused, and
-                        // teach the first reader that the warning is noise.
-                        var writes = function.DeriveWrites();
-                        if (writes.Count > 0) function.SetPure(false);
-
-                        // Same reasoning for watched keys: a guard reading this Function inherits them, and
-                        // an empty declaration on a migrated condition is the silent-stale-guard failure the
-                        // watched-key work exists to prevent.
-                        var readKeys = function.DeriveReadKeys();
-                        if (readKeys.Count > 0) function.SetWatchedKeys(readKeys);
-
-                        EditorUtility.SetDirty(function);
-                        AssetDatabase.SaveAssets();
-
-                        results.Add(new
-                        {
-                            tree = treePath,
-                            node = node.guid.ToString(),
-                            function = AssetDatabase.GetAssetPath(function),
-                            pure = function.Pure,
-                            watchedKeys = readKeys
-                        });
-                    }
-                    catch (Exception exception)
-                    {
-                        // Reported rather than thrown: one bad node must not abandon the migration partway
-                        // through and leave the project in a state nobody chose.
-                        results.Add(new { tree = treePath, node = node.guid.ToString(), error = exception.Message });
-                    }
+                foreach (var (node, slot, label) in pendingSlots)
+                {
+                    Migrate(
+                        treePath,
+                        node.guid.ToString(),
+                        $"{node.NodeName}.{label}",
+                        MigrationPathFor(tree, node, slot, label),
+                        candidate => ExtractSlotToProjectAsset(tree, slot, candidate));
                 }
             }
 
             return results;
+
+            // Local, because the two loops above differ only in how they reach the graph -- and the part
+            // they share, deciding what the migrated Function declares, is the part that must not be
+            // written twice and then drift.
+            void Migrate(string treePath, string nodeGuid, string graphName, string wantedPath,
+                Func<string, FunctionGraphAsset> extract)
+            {
+                var candidate = wantedPath;
+                var suffix = 2;
+                while (taken.Contains(candidate) || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(candidate) != null)
+                {
+                    candidate = wantedPath.Substring(0, wantedPath.Length - ".asset".Length) + suffix + ".asset";
+                    suffix++;
+                }
+
+                taken.Add(candidate);
+
+                if (dryRun)
+                {
+                    results.Add(new { tree = treePath, node = nodeGuid, graph = graphName, function = candidate });
+                    return;
+                }
+
+                EnsureFolder(System.IO.Path.GetDirectoryName(candidate)?.Replace('\\', '/'));
+
+                try
+                {
+                    var function = extract(candidate);
+
+                    // Purity defaults to true, which is right for a Function somebody wrote deliberately and
+                    // wrong for one that arrived by migration: an embedded graph was never asked to declare
+                    // anything, and BH3's own FPS sample has several that write. Declaring them pure would
+                    // manufacture a batch of verify warnings the migration itself caused, and teach the
+                    // first reader that the warning is noise.
+                    var writes = function.DeriveWrites();
+                    if (writes.Count > 0) function.SetPure(false);
+
+                    // Same reasoning for watched keys: a guard reading this Function inherits them, and an
+                    // empty declaration on a migrated condition is the silent-stale-guard failure the
+                    // watched-key work exists to prevent.
+                    var readKeys = function.DeriveReadKeys();
+                    if (readKeys.Count > 0) function.SetWatchedKeys(readKeys);
+
+                    EditorUtility.SetDirty(function);
+                    AssetDatabase.SaveAssets();
+
+                    results.Add(new
+                    {
+                        tree = treePath,
+                        node = nodeGuid,
+                        function = AssetDatabase.GetAssetPath(function),
+                        pure = function.Pure,
+                        watchedKeys = readKeys
+                    });
+                }
+                catch (Exception exception)
+                {
+                    // Reported rather than thrown: one bad node must not abandon the migration partway
+                    // through and leave the project in a state nobody chose.
+                    results.Add(new { tree = treePath, node = nodeGuid, error = exception.Message });
+                }
+            }
+        }
+
+        /// <summary>
+        /// What to call a graph slot that has no name of its own. <c>VisualScriptingNode</c>'s four are its
+        /// lifecycle hooks, in declaration order, and naming them after the hook is the only thing that
+        /// makes <c>Soldier.Shoot.OnEnter</c> readable rather than <c>Soldier.Shoot.2</c>.
+        /// </summary>
+        private static string SlotLabel(BaseVisualScriptingNode node, int index)
+        {
+            if (node is VisualScriptingNode)
+            {
+                switch (index)
+                {
+                    case 0: return "OnAwake";
+                    case 1: return "OnEnter";
+                    case 2: return "OnUpdate";
+                    case 3: return "OnExit";
+                }
+            }
+
+            return index.ToString();
         }
 
         /// <summary>Creates a folder and any missing parent, since <c>CreateAsset</c> will not.</summary>
@@ -494,14 +619,37 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
         }
 
-        /// <summary>Every behavior tree in the project, or under one folder.</summary>
+        /// <summary>
+        /// Every behavior tree in the project, or under one folder — except test fixtures.
+        ///
+        /// <para>
+        /// <b>A migration must not rewrite a test fixture.</b> Some of them exist precisely to hold an old
+        /// serialization shape, so re-saving one destroys the thing it was kept for while leaving a green
+        /// suite that no longer tests anything. BH3 has exactly such a fixture, and a guard test that
+        /// notices — it is what caught this. Passing an explicit <paramref name="folder"/> under a test
+        /// directory still reaches them, so this is a default rather than a prohibition.
+        /// </para>
+        /// </summary>
         public static List<string> FindTrees(string folder)
         {
-            var search = string.IsNullOrWhiteSpace(folder)
-                ? AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}")
-                : AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}", new[] { NormalizePath(folder) });
+            var explicitlyScoped = !string.IsNullOrWhiteSpace(folder);
 
-            return search.Select(AssetDatabase.GUIDToAssetPath).Distinct().OrderBy(path => path).ToList();
+            var search = explicitlyScoped
+                ? AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}", new[] { NormalizePath(folder) })
+                : AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}");
+
+            return search
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => explicitlyScoped || !IsTestAsset(path))
+                .Distinct()
+                .OrderBy(path => path)
+                .ToList();
+        }
+
+        private static bool IsTestAsset(string path)
+        {
+            return path.Contains("/Test/", StringComparison.OrdinalIgnoreCase)
+                || path.Contains("/Tests/", StringComparison.OrdinalIgnoreCase);
         }
 
         [CliCommand("fn_migrate_embedded",
