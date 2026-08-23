@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
@@ -32,6 +32,60 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         [TearDown]
         public void TearDown() => AssetDatabase.DeleteAsset(Folder);
+
+        // ------------------------------------------------------------------ the variable-read Function
+
+        /// <summary>
+        /// Two guards in one tree reading the same variable share one Function asset. This is the behaviour
+        /// that replaced minting a fresh anonymous sub-asset per guard, and it is the reason a Function has
+        /// a path at all — so it is worth a test rather than a doc comment.
+        /// </summary>
+        [Test]
+        public void TwoGuardsReadingOneVariable_ShareOneFunction()
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(treePath);
+            var first = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 200.0f);
+            var second = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 200.0f, 200.0f);
+
+            BehaviorTreeAuthoring.GuardOnVariable(asset, first, "hp", true, false, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.GuardOnVariable(asset, second, "hp", true, false, 200.0f, 100.0f);
+
+            var functions = asset.graph.Nodes
+                .OfType<VisualScriptGraphVariable>()
+                .Select(node => node.Function)
+                .Where(function => function != null)
+                .ToList();
+
+            Assert.That(functions.Count, Is.EqualTo(2), "both guards must have a condition");
+            Assert.That(functions[0], Is.SameAs(functions[1]),
+                "a second read of the same variable must reuse the asset, not mint a second identical one");
+        }
+
+        /// <summary>
+        /// The cost of that reuse, made loud. The path is keyed on the variable and not on the fallback, so
+        /// the second caller's fallback cannot be honoured — and handing back a Function whose fallback is
+        /// not the one just asked for, silently, is the failure this warning exists to prevent.
+        /// </summary>
+        [Test]
+        public void ASecondReadAskingForADifferentFallback_IsWarnedAndKeepsTheFirst()
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(treePath);
+            var first = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 200.0f);
+            var second = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 200.0f, 200.0f);
+
+            BehaviorTreeAuthoring.GuardOnVariable(asset, first, "hp", true, fallback: false, 0.0f, 100.0f);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                "already reads 'hp' with a fallback of 'False'"));
+
+            BehaviorTreeAuthoring.GuardOnVariable(asset, second, "hp", true, fallback: true, 200.0f, 100.0f);
+
+            var function = asset.graph.Nodes.OfType<VisualScriptGraphVariable>().First().Function;
+            var literal = function.graph.units.OfType<Unity.VisualScripting.Literal>().First();
+
+            Assert.That(literal.value, Is.EqualTo(false),
+                "the first caller's fallback is the one the shared asset keeps");
+        }
 
         /// <summary>Entry -> Selector -> a guarded WaitTime, which is the shape every lint is about.</summary>
         /// <param name="conditionDeclaresKeys">

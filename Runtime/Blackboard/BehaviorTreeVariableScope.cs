@@ -86,8 +86,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// The chain collapsed into one set of declarations, inner winning over outer.
         /// <para>
         /// For the Visual Scripting entry points, which take a flat <c>VariableDeclarations</c> and use it
-        /// strictly as input — <c>ScriptGraphVariableExtension.UpdateInput</c> copies matching names onto the
-        /// graph's input ports and never writes back — so nothing is lost by flattening. A root scope has
+        /// strictly as input — the legacy seam copied matching names onto the graph's input ports and never
+        /// wrote back — so nothing is lost by flattening. A root scope has
         /// nothing to merge and hands back its own declarations, which is both free and exactly the object
         /// these paths were given before.
         /// </para>

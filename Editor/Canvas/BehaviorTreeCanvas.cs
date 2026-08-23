@@ -164,8 +164,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// <para>
         /// This used to do a second job — resync a project-wide script-graph ledger, re-register every
         /// element's graphs, and destroy the ones nothing referenced. That deleted assets from a repaint
-        /// path, on whatever the graph happened to report at that instant. Deletion now happens once, at
-        /// save, in <c>OrphanedScriptGraphCleanup</c>, and the ledger it needed is gone.
+        /// path, on whatever the graph happened to report at that instant. Nothing does it any more: a node
+        /// references a Function, so there is no anonymous graph for a tree to own and nothing to collect.
         /// </para>
         /// </summary>
         public void SyncBookkeeping()

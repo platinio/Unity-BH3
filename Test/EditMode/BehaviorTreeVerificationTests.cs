@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;

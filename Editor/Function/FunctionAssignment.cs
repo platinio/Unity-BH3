@@ -1,4 +1,4 @@
-﻿using ArcaneOnyx.VisualScriptingExtension;
+using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityObject = UnityEngine.Object;
 

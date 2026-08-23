@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -268,20 +268,23 @@ namespace ArcaneOnyx.BehaviorTree
             RunFunction(gameObject, arguments);
         }
 
-        public T GetValue<T>(Variables input = null) => EvaluateFunction<T>(null, null);
+        /// <summary>
+        /// Evaluates the Function with no arguments, for a caller that has none to give.
+        ///
+        /// <para>
+        /// There used to be three of these, each taking an ambient variable scope — a <c>Variables</c>
+        /// component or a <c>VariableDeclarations</c> — because the embedded route fed a graph by copying
+        /// that scope onto its input ports. A Function is fed by declared arguments instead, so when the
+        /// embedded route went those parameters stopped doing anything while callers kept passing real
+        /// scopes to them. A parameter that is read by nobody and supplied by everybody is worse than no
+        /// parameter: it tells the next reader the scope reaches the graph, and their first hour goes on
+        /// finding out it does not.
+        /// </para>
+        /// </summary>
+        public T GetValue<T>(GameObject agent = null) => EvaluateFunction<T>(agent, null);
 
-        public T GetValue<T>(GameObject gameObject, Variables input = null)
-            => EvaluateFunction<T>(gameObject, null);
-
-        public T GetValue<T>(GameObject gameObject, VariableDeclarations variableDeclarations)
-            => EvaluateFunction<T>(gameObject, null);
-
-        public void Run(Variables input = null) => RunFunction(null, null);
-
-        public void Run(GameObject gameObject, Variables input = null) => RunFunction(gameObject, null);
-
-        public void Run(GameObject gameObject, VariableDeclarations input = null)
-            => RunFunction(gameObject, null);
+        /// <summary>Runs the Function for its control flow, with no arguments. See <see cref="GetValue{T}"/>.</summary>
+        public void Run(GameObject agent = null) => RunFunction(agent, null);
 
     }
 }

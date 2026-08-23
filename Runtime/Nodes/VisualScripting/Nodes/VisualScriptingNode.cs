@@ -55,7 +55,7 @@ namespace ArcaneOnyx.BehaviorTree
             // rather than to a bare name. The push and pop compile out with the recorder.
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
-            try { OnAwakeGraph.Run(gameObject, ScriptGraphVariables); }
+            try { OnAwakeGraph.Run(gameObject); }
             finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
-            try { OnEnterGraph.Run(gameObject, ScriptGraphVariables); }
+            try { OnEnterGraph.Run(gameObject); }
             finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
@@ -76,7 +76,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
-            try { return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject, ScriptGraphVariables); }
+            try { return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject); }
             finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
 
@@ -87,7 +87,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
 
-            try { OnExitGraph.Run(gameObject, ScriptGraphVariables); }
+            try { OnExitGraph.Run(gameObject); }
             finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
         }
     }

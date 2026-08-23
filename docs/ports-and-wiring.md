@@ -1,4 +1,4 @@
-﻿# Ports and Wiring
+# Ports and Wiring
 
 The idea BH3 is built around: a node's logic and its data are two separate things.
 

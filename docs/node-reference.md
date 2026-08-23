@@ -1,4 +1,4 @@
-﻿# Node Reference
+# Node Reference
 
 Every node that ships with BH3, organised the way the canvas right-click menu organises them.
 

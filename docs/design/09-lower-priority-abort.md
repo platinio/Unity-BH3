@@ -344,9 +344,9 @@ Blocking — decide before serializing anything:
    so once instantiated there is no copy to go stale. Re-dropping produces a second independent call site.
    The condition may be a variable read or an arbitrary Visual Scripting graph **referenced** by asset, with
    the constraint that the graph must be standalone rather than one of the embedded sub-assets the tree
-   owns. (*Corrected 2026-08-23, spec 10 step 5: `DestroyUnusedScriptGraphAssets` and the repository are
-   deleted. An embedded graph's lifetime is now owned by `OrphanedScriptGraphCleanup`, at save time. The
-   constraint itself is unchanged.*)
+   owns. (*Corrected 2026-08-23, spec 10 steps 5 and 7: the repository, `DestroyUnusedScriptGraphAssets`
+   and embedded graphs themselves are all deleted. Every graph is a standalone asset now, so the constraint
+   below is satisfied by construction rather than by an author remembering it.*)
 2. **Derived-key staleness.** The key list is a cached copy of what the graph reads, so it can drift when
    the graph changes — the same failure `BehaviorTreeGraphParameter` already solves for sub-tree contracts.
    Re-derive on save, on verify, or report drift and require an explicit refresh?

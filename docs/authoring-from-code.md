@@ -1,4 +1,4 @@
-﻿# Authoring From Code
+# Authoring From Code
 
 Generating behavior trees and Visual Scripting graphs programmatically — for tooling, bulk edits, and
 generated content.

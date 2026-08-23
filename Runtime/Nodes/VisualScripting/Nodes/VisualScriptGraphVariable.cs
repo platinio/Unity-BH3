@@ -90,7 +90,6 @@ namespace ArcaneOnyx.BehaviorTree
         public override bool DrawInSubTree => true;
 
         /// <summary>
-        /// <summary>
         /// Points this node at a Function and grows a port per declared input.
         /// <para>
         /// The refresh is part of assigning rather than a second step an author has to remember: a node
@@ -131,11 +130,9 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     runtimeException = null;
 
-                    // A Function is fed by this node's declared ports; an embedded graph still reads the
-                    // ambient scope, because it has no contract to declare ports from.
-                    return ScriptGraphVariable.ReadsFunction
-                        ? ScriptGraphVariable.GetValue<object>(gameObject, this)
-                        : ScriptGraphVariable.GetValue<object>(gameObject, ScriptGraphVariables);
+                    // Fed by this node's declared ports. The other arm of this used to hand an embedded
+                    // graph the ambient scope instead; with one route left, both arms called the same thing.
+                    return ScriptGraphVariable.GetValue<object>(gameObject, this);
                 }
                 catch (Exception e)
                 {

@@ -1,4 +1,4 @@
-﻿# Function graphs — named, contracted, reusable Visual Scripting logic
+# Function graphs — named, contracted, reusable Visual Scripting logic
 
 **Status:** design spec for implementation by an AI or engineer with access to the BH3,
 VisualScriptingExtension and TacticalPositionSelection sources. Decided with the tool owner (2026-08-11).
@@ -1251,6 +1251,47 @@ run — now reports the two things that can actually be wrong: a required input 
 field, turned out to be exactly the information this needed.
 
 Not test-run at the owner's request; compiles clean; three tests written.
+
+### The review round, 2026-08-23
+
+An independent review of both PRs. Everything actionable was taken; what follows is what it changed and the
+two things it got at that the implementation had not.
+
+**The stated merge order was backwards, and the code said so.** Both PR bodies claimed BH3 depended on
+VisualScriptingExtension. It is the reverse: BH3 `main` still calls `GetScriptGraphOutput` at six sites, so
+VSE cannot land first without turning BH3 red; BH3's change uses only VSE surface that was already on
+`main`. Superproject #37 moves both pointers in one commit so the project itself was never at risk — but
+the sentence is what someone follows when they bump one pointer alone. Corrected in all three bodies.
+
+**Half the per-call state the VSE change claimed to kill survived.** `ScriptGraphOutput.executionIndex`
+went; `usedControlInputKey`, `Reset()` and `GetUsedControlInputKey()` stayed, still writing to a field on
+the unit instance — shared by every agent — on every exit taken. Its only reader had been the deleted seam,
+and the guard it fed sat after all the real work, so it changed nothing. Deleted. `FiredExitKey` on the
+pooled `Flow` was already the mechanism.
+
+**Six overloads kept a parameter nothing read.** `GetValue`/`Run` took a `Variables` or
+`VariableDeclarations` scope, which fed the embedded route's input ports; with that route gone they ignored
+it while all four live call sites kept passing a real scope. Collapsed to `GetValue<T>(GameObject)` /
+`Run(GameObject)`. A parameter supplied by everyone and read by no one is worse than none: it tells the next
+reader the scope reaches the graph.
+
+**The empty-Function skeleton had a third copy.** `CreateVariableReadFunction` hand-built input unit, output
+unit and Enter/Exit/Result — the same skeleton `FunctionGraphAsset.DefaultGraph()` and
+`FunctionGraphAuthoring.CreateFunction` own, and the same duplication that produced the create-menu bug this
+work already fixed once. Now delegated.
+
+**Reuse-by-path dropped a differing fallback silently.** Two guards on `hp` share one Function, which is the
+point of naming things — but the second caller's fallback cannot be honoured, and saying nothing about it is
+the failure class this design exists to remove. Now warned, with both values named, and pinned by two tests:
+that the asset is shared, and that the first caller's fallback is the one kept. The variable name is also
+sanitised for the filename, so an odd key fails with our message rather than Unity's.
+
+**23 files had gained a UTF-8 BOM** from the editing tool used across this work, making `git blame` lie on
+the first line of every file touched. Restored to each file's original state.
+
+Left deliberately: a tree written before step 7 keeps its now-unreachable sub-assets, and nothing removes
+them — the cleanup that would have was deleted with the thing it cleaned. Documented in `functions.md`
+rather than kept alive for one release, since a tree saved by this version cannot produce one.
 
 ### Not scheduled
 

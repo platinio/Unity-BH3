@@ -1,4 +1,4 @@
-﻿using Unity.VisualScripting;
+using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {

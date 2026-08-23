@@ -1,4 +1,4 @@
-﻿# Functions
+# Functions
 
 A **Function** is a named, shared Visual Scripting graph with a declared contract — the thing a
 `hasTarget` predicate should have been all along, instead of a three-unit graph rebuilt by hand in every
@@ -117,6 +117,11 @@ variable in the same tree reuses the one asset.
 > Script Graph Variable node in it comes up empty. `bt_verify` names each one — "has no Function assigned" —
 > and the read has to be re-authored. There is no converter: it would only help a project that updated in
 > two hops, which is the same trade [spec 10](design/10-function-graphs.md) took for TPS query items.
+>
+> **The old sub-assets stay inside that tree's `.asset` file**, visible under it in the Project window and
+> reachable from nothing. Nothing removes them — the save-time cleanup that used to was deleted along with
+> the thing it cleaned, since a tree saved by this version cannot contain one. Delete them by hand once the
+> reads are re-authored; they are inert until you do.
 
 ### Functions on a Script Graph node
 
