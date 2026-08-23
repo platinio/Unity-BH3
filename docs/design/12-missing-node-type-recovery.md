@@ -1,7 +1,10 @@
 # Missing node types — keeping what a deleted script left behind, and putting it back
 
-**Status:** **IMPLEMENTED** 2026-08-23 on `feature/missing-type-recovery` (BH3 submodule), demo on the
-superproject branch of the same name. Decisions locked with the tool owner before building (see *Locked
+**Status:** **IN REVIEW** 2026-08-23. Implemented on `feature/missing-type-recovery` in both repos:
+BH3 submodule [platinio/Unity-BH3#74](https://github.com/platinio/Unity-BH3/pull/74) (`55a0ee4`), and the
+superproject pointer bump plus demo in
+[platinio/bh3-development#40](https://github.com/platinio/bh3-development/pull/40) (`59874d1`).
+**#74 merges first** — #40 carries the pointer bump. Decisions locked with the tool owner before building (see *Locked
 decisions*); what building it changed is in *Corrections to this spec, found by building it* at the end,
 which is the section to read if the design above and the code disagree.
 
