@@ -162,8 +162,7 @@ that declares no default (see below).
 
 | Menu | Behavior |
 |---|---|
-| Script Graph | A node whose lifecycle hooks (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`) are Visual Scripting graphs |
-| Run Script Graph | Executes a `ScriptGraphAsset` on enter |
+| Script Graph | A node whose lifecycle hooks (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`) are Functions |
 | Script Graph Variable | Returns a value from a Script Graph — the bridge for feeding ports, see [Ports and Wiring](ports-and-wiring.md) |
 
 ---

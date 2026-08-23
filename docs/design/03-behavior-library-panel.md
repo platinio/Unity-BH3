@@ -83,7 +83,13 @@ registered in `ScriptGraphAssetsRepository` against the owning tree, and
 `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets` deletes any registered graph no element still references.
 Two trees pointing at one tree's sub-asset means the owner's cleanup can delete it out from under the other.
 
-That cleanup only ever considers assets the repository holds **for that tree**, so a standalone
+> **Corrected 2026-08-23 (spec 10, steps 5 and 7).** The repository and `DestroyUnusedScriptGraphAssets`
+> are gone, and so is embedding itself — a node references a Function, so no tree owns an anonymous graph
+> and there is nothing to clean up. **The conclusion below is unchanged and is now structural rather than a
+> property of a ledger's contents:** every graph is a standalone asset at its own path, so the cross-tree
+> deletion this section warns about is no longer representable.
+
+That cleanup only ever considers assets stored **inside that tree**, so a standalone
 `ScriptGraphAsset` living in the project is never a candidate and is safe to reference from anywhere. Hence:
 
 - A suggested guard's Graph condition **must** reference a standalone asset.

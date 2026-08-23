@@ -122,12 +122,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         private static int HarvestScriptGraphs(BehaviorTreeNode node, List<GuardGraphSnapshot> snapshots)
         {
-            var assets = node.scriptGraphAssets;
-            if (assets == null) return -1;
+            if (node is not BaseVisualScriptingNode holder) return -1;
 
             var first = -1;
 
-            foreach (var asset in assets)
+            foreach (var asset in holder.Functions)
             {
                 if (asset?.graph == null) continue;
 
@@ -141,7 +140,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return first;
         }
 
-        private static GuardGraphSnapshot Harvest(Guid ownerGuid, ScriptGraphAsset asset)
+        // Typed on the shared Macro base rather than on either asset type: a guard's graph is a Function
+        // now, and both it and the ScriptGraphAsset this used to take derive from Macro<FlowGraph>, which
+        // is what supplies both `graph` and `GetReference()`.
+        private static GuardGraphSnapshot Harvest(Guid ownerGuid, Macro<FlowGraph> asset)
         {
             var wires = new List<GuardWireValue>();
 

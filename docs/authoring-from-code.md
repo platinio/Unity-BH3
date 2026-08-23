@@ -298,8 +298,11 @@ branch.condition.SetDefaultValue(true);            // inline value
 > A port typed `object` — Unity's `GetVariable.fallback`, for one — fails `SupportsDefaultValue`, so
 > `SetDefaultValue` on it is a silent no-op. Feed it a `Unity.VisualScripting.Literal` unit instead.
 
-Generated `ScriptGraphAsset`s owned by a tree should be registered with `ScriptGraphAssetsRepository` so
-unused-asset cleanup does not collect them.
+A generated graph is a **Function**: an ordinary asset at its own path, referenced by the node that reads
+it. `BehaviorTreeAuthoring.CreateVariableReadFunction` makes one at
+`<TreeFolder>/Functions/<Tree>.<variable>Read.asset` and reuses it if it is already there, so two guards in
+one tree reading `hp` share a single asset. Nothing registers it and nothing collects it — a Function is
+deleted the way any asset is.
 
 ---
 

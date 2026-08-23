@@ -62,13 +62,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     findings.Add($"{name}: port '{port}' is unset and will throw when read.");
                 }
 
+                findings.AddRange(MissingNodeTypes(asset, name));
                 findings.AddRange(ContractDrift(asset, name));
                 findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
                 findings.AddRange(GuardProblems(asset, name));
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
                 findings.AddRange(InvalidConnections(asset, name));
-                findings.AddRange(OrphanedScriptGraphSubAssets(asset, path, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -225,14 +225,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in asset.graph.Nodes)
             {
-                var scriptGraphs = node?.scriptGraphAssets;
-                if (scriptGraphs == null) continue;
-
-                foreach (var scriptGraph in scriptGraphs)
+                foreach (var functionGraph in FunctionGraphsReadBy(node))
                 {
-                    if (scriptGraph?.graph == null) continue;
-
-                    foreach (var unit in scriptGraph.graph.units)
+                    foreach (var unit in functionGraph.units)
                     {
                         // The stock unit specifically. BH3's own writes through AgentVariableWriter and is
                         // fine, and it is not a subclass of this one, so an exact type test is right.
@@ -245,7 +240,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                         findings.Add(
                             $"{name}: '{key}' is watched by a Reactive Guard but written by Unity's stock Set "
-                            + $"Variable unit in '{scriptGraph.name}', which cannot wake it. Use Set Behavior "
+                            + $"Variable unit in '{functionGraph.title ?? "a Function"}', which cannot wake it. Use Set Behavior "
                             + "Tree Variable, or write it through AgentVariableWriter.");
                     }
                 }
@@ -302,21 +297,37 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
+        /// The Functions a node reads, as graphs to walk.
+        ///
+        /// <para>
+        /// These lints used to walk <c>scriptGraphAssets</c> — the embedded sub-assets a node owned. Nothing
+        /// embeds any more, so that property answers empty and every lint reading it would have gone quiet
+        /// without failing. A lint that silently stops checking is worse than one that is deleted, so both
+        /// were re-pointed at where the graphs actually live.
+        /// </para>
+        /// </summary>
+        private static IEnumerable<Unity.VisualScripting.FlowGraph> FunctionGraphsReadBy(BehaviorTreeNode node)
+        {
+            if (node is not BaseVisualScriptingNode holder) yield break;
+
+            foreach (var slot in holder.GraphSlots)
+            {
+                var function = slot?.Function;
+                if (function?.graph != null) yield return function.graph;
+            }
+        }
+
+        /// <summary>
         /// Names of write units inside a guard's script graphs. The key-derivation walk already visits every
         /// unit, so spotting the ones that write is free.
         /// </summary>
         private static IEnumerable<string> WriteUnitsInside(ConditionalExecution guard)
         {
             var found = new List<string>();
-            var assets = guard.scriptGraphAssets;
 
-            if (assets == null) return found;
-
-            foreach (var scriptGraph in assets)
+            foreach (var functionGraph in FunctionGraphsReadBy(guard))
             {
-                if (scriptGraph?.graph == null) continue;
-
-                foreach (var element in scriptGraph.graph.units)
+                foreach (var element in functionGraph.units)
                 {
                     string unit = element?.GetType().Name;
                     if (string.IsNullOrEmpty(unit)) continue;
@@ -370,32 +381,56 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in asset.graph.Nodes)
             {
-                // A Function on a Script Graph node's lifecycle graph has no way to be given arguments:
-                // only a Script Graph Variable declares ports from a contract. Worth reporting because
-                // BTScriptGraphVariableInspector is registered for BTScriptGraphVariable and so offers the
-                // Function picker on all four of these too, and because the two failure shapes are both
-                // silent -- with no embedded graph beside it the Function never runs at all, and with one it
-                // runs unfed.
+                // A Script Graph node's four lifecycle slots take Functions, through the same picker the
+                // value node uses. Two things can be wrong with one that nothing else catches: the slot
+                // cannot declare ports, so a Function that needs an argument runs unfed; and OnUpdate's
+                // Function is the node's verdict, so it has to return an ExecutionStatus. The requirement is
+                // read off the slot by the same rule the picker filters with, so what verify names and what
+                // the dropdown offers cannot disagree.
                 if (node is VisualScriptingNode lifecycleNode)
                 {
-                    foreach (var graph in lifecycleNode.LifecycleGraphs)
+                    foreach (var slot in lifecycleNode.GraphSlots)
                     {
-                        if (graph == null || !graph.ReadsFunction) continue;
+                        if (slot == null || !slot.ReadsFunction) continue;
 
-                        yield return
-                            $"{treeName}: node '{lifecycleNode.NodeName}' assigns Function " +
-                            $"'{graph.Function.name}' to a lifecycle graph, which cannot declare ports and so " +
-                            "cannot be passed arguments. Read it from a Script Graph Variable node instead.";
+                        var slotFunction = slot.Function;
+                        var requirement = FunctionPortConstraint.For(slot);
+
+                        if (!requirement.Satisfies(slotFunction.ResultType))
+                        {
+                            yield return
+                                $"{treeName}: node '{lifecycleNode.NodeName}' assigns Function '{slotFunction.name}' " +
+                                $"to a lifecycle slot requiring {requirement.Describe()}, but it returns " +
+                                $"{slotFunction.ResultType?.Name ?? "nothing"}.";
+                        }
+
+                        foreach (var input in slotFunction.Inputs)
+                        {
+                            if (input.hasDefaultValue) continue;
+
+                            yield return
+                                $"{treeName}: node '{lifecycleNode.NodeName}' assigns Function '{slotFunction.name}' " +
+                                $"to a lifecycle slot, which cannot declare ports, so its required input " +
+                                $"'{input.key}' can never be supplied. Give it a default, or read the Function " +
+                                "from a Script Graph Variable node instead.";
+                        }
                     }
                 }
 
                 if (node is not VisualScriptGraphVariable variableNode) continue;
 
-                if (variableNode.HasAmbiguousGraphSource)
+                // A node that reads nothing. Before embedding was retired this could only be reported as an
+                // ambiguity — Function *and* embedded graph — because "no Function" was a legitimate state
+                // meaning "reads the embedded one". Now it is simply broken, and this is what catches a tree
+                // that arrives from an older version with its embedded graphs no longer readable.
+                if (variableNode.Function == null)
                 {
                     yield return
-                        $"{treeName}: node '{variableNode.NodeName}' has both a Function and an embedded graph " +
-                        "assigned. The Function is what runs, so the embedded graph is editable but dead.";
+                        $"{treeName}: node '{variableNode.NodeName}' has no Function assigned, so it reads " +
+                        "nothing. A tree written before embedded graphs were retired needs its reads " +
+                        "re-authored as Functions.";
+
+                    continue;
                 }
 
                 // Per node, not per Function: two nodes referencing one Function can be at different points
@@ -499,14 +534,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// Script-graph sub-assets of this tree that nothing in it references any more.
-        /// <para>
-        /// <b>Report only.</b> The canvas sweep still owns deletion, and the sequencing this feature follows is
-        /// that there is never more than one thing deleting graphs at a time. This is step one: make the
-        /// orphans visible while the existing deleter is still the one acting on them.
-        /// </para>
-        /// </summary>
-        /// <summary>
         /// Wires the canvas draws red: connections whose ports no longer accept each other.
         ///
         /// <para>
@@ -545,40 +572,25 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
         }
 
-        private static IEnumerable<string> OrphanedScriptGraphSubAssets(
-            BehaviorTreeGraphAsset asset,
-            string assetPath,
-            string treeName)
+        /// <summary>
+        /// Nodes whose type no longer exists. The asset rewrites an unknown <c>$type</c> to
+        /// <see cref="MissingType"/> on load, so the tree still opens and its wiring survives — which is
+        /// exactly why nothing else notices: nothing throws, nothing is unset, the branch simply does
+        /// nothing where that node was. Deleting a node type is the accepted way to retire one here, so
+        /// the thing that names the leftovers has to exist.
+        /// </summary>
+        private static IEnumerable<string> MissingNodeTypes(BehaviorTreeGraphAsset asset, string treeName)
         {
-            // The path is passed in rather than read off the asset: Reload hands back an Instantiate clone so
-            // that what is inspected is what survives serialization, and a clone has no asset path. Deriving
-            // it here returned empty and this lint silently reported nothing — which a test caught only
-            // because it asserted on the finding rather than on the method running.
-            if (string.IsNullOrEmpty(assetPath)) yield break;
-
-            var path = assetPath;
-
-            var referenced = new HashSet<Unity.VisualScripting.ScriptGraphAsset>();
-
             foreach (var node in asset.graph.Nodes)
             {
-                var graphs = node?.scriptGraphAssets;
-                if (graphs == null) continue;
+                if (node is not MissingType missing) continue;
 
-                foreach (var graph in graphs)
-                {
-                    if (graph != null) referenced.Add(graph);
-                }
-            }
-
-            foreach (var representation in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
-            {
-                if (representation is not Unity.VisualScripting.ScriptGraphAsset subAsset) continue;
-                if (referenced.Contains(subAsset)) continue;
+                var former = string.IsNullOrEmpty(missing.formerType) ? "unknown" : missing.formerType;
 
                 yield return
-                    $"{treeName}: orphaned sub-asset — script graph '{subAsset.name}' is stored in this tree " +
-                    "but nothing in it references the graph any more.";
+                    $"{treeName}: node at ({missing.Position.x:F0}, {missing.Position.y:F0}) has a type that " +
+                    $"no longer exists (formerly '{former}'). It does nothing; delete it and rebuild what it " +
+                    "did with a node that exists.";
             }
         }
 

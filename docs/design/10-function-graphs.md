@@ -558,8 +558,10 @@ control that must fail.
   extension methods from that namespace must be called as plain statics.
 - `save_all` on a freshly launched Editor sitting on an *Untitled* scene raises a modal `Save Scene` dialog
   and blocks the whole pipeline. The precaution and the hazard are the same call.
-- Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
-  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit it.
+- ~~Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
+  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit
+  it.~~ — **struck 2026-08-23: the asset, its folder and its class are deleted by step 5.** Nothing dirties
+  a shared file any more, so there is nothing to remember to revert.
 
 ***
 
@@ -934,6 +936,8 @@ below and in the authoring skill stay valid.
 
 ### Step 5 — Remove the repository (repository removal, steps 2 and 3 of 3)
 
+✅ **Done, 2026-08-23** — see *Step 5 landed* below.
+
 **Merged from the former steps 5 and 6 on 2026-08-22, by the tool owner.** They were separate to keep a
 safe intermediate state — deletion moved to save time first, the repository removed second — but both are
 BH3-only, both are small, and landing only the first leaves the state nobody wants: two deletion mechanisms,
@@ -963,12 +967,122 @@ referenced by the same tree → never touched) and test 8 (after this step, edit
 tree's asset) are the ones this step makes green. Plus: saving a tree with no orphans destroys nothing; an
 orphan that reappears before save (undo) is not destroyed.
 
+### Step 5 landed — the tree owns its graphs, 2026-08-23
+
+Branch `feature/repository-removal` in BH3 and the superproject. TacticalPositionSelection and
+VisualScriptingExtension are untouched — but see *this was not a BH3-only change* below, because the step
+said it was.
+
+EditMode 733 tests / 1 failure, the pre-existing `TpsArchitectureTests` one. Baseline before the work was
+726 / 1, same failure. PlayMode unchanged at 84 / 3, the same three pre-existing
+`TacticalPositionSelectionPlayModeTests` NREs.
+
+#### What shipped
+
+- **`OrphanedScriptGraphs.Of(tree, assetPath)`** (BH3 editor, new). The enumerate-and-diff, written once:
+  script-graph sub-assets stored at the tree's path, minus what its elements reference. Both the verify lint
+  and the cleanup read it, so what gets named and what gets destroyed cannot drift apart.
+- **`OrphanedScriptGraphCleanup`** (BH3 editor, new). An `AssetModificationProcessor.OnWillSaveAssets` hook,
+  mirroring `GuardScheduleSeeder` — the same file, the same reasoning, and now the second user of that
+  pattern. It is the only thing in the project that destroys a graph. Refuses to act in Play mode, logs each
+  removal by name, and swallows its own exceptions so a save always completes.
+- **The repository is gone**: `ScriptGraphAssetsRepository` (class, `.asset`, and the
+  `Assets/BehaviorTree.Generated` folder), the `Instance` "first repository found" lookup,
+  `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, `BehaviorTreeGraph.AddScriptGraphAssets`, the
+  registration call in `CreateVariableReadGraph`, and the canvas sweep. The sweep did not survive as
+  report-only, per the step.
+- **`BehaviorTreeCanvas.SyncBookkeeping` shrank to what it is actually for** — the dangling-element repair.
+  `wasPlaying`, `lastSyncedAsset` and the `EditorApplication.projectChanged` subscription went with the
+  repository half; all three existed only to re-arm it.
+- **Demo**: `BH3Demos/RepositoryRemoval/` — the ledger's absence checked live rather than asserted, an agent
+  running a tree whose node reads an embedded graph, and the two sets the cleanup compares. Verified on Play
+  with a game-view capture.
+
+#### Decisions taken while implementing
+
+- **The finder is a type, not a method on the verification class.** Deletion depending on a report generator
+  is the wrong direction, and the alternative — each of them implementing the rule — is how a report that
+  named a different set than the deleter took would come about. One type both depend on.
+- **An unreadable tree is refused, not treated as all-orphans.** `Of` returns empty when `graph` is null.
+  Read the other way, a tree that failed to deserialize reports no elements, which looks exactly like "every
+  sub-asset is unreferenced" — and the cleanup would take the lot. This is the timing bug class that made
+  the old sweep dangerous, and the one thing this code must never get wrong.
+- **Play mode inherits the old sweep's one sensible guard.** A running agent holds live references into the
+  graphs of the tree it executes, and a save during play is not an authoring act.
+- **Deletion is not undoable, and nothing was built to make it so.** `DestroyImmediate` on a sub-asset
+  cannot be recorded for undo. What replaces undo is *when* it runs: an orphan that stops being one before
+  the next save was never a candidate. Pinned by a test.
+
+#### Corrections to this spec, found by building it
+
+1. **This was not a BH3-only change.** The `.asset` and the `Assets/BehaviorTree.Generated` folder live in
+   the **superproject**, not in the BH3 submodule, so removing the repository touches two repos. The step's
+   text ("both are BH3-only, both are small") is wrong about the first half.
+2. **`bt_verify` now triggers the cleanup, because `Reload` saves first.**
+   `BehaviorTreeVerification.Reload` opens with `AssetDatabase.SaveAssets()`, so verifying a tree with
+   unsaved changes cleans it before the orphan lint looks. The lint is **not** dead — what still reaches it
+   is a tree that arrived on disk already carrying an orphan, from an older version of this tool or another
+   project, which nothing in the session has dirtied. Worth knowing before someone reads the lint as broken.
+3. **`fn_extract` now tidies up after itself, and its documentation said the opposite.**
+   `ExtractToProjectAsset` clears the node's reference and then calls `SaveAssets()`, so the sub-asset it
+   deliberately left behind is removed by that save. Extract is still not a deleter — the cleanup is. Its
+   doc comment and the test `Extract_LeavesTheOriginalSubAsset_ForVerifyToReportAsAnOrphan` both asserted
+   the old behaviour and were updated; the test is now `Extract_LeavesNoOrphanedSubAssetBehind`.
+4. **The canvas sweep was no longer per-OnGUI.** It had already been put behind a `bookkeepingIsStale` flag
+   by the canvas performance work. The spec's `BehaviorTreeCanvas.cs:77-86` had drifted to 180-216. The
+   *cost* argument for removing it was therefore already half-spent; the *correctness* argument — deleting
+   assets from a repaint path, on whatever the graph reported at that instant — was the whole remaining
+   case, and it was enough.
+5. **The repository lived in the Runtime assembly**, `Runtime/Graphs/`, gated internally with
+   `#if UNITY_EDITOR` — not in the Editor assembly, as its purely editor-time job would suggest.
+
+#### A defect fixed on the way
+
+`BehaviorTreeVerification.OrphanedScriptGraphSubAssets` had **no doc comment, and its doc comment had
+drifted onto the wrong method** — the `<summary>` describing it sat immediately above
+`InvalidConnections`'s own `<summary>`, so the file had two stacked summaries on one method and none on the
+other. That is how the report-only note ended up documenting the wrong thing. Both are now attached to what
+they describe.
+
+#### Known gaps, stated rather than discovered
+
+- **`bt_verify` cleans as a side effect of verifying, and not only the tree it was given.** Correction 2
+  above, with the wider half found by the self-review: `AssetDatabase.SaveAssets()` saves **every dirty
+  asset in the project**, so verifying tree A also saves tree B and cleans B's orphans. The realistic
+  exposure is narrow — an author holding a freshly created graph they have not wired to a node yet, which
+  is an orphan by definition and would be removed by their own next save regardless — and the authoring
+  helpers all wire in the same expression that creates. But the command's description promised "Read-only",
+  which was true before this step and is not now; that claim has been corrected rather than left to
+  mislead an automated caller. Scoping `Reload` to persist only the tree it was asked about would fix the
+  breadth properly, and is a change to verification's contract that belongs in its own pass.
+- **No test covers the hook firing through Unity's own Ctrl+S**, only through `AssetDatabase.SaveAssets()`.
+  Both reach `OnWillSaveAssets`, which is the seam under test, but the keyboard path is untested by
+  construction.
+- **Ordering between the two `AssetModificationProcessor`s is unspecified.** `GuardScheduleSeeder` and
+  `OrphanedScriptGraphCleanup` both run on save and Unity does not define which goes first. They are
+  independent today — one seeds triggers, the other destroys unreferenced graphs — but a future hook that
+  cares about ordering would have no way to express it.
+- **`Assets/TPSQuery.asset`** is an untracked stray in the repo root, left by an earlier session. Not this
+  step's, and not committed by it.
+
+#### Tests
+
+Seven new EditMode tests in `OrphanedScriptGraphCleanupTests`, plus one rewritten in
+`FunctionVerificationTests`. Spec test 7 (delete the node, save, the sub-asset is gone; a standalone
+Function referenced by the same tree is never touched) and test 8 (no project-wide ledger is created by a
+full authoring round trip) are the ones this step makes green. Beyond those: saving a healthy tree
+repeatedly destroys nothing, a graph whose node returns before the save survives, the finder refuses a null
+tree or an empty path, and an unreferenced graph still on disk is *named without being deleted* — which is
+what pins that the lint and the cleanup read the same rule.
+
 ### Step 6 — folded into Step 5
 
 Was *Remove the repository (repository removal, step 3 of 3)*. Merged into step 5 on 2026-08-22. Step 7 keeps
 its number so the cross-references stay valid; its ordering rule now reads "after step 5".
 
 ### Step 7 — Retire embedded graphs (open question 3, closed)
+
+✅ **Done, 2026-08-23** — see *Step 7 landed* below.
 
 **Decided 2026-08-21 by the tool owner: no more embedded graphs.** The open question asked what a *new*
 one-off should be; the answer is that there are no new one-offs. What remains is finishing the job.
@@ -994,6 +1108,190 @@ is concurrently re-pointing, which is exactly the two-deleters state locked deci
 with a path, so a tree that used to be self-contained now depends on a folder of small Functions. That is
 the trade being taken deliberately: a named asset a designer can find, reuse and delete, in place of an
 anonymous sub-asset that only a garbage collector knew about.
+
+### Step 7 landed — embedding is gone, 2026-08-23
+
+Branch `feature/repository-removal` in BH3, VisualScriptingExtension and the superproject — the same branch
+as step 5, folded in at the tool owner's request, so the two ship as one change.
+
+EditMode 722 tests / 1 failure, the pre-existing `TpsArchitectureTests` one. The count fell from 733 because
+eleven tests covered machinery this step deletes: step 5's save-time cleanup, and `fn_extract`.
+
+#### What shipped
+
+- **46 embedded graphs migrated** to Functions at `<TreeFolder>/Functions/<Tree>.<Name>.asset` — BH3's FPS
+  and FlightRecorder samples, nine demo trees, and GOWDraugr's Draugr. No tree in the project holds an
+  embedded graph or a script-graph sub-asset any more.
+- **The field and its seam are deleted**: `ScriptGraphVariable.scriptGraphAsset`, the six dual-path
+  `GetValue`/`Run` overloads collapsed to Function-only, `EmbeddedScriptGraph`, `SetScriptGraph`,
+  `HasAmbiguousGraphSource` and the three surfaces that reported it, and — in VisualScriptingExtension —
+  `ScriptGraphVariableExtension` and `ScriptGraphOutput.executionIndex`, exactly as step 3 predicted.
+- **Step 5's machinery is gone with it**: `OrphanedScriptGraphs`, `OrphanedScriptGraphCleanup`, the orphan
+  lint and their tests. Nothing can be orphaned when nothing is contained.
+- **Copy, cut and duplicate work again** on nodes holding graphs. The restriction existed because two copies
+  shared one sub-asset; a Function is referenced, so it does not apply.
+- **`CreateVariableReadGraph` became `CreateVariableReadFunction`**, so `bt_add_variable_read` and
+  `bt_guard_on_variable` produce named assets. It reuses an existing Function at the same path, so two guards
+  in one tree reading `hp` share one asset rather than minting two identical graphs.
+- **The four raw create-menu items make Functions**, delegating to `FunctionGraphAssetCreator.Create` rather
+  than building a graph a second way.
+
+#### Corrections to this spec, found by building it
+
+1. **`VisualScriptGraphVariable` is not the only holder of an embedded graph, and the spec never says so.**
+   `VisualScriptingNode` carries four — `OnAwake`, `OnEnter`, `OnUpdate`, `OnExit` — and BH3's own FPS sample
+   runs its entire Shoot / Aim at Target / Do Damage behaviour out of them. Step 7's text names only
+   `ScriptGraphVariable.scriptGraphAsset`, so migrating what it describes left eleven graphs in place and the
+   field still in use. Found by verifying the migration rather than by reading, which is the argument for
+   checking the count afterwards.
+2. **Those four lifecycle hooks could never have run a Function anyway.** Each gated on
+   `?.ScriptGraphAsset == null` — the embedded field specifically — so a slot holding a Function was skipped
+   entirely and did nothing, silently. The inspector has offered a Function there since Functions existed.
+   This is a live bug predating the step, fixed by asking `HasGraph`.
+3. **Step 7's "what dies with it, for free" list is a third of the real total.** It names the orphan lint,
+   the save-time cleanup and the cross-tree deletion bug class. Also dead: two `bt_verify` write lints, the
+   dump's graph writer, the why-panel's graph resolver, its topology walk, and the guard-trace harvester —
+   six surfaces that read `scriptGraphAssets`. **They were re-pointed at Functions, not deleted**: a debugger
+   that silently shows nothing is worse than one that is missing.
+4. **The step is silent on `CanCopy`/`CanCut`/`CanDuplicate`**, though `ports-and-wiring.md` already promised
+   that lifting them was part of retiring embedded graphs. It is a user-visible feature restoration rather
+   than cleanup, and belongs in the step's description.
+5. **The asset-path convention had to be invented here**, as step 2c deferred it to whoever needed it. The
+   name has three sources in order — the graph's own name, the node's, then the variable it reads — because
+   hand-authored graphs have no name at all while their nodes are called *Is Enemy On Range?* and *Safe
+   Position Query*. Getting that order wrong turns the FPS sample into `Soldier.Graph3` through
+   `Soldier.Graph8`.
+6. **`ScriptGraphVariableExtension` dies exactly as step 3 predicted**, and its census was right: after the
+   embedded branch went, nothing referenced it.
+
+#### Decisions taken while implementing
+
+- **Migrated Functions derive purity and watched keys rather than accepting the defaults.** An embedded graph
+  was never asked to declare anything. Purity defaults to true and several sample graphs write, so accepting
+  it would have manufactured a batch of verify warnings the migration itself caused — and taught the first
+  reader that the warning is noise. Watched keys are the same bet in the other direction: an empty
+  declaration on a migrated guard condition is the stale-guard failure the watched-key work exists to prevent.
+- **The migration tool is deleted along with the field.** `fn_migrate_embedded` cannot work once nothing can
+  be embedded, and keeping it would only help a downstream project that updated in two hops — the same
+  reasoning open question 1 used to refuse a TPS converter. It exists in this branch's history, at the commit
+  that ran it, which is where a downstream project would have to be anyway.
+- **Test fixtures are excluded from a project-wide migration.** `LegacyPlaceholders.asset` exists to hold a
+  serialization shape older than the current writer, so re-saving it destroys what it is kept for while
+  leaving a green suite that tests nothing. Its guard test caught this.
+- **GraphCore is not touched.** `IGraphElement.scriptGraphAssets` loses its only implementer, but GraphCore
+  itself never consumes it, so removing it would open a third submodule for two vestigial lines. Left, and
+  reported.
+
+#### Also in this pass: `RunScriptGraph` is deleted
+
+The last BH3 node type holding a raw `ScriptGraphAsset`. Its own summary called it deprecated and wrong
+when fully configured -- it ran the *shared* asset with no agent context, so graph state was shared across
+agents and `Self` did not resolve -- and it was kept only for trees that already held one. No tree, prefab
+or scene in the project does. Gone with its test, its create-menu entry and two doc rows.
+
+**What a tree holding one does now, observed rather than guessed.** Before deleting the class a probe tree
+was built with one in it; after, it **loads**: the asset rewrites the unknown `$type` to `MissingType`, the
+wiring survives, nothing throws. And `bt_verify` **said nothing** -- the safety net this spec leans on ("a
+hand-authored tree in a downstream project is caught rather than silently broken") had a hole exactly where
+a deleted node type lands. Closed: `MissingType` now reports itself on the canvas, and `bt_verify` names
+each one with its position and former type. Pinned by `VerifyNamesANodeWhoseTypeNoLongerExists`.
+
+#### The FPS sample's Functions cannot be entered, and did not start that way here
+
+Twenty-six of the project's Functions -- every one migrated out of BH3's `Sample/FPS` and `Patrol` -- have
+no `ScriptGraphInput` unit, so `FunctionBindingPlan` refuses them and they cannot run. Found by running
+`bt_verify` over the sample, which names all of them.
+
+**The migration did not cause it.** The pre-migration `Soldier.asset` contains zero `ScriptGraphInput` and
+zero `ScriptGraphOutput`; those graphs never had either. The deleted legacy seam required the same unit --
+`GetNodeOfType<ScriptGraphInput>(graph)` then `inputNode.controlOutputs[0]` -- so it would have thrown a
+`NullReferenceException` on exactly these graphs. The sample's Visual Scripting content was already dead;
+migrating it faithfully carried that forward, and the contract check now says so out loud instead of
+failing at the first tick.
+
+**Left unrepaired, by the tool owner's decision.** Re-authoring twenty-three-unit graphs nobody has run in
+a long time is game-content work, and the same trade step 3 took for TPS query items: named by verify
+rather than silently broken.
+
+**The real gap is coverage, not the lint.** The unusable-Function lint already existed and catches every
+one. Nothing runs `bt_verify` over BH3's shipped `Sample/` trees, so the suite stayed green while
+twenty-six assets were dead. A verify pass over shipped sample content is worth scheduling; it is what
+would have caught this the day it happened rather than years later.
+
+Two smaller things the same pass surfaced: `Soldier.asset` and `Zombie.asset` each carry a `MissingType`
+node from some type deleted long before this work (confirmed present before `RunScriptGraph` was removed),
+and `Soldier` has an unset `NavPosition` port. Both are named by verify now.
+
+#### Known gaps, stated rather than discovered
+
+- **`IGraphElement.scriptGraphAssets` is now a zero-implementer seam** in GraphCore, returning null forever.
+  Harmless, and worth removing the next time GraphCore is opened for its own reasons.
+- **A tree written before this change reads nothing.** Its embedded graphs no longer deserialize, so every
+  read node comes up empty and `bt_verify` names each one. This is the accepted trade, matching step 3's for
+  TPS query items — but it is a bigger blast radius, since every downstream tree is affected rather than
+  every downstream query item.
+- **`BTScriptGraphVariable.returnType` has no readers anywhere** — a pre-existing dead field noticed while
+  working in that file, left alone as unrelated.
+- **Nothing tests the create-menu items or the inspector's button row**, both editor GUI, as before.
+
+### Follow-up to step 7 — the Script Graph node's Function picker, 2026-08-23
+
+Found by the tool owner trying it: on a **Script Graph** node (`VisualScriptingNode`) the Function dropdown
+listed everything and selected nothing. The slot inspector is shared by both nodes, but it resolved its owner
+as a `VisualScriptGraphVariable` specifically — so on a lifecycle slot it found nothing and dropped the pick,
+with a warning nobody was looking at. Until step 7 fixed the hooks' `HasGraph` gate this was moot, since an
+assigned Function would not have run anyway; after it, the inspector was the last thing in the way.
+
+Fixed in three places that now share one rule: the inspector resolves either node; `FunctionPortConstraint`
+reads a lifecycle slot's requirement off the slot itself (`OnUpdate` was created requiring `ExecutionStatus`;
+the other three run for effects and accept a Function with no `Result`, which the picker refused everywhere
+before); and the verify lint that reported *every* Function on a lifecycle slot — true when they could not
+run — now reports the two things that can actually be wrong: a required input nothing can supply, and an
+`OnUpdate` Function that does not return a verdict. `BTScriptGraphVariable.returnType`, noted above as a dead
+field, turned out to be exactly the information this needed.
+
+Not test-run at the owner's request; compiles clean; three tests written.
+
+### The review round, 2026-08-23
+
+An independent review of both PRs. Everything actionable was taken; what follows is what it changed and the
+two things it got at that the implementation had not.
+
+**The stated merge order was backwards, and the code said so.** Both PR bodies claimed BH3 depended on
+VisualScriptingExtension. It is the reverse: BH3 `main` still calls `GetScriptGraphOutput` at six sites, so
+VSE cannot land first without turning BH3 red; BH3's change uses only VSE surface that was already on
+`main`. Superproject #37 moves both pointers in one commit so the project itself was never at risk — but
+the sentence is what someone follows when they bump one pointer alone. Corrected in all three bodies.
+
+**Half the per-call state the VSE change claimed to kill survived.** `ScriptGraphOutput.executionIndex`
+went; `usedControlInputKey`, `Reset()` and `GetUsedControlInputKey()` stayed, still writing to a field on
+the unit instance — shared by every agent — on every exit taken. Its only reader had been the deleted seam,
+and the guard it fed sat after all the real work, so it changed nothing. Deleted. `FiredExitKey` on the
+pooled `Flow` was already the mechanism.
+
+**Six overloads kept a parameter nothing read.** `GetValue`/`Run` took a `Variables` or
+`VariableDeclarations` scope, which fed the embedded route's input ports; with that route gone they ignored
+it while all four live call sites kept passing a real scope. Collapsed to `GetValue<T>(GameObject)` /
+`Run(GameObject)`. A parameter supplied by everyone and read by no one is worse than none: it tells the next
+reader the scope reaches the graph.
+
+**The empty-Function skeleton had a third copy.** `CreateVariableReadFunction` hand-built input unit, output
+unit and Enter/Exit/Result — the same skeleton `FunctionGraphAsset.DefaultGraph()` and
+`FunctionGraphAuthoring.CreateFunction` own, and the same duplication that produced the create-menu bug this
+work already fixed once. Now delegated.
+
+**Reuse-by-path dropped a differing fallback silently.** Two guards on `hp` share one Function, which is the
+point of naming things — but the second caller's fallback cannot be honoured, and saying nothing about it is
+the failure class this design exists to remove. Now warned, with both values named, and pinned by two tests:
+that the asset is shared, and that the first caller's fallback is the one kept. The variable name is also
+sanitised for the filename, so an odd key fails with our message rather than Unity's.
+
+**23 files had gained a UTF-8 BOM** from the editing tool used across this work, making `git blame` lie on
+the first line of every file touched. Restored to each file's original state.
+
+Left deliberately: a tree written before step 7 keeps its now-unreachable sub-assets, and nothing removes
+them — the cleanup that would have was deleted with the thing it cleaned. Documented in `functions.md`
+rather than kept alive for one release, since a tree saved by this version cannot produce one.
 
 ### Not scheduled
 

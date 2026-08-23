@@ -90,15 +90,13 @@ namespace ArcaneOnyx.BehaviorTree
         };
 
         /// <summary>
-        /// Whether the dangling-element repair and the script-graph-asset sync still have work to do.
+        /// Whether the dangling-element repair still has work to do.
         ///
         /// <para>
-        /// Both used to run unconditionally in <see cref="OnGUI"/>, which is not once per frame — it runs for
+        /// It used to run unconditionally in <see cref="OnGUI"/>, which is not once per frame — it runs for
         /// <em>every</em> GUI event: layout, repaint, every mouse-move. So a mouse crossing the canvas paid,
-        /// several times a frame, for a full walk of the graph's elements, a resync of the project-wide
-        /// script-graph repository, a re-add of every element's assets, and a sweep for unused ones. None of
-        /// that is repaint work; all of it is change-driven bookkeeping that answers the same way until
-        /// something actually changes.
+        /// several times a frame, for a full walk of the graph's elements. None of that is repaint work; all
+        /// of it is change-driven bookkeeping that answers the same way until something actually changes.
         /// </para>
         ///
         /// <para>
@@ -113,25 +111,15 @@ namespace ArcaneOnyx.BehaviorTree
         private bool bookkeepingIsStale = true;
 
         /// <summary>
-        /// Play-mode state is polled rather than subscribed to. It gates
-        /// <c>DestroyUnusedScriptGraphAssets</c>, so leaving play has to re-run the sweep — and one bool
-        /// comparison per event is cheaper than another global subscription to unhook correctly.
-        /// </summary>
-        private bool wasPlaying;
-
-        /// <summary>
-        /// The asset the last sync ran against. Polled for the same reason as <see cref="wasPlaying"/>:
-        /// the repository half of the pass needs an asset, and there is no event for "the edited context
-        /// finally resolved", so a null turning into a tree has to re-arm the pass or the repository would
-        /// stay unsynced until the next unrelated edit.
-        /// </summary>
-        private BehaviorTreeGraphAsset lastSyncedAsset;
-
-        /// <summary>
-        /// The things that can change what the bookkeeping would conclude: the graph gaining or losing an
-        /// element, undo restoring one, and the project's assets changing underneath the repository — a
-        /// script graph deleted in the Project window invalidates a repository entry without touching this
-        /// graph at all.
+        /// The things that can change what the repair would conclude: the graph gaining or losing an
+        /// element, and undo restoring one.
+        ///
+        /// <para>
+        /// <c>EditorApplication.projectChanged</c> used to be here too, for the script-graph half of this
+        /// pass — a graph deleted in the Project window invalidated a ledger entry without touching this
+        /// graph at all. That ledger is gone, and whether an element is dangling is a question about this
+        /// graph's own contents, which no project-wide change can alter.
+        /// </para>
         /// </summary>
         private void ListenForBookkeepingChanges()
         {
@@ -143,9 +131,6 @@ namespace ArcaneOnyx.BehaviorTree
             Undo.undoRedoPerformed -= MarkBookkeepingStale;
             Undo.undoRedoPerformed += MarkBookkeepingStale;
 
-            EditorApplication.projectChanged -= MarkBookkeepingStale;
-            EditorApplication.projectChanged += MarkBookkeepingStale;
-
             bookkeepingIsStale = true;
         }
 
@@ -153,9 +138,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             graph.elements.CollectionChanged -= MarkBookkeepingStale;
 
-            // These two are global and would otherwise root this canvas for the session.
+            // Global, and would otherwise root this canvas for the session.
             Undo.undoRedoPerformed -= MarkBookkeepingStale;
-            EditorApplication.projectChanged -= MarkBookkeepingStale;
         }
 
         private void MarkBookkeepingStale() => bookkeepingIsStale = true;
@@ -168,26 +152,24 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Brings the graph and the script-graph repository back into agreement, if anything has happened
-        /// that could have put them out of it. Cheap and does nothing on the overwhelming majority of calls.
+        /// Repairs elements left anchored to something that has been deleted, if anything has happened that
+        /// could have produced one. Cheap and does nothing on the overwhelming majority of calls.
         ///
         /// <para>
         /// Separate from <see cref="OnGUI"/> so the rule about <em>when</em> this work happens can be read,
         /// changed and tested without a graph window: the base <c>OnGUI</c> needs a live GUI context, and
         /// this does not.
         /// </para>
+        ///
+        /// <para>
+        /// This used to do a second job — resync a project-wide script-graph ledger, re-register every
+        /// element's graphs, and destroy the ones nothing referenced. That deleted assets from a repaint
+        /// path, on whatever the graph happened to report at that instant. Nothing does it any more: a node
+        /// references a Function, so there is no anonymous graph for a tree to own and nothing to collect.
+        /// </para>
         /// </summary>
         public void SyncBookkeeping()
         {
-            var asset = GetBehaviorTreeGraphAsset();
-
-            if (wasPlaying != EditorApplication.isPlaying || lastSyncedAsset != asset)
-            {
-                wasPlaying = EditorApplication.isPlaying;
-                lastSyncedAsset = asset;
-                bookkeepingIsStale = true;
-            }
-
             if (!bookkeepingIsStale) return;
 
             bookkeepingIsStale = false;
@@ -196,23 +178,6 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 RemoveDanglingElements();
             }
-
-            // The repair above is about the graph and needs nothing else. Everything below is about this
-            // tree's script graph assets, and there is no tree to attribute them to until the edited context
-            // resolves -- which it has not while a canvas exists but no window is editing it. Passing the
-            // null on regardless throws inside the repository, on a key it uses to group assets by asset.
-            if (asset == null) return;
-
-            ScriptGraphAssetsRepository.Instance.RemoveInvalid();
-
-            //read new script graph assets
-            foreach (var graphElement in graph.elements)
-            {
-                if (graphElement.scriptGraphAssets == null || !graphElement.scriptGraphAssets.Any()) continue;
-                graph.AddScriptGraphAssets(asset, graphElement.scriptGraphAssets);
-            }
-
-            if (!EditorApplication.isPlaying) graph.DestroyUnusedScriptGraphAssets(asset);
         }
 
         /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>

@@ -25,12 +25,11 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// <b>This surface no longer creates embedded graphs.</b> The drawer it replaces minted a
+    /// <b>A slot holds a Function and nothing else.</b> The drawer this replaced minted a
     /// <c>ScriptGraphAsset</c> sub-asset whenever the node had nothing assigned, which is how most of the
     /// embedded graphs in this project came to exist — each one anonymous, owned by a garbage collector, and
-    /// the reason a repository, an OnGUI sweep and an orphan lint all have to exist. A node with nothing
-    /// assigned now gets a Function. One that already holds an embedded graph keeps opening it and gains
-    /// <i>Extract to Function</i>, so nothing existing becomes unreachable. See spec 10, step 7.
+    /// the reason a repository, an OnGUI sweep and an orphan lint all had to exist. Embedding is retired
+    /// (spec 10, step 7); a slot with nothing assigned gets a Function from this picker.
     /// </para>
     /// </summary>
     [Inspector(typeof(BTScriptGraphVariable))]
@@ -72,10 +71,16 @@ namespace ArcaneOnyx.BehaviorTree
         private BTScriptGraphVariable Variable => metadata?.value as BTScriptGraphVariable;
 
         /// <summary>
-        /// The node holding this variable, found by walking up rather than asked for: the value is a plain
+        /// The node holding this slot, found by walking up rather than asked for: the value is a plain
         /// serialized member with no back-reference, and <c>metadata.parent</c> is the only route to it.
+        ///
+        /// <para>
+        /// Either kind of node. This used to look for a <see cref="VisualScriptGraphVariable"/> specifically,
+        /// so on a Script Graph node -- whose four lifecycle slots draw with this same inspector -- it found
+        /// nothing, and a pick from a full dropdown was dropped with a warning the author was not looking at.
+        /// </para>
         /// </summary>
-        private VisualScriptGraphVariable Node
+        private BaseVisualScriptingNode Owner
         {
             get
             {
@@ -83,13 +88,23 @@ namespace ArcaneOnyx.BehaviorTree
 
                 for (var hops = 0; current != null && hops < MaxHopsToOwningNode; hops++)
                 {
-                    if (current.value is VisualScriptGraphVariable node) return node;
+                    if (current.value is BaseVisualScriptingNode node) return node;
                     current = current.parent;
                 }
 
                 return null;
             }
         }
+
+        /// <summary>The owner when it is the value-reading node, whose slot also owns ports. Null otherwise.</summary>
+        private VisualScriptGraphVariable Node => Owner as VisualScriptGraphVariable;
+
+        /// <summary>
+        /// What may go in this slot. A value-reading node's requirement is read off the wiring of its
+        /// Output; a lifecycle slot's is read off the slot itself, which knows whether it is run or read.
+        /// </summary>
+        private FunctionPortConstraint ConstraintForThisSlot() =>
+            Node != null ? FunctionPortConstraint.For(Node) : FunctionPortConstraint.For(Variable);
 
         // ------------------------------------------------------------------ layout
 
@@ -107,15 +122,11 @@ namespace ArcaneOnyx.BehaviorTree
         private struct Rows
         {
             public bool HasFunction;
-            public bool HasEmbedded;
 
             /// <summary>The mismatch message, or null when the Function fits what the node feeds.</summary>
             public string Mismatch;
 
-            /// <summary>The both-assigned message, or null when only one source is set.</summary>
-            public string Ambiguity;
-
-            public bool HasButtons => HasFunction || HasEmbedded;
+            public bool HasButtons => HasFunction;
         }
 
         private Rows Describe()
@@ -126,24 +137,18 @@ namespace ArcaneOnyx.BehaviorTree
             var rows = new Rows
             {
                 HasFunction = function != null,
-                HasEmbedded = variable?.ScriptGraphAsset != null,
             };
-
-            if (rows.HasFunction && rows.HasEmbedded)
-            {
-                rows.Ambiguity = "The Function runs; the embedded graph is editable but dead. Clear one.";
-            }
 
             if (rows.HasFunction)
             {
-                var constraint = FunctionPortConstraint.For(Node);
+                var constraint = ConstraintForThisSlot();
 
                 if (!constraint.Satisfies(function.ResultType))
                 {
                     rows.Mismatch =
-                        $"'{function.name}' returns {function.ResultType?.Name ?? "nothing"}, but this node " +
-                        $"feeds {constraint.Describe()}. It is kept, not cleared, pick another or fix the " +
-                        "Function.";
+                        $"'{function.name}' returns {function.ResultType?.Name ?? "nothing"}, but this " +
+                        $"{(Node != null ? "node feeds" : "slot requires")} {constraint.Describe()}. It is " +
+                        "kept, not cleared, pick another or fix the Function.";
                 }
             }
 
@@ -178,7 +183,6 @@ namespace ArcaneOnyx.BehaviorTree
 
             // The boxes span the full block width, so this is exactly the width they are drawn at.
             if (rows.Mismatch != null) height += Spacing + HelpBoxHeight(rows.Mismatch, width, MessageType.Error);
-            if (rows.Ambiguity != null) height += Spacing + HelpBoxHeight(rows.Ambiguity, width, MessageType.Warning);
 
             return height;
         }
@@ -194,7 +198,7 @@ namespace ArcaneOnyx.BehaviorTree
             editedOwner = LudiqEditorUtility.editedObject.value;
 
             var rows = Describe();
-            var constraint = FunctionPortConstraint.For(Node);
+            var constraint = ConstraintForThisSlot();
 
             DrawPickerRow(content.VerticalSection(ref y, Row), constraint);
 
@@ -212,13 +216,6 @@ namespace ArcaneOnyx.BehaviorTree
                 y += Spacing;
                 var height = HelpBoxHeight(rows.Mismatch, position.width, MessageType.Error);
                 EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Mismatch, MessageType.Error);
-            }
-
-            if (rows.Ambiguity != null)
-            {
-                y += Spacing;
-                var height = HelpBoxHeight(rows.Ambiguity, position.width, MessageType.Warning);
-                EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Ambiguity, MessageType.Warning);
             }
 
             EndBlock(metadata);
@@ -240,43 +237,23 @@ namespace ArcaneOnyx.BehaviorTree
             dropdown.Show(valueRect);
         }
 
-        private static string DescribeWhatIsOffered(FunctionPortConstraint constraint) =>
-            constraint.IsUnconstrained
-                ? "This node feeds nothing yet, so every Function is offered."
-                : $"Only Functions whose result fits {constraint.Describe()} are offered.";
+        private static string DescribeWhatIsOffered(FunctionPortConstraint constraint)
+        {
+            if (constraint.AllowsNoResult) return "This slot runs the Function for its effects, so every Function is offered.";
+            if (constraint.IsUnconstrained) return "This node feeds nothing yet, so every Function is offered.";
+
+            return $"Only Functions whose result fits {constraint.Describe()} are offered.";
+        }
 
         // ------------------------------------------------------------------ the buttons
 
         private void DrawButtonRow(Rect row, Rows rows)
         {
-            // An embedded graph gets two buttons — open it, or leave the embedded world — and a Function one.
-            var count = rows.HasEmbedded ? (rows.HasFunction ? 3 : 2) : 1;
-            var width = (row.width - Spacing * (count - 1)) / count;
-            var next = row.x;
+            // One button. There used to be a row of up to three, because an embedded graph could be opened
+            // or extracted to a Function, and a node could hold both at once.
+            if (!rows.HasFunction) return;
 
-            Rect Slot()
-            {
-                var slot = new Rect(next, row.y, width, row.height);
-                next += width + Spacing;
-                return slot;
-            }
-
-            if (rows.HasFunction && GUI.Button(Slot(), "Open Function"))
-            {
-                OpenGraph(Variable.Function);
-            }
-
-            if (!rows.HasEmbedded) return;
-
-            if (GUI.Button(Slot(), "Open Graph"))
-            {
-                OpenGraph(Variable.ScriptGraphAsset);
-            }
-
-            if (GUI.Button(Slot(), "Extract to Function"))
-            {
-                Extract();
-            }
+            if (GUI.Button(row, "Open Function")) OpenGraph(Variable.Function);
         }
 
         /// <summary>
@@ -316,9 +293,9 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private void Assign(FunctionGraphAsset function)
         {
-            var node = Node;
+            var owner = Owner;
 
-            if (node == null)
+            if (owner == null)
             {
                 // Reachable only if this type is ever inspected outside a live node's metadata chain. Said
                 // out loud rather than returned silently: the author just picked from a full dropdown, and a
@@ -329,7 +306,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            if (!FunctionAssignment.Apply(node, function, editedOwner))
+            if (!FunctionAssignment.Apply(owner, Variable, function, editedOwner))
             {
                 Debug.LogWarning(
                     "[BehaviorTree] The Function picker could not identify the asset or scene object that "
@@ -408,67 +385,12 @@ namespace ArcaneOnyx.BehaviorTree
 
             // The dialog has already asked about overwriting, so the answer given there is honoured rather
             // than quietly turned into "New Function 1" by GenerateUniqueAssetPath.
+            // A side-effect slot gets a Function with no Result at all, which is what it wants; anywhere
+            // else an unconstrained slot gets object, so an author who wires up afterwards still has a value.
             return Authoring.FunctionGraphAuthoring.CreateFunction(
-                path, constraint.SuggestedResultType ?? typeof(object));
+                path, constraint.AllowsNoResult ? null : constraint.SuggestedResultType ?? typeof(object));
         }
 
-        /// <summary>
-        /// Promotes this node's embedded graph to a project asset and re-points the node at it — the one-way
-        /// door out of the embedded world, and the same operation <c>fn_extract</c> performs from the CLI.
-        /// </summary>
-        private void Extract()
-        {
-            var node = Node;
-            var tree = BehaviorTreeCanvas.GetBehaviorTreeGraphAsset();
-
-            if (node == null || tree == null)
-            {
-                Debug.LogWarning(
-                    "[BehaviorTree] Extract needs the tree that owns this node, and no tree is being edited.");
-                return;
-            }
-
-            var suggested = node.EmbeddedScriptGraph == null || string.IsNullOrEmpty(node.EmbeddedScriptGraph.name)
-                ? "New Function"
-                : node.EmbeddedScriptGraph.name;
-
-            var path = EditorUtility.SaveFilePanelInProject(
-                "Extract to Function",
-                suggested,
-                "asset",
-                "The embedded graph is copied into a Function this node then references.",
-                DefaultFunctionFolder());
-
-            if (string.IsNullOrEmpty(path)) return;
-
-            using (LudiqEditorUtility.editedObject.Override(editedOwner == null ? tree : editedOwner))
-            {
-                UndoUtility.RecordEditedObject("Extract to Function");
-            }
-
-            try
-            {
-                var function = Authoring.FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, path);
-
-                // The original sub-asset is deliberately left in place rather than destroyed here: deletion
-                // has exactly one owner at a time (spec 10, locked decision 6), and bt_verify reports the
-                // leftover as an orphan.
-                Debug.Log(
-                    $"[BehaviorTree] Extracted '{node.NodeName}' to '{AssetDatabase.GetAssetPath(function)}'. "
-                    + "The embedded copy is still stored in the tree and is now unreferenced; bt_verify "
-                    + "reports it as an orphan.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[BehaviorTree] Extract failed: {e.Message}");
-                return;
-            }
-
-            Authoring.ContractPortLayout.ResizeToFitPorts(node);
-            Authoring.NodeProblemCache.Invalidate();
-
-            AfterMutation();
-        }
 
         // ------------------------------------------------------------------ the dropdown
 

@@ -370,11 +370,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         private static void WriteScriptGraphs(JsonWriter json, BehaviorTreeNode node)
         {
-            // GraphElement returns null rather than an empty sequence when a node owns no graphs
-            var assets = node.scriptGraphAssets;
-            if (assets == null) return;
+            if (node is not BaseVisualScriptingNode holder) return;
 
-            var owned = assets.Where(asset => asset != null).ToList();
+            var owned = holder.Functions.ToList();
             if (owned.Count == 0) return;
 
             json.PropertyName("scriptGraphs");

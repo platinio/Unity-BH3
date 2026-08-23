@@ -10,12 +10,8 @@ uses one. For the contract model, the evaluation seam and the performance rules,
 
 ## Using one from a tree
 
-A **Script Graph Variable** node can read either an embedded graph, as it always could, or a Function.
-Assign a Function and the node evaluates it through the shared seam; leave it unset and nothing about the
-node changes. Existing trees are unaffected.
-
-New graphs, however, are Functions. The node's inspector no longer offers to create an embedded one-off --
-see [Embedded graphs are being retired](#embedded-graphs-are-being-retired).
+A **Script Graph Variable** node reads a Function, and that is the only way it gets a graph -- see
+[There are no embedded graphs](#there-are-no-embedded-graphs) for what that replaced.
 
 The gain is that the Function is one asset. Fix a predicate once and every tree referencing it is fixed —
 no copy to find, nothing to keep in step.
@@ -101,21 +97,42 @@ If a Function's `Result` type changes after it was assigned, the node keeps the 
 error, naming the mismatch. It is not silently cleared -- destroying an authored assignment to enforce a
 rule you cannot yet see would be worse than showing it broken.
 
-### Embedded graphs are being retired
+### There are no embedded graphs
 
-The inspector used to create an anonymous embedded graph whenever a node had nothing assigned, which is how
-most embedded graphs in this project came to exist. It no longer does; **Create new Function...** replaces
-it.
+A node reads a **Function**, and that is the only way it gets a graph.
 
-> **Two CLI commands still make them.** `bt_add_variable_read` and `bt_guard_on_variable` go through
-> `CreateVariableReadGraph`, which still welds a graph into the tree as a sub-asset. So the honest statement
-> today is that no *editor* surface creates one -- migrating those two commands is part of
-> [step 7](design/10-function-graphs.md).
+It used to be able to hold an *embedded* graph instead: a graph welded into the owning tree as an anonymous
+sub-asset. That is gone, along with everything it required — a project-wide ledger recording which tree each
+one belonged to, a sweep to delete the ones nothing referenced, and the rule that a node holding one could
+not be copied or duplicated, because two copies sharing one sub-asset meant deleting either destroyed it.
 
-A node that **already** holds an embedded graph is unaffected: **Open Graph** still opens it, and
-**Extract to Function** promotes it to a project asset and re-points the node at it -- the same operation
-`fn_extract` performs from the CLI. The original sub-asset stays in the tree and `bt_verify` reports it as
-an orphan, because deletion has exactly one owner at a time.
+**Copy, cut and duplicate work on these nodes again**, which is the visible half of the change. A Function is
+referenced, so two copies referencing one is what sharing means rather than a hazard.
+
+`bt_add_variable_read` and `bt_guard_on_variable` now create a Function at
+`<TreeFolder>/Functions/<Tree>.<variable>Read.asset` and point the node at it. Asking twice for the same
+variable in the same tree reuses the one asset.
+
+> **A tree written before this change reads nothing.** Its embedded graphs no longer deserialize, so every
+> Script Graph Variable node in it comes up empty. `bt_verify` names each one — "has no Function assigned" —
+> and the read has to be re-authored. There is no converter: it would only help a project that updated in
+> two hops, which is the same trade [spec 10](design/10-function-graphs.md) took for TPS query items.
+>
+> **The old sub-assets stay inside that tree's `.asset` file**, visible under it in the Project window and
+> reachable from nothing. Nothing removes them — the save-time cleanup that used to was deleted along with
+> the thing it cleaned, since a tree saved by this version cannot contain one. Delete them by hand once the
+> reads are re-authored; they are inert until you do.
+
+### Functions on a Script Graph node
+
+A **Script Graph** node's four lifecycle slots -- `OnAwake`, `OnEnter`, `OnUpdate`, `OnExit` -- take
+Functions too, through the same picker. Two differences from a Script Graph Variable:
+
+- **No ports.** A lifecycle slot cannot declare ports, so a Function there cannot be passed arguments.
+  `bt_verify` names one that has a required input.
+- **`OnUpdate` must return an `ExecutionStatus`** -- that is the node's verdict -- and the picker offers only
+  those. The other three run the Function for its effects, so any Function is offered, including one with
+  no `Result` at all.
 
 ## Declared inputs are ports
 
@@ -171,7 +188,7 @@ What a Script Graph Variable reports today:
 |---|---|---|
 | `added: armour : Single` | The Function gained an input this node has never heard of | **Refresh Ports** |
 | `Required input 'threshold' has nothing connected` | The port exists and is empty | Connect a value |
-| `Both a Function and an embedded graph are assigned` | The Function runs; the graph is editable but dead | Clear one |
+| `has no Function assigned` | The node reads nothing, so it cannot produce a value | Assign one |
 | `No Function or graph assigned` | The node has nothing to read | Assign one |
 
 A sub-tree node reports the same shapes against its own contract. Neither used to say anything at all —
@@ -194,7 +211,7 @@ checks appear on the canvas without the drawing code being touched.
 > **Before this existed**, a declared input was matched by name against the agent's own variables: you
 > supplied `threshold` by declaring an agent variable called `threshold`. That worked, but nothing about it
 > was visible on the node, and two agents could not disagree. It has been **removed**, not deprecated — a
-> same-named agent variable no longer feeds a Function. Embedded graphs are untouched and still read the
+> same-named agent variable no longer feeds a Function. Ambient reads inside the graph still read the
 > ambient scope, because they have no contract to declare ports from.
 
 ## Functions and guards
@@ -225,13 +242,18 @@ Same philosophy as `bt_list_nodes`: the catalogue is derived from the assets, so
 a written table does. `fn_describe` is the fastest way to find out why a Function is not returning what you
 expect — a missing `Result` output is reported by name rather than failing at runtime and nowhere else.
 
-## What has not moved yet
+## Where a Function lives
 
-Functions sit beside the older embedded-graph machinery rather than having replaced it. Embedded graphs
-that already exist, the script-graph repository and its canvas sweep all still work as before.
+Anywhere in the project. A Function is an ordinary asset with a path, a name, and whatever folder you put it
+in — nothing owns it, nothing collects it, and deleting it is something you do in the Project window.
 
-What has changed is the direction: **no editor surface creates a new embedded graph any more.** Two CLI
-commands still do -- `bt_add_variable_read` and `bt_guard_on_variable`, through `CreateVariableReadGraph` --
-and migrating them is part of step 7. Retiring the rest -- the graphs that already exist, then the
-repository and the sweep -- is sequenced separately, so that there is never more than one thing deleting
-graphs at a time.
+That is worth stating only because of what it replaces. A graph a tree used was a sub-asset of that tree, so
+it needed a ledger to record who owned it and a sweep to delete the ones nothing referenced. The sweep ran on
+every GUI event and destroyed whatever looked unreferenced at that instant, which made deleting a node
+occasionally take a graph a second tree was still using. None of those parts exist now, because the question
+they answered — *which tree owns this anonymous graph* — can no longer be asked.
+
+The commands that generate Functions follow one convention: `<TreeFolder>/Functions/<Tree>.<Name>.asset`,
+beside the tree that asked for it and named for where it came from. Nothing enforces it. Move them wherever
+suits the project.
+

@@ -209,7 +209,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
 
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y + 90.0f);
-            read.SetScriptGraph(CreateVariableReadGraph(asset, variableName, fallback));
+            read.SetFunction(CreateVariableReadFunction(asset, variableName, fallback));
             SetComment(read, (expected ? "" : "not ") + variableName);
 
             ConditionalExecution guard;
@@ -338,27 +338,54 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// A graph that reads one Object variable off the agent and returns it, falling back when the agent
-        /// does not declare it. Stored as a sub-asset of the tree that owns it, and registered so
-        /// DestroyUnusedScriptGraphAssets leaves it alone.
+        /// A Function that reads one Object variable off the agent and returns it, falling back when the
+        /// agent does not declare it.
+        ///
+        /// <para>
+        /// <b>A named project asset, beside the tree that asked for it</b>, at
+        /// <c>&lt;TreeFolder&gt;/Functions/&lt;Tree&gt;.&lt;variable&gt;Read.asset</c>. This used to mint an
+        /// anonymous sub-asset of the tree, which is what made these graphs findable by nobody and
+        /// deletable only by a garbage collector. The cost is the one spec 10 named and accepted: a tree
+        /// that used to be self-contained now depends on a folder of small Functions.
+        /// </para>
+        ///
+        /// <para>
+        /// Reusing an existing Function at the same path is deliberate. Two guards in one tree reading
+        /// <c>hp</c> asked for two identical sub-assets before; now they share one asset, which is what a
+        /// named, shared thing is for.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>The first caller's fallback wins, and a second caller asking for a different one is told.</b>
+        /// The path is keyed on the variable, not on the fallback, so the two callers want one asset — but
+        /// silently handing back a Function whose fallback is not the one just requested is the kind of
+        /// thing that costs an afternoon six months later. Warned rather than refused: the reuse is the
+        /// wanted behaviour, and refusing would make the second guard impossible to author at all.
+        /// </para>
         /// </summary>
-        public static ScriptGraphAsset CreateVariableReadGraph(BehaviorTreeGraphAsset owner, string variableName, object fallback)
+        public static FunctionGraphAsset CreateVariableReadFunction(
+            BehaviorTreeGraphAsset owner, string variableName, object fallback)
         {
-            var scriptGraph = ScriptableObject.CreateInstance<ScriptGraphAsset>();
-            var graph = scriptGraph.graph;
+            var path = VariableReadFunctionPath(owner, variableName);
 
-            var input = new ScriptGraphInput { position = new Vector2(-420.0f, 0.0f) };
-            var output = new ScriptGraphOutput { position = new Vector2(320.0f, 0.0f) };
-            graph.units.Add(input);
-            graph.units.Add(output);
-
-            graph.controlInputDefinitions.Add(new ControlInputDefinition { key = "Enter", label = "Enter" });
-            graph.controlOutputDefinitions.Add(new ControlOutputDefinition { key = "Exit", label = "Exit" });
-            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            var existing = AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(path);
+            if (existing != null)
             {
-                key = "Result", label = "Result", type = typeof(object)
-            });
-            graph.PortDefinitionsChanged();
+                WarnIfFallbackDiffers(existing, variableName, fallback);
+                return existing;
+            }
+
+            EnsureFunctionsFolder(owner);
+
+            // The skeleton -- input unit, output unit, Enter/Exit/Result -- comes from the one place that
+            // owns what a new Function contains rather than being assembled here for a third time. That
+            // duplication is what produced the create-menu bug, where a second copy of this made an asset
+            // with no Enter and nothing to run.
+            var function = FunctionGraphAuthoring.CreateFunction(path, typeof(object));
+            var graph = function.graph;
+
+            var input = graph.units.OfType<ScriptGraphInput>().First();
+            var output = graph.units.OfType<ScriptGraphOutput>().First();
 
             // specifyFallback is read by Definition(), so it has to be set before the unit joins the graph
             var getVariable = new Unity.VisualScripting.GetVariable
@@ -380,16 +407,73 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             graph.units.Add(fallbackLiteral);
             fallbackLiteral.output.ValidlyConnectTo(getVariable.fallback);
 
-            input.controlOutputs["Enter"].ValidlyConnectTo(output.controlInputs["Exit"]);
-            getVariable.value.ValidlyConnectTo(output.valueInputs["Result"]);
+            // Enter is already wired to Exit by the default graph; only the Result needs feeding.
+            getVariable.value.ValidlyConnectTo(output.valueInputs[FunctionGraphAsset.ResultKey]);
 
-            AssetDatabase.AddObjectToAsset(scriptGraph, owner);
-            scriptGraph.name = variableName + "Read";
+            // Derived rather than defaulted, for the same reason the migration derives them: this graph
+            // reads exactly one key, and a guard whose condition is this Function inherits that key to
+            // decide when it may recompute. Leaving the list empty is the stale-guard failure.
+            function.SetWatchedKeys(new[] { variableName });
 
-            ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(owner, scriptGraph);
-            EditorUtility.SetDirty(scriptGraph);
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
 
-            return scriptGraph;
+            FunctionEvaluator.Invalidate(function);
+
+            return function;
+        }
+
+        /// <summary>Where <see cref="CreateVariableReadFunction"/> puts what it makes.</summary>
+        public static string VariableReadFunctionPath(BehaviorTreeGraphAsset owner, string variableName)
+        {
+            var treePath = AssetDatabase.GetAssetPath(owner);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/') ?? "Assets";
+            var treeName = System.IO.Path.GetFileNameWithoutExtension(treePath);
+
+            return $"{folder}/Functions/{treeName}.{FileSafe(variableName)}Read.asset";
+        }
+
+        /// <summary>
+        /// A variable key as a file name. An agent variable may legally contain characters a path may not —
+        /// <c>CreateAsset</c> then fails with Unity's message about the path rather than ours about the key,
+        /// which sends the reader to the wrong problem.
+        /// </summary>
+        private static string FileSafe(string variableName)
+        {
+            var kept = new System.Text.StringBuilder(variableName.Length);
+
+            foreach (var character in variableName)
+            {
+                var invalid = System.Array.IndexOf(System.IO.Path.GetInvalidFileNameChars(), character) >= 0;
+                kept.Append(invalid || character == '.' ? '_' : character);
+            }
+
+            return kept.Length == 0 ? "Variable" : kept.ToString();
+        }
+
+        /// <summary>
+        /// Says so when a caller asks for a variable read that already exists with a different fallback.
+        /// See <see cref="CreateVariableReadFunction"/> for why this warns rather than refusing.
+        /// </summary>
+        private static void WarnIfFallbackDiffers(FunctionGraphAsset existing, string variableName, object fallback)
+        {
+            var literal = existing.graph?.units.OfType<Unity.VisualScripting.Literal>().FirstOrDefault();
+            if (literal == null || Equals(literal.value, fallback)) return;
+
+            Debug.LogWarning(
+                $"[BehaviorTree] '{existing.name}' already reads '{variableName}' with a fallback of "
+                + $"'{literal.value}', so the requested fallback of '{fallback}' was not applied. One "
+                + "Function serves every read of this variable in this tree; edit the asset to change it.");
+        }
+
+        private static void EnsureFunctionsFolder(BehaviorTreeGraphAsset owner)
+        {
+            var treePath = AssetDatabase.GetAssetPath(owner);
+            var folder = System.IO.Path.GetDirectoryName(treePath)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder)) return;
+
+            var functions = folder + "/Functions";
+            if (!AssetDatabase.IsValidFolder(functions)) AssetDatabase.CreateFolder(folder, "Functions");
         }
 
         /// <summary>
@@ -598,7 +682,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "Reload one or more trees and report what would break at runtime: ports that read as unset and " +
             "will throw, orphaned nodes, sub-trees with no asset assigned, and recursion. Run this after " +
             "authoring — it forces the serialize/deserialize round trip, so it sees the trees as the machine " +
-            "will rather than as they are still held in memory. Read-only.")]
+            "will rather than as they are still held in memory. Reports rather than repairs, but it is not " +
+            "read-only: the round trip saves every dirty asset in the project, so anything hooked to a save " +
+            "runs, project-wide, not just for the trees named here.")]
         public static object VerifyTrees(
             [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Draugr,Trees/Death", Required = true)] string trees)
         {
@@ -1051,7 +1137,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             var asset = ResolveTree(tree, out _);
 
             var read = AddNode<VisualScriptGraphVariable>(asset, x, y);
-            read.SetScriptGraph(CreateVariableReadGraph(asset, variable, ParseNamedType(fallback, fallbackType, "fallback")));
+            read.SetFunction(CreateVariableReadFunction(asset, variable, ParseNamedType(fallback, fallbackType, "fallback")));
             SetComment(read, variable);
 
             Save(asset);

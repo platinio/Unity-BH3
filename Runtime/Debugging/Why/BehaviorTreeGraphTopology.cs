@@ -236,16 +236,15 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// Variable names read by the Visual Scripting graphs hanging off a node.
         ///
         /// <para>
-        /// <c>scriptGraphAssets</c> is the seam a node uses to declare the graphs it owns — the same one the
-        /// tree dump reads — so this sees exactly what the dump can see and nothing it cannot.
+        /// The Functions a node reads are the seam here — the same one the tree dump reads — so this sees
+        /// exactly what the dump can see and nothing it cannot.
         /// </para>
         /// </summary>
         private static void CollectFromScriptGraphs(BehaviorTreeNode node, List<string> keys)
         {
-            var assets = node.scriptGraphAssets;
-            if (assets == null) return;
+            if (node is not BaseVisualScriptingNode holder) return;
 
-            foreach (var asset in assets)
+            foreach (var asset in holder.Functions)
             {
                 if (asset == null || asset.graph == null) continue;
 

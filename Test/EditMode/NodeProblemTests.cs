@@ -39,6 +39,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             NodeProblemCache.Invalidate();
         }
 
+        /// <summary>
+        /// Adds a <c>GetVariable</c> reading <paramref name="key"/> without declaring it as a watched key,
+        /// which is what the undeclared-read warning reports.
+        /// </summary>
+        private static void AddUndeclaredRead(FunctionGraphAsset function, string key)
+        {
+            var read = new Unity.VisualScripting.GetVariable
+            {
+                kind = Unity.VisualScripting.VariableKind.Object
+            };
+
+            function.graph.units.Add(read);
+            read.name.SetDefaultValue(key);
+
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
+        }
+
         private static FunctionGraphAsset Predicate(string assetName, params string[] inputs)
         {
             var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
@@ -154,10 +172,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ErrorsAreListedBeforeWarnings()
         {
-            // Both sources assigned is a warning; the unfed required port is an error.
-            var function = Predicate("Ambiguous", "threshold");
+            // A key the Function reads but does not declare is a warning; the unfed required port is an
+            // error. This used to pair the error with the both-sources-assigned warning, which cannot happen
+            // any more -- a node has one source.
+            var function = Predicate("UndeclaredRead", "threshold");
+            AddUndeclaredRead(function, "hp");
+
             var node = NodeReading(function);
-            node.SetScriptGraph(ScriptableObject.CreateInstance<ScriptGraphAsset>());
 
             NodeProblemCache.Invalidate();
 
@@ -439,36 +460,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
 
             Assert.That(NodeProblemCache.For(node), Is.Empty, "removing a provider must also take its findings");
-        }
-
-        /// <summary>
-        /// <see cref="RunScriptGraph"/> reports itself, on every instance, configured or not.
-        ///
-        /// <para>
-        /// The node runs the shared script-graph asset outside the machine's variable scope, so graph state
-        /// is shared between agents and <c>Self</c> does not resolve to the agent. That is not a
-        /// misconfiguration anyone can correct by filling the field in -- the node is wrong when it is fully
-        /// set up -- so the warning is unconditional, and it is how the instances already sitting in trees
-        /// get found. The class cannot simply be deleted: its name is what assets serialize.
-        /// </para>
-        /// </summary>
-        [Test]
-        public void RunScriptGraph_ReportsItselfEvenWhenFullyConfigured()
-        {
-            var node = new RunScriptGraph();
-            node.Define();
-
-            var problems = new List<NodeProblem>();
-            node.CollectProblems(problems);
-
-            Assert.IsTrue(problems.Any(problem => problem.Severity == NodeProblemSeverity.Warning
-                    && problem.Summary.Contains("no agent context")),
-                "A Run Script Graph node did not warn about running the shared asset without agent context:" + "\n"
-                + string.Join("\n", problems.Select(problem => $"{problem.Severity}: {problem.Summary}")));
-
-            Assert.IsTrue(problems.Any(problem => problem.Severity == NodeProblemSeverity.Error
-                    && problem.Summary.Contains("No script graph assigned")),
-                "An unassigned script graph is an error, and the node did not report one.");
         }
 
     }

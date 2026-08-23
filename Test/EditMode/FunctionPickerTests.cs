@@ -487,6 +487,53 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "on the next reload");
         }
 
+        // ------------------------------------------------------------------ a Script Graph node's slots
+
+        /// <summary>
+        /// The Script Graph node's four lifecycle slots draw with the same inspector as the value node, and
+        /// the inspector used to resolve its owner as a <see cref="VisualScriptGraphVariable"/> only -- so on
+        /// those slots every pick was silently dropped. The owner is now either node, and the slot's own
+        /// requirement decides what is offered.
+        /// </summary>
+        [Test]
+        public void ASideEffectSlot_AcceptsAFunctionWithNoResult()
+        {
+            var slot = new BTScriptGraphVariable();
+            var constraint = FunctionPortConstraint.For(slot);
+
+            Assert.IsTrue(constraint.AllowsNoResult);
+            Assert.IsTrue(constraint.Satisfies(null), "a slot that runs a Function for its effects wants no Result");
+            Assert.IsTrue(constraint.Satisfies(typeof(bool)), "and does not mind one either");
+        }
+
+        [Test]
+        public void TheOnUpdateSlot_RequiresAnExecutionStatus()
+        {
+            var slot = new BTScriptGraphVariable(typeof(ArcaneOnyx.GraphCore.ExecutionStatus));
+            var constraint = FunctionPortConstraint.For(slot);
+
+            Assert.IsFalse(constraint.AllowsNoResult);
+            Assert.IsTrue(constraint.Satisfies(typeof(ArcaneOnyx.GraphCore.ExecutionStatus)));
+            Assert.IsFalse(constraint.Satisfies(typeof(bool)), "OnUpdate's Function is the node's verdict");
+            Assert.IsFalse(constraint.Satisfies(null));
+        }
+
+        [Test]
+        public void AssigningToAScriptGraphNodeSlot_Applies()
+        {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Lifecycle.asset");
+            var node = BehaviorTreeAuthoring.AddNode<VisualScriptingNode>(tree, 0.0f, 0.0f);
+            var function = FunctionGraphAuthoring.CreateFunction($"{Folder}/Ping.asset");
+
+            // Slots are in declaration order: OnAwake, OnEnter, OnUpdate, OnExit.
+            var onEnter = node.GraphSlots[1];
+
+            Assert.IsTrue(FunctionAssignment.Apply(node, onEnter, function, tree),
+                "a lifecycle slot is a legitimate target, not only the value node's");
+            Assert.AreSame(function, onEnter.Function);
+            Assert.IsTrue(onEnter.HasGraph, "and the lifecycle hook that gates on HasGraph will now run it");
+        }
+
         // ------------------------------------------------------------------ helpers
 
         /// <summary>

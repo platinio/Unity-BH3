@@ -414,7 +414,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 .ValidlyConnectTo(output.controlInputs[FunctionGraphAsset.ExitKey]);
 
             // A fallback, so an agent that has not declared the key yet reads false instead of throwing --
-            // the same shape CreateVariableReadGraph produces for the non-Function path.
+            // the same shape CreateVariableReadFunction produces.
             var read = new Unity.VisualScripting.GetVariable
             {
                 kind = VariableKind.Object,

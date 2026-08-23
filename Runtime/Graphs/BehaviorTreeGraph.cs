@@ -60,9 +60,6 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize] 
         private Entry entryNode;
 
-        [SerializeAs(nameof(scriptGraphAssets))]
-        private List<ScriptGraphAsset> scriptGraphAssets = new();
-
         public Entry EntryNode => entryNode;
       
         public BehaviorTreeGraph() : base()
@@ -113,37 +110,6 @@ namespace ArcaneOnyx.BehaviorTree
             // asset, since the field is still written whenever it holds something.
             foreach (var transition in Transitions) transition.DiscardLegacyPlaceHolderNodes();
         }
-
-        public void DestroyUnusedScriptGraphAssets(BehaviorTreeGraphAsset graphAsset)
-        {
-            List<ScriptGraphAsset> unusedScriptGraphAssets = ScriptGraphAssetsRepository.Instance.GetScriptGraphAssets(graphAsset);
-            if (unusedScriptGraphAssets == null) return;
-
-            foreach (var graphElement in elements)
-            {
-                if (graphElement.scriptGraphAssets == null || graphElement.scriptGraphAssets.Count() == 0) continue;
-
-                foreach (var scriptGraphAsset in graphElement.scriptGraphAssets)
-                {
-                    unusedScriptGraphAssets.Remove(scriptGraphAsset);
-                }
-            }
-
-            for (int i = unusedScriptGraphAssets.Count - 1; i >= 0; i--)
-            {
-                ScriptGraphAssetsRepository.Instance.RemoveScriptGraphAsset(unusedScriptGraphAssets[i]);
-                Object.DestroyImmediate(unusedScriptGraphAssets[i], true);
-            }
-        }
-
-        public void AddScriptGraphAssets(BehaviorTreeGraphAsset asset, IEnumerable<ScriptGraphAsset> newScriptGraphAssets)
-        {
-            foreach (var scriptGraphAsset in newScriptGraphAssets)
-            {
-                ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(asset, scriptGraphAsset);
-            }
-        }
-       
 
         public override GraphCore.IGraphData CreateData()
         {
