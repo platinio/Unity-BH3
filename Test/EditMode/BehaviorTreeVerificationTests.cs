@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
@@ -53,6 +53,32 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var reloadedWait = reloaded.graph.Nodes.OfType<WaitTime>().Single();
             Assert.IsFalse(reloadedWait.defaultValues.ContainsKey("Time"),
                 "A bare port cannot hold an inline value across serialization — this is why SetValue exists.");
+        }
+
+        /// <summary>
+        /// A node whose type was deleted comes back as <see cref="MissingType"/>, and the tree loads as if
+        /// nothing happened -- wiring intact, no exception, the branch silently shorter. Deleting a node
+        /// type is how one is retired here (RunScriptGraph was the first), so this is the only thing
+        /// standing between "we removed it" and a downstream tree that quietly stopped doing something.
+        /// </summary>
+        [Test]
+        public void VerifyNamesANodeWhoseTypeNoLongerExists()
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(asset, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, sequence);
+
+            // The placeholder itself, as the asset would produce it for an unknown $type.
+            var missing = BehaviorTreeAuthoring.AddNode<MissingType>(asset, 0.0f, 300.0f);
+            BehaviorTreeAuthoring.Connect(asset, sequence, missing);
+
+            BehaviorTreeAuthoring.Save(asset);
+
+            var findings = BehaviorTreeVerification.Verify(TreePath);
+
+            Assert.IsTrue(findings.Any(f => f.Contains("no longer exists")),
+                "a node standing in for a deleted type must be named, or the tree passes verification while "
+                + "silently doing less than it did: " + string.Join(" | ", findings));
         }
 
         [Test]

@@ -233,7 +233,6 @@ value from anywhere in the game. Neither needs to know about the other.
 |---|---|
 | **Script Graph Variable** | One Function that produces a value for a port |
 | **Script Graph** | Four Functions, one per lifecycle hook (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`). The `OnUpdate` Function must return an `ExecutionStatus` |
-| **Run Script Graph** | One `ScriptGraphAsset`, executed on enter |
 
 > **These nodes can be copied and duplicated.** They could not while a graph was welded inside the tree: two
 > copies shared one sub-asset, and deleting either destroyed the graph the other still used. A Function is

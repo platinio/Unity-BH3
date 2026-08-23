@@ -62,6 +62,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     findings.Add($"{name}: port '{port}' is unset and will throw when read.");
                 }
 
+                findings.AddRange(MissingNodeTypes(asset, name));
                 findings.AddRange(ContractDrift(asset, name));
                 findings.AddRange(LayoutDisagreeingWithPriority(asset, name));
                 findings.AddRange(GuardProblems(asset, name));
@@ -551,6 +552,28 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     $"{treeName}: invalid connection -- '{from}'.{source.key} ({sourceType}) no longer fits " +
                     $"'{to}'.{destination.key} ({destinationType}). Rewire it, or change the Function so it " +
                     "fits again and the wire comes back by itself.";
+            }
+        }
+
+        /// <summary>
+        /// Nodes whose type no longer exists. The asset rewrites an unknown <c>$type</c> to
+        /// <see cref="MissingType"/> on load, so the tree still opens and its wiring survives — which is
+        /// exactly why nothing else notices: nothing throws, nothing is unset, the branch simply does
+        /// nothing where that node was. Deleting a node type is the accepted way to retire one here, so
+        /// the thing that names the leftovers has to exist.
+        /// </summary>
+        private static IEnumerable<string> MissingNodeTypes(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            foreach (var node in asset.graph.Nodes)
+            {
+                if (node is not MissingType missing) continue;
+
+                var former = string.IsNullOrEmpty(missing.formerType) ? "unknown" : missing.formerType;
+
+                yield return
+                    $"{treeName}: node at ({missing.Position.x:F0}, {missing.Position.y:F0}) has a type that " +
+                    $"no longer exists (formerly '{former}'). It does nothing; delete it and rebuild what it " +
+                    "did with a node that exists.";
             }
         }
 

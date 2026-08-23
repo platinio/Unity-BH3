@@ -1,4 +1,4 @@
-using Unity.VisualScripting;
+﻿using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -17,6 +17,22 @@ namespace ArcaneOnyx.BehaviorTree
         // Although this unit will have no ports, the already existing graph
         // connections will create invalid ones to connect themselves to.
         protected override void Definition() { }
+
+        /// <summary>
+        /// A node standing in for a type that no longer exists is wrong in every configuration, so it says
+        /// so on the canvas rather than relying on its name being read. This is how the instances left in
+        /// a tree by a deleted node type -- RunScriptGraph was the first -- get found.
+        /// </summary>
+        public override void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
+        {
+            base.CollectProblems(into);
+
+            into.Add(new NodeProblem(NodeProblemSeverity.Error,
+                string.IsNullOrEmpty(formerType)
+                    ? "This node's type no longer exists, so it does nothing."
+                    : $"This node's type ('{formerType}') no longer exists, so it does nothing.",
+                "Delete it and rebuild what it did with a node that exists."));
+        }
     }
 }
 

@@ -1182,6 +1182,20 @@ eleven tests covered machinery this step deletes: step 5's save-time cleanup, an
   itself never consumes it, so removing it would open a third submodule for two vestigial lines. Left, and
   reported.
 
+#### Also in this pass: `RunScriptGraph` is deleted
+
+The last BH3 node type holding a raw `ScriptGraphAsset`. Its own summary called it deprecated and wrong
+when fully configured -- it ran the *shared* asset with no agent context, so graph state was shared across
+agents and `Self` did not resolve -- and it was kept only for trees that already held one. No tree, prefab
+or scene in the project does. Gone with its test, its create-menu entry and two doc rows.
+
+**What a tree holding one does now, observed rather than guessed.** Before deleting the class a probe tree
+was built with one in it; after, it **loads**: the asset rewrites the unknown `$type` to `MissingType`, the
+wiring survives, nothing throws. And `bt_verify` **said nothing** -- the safety net this spec leans on ("a
+hand-authored tree in a downstream project is caught rather than silently broken") had a hole exactly where
+a deleted node type lands. Closed: `MissingType` now reports itself on the canvas, and `bt_verify` names
+each one with its position and former type. Pinned by `VerifyNamesANodeWhoseTypeNoLongerExists`.
+
 #### Known gaps, stated rather than discovered
 
 - **`IGraphElement.scriptGraphAssets` is now a zero-implementer seam** in GraphCore, returning null forever.
