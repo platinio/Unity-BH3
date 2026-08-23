@@ -11,7 +11,12 @@ justify it.**
 > The seam is in; the instancing flip is not. `BehaviorTreeMachine.Awake` still calls
 > `Instantiate(macro)` and every node still runs on a per-agent clone — behaviour is unchanged by design.
 >
-> Branches: `feature/lifecycle-context-seam` in **Unity-BH3** and in **graph-core-library**.
+> Branches: `feature/lifecycle-context-seam` in **Unity-BH3**, **graph-core-library** and the superproject.
+> PRs, in merge order — GraphCore first, because BH3 does not compile without it:
+> [graph-core-library#4](https://github.com/platinio/graph-core-library/pull/4) →
+> [Unity-BH3#75](https://github.com/platinio/Unity-BH3/pull/75) →
+> [bh3-development#41](https://github.com/platinio/bh3-development/pull/41).
+>
 > See "What step 1–2 actually shipped" at the bottom of this file for the decisions, the deviations from
 > this spec, and what the next person needs to know.
 
