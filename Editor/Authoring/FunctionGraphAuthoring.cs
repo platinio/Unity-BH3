@@ -226,8 +226,10 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// moment one is worth sharing it becomes a Function without being rebuilt by hand. The graph is
         /// cloned rather than moved, because the embedded sub-asset is owned structurally by the tree and
         /// deleting it here would make this the second thing in the project that deletes graphs — the one
-        /// situation the repository-removal sequence exists to avoid. The now-unreferenced sub-asset is left
-        /// for <c>bt_verify</c> to report as an orphan.
+        /// situation the repository-removal sequence exists to avoid. Clearing the node's reference is all
+        /// this does; the <c>SaveAssets</c> below then runs <c>OrphanedScriptGraphCleanup</c>, which removes
+        /// the sub-asset nothing references any more. So extraction leaves no leftover, and still is not a
+        /// deleter.
         /// </para>
         /// </summary>
         public static FunctionGraphAsset ExtractToProjectAsset(
@@ -294,8 +296,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         [CliCommand("fn_extract",
             "Promote a node's embedded one-off graph into a shared Function asset and re-point the node at " +
-            "it. The graph is copied, not moved: the tree still owns the original sub-asset, which bt_verify " +
-            "then reports as an orphan rather than this command deleting it.")]
+            "it. The graph is copied, not moved, and this command never deletes one: it clears the node's " +
+            "reference and saves, and the save-time cleanup removes the sub-asset nothing references any " +
+            "more. Nothing is left behind for bt_verify to report.")]
         public static object ExtractFunctionCommand(
             [CliArg("tree", "Asset path of the behavior tree holding the node.", Required = true)] string tree,
             [CliArg("node", "Guid of the Script Graph Variable node. Run bt_describe_tree to list them.", Required = true)] string node,
@@ -327,8 +330,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 extractedFrom = extractedFrom,
                 function = AssetDatabase.GetAssetPath(function),
                 contract = DescribeContract(function),
-                note = "The original sub-asset is still stored in the tree and is now unreferenced; " +
-                       "bt_verify reports it as an orphan."
+                note = "The original sub-asset was left unreferenced and removed by the save this command " +
+                       "performed. Extraction does not delete graphs; the save-time cleanup does."
             };
         }
 

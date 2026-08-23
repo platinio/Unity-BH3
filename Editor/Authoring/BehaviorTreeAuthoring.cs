@@ -339,8 +339,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         /// <summary>
         /// A graph that reads one Object variable off the agent and returns it, falling back when the agent
-        /// does not declare it. Stored as a sub-asset of the tree that owns it, and registered so
-        /// DestroyUnusedScriptGraphAssets leaves it alone.
+        /// does not declare it. Stored as a sub-asset of the tree that owns it.
+        /// <para>
+        /// Nothing registers it anywhere: containment in the tree's asset is what says it belongs to that
+        /// tree, and <c>OrphanedScriptGraphCleanup</c> reads that directly at save time. Assign it to a node
+        /// before saving — a graph nothing references when the tree is written is an orphan by definition
+        /// and is removed.
+        /// </para>
         /// </summary>
         public static ScriptGraphAsset CreateVariableReadGraph(BehaviorTreeGraphAsset owner, string variableName, object fallback)
         {
@@ -386,7 +391,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             AssetDatabase.AddObjectToAsset(scriptGraph, owner);
             scriptGraph.name = variableName + "Read";
 
-            ScriptGraphAssetsRepository.Instance.AddScriptGraphAsset(owner, scriptGraph);
             EditorUtility.SetDirty(scriptGraph);
 
             return scriptGraph;
@@ -598,7 +602,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "Reload one or more trees and report what would break at runtime: ports that read as unset and " +
             "will throw, orphaned nodes, sub-trees with no asset assigned, and recursion. Run this after " +
             "authoring — it forces the serialize/deserialize round trip, so it sees the trees as the machine " +
-            "will rather than as they are still held in memory. Read-only.")]
+            "will rather than as they are still held in memory. Reports rather than repairs, but it is not " +
+            "read-only: the round trip saves every dirty asset in the project, which runs the save-time " +
+            "hooks, so an unwired script graph anywhere can be cleaned up as a side effect.")]
         public static object VerifyTrees(
             [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Draugr,Trees/Death", Required = true)] string trees)
         {

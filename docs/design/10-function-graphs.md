@@ -558,8 +558,10 @@ control that must fail.
   extension methods from that namespace must be called as plain statics.
 - `save_all` on a freshly launched Editor sitting on an *Untitled* scene raises a modal `Save Scene` dialog
   and blocks the whole pipeline. The precaution and the hazard are the same call.
-- Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
-  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit it.
+- ~~Running the editor at all dirties `Assets/BehaviorTree.Generated/ScriptGraphAssetsRepository.asset`. It
+  accumulated six rows for one owner GUID, five of them null, during this pass. Revert it; do not commit
+  it.~~ — **struck 2026-08-23: the asset, its folder and its class are deleted by step 5.** Nothing dirties
+  a shared file any more, so there is nothing to remember to revert.
 
 ***
 
@@ -934,6 +936,8 @@ below and in the authoring skill stay valid.
 
 ### Step 5 — Remove the repository (repository removal, steps 2 and 3 of 3)
 
+✅ **Done, 2026-08-23** — see *Step 5 landed* below.
+
 **Merged from the former steps 5 and 6 on 2026-08-22, by the tool owner.** They were separate to keep a
 safe intermediate state — deletion moved to save time first, the repository removed second — but both are
 BH3-only, both are small, and landing only the first leaves the state nobody wants: two deletion mechanisms,
@@ -962,6 +966,114 @@ orphan; only the cleanup may destroy one. That is locked decision 6 applied insi
 referenced by the same tree → never touched) and test 8 (after this step, editing a tree dirties only that
 tree's asset) are the ones this step makes green. Plus: saving a tree with no orphans destroys nothing; an
 orphan that reappears before save (undo) is not destroyed.
+
+### Step 5 landed — the tree owns its graphs, 2026-08-23
+
+Branch `feature/repository-removal` in BH3 and the superproject. TacticalPositionSelection and
+VisualScriptingExtension are untouched — but see *this was not a BH3-only change* below, because the step
+said it was.
+
+EditMode 733 tests / 1 failure, the pre-existing `TpsArchitectureTests` one. Baseline before the work was
+726 / 1, same failure. PlayMode unchanged at 84 / 3, the same three pre-existing
+`TacticalPositionSelectionPlayModeTests` NREs.
+
+#### What shipped
+
+- **`OrphanedScriptGraphs.Of(tree, assetPath)`** (BH3 editor, new). The enumerate-and-diff, written once:
+  script-graph sub-assets stored at the tree's path, minus what its elements reference. Both the verify lint
+  and the cleanup read it, so what gets named and what gets destroyed cannot drift apart.
+- **`OrphanedScriptGraphCleanup`** (BH3 editor, new). An `AssetModificationProcessor.OnWillSaveAssets` hook,
+  mirroring `GuardScheduleSeeder` — the same file, the same reasoning, and now the second user of that
+  pattern. It is the only thing in the project that destroys a graph. Refuses to act in Play mode, logs each
+  removal by name, and swallows its own exceptions so a save always completes.
+- **The repository is gone**: `ScriptGraphAssetsRepository` (class, `.asset`, and the
+  `Assets/BehaviorTree.Generated` folder), the `Instance` "first repository found" lookup,
+  `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, `BehaviorTreeGraph.AddScriptGraphAssets`, the
+  registration call in `CreateVariableReadGraph`, and the canvas sweep. The sweep did not survive as
+  report-only, per the step.
+- **`BehaviorTreeCanvas.SyncBookkeeping` shrank to what it is actually for** — the dangling-element repair.
+  `wasPlaying`, `lastSyncedAsset` and the `EditorApplication.projectChanged` subscription went with the
+  repository half; all three existed only to re-arm it.
+- **Demo**: `BH3Demos/RepositoryRemoval/` — the ledger's absence checked live rather than asserted, an agent
+  running a tree whose node reads an embedded graph, and the two sets the cleanup compares. Verified on Play
+  with a game-view capture.
+
+#### Decisions taken while implementing
+
+- **The finder is a type, not a method on the verification class.** Deletion depending on a report generator
+  is the wrong direction, and the alternative — each of them implementing the rule — is how a report that
+  named a different set than the deleter took would come about. One type both depend on.
+- **An unreadable tree is refused, not treated as all-orphans.** `Of` returns empty when `graph` is null.
+  Read the other way, a tree that failed to deserialize reports no elements, which looks exactly like "every
+  sub-asset is unreferenced" — and the cleanup would take the lot. This is the timing bug class that made
+  the old sweep dangerous, and the one thing this code must never get wrong.
+- **Play mode inherits the old sweep's one sensible guard.** A running agent holds live references into the
+  graphs of the tree it executes, and a save during play is not an authoring act.
+- **Deletion is not undoable, and nothing was built to make it so.** `DestroyImmediate` on a sub-asset
+  cannot be recorded for undo. What replaces undo is *when* it runs: an orphan that stops being one before
+  the next save was never a candidate. Pinned by a test.
+
+#### Corrections to this spec, found by building it
+
+1. **This was not a BH3-only change.** The `.asset` and the `Assets/BehaviorTree.Generated` folder live in
+   the **superproject**, not in the BH3 submodule, so removing the repository touches two repos. The step's
+   text ("both are BH3-only, both are small") is wrong about the first half.
+2. **`bt_verify` now triggers the cleanup, because `Reload` saves first.**
+   `BehaviorTreeVerification.Reload` opens with `AssetDatabase.SaveAssets()`, so verifying a tree with
+   unsaved changes cleans it before the orphan lint looks. The lint is **not** dead — what still reaches it
+   is a tree that arrived on disk already carrying an orphan, from an older version of this tool or another
+   project, which nothing in the session has dirtied. Worth knowing before someone reads the lint as broken.
+3. **`fn_extract` now tidies up after itself, and its documentation said the opposite.**
+   `ExtractToProjectAsset` clears the node's reference and then calls `SaveAssets()`, so the sub-asset it
+   deliberately left behind is removed by that save. Extract is still not a deleter — the cleanup is. Its
+   doc comment and the test `Extract_LeavesTheOriginalSubAsset_ForVerifyToReportAsAnOrphan` both asserted
+   the old behaviour and were updated; the test is now `Extract_LeavesNoOrphanedSubAssetBehind`.
+4. **The canvas sweep was no longer per-OnGUI.** It had already been put behind a `bookkeepingIsStale` flag
+   by the canvas performance work. The spec's `BehaviorTreeCanvas.cs:77-86` had drifted to 180-216. The
+   *cost* argument for removing it was therefore already half-spent; the *correctness* argument — deleting
+   assets from a repaint path, on whatever the graph reported at that instant — was the whole remaining
+   case, and it was enough.
+5. **The repository lived in the Runtime assembly**, `Runtime/Graphs/`, gated internally with
+   `#if UNITY_EDITOR` — not in the Editor assembly, as its purely editor-time job would suggest.
+
+#### A defect fixed on the way
+
+`BehaviorTreeVerification.OrphanedScriptGraphSubAssets` had **no doc comment, and its doc comment had
+drifted onto the wrong method** — the `<summary>` describing it sat immediately above
+`InvalidConnections`'s own `<summary>`, so the file had two stacked summaries on one method and none on the
+other. That is how the report-only note ended up documenting the wrong thing. Both are now attached to what
+they describe.
+
+#### Known gaps, stated rather than discovered
+
+- **`bt_verify` cleans as a side effect of verifying, and not only the tree it was given.** Correction 2
+  above, with the wider half found by the self-review: `AssetDatabase.SaveAssets()` saves **every dirty
+  asset in the project**, so verifying tree A also saves tree B and cleans B's orphans. The realistic
+  exposure is narrow — an author holding a freshly created graph they have not wired to a node yet, which
+  is an orphan by definition and would be removed by their own next save regardless — and the authoring
+  helpers all wire in the same expression that creates. But the command's description promised "Read-only",
+  which was true before this step and is not now; that claim has been corrected rather than left to
+  mislead an automated caller. Scoping `Reload` to persist only the tree it was asked about would fix the
+  breadth properly, and is a change to verification's contract that belongs in its own pass.
+- **No test covers the hook firing through Unity's own Ctrl+S**, only through `AssetDatabase.SaveAssets()`.
+  Both reach `OnWillSaveAssets`, which is the seam under test, but the keyboard path is untested by
+  construction.
+- **Ordering between the two `AssetModificationProcessor`s is unspecified.** `GuardScheduleSeeder` and
+  `OrphanedScriptGraphCleanup` both run on save and Unity does not define which goes first. They are
+  independent today — one seeds triggers, the other destroys unreferenced graphs — but a future hook that
+  cares about ordering would have no way to express it.
+- **`Assets/TPSQuery.asset`** is an untracked stray in the repo root, left by an earlier session. Not this
+  step's, and not committed by it.
+
+#### Tests
+
+Seven new EditMode tests in `OrphanedScriptGraphCleanupTests`, plus one rewritten in
+`FunctionVerificationTests`. Spec test 7 (delete the node, save, the sub-asset is gone; a standalone
+Function referenced by the same tree is never touched) and test 8 (no project-wide ledger is created by a
+full authoring round trip) are the ones this step makes green. Beyond those: saving a healthy tree
+repeatedly destroys nothing, a graph whose node returns before the save survives, the finder refuses a null
+tree or an empty path, and an unreferenced graph still on disk is *named without being deleted* — which is
+what pins that the lint and the cleanup read the same rule.
 
 ### Step 6 — folded into Step 5
 

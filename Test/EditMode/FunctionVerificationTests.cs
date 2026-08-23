@@ -312,22 +312,40 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
-        /// Extract copies rather than deletes, deliberately: deleting here would make this the second thing
-        /// in the project that destroys graphs, which is exactly what the repository-removal sequencing
-        /// forbids. The now-unreferenced sub-asset must therefore show up as an orphan instead.
+        /// Extract still never destroys a graph itself — it clears the node's reference and saves, and the
+        /// save-time cleanup is what removes the sub-asset that just became unreferenced. So promoting an
+        /// embedded one-off to a shared Function now tidies up after itself, through the single deleter,
+        /// rather than leaving a leftover for someone to notice later.
+        /// <para>
+        /// This used to assert that <c>bt_verify</c> <em>reported</em> that leftover, which was correct
+        /// while nothing deleted it. The lint still exists for the case that reaches it — a tree that
+        /// arrived on disk already carrying an orphan — which <c>OrphanedScriptGraphCleanupTests</c> covers
+        /// through the finder the lint and the cleanup share.
+        /// </para>
         /// </summary>
         [Test]
-        public void Extract_LeavesTheOriginalSubAsset_ForVerifyToReportAsAnOrphan()
+        public void Extract_LeavesNoOrphanedSubAssetBehind()
         {
             var (tree, node, path) = TreeReading("OrphanTree", null);
             node.SetScriptGraph(BehaviorTreeAuthoring.CreateVariableReadGraph(tree, "hp", false));
             EditorUtility.SetDirty(tree);
             AssetDatabase.SaveAssets();
 
+            Assert.That(
+                AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
+                    .Any(representation => representation is Unity.VisualScripting.ScriptGraphAsset),
+                Is.True,
+                "precondition: the embedded graph must be stored in the tree before extraction");
+
             FunctionGraphAuthoring.ExtractToProjectAsset(tree, node, $"{Folder}/Promoted.asset");
 
-            Assert.That(FunctionFindings(path), Has.Some.Contains("orphaned sub-asset"),
-                "the sub-asset the node no longer references must be reported, not silently left");
+            Assert.That(OrphanedScriptGraphs.Of(tree, path), Is.Empty,
+                "extract's own save must leave the tree with nothing orphaned in it");
+            Assert.That(
+                AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
+                    .Any(representation => representation is Unity.VisualScripting.ScriptGraphAsset),
+                Is.False,
+                "the sub-asset the node stopped referencing must be gone after extraction");
         }
 
         [Test]

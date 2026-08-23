@@ -114,8 +114,9 @@ it.
 
 A node that **already** holds an embedded graph is unaffected: **Open Graph** still opens it, and
 **Extract to Function** promotes it to a project asset and re-points the node at it -- the same operation
-`fn_extract` performs from the CLI. The original sub-asset stays in the tree and `bt_verify` reports it as
-an orphan, because deletion has exactly one owner at a time.
+`fn_extract` performs from the CLI. The graph is copied rather than moved, and extraction never deletes one
+itself — deletion has exactly one owner. It clears the node's reference and saves, and the save is what
+removes the sub-asset nothing points at any more.
 
 ## Declared inputs are ports
 
@@ -225,13 +226,39 @@ Same philosophy as `bt_list_nodes`: the catalogue is derived from the assets, so
 a written table does. `fn_describe` is the fastest way to find out why a Function is not returning what you
 expect — a missing `Result` output is reported by name rather than failing at runtime and nowhere else.
 
+## Who owns an embedded graph's lifetime
+
+A graph stored inside a tree is a **sub-asset of that tree**, and that containment is the whole record of
+ownership. There is no register to add it to and no index that can disagree with the file.
+
+**One thing deletes a graph, and it runs when you save.** On save, BH3 compares the graphs stored in the
+tree against the graphs its nodes reference, and removes the difference. Each removal is logged, naming the
+graph and the tree.
+
+What follows from that, for anyone authoring trees from code:
+
+- **Wire a new graph to a node before saving.** A graph nothing references at save time is an orphan by
+  definition, and will be removed.
+- **Nothing is destroyed while you are mid-edit.** Delete a node and undo it, and its graph was never a
+  candidate — deletion is not undoable, so it waits for a moment you committed to.
+- **Standalone Functions are never candidates.** Only sub-assets of the tree being saved can be removed, so
+  a Function shared between two trees cannot be deleted by either.
+- **Play mode never deletes.** A running agent holds live references into the graphs it is executing.
+
+`bt_verify` still reports an orphan it finds, and still never removes one. What reaches it now is a tree
+that arrived on disk already carrying an orphan — from an older version of this tool, or from another
+project — since anything you save here is cleaned as you save it.
+
+This replaced a project-wide ledger asset swept by the canvas on every GUI event. That ledger is gone: the
+type, its `.asset`, and the `Assets/BehaviorTree.Generated` folder. Editing a tree now writes that tree and
+nothing else, so two authors on unrelated trees no longer collide in version control.
+
 ## What has not moved yet
 
-Functions sit beside the older embedded-graph machinery rather than having replaced it. Embedded graphs
-that already exist, the script-graph repository and its canvas sweep all still work as before.
+Functions sit beside the older embedded-graph machinery rather than having replaced it: embedded graphs that
+already exist still work as before.
 
 What has changed is the direction: **no editor surface creates a new embedded graph any more.** Two CLI
 commands still do -- `bt_add_variable_read` and `bt_guard_on_variable`, through `CreateVariableReadGraph` --
-and migrating them is part of step 7. Retiring the rest -- the graphs that already exist, then the
-repository and the sweep -- is sequenced separately, so that there is never more than one thing deleting
-graphs at a time.
+and migrating them is part of step 7, which also deletes the embedded field itself and, with it, the
+save-time cleanup described above.

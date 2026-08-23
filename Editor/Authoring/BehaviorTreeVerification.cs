@@ -499,14 +499,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         /// <summary>
-        /// Script-graph sub-assets of this tree that nothing in it references any more.
-        /// <para>
-        /// <b>Report only.</b> The canvas sweep still owns deletion, and the sequencing this feature follows is
-        /// that there is never more than one thing deleting graphs at a time. This is step one: make the
-        /// orphans visible while the existing deleter is still the one acting on them.
-        /// </para>
-        /// </summary>
-        /// <summary>
         /// Wires the canvas draws red: connections whose ports no longer accept each other.
         ///
         /// <para>
@@ -545,39 +537,32 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
         }
 
+        /// <summary>
+        /// Script-graph sub-assets of this tree that nothing in it references any more.
+        ///
+        /// <para>
+        /// <b>Reports; never deletes.</b> <c>OrphanedScriptGraphCleanup</c> owns deletion, at save time, and
+        /// is the only thing allowed to destroy a graph. Both read the same
+        /// <see cref="OrphanedScriptGraphs.Of"/>, so what this names and what that removes cannot drift
+        /// apart.
+        /// </para>
+        ///
+        /// <para>
+        /// What is left to report, now that saving cleans up: a tree that arrived on disk already carrying
+        /// an orphan — written by an older version of this tool, or by another project — and which nothing
+        /// in this session has dirtied. <see cref="Reload"/> saves before it reads, so a tree with unsaved
+        /// changes has already been cleaned by the time this looks at it.
+        /// </para>
+        /// </summary>
         private static IEnumerable<string> OrphanedScriptGraphSubAssets(
             BehaviorTreeGraphAsset asset,
             string assetPath,
             string treeName)
         {
-            // The path is passed in rather than read off the asset: Reload hands back an Instantiate clone so
-            // that what is inspected is what survives serialization, and a clone has no asset path. Deriving
-            // it here returned empty and this lint silently reported nothing — which a test caught only
-            // because it asserted on the finding rather than on the method running.
-            if (string.IsNullOrEmpty(assetPath)) yield break;
-
-            var path = assetPath;
-
-            var referenced = new HashSet<Unity.VisualScripting.ScriptGraphAsset>();
-
-            foreach (var node in asset.graph.Nodes)
+            foreach (var orphan in OrphanedScriptGraphs.Of(asset, assetPath))
             {
-                var graphs = node?.scriptGraphAssets;
-                if (graphs == null) continue;
-
-                foreach (var graph in graphs)
-                {
-                    if (graph != null) referenced.Add(graph);
-                }
-            }
-
-            foreach (var representation in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
-            {
-                if (representation is not Unity.VisualScripting.ScriptGraphAsset subAsset) continue;
-                if (referenced.Contains(subAsset)) continue;
-
                 yield return
-                    $"{treeName}: orphaned sub-asset — script graph '{subAsset.name}' is stored in this tree " +
+                    $"{treeName}: orphaned sub-asset — script graph '{orphan.name}' is stored in this tree " +
                     "but nothing in it references the graph any more.";
             }
         }
