@@ -682,7 +682,7 @@ EditMode 705 tests / 1 failure, PlayMode 84 / 3 — the same four that failed be
 1. **`ScriptGraphVariableExtension` does not die here.** Both this step's text and the consumer census said
    it goes with the wrappers. It does not: BH3's `ScriptGraphVariable` still routes its **embedded**-graph
    path through `GetScriptGraphOutput` / `Run` extension methods on it (`ScriptGraphVariable.cs:277-331`),
-   and embedded graphs are retired in **step 7**, which is ordered after steps 5 and 6. Deleting it here
+   and embedded graphs are retired in **step 7**, which is ordered after step 5. Deleting it here
    turned the project red. It stays, and `ScriptGraphOutput.executionIndex` — whose only reader is that
    file — stays with it. **Step 7 inherits both.**
 2. **The wrappers had a third file living with them.** `VisualScriptingExtension/Editor/RunnableScriptGraph/
@@ -932,18 +932,41 @@ Was *Delete `ParameterizedGraphAsset` and `RunnableScriptGraph`*. Merged into st
 migration utility it was waiting on was dropped. Numbering of steps 5–7 is kept so the cross-references
 below and in the authoring skill stay valid.
 
-### Step 5 — Move deletion to save time (repository removal, step 2 of 3)
+### Step 5 — Remove the repository (repository removal, steps 2 and 3 of 3)
 
-Orphan detection already ships **report-only** and is tested. Now move actual deletion from the per-OnGUI
-canvas sweep to a save-time structural cleanup: enumerate the tree's own script-graph sub-assets, diff
-against what its elements reference, destroy orphans. At this point the canvas sweep becomes report-only.
-**Never both deleting at once.**
+**Merged from the former steps 5 and 6 on 2026-08-22, by the tool owner.** They were separate to keep a
+safe intermediate state — deletion moved to save time first, the repository removed second — but both are
+BH3-only, both are small, and landing only the first leaves the state nobody wants: two deletion mechanisms,
+one merely demoted. Done as one change, the invariant that mattered (*never two things deleting graphs at
+once*) is kept inside the change rather than across two releases: the save-time cleanup is the **only** thing
+that deletes, from the first commit that deletes anything.
 
-### Step 6 — Remove the repository (repository removal, step 3 of 3)
+**What changes, in order:**
 
-Delete `ScriptGraphAssetsRepository`, its `.asset`, `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, and
-the canvas sweep. Acceptance criterion 3 becomes checkable: editing unrelated trees produces no shared-file
-merge conflicts.
+1. **Deletion moves to save time.** Orphan detection already ships **report-only** and is tested. Actual
+   deletion moves from the per-OnGUI canvas sweep to a save-time structural cleanup: enumerate the tree's own
+   script-graph sub-assets, diff against what its elements reference, destroy the orphans. Undoable in the
+   sense that matters — nothing is destroyed while an author is mid-edit, only when they save.
+2. **The repository goes.** Delete `ScriptGraphAssetsRepository`, its `.asset`, the `Instance` "first
+   repository found" lookup, `BehaviorTreeGraph.DestroyUnusedScriptGraphAssets`, and the canvas sweep — the
+   sweep does not survive as report-only, because the orphan *lint* already reports and the cleanup already
+   deletes; a third surface answering the same question is what this step removes.
+3. **Acceptance criterion 3 becomes checkable**: editing unrelated trees produces no shared-file merge
+   conflicts. The `.asset` that dirtied on every editor run and appeared in every diff is gone; the
+   *revert it, do not commit it* note in *Context for whoever picks this up next* stops applying.
+
+**What it must not do.** Delete anything from a path that is not the save-time cleanup. A lint may name an
+orphan; only the cleanup may destroy one. That is locked decision 6 applied inside one change.
+
+**Tests.** Test 7 (delete a node owning an embedded graph, save → sub-asset gone; a standalone Function
+referenced by the same tree → never touched) and test 8 (after this step, editing a tree dirties only that
+tree's asset) are the ones this step makes green. Plus: saving a tree with no orphans destroys nothing; an
+orphan that reappears before save (undo) is not destroyed.
+
+### Step 6 — folded into Step 5
+
+Was *Remove the repository (repository removal, step 3 of 3)*. Merged into step 5 on 2026-08-22. Step 7 keeps
+its number so the cross-references stay valid; its ordering rule now reads "after step 5".
 
 ### Step 7 — Retire embedded graphs (open question 3, closed)
 
@@ -960,13 +983,12 @@ Step 2c does the first half by removing the last creating surface. This step doe
    creates with `function` (and the warning row that exists only to explain it), and the
    `AddObjectToAsset` calls in `BehaviorTreeAuthoring.CreateVariableReadGraph` and the old drawer.
 3. **What dies with it, for free:** the orphan lint, the save-time structural cleanup built in step 5, and
-   the cross-tree deletion bug class — all of them answer a question that can no longer be asked. Steps
-   5 and 6 stay worth doing first regardless: they are what makes the intermediate state safe while trees
-   still hold sub-assets, and *never two deleters at once* still applies.
+   the cross-tree deletion bug class — all of them answer a question that can no longer be asked. Step 5
+   stays worth doing first regardless: it is what makes the intermediate state safe while trees still hold
+   sub-assets, and *never two deleters at once* still applies.
 
-**Ordering:** after steps 5 and 6. Doing it before them would leave the repository deleting graphs that
-the migration is concurrently re-pointing, which is exactly the two-deleters state locked decision 6
-forbids.
+**Ordering:** after step 5. Doing it before would leave the repository deleting graphs that the migration
+is concurrently re-pointing, which is exactly the two-deleters state locked decision 6 forbids.
 
 **The cost, stated so it is not discovered later.** Every one-off variable read becomes a project asset
 with a path, so a tree that used to be self-contained now depends on a folder of small Functions. That is
