@@ -192,7 +192,9 @@ The heaviest are the composites/containers (`currentExecutingChildIndex`, `child
   `GuardTrigger` hold the densest per-agent state in the codebase (`hasCachedResult`, `cachedResult`,
   `lastEvaluatedAt`, `seenVersions`, `cachedAgent`, `cachedWriter`). This is the largest un-seamed public
   surface, and a third-party guard written against v2 has nothing to migrate to. Doing this is the natural
-  step 2.5.
+  step 2.5 — **planned in [13-guard-and-subobject-context.md](13-guard-and-subobject-context.md)**, which
+  also covers the two non-node holders of per-agent state (`GuardTrigger`, `ScriptGraphVariable`) that no
+  rule here can see.
 - **No test asserts on `ctx.Machine` / `ctx.gameObject` / `ctx.transform`.** The dispatch path itself *is*
   covered against a live machine — the existing PlayMode suite runs real trees through real machines, and
   those runs go `BehaviorTreeMachine.Update -> OnUpdateInternal -> InvokeUpdate -> OnUpdate(BTContext) ->
