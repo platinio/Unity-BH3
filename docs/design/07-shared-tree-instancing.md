@@ -28,6 +28,26 @@ Record the numbers in this file. If spawn hitch and memory are acceptable at the
 and spawn pattern (pooling may already hide it), **stop here** — this refactor is not free and the
 migration cost is real.
 
+### Step 0 numbers — measured 2026-08-24
+
+Editor run, 200 agents per row, `BH3Demos/SharedInstancing` scene (branch `feature/shared-runtime-demo`).
+The Zombie is the Sample-FPS Zombie: 38 nodes, Patrol sub-tree, 2 reactive guards with OnKeyChanged
+triggers, 5 function-graph nodes. Managed memory is a `GC.GetTotalMemory(true)` delta — it under-counts
+the clones' native side and is noisy run to run; times are Stopwatch over the activation loop.
+
+| Spawn 200 agents | total | per agent | managed | graph-asset clones |
+|---|---|---|---|---|
+| Zombie, machine only (the tree's own cost) | 5307 ms | **26.5 ms** | +72–133 MB | **+400** (root + Patrol per agent) |
+| Zombie, full prefab (meshes, sensors, nav) | 5796 ms | 29.0 ms | +75.5 MB | +400 |
+| 12-node demo tree, old runtime | 2744 ms | 13.7 ms | +114 MB | +200 |
+| 12-node demo tree, shared-plan demo runtime | 0.7 ms | 0.003 ms | +0.04 MB | 0 |
+
+Readings: **the behavior tree is ~91% of the entire prefab spawn cost** (26.5 of 29.0 ms/agent); nesting
+doubles the clones exactly as this spec predicted; 200 zombies is a 5–6 s main-thread stall that pooling
+can amortize but not shrink. The verdict this section asks for: **the numbers justify proceeding** — the
+question is no longer whether, but via which path (see
+[14-shared-runtime-coexistence.md](14-shared-runtime-coexistence.md) for the measured shared-path demo).
+
 ## Target model (the Unreal shape)
 
 One **shared immutable graph** per asset — nodes, ports, transitions, defaults, guard attachments — loaded
