@@ -53,7 +53,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void EmptyEntrySucceeds()
         {
-            Assert.AreEqual(ExecutionStatus.Success, new Entry().OnUpdate(),
+            // See EmptySelector_Fails: migrated nodes are exercised through OnUpdateInternal.
+            Assert.AreEqual(ExecutionStatus.Success, new Entry().OnUpdateInternal(),
                 "A tree with nothing wired to the root has nothing to fail at.");
         }
     }

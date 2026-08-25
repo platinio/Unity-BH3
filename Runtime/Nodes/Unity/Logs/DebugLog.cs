@@ -19,9 +19,12 @@ namespace ArcaneOnyx.BehaviorTree
             LogText = ValueInput<object>(nameof(LogText), string.Empty);
         }
 
-        public override ExecutionStatus OnUpdate()
+        // Migrated (spec 07 step 3). Stateless already, so the whole migration is reading the port through
+        // the context instead of off the port object -- and the agent comes from the context too, so the
+        // log line points at the right object on a shared tree.
+        public override ExecutionStatus OnUpdate(BTContext ctx)
         {
-            Debug.Log(LogText.GetValue());
+            Debug.Log(ctx.GetValue(LogText), ctx.gameObject);
             return ExecutionStatus.Success;
         }
     }

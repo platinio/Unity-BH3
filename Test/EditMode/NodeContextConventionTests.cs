@@ -47,9 +47,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private static readonly HashSet<string> LegacyLifecycleAllowlist = new()
         {
             // Composites and containers — they hold the child-index state that forces cloning, so spec 07
-            // migrates this group first.
-            "Composite", "ContainerNode", "Entry", "Parallel", "ParallelSelector", "ParallelSequence",
-            "RandomSelector", "RandomSequence", "Selector", "Sequence",
+            // migrates this group first. Composite, Entry, Selector and Sequence are DONE (step 3).
+            // ContainerNode is deliberately last in its family: migrating a base class shadows every
+            // subclass still on the legacy hook — see the note on ContainerNode.OnUpdate().
+            "ContainerNode", "Parallel", "ParallelSelector", "ParallelSequence",
+            "RandomSelector", "RandomSequence",
 
             // Conditions and decorators.
             "Condition", "Cooldown", "RandomChance", "Repeater", "ReturnFailure", "ReturnSuccess",
@@ -59,11 +61,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             "RunBehaviorTreeGraphNode", "VisualScriptGraphVariable", "VisualScriptingNode",
 
             // Leaves.
-            "AddExplosiveForce", "AddForce", "AddTorque", "CrossFadeAnimation", "DebugLog", "DebugLogError",
+            // DebugLog, Rotate and WaitTime are DONE (step 3).
+            "AddExplosiveForce", "AddForce", "AddTorque", "CrossFadeAnimation", "DebugLogError",
             "DebugLogWarning", "DestroyObject", "DontDestroyOnLoad", "FaceTarget",
             "GenerateRandomNavMeshPosition", "InstanteObject", "Literal", "LookAt", "MissingType",
-            "PlayAudio", "RemoveVariable", "Rotate", "SetAnimatorTrigger", "SetAnimatorValue",
-            "SetNavAgentPosition", "SetPosition", "SetRotation", "SetVariable", "StopNavAgent", "WaitTime",
+            "PlayAudio", "RemoveVariable", "SetAnimatorTrigger", "SetAnimatorValue",
+            "SetNavAgentPosition", "SetPosition", "SetRotation", "SetVariable", "StopNavAgent",
             "WaitTimeRandomRange", "WaitUntilReachNavTargetPosition"
         };
 
@@ -76,14 +79,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // and all move into instance memory with everything else.
             "BehaviorTreeNode",
 
-            "Composite", "ContainerNode", "Parallel", "Selector", "Sequence",
+            // Composite, Selector, Sequence, Rotate and WaitTime are DONE (step 3) — their state now lives
+            // in ctx.Memory<T>(). ContainerNode still holds its child list.
+            "ContainerNode", "Parallel",
             "Cooldown", "RandomChance", "ReactiveGuard",
             "RunBehaviorTreeGraphNode", "VisualScriptGraphVariable",
             "PlaceHolderNode", "MissingType", "RemoveVariable",
 
             "AddExplosiveForce", "AddForce", "AddTorque", "CrossFadeAnimation", "LookAt", "PlayAudio",
-            "Rotate", "SetAnimatorTrigger", "SetAnimatorValue", "SetNavAgentPosition", "SetPosition",
-            "SetRotation", "StopNavAgent", "WaitTime", "WaitTimeRandomRange",
+            "SetAnimatorTrigger", "SetAnimatorValue", "SetNavAgentPosition", "SetPosition",
+            "SetRotation", "StopNavAgent", "WaitTimeRandomRange",
             "WaitUntilReachNavTargetPosition"
         };
 

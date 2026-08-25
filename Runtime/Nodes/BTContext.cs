@@ -1,4 +1,5 @@
 using ArcaneOnyx.BehaviorTree.Debugging;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -40,10 +41,40 @@ namespace ArcaneOnyx.BehaviorTree
     {
         private readonly BehaviorTreeNode node;
 
+        /// <summary>
+        /// The agent's instance when this context is backed by a shared tree, null when it is backed by a
+        /// cloned node. <b>This one field is the whole of the flip.</b>
+        /// <para>
+        /// A node body never asks which it is. It reads <see cref="Memory{T}"/>, <see cref="gameObject"/>
+        /// and <see cref="TickChild"/>, and each of those answers from the instance when there is one and
+        /// from the node when there is not — so the same body runs under
+        /// <see cref="BehaviorTreeMachine"/> (clone per agent) and under
+        /// <see cref="Instancing.SharedBehaviorTreeMachine"/> (one shared tree) with no recompilation and
+        /// no branch of its own.
+        /// </para>
+        /// </summary>
+        private readonly Instancing.TreeInstance instance;
+
+        private readonly int index;
+
+        /// <summary>Backed by a cloned node: state lives on the node, children come from its child list.</summary>
         internal BTContext(BehaviorTreeNode node)
         {
             this.node = node;
+            instance = null;
+            index = -1;
         }
+
+        /// <summary>Backed by a shared tree: state lives in the agent's arrays, children come from the plan.</summary>
+        internal BTContext(Instancing.TreeInstance instance, int index)
+        {
+            node = instance.Plan.Nodes[index];
+            this.instance = instance;
+            this.index = index;
+        }
+
+        /// <summary>Whether this context is backed by a shared tree rather than a per-agent clone.</summary>
+        public bool IsShared => instance != null;
 
         /// <summary>
         /// This node's own state on this agent, created on first use — a timer, a current-child index, a
@@ -66,16 +97,61 @@ namespace ArcaneOnyx.BehaviorTree
         /// with somewhere to move to.
         /// </para>
         /// </summary>
-        public T Memory<T>() where T : class, new() => node.MemorySlot<T>();
+        public T Memory<T>() where T : class, new() =>
+            instance != null ? instance.MemoryAt<T>(index) : node.MemorySlot<T>();
 
         /// <summary>The machine running this tree, or null when the tree is ticked without one (edit-mode tests).</summary>
-        public BehaviorTreeMachine Machine => node.BehaviorTreeMachine;
+        public BehaviorTreeMachine Machine => instance != null ? null : node.BehaviorTreeMachine;
 
         /// <summary>The agent this node is running on.</summary>
-        public GameObject gameObject => node.gameObject;
+        public GameObject gameObject => instance != null ? instance.Agent : node.gameObject;
 
         /// <inheritdoc cref="gameObject"/>
-        public Transform transform => node.transform;
+        public Transform transform => gameObject.transform;
+
+        /// <summary>
+        /// How many children this node has. From the baked plan on a shared tree, from the node's own
+        /// child list on a clone — a composite body asks here and never learns which.
+        /// </summary>
+        public int ChildCount =>
+            instance != null
+                ? instance.Plan.ChildCount(index)
+                : node is ContainerNode container ? container.GetChildren().Count : 0;
+
+        /// <summary>
+        /// Ticks a child by ordinal, entering it first if it is not already running — the universal form of
+        /// <c>ContainerNode.TickChild</c>, and the reason a migrated composite runs unmodified on both
+        /// runtimes.
+        /// <para>
+        /// "Is it running" is the question that differs: on a clone it is the node's own flag, on a shared
+        /// tree it is this agent's slot in the running array. Both are answered here so that no composite
+        /// has to ask.
+        /// </para>
+        /// </summary>
+        public ExecutionStatus TickChild(int ordinal)
+        {
+            if (instance != null)
+            {
+                return Instancing.SharedTreeRunner.TickNode(instance, instance.Plan.ChildIndex(index, ordinal));
+            }
+
+            var child = ((ContainerNode)node).GetChildren()[ordinal];
+            if (!child.IsRunning) child.OnNodeEnter();
+
+            return child.OnUpdateInternal();
+        }
+
+        /// <summary>Exits a child by ordinal if it is running. Safe to call for one that is not.</summary>
+        public void ExitChild(int ordinal)
+        {
+            if (instance != null)
+            {
+                Instancing.SharedTreeRunner.ExitNode(instance, instance.Plan.ChildIndex(index, ordinal));
+                return;
+            }
+
+            ((ContainerNode)node).GetChildren()[ordinal].OnNodeExit();
+        }
 
         /// <summary>
         /// The variables this node can see — the sub-tree's own instance first, then outward. Not reachable
@@ -90,22 +166,56 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>What an embedded Visual Scripting graph sees — the scope chain collapsed to a flat set.</summary>
         public VariableDeclarations ScriptGraphVariables => node.ScriptGraphVariables;
 
+        /// <summary>
+        /// One of this node's children, by ordinal. Needed by composites that ask a child a question before
+        /// deciding to run it — the preemption scan, for one.
+        /// </summary>
+        public BehaviorTreeNode Child(int ordinal) =>
+            instance != null
+                ? instance.Plan.Nodes[instance.Plan.ChildIndex(index, ordinal)]
+                : ((ContainerNode)node).GetChildren()[ordinal];
+
         /// <summary>Reads a port at the type it declares. Prefer this to touching the port directly.</summary>
         public T GetValue<T>(ValueInput port) => port.GetValue<T>();
 
-        /// <summary>A component on the agent.</summary>
-        public T GetComponent<T>() where T : Component => node.gameObject.GetComponent<T>();
+        /// <summary>Reads a port whose declared type is <c>object</c>.</summary>
+        public object GetValue(ValueInput port) => port.GetValue();
 
-        /// <summary>The component a port points at, falling back to the agent's own.</summary>
-        public T GetComponent<T>(ValueInput port) where T : Component => node.GetComponent<T>(port);
+        /// <summary>A component on the agent.</summary>
+        public T GetComponent<T>() where T : Component => gameObject.GetComponent<T>();
+
+        /// <summary>
+        /// The component a port points at, falling back to the agent's own.
+        /// <para>
+        /// Reimplemented here rather than delegated to the node, because the node's fallback reaches the
+        /// agent through its machine — which a shared node does not have. The port half is shared structure
+        /// and is read the same way on both paths.
+        /// </para>
+        /// </summary>
+        public T GetComponent<T>(ValueInput port) where T : Component
+        {
+            var component = port.GetComponent<T>();
+
+            return component != null ? component : gameObject.GetComponent<T>();
+        }
 
         /// <summary>
         /// Resolves a component from a port and says so when it cannot find one. Call it when the node is
         /// entered — not at wake, not per tick; see <see cref="BehaviorTreeNode.TryResolve{T}"/>.
         /// </summary>
         /// <returns>False when nothing was found, in which case the node should fail rather than continue.</returns>
-        public bool TryResolve<T>(ValueInput port, out T component) where T : Component =>
-            node.TryResolve(port, out component);
+        public bool TryResolve<T>(ValueInput port, out T component) where T : Component
+        {
+            component = GetComponent<T>(port);
+
+            if (component != null) return true;
+
+            Debug.LogError(
+                $"'{node.NodeName}' found no {typeof(T).Name} on its {port.key} or on the agent itself.",
+                gameObject);
+
+            return false;
+        }
 
         /// <summary>The GameObject a blackboard variable names, falling back to the agent itself.</summary>
         public GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable) =>

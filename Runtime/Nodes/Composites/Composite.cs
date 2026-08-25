@@ -2,12 +2,33 @@ namespace ArcaneOnyx.BehaviorTree
 {
     public class Composite : ContainerNode
     {
-        protected int currentExecutingChildIndex = 0;
-
-        public override void OnAwake()
+        /// <summary>
+        /// What used to be <c>protected int currentExecutingChildIndex</c> plus <c>callOnEnter</c> on the
+        /// two composites that had it. Migrated (spec 07 step 3).
+        ///
+        /// <para>
+        /// This is the state that forces the clone: which branch a composite is part-way through is the
+        /// most per-agent fact in a behavior tree, and every agent running the same Selector has a different
+        /// answer. Sharing the node without moving this would have two hundred zombies fighting over one
+        /// integer.
+        /// </para>
+        ///
+        /// <para>
+        /// Declared <c>protected</c> on the base so <see cref="Selector"/> and <see cref="Sequence"/> name
+        /// the same type — one memory block per node, and both read it through
+        /// <c>ctx.Memory&lt;CompositeMemory&gt;()</c>.
+        /// </para>
+        /// </summary>
+        protected sealed class CompositeMemory
         {
-            currentExecutingChildIndex = 0;
+            /// <summary>Which child this composite is resuming.</summary>
+            public int Current;
         }
+
+        // The old OnAwake() reset currentExecutingChildIndex to 0. Dropped rather than migrated: both
+        // migrated composites set Current in OnEnter, so the reset was redundant -- and an OnAwake here
+        // would claim this node's single memory slot for CompositeMemory on every composite, including the
+        // ones not yet migrated, which would collide with whatever memory type they eventually want.
 
         /// <summary>
         /// Whether a guard change on one child should move this composite's resume point, and to where.
@@ -29,12 +50,12 @@ namespace ArcaneOnyx.BehaviorTree
         ///
         /// <para>
         /// <b>"Resume" is every frame a branch runs longer than one tick</b>, which is the common case.
-        /// <see cref="Selector.OnUpdate"/> starts its loop at <c>currentExecutingChildIndex</c> rather than at
+        /// <see cref="Selector.OnUpdate(BTContext)"/> starts its loop at the remembered index rather than at
         /// zero:
         /// </para>
         /// <code>
         /// frame 1  enter selector -> child0's guard is false, skipped -> child1 returns Running -> index = 1
-        /// frame 2  OnUpdate again -> the loop starts at index 1, callOnEnter false
+        /// frame 2  OnUpdate again -> the loop starts at index 1
         ///          -> ticks child1 WITHOUT re-entering it, and WITHOUT reconsidering child0
         /// frame 3  the same
         /// </code>
@@ -47,9 +68,9 @@ namespace ArcaneOnyx.BehaviorTree
         /// changes, and only for children that opted in by carrying a take-over guard.
         /// </para>
         /// </summary>
-        protected virtual bool TryChangeRunningChild(out int newChildIndex)
+        protected virtual bool TryChangeRunningChild(in BTContext ctx, out int newChildIndex)
         {
-            newChildIndex = currentExecutingChildIndex;
+            newChildIndex = ctx.Memory<CompositeMemory>().Current;
             return false;
         }
 
@@ -63,16 +84,18 @@ namespace ArcaneOnyx.BehaviorTree
         /// <see cref="BehaviorTreeNode.WouldEnterNow"/>, which is a full entry-feasibility check and can run
         /// a graph.
         /// </para>
+        /// <para>
+        /// Children come from the context, so the walk reads the baked plan on a shared tree and the node's
+        /// own child list on a clone.
+        /// </para>
         /// </summary>
-        protected int FirstChildThatWouldEnterNow(int from, int toExclusive)
+        protected static int FirstChildThatWouldEnterNow(in BTContext ctx, int from, int toExclusive)
         {
-            var children = GetChildren();
-
-            if (toExclusive > children.Count) toExclusive = children.Count;
+            if (toExclusive > ctx.ChildCount) toExclusive = ctx.ChildCount;
 
             for (int i = from; i < toExclusive; i++)
             {
-                var child = children[i];
+                var child = ctx.Child(i);
 
                 if (child == null || !child.HasTakeOverGuard) continue;
                 if (child.WouldEnterNow()) return i;
