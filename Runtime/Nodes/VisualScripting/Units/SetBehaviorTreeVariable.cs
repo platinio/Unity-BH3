@@ -132,8 +132,10 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     // Set and version bump together, so a guard watching this key cannot be left asleep by a
                     // write that forgot to announce itself -- but only when the target actually runs a tree.
-                    // Writing a flag on a door must not attach BH3 components to the door.
-                    AgentVariableWriter.SetOn(target, key, value);
+                    // Writing a flag on a door must not attach BH3 components to the door. SetVersioned and
+                    // not SetOn: this write was recorded above, and recording it again would fire a variable
+                    // breakpoint twice for one write.
+                    AgentVariableWriter.SetVersioned(target, key, value);
                 }
             }
             else
