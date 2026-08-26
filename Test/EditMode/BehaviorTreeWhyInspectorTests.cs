@@ -94,6 +94,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             public RecordingBuilder Skipped(Guid node, Guid guard, int scope = 0) =>
                 Add(BehaviorTreeEventKind.NodeSkipped, scope, node, guard);
 
+            public RecordingBuilder TakenOver(Guid victim, Guid guard, string preemptorName, Guid preemptor, int scope = 0) =>
+                Add(BehaviorTreeEventKind.NodeTakenOver, scope, victim, guard,
+                    key: preemptorName, newValue: preemptor.ToString());
+
             public RecordingBuilder GuardEval(Guid guard, Guid owner, bool result, int scope = 0) =>
                 Add(BehaviorTreeEventKind.GuardEval, scope, guard, owner, flag: result);
 
@@ -155,6 +159,94 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             return explanation.Clauses.Any(clause =>
                 clause.Role == role && clause.Text.IndexOf(contains, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        #endregion
+
+        #region Takeovers
+
+        [Test]
+        public void ATakeoverIsWordedAsGivingWayRatherThanAborted()
+        {
+            // The recorder keeps NodeTakenOver and NodeAborted apart on purpose: an aborted branch had a
+            // guard turn false under it, a taken-over branch had a sibling outbid it, and the two send
+            // whoever is asking to different places. This is the read side of that distinction.
+            var recording = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(450).GuardEval(Guard, Sibling, true)
+                        .TakenOver(Branch, Guard, "Attack", Sibling)
+                        .Exit(Branch, ExecutionStatus.Failure)
+                .Build();
+
+            var topology = new StubTopology()
+                .Node(Branch, "Idle")
+                .Node(Sibling, "Attack")
+                .Node(Guard, "target in range", "BooleanReactiveGuard");
+
+            var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, topology);
+
+            Assert.AreEqual(BehaviorTreeOutcome.TakenOver, explanation.Outcome);
+            StringAssert.Contains("Taken over at tick 450", explanation.Headline);
+            StringAssert.Contains("Attack", explanation.Headline,
+                "The preemptor is the answer — the place to look next is its guard, not this branch.");
+            StringAssert.DoesNotContain("Aborted", explanation.Headline,
+                "Nothing under this node turned false, and calling it an abort sends the reader to the wrong branch.");
+
+            Assert.IsTrue(HasClause(explanation, BehaviorTreeClauseRole.Cause, "outranks"),
+                "The cause is the priority, said as priority.");
+            Assert.IsTrue(HasClause(explanation, BehaviorTreeClauseRole.Context, "entered at tick 400"));
+            Assert.IsTrue(HasClause(explanation, BehaviorTreeClauseRole.Context, "returned Failure"),
+                "The exit it caused is context, not hidden and not the headline.");
+        }
+
+        [Test]
+        public void ATakeoverBlamesTheWriteThatWokeThePreemptorsGuard()
+        {
+            // Everything an abort hangs off the fall to false hangs here off the rise to true: the guard that
+            // opened, and the write that opened it. The chain ends at the sensor, which is where the fix
+            // usually lives.
+            var recording = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(449).ExternalWrite("hasTarget", "False", "True", "VisionSensor")
+                .At(450).GuardEval(Guard, Sibling, true)
+                        .TakenOver(Branch, Guard, "Attack", Sibling)
+                        .Exit(Branch, ExecutionStatus.Failure)
+                .Build();
+
+            var topology = new StubTopology()
+                .Node(Branch, "Idle")
+                .Node(Sibling, "Attack")
+                .Node(Guard, "target in range", "BooleanReactiveGuard")
+                .GuardReads(Guard, "hasTarget");
+
+            var explanation = BehaviorTreeExplainer.Explain(recording, 0, Branch, topology);
+
+            Assert.IsTrue(HasClause(explanation, BehaviorTreeClauseRole.Evidence, "turning true"),
+                "The guard opening is the evidence; an abort's wording of 'turning false' would be the wrong direction.");
+            StringAssert.Contains("VisionSensor", TextOf(explanation),
+                "The write that woke the preemptor's guard is part of the answer, writer named.");
+            StringAssert.Contains("hasTarget", TextOf(explanation));
+        }
+
+        [Test]
+        public void ThePreemptorIsNamedFromTheRecordingWhenThereIsNoTopology()
+        {
+            // An imported recording has no tree to ask, so the name recorded at the moment of the takeover is
+            // what survives — and when even that is missing, the sentence stays honest rather than quoting a
+            // guid at a designer.
+            var recorded = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(450).TakenOver(Branch, Guard, "Attack", Sibling).Exit(Branch, ExecutionStatus.Failure)
+                .Build();
+
+            StringAssert.Contains("Attack", BehaviorTreeExplainer.Explain(recorded, 0, Branch).Headline);
+
+            var nameless = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(450).TakenOver(Branch, Guard, null, Guid.Empty).Exit(Branch, ExecutionStatus.Failure)
+                .Build();
+
+            StringAssert.Contains("a higher-priority branch", BehaviorTreeExplainer.Explain(nameless, 0, Branch).Headline);
         }
 
         #endregion
