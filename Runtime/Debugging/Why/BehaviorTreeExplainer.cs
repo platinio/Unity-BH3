@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 return ExplainNeverRan(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses);
             }
 
-            episode = PreferAbortOverItsOwnExit(recording, callSiteId, nodeGuid, episode);
+            episode = PreferCauseOverItsOwnExit(recording, callSiteId, nodeGuid, episode);
 
             var last = recording.EventAt(episode);
 
@@ -77,6 +77,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 case BehaviorTreeEventKind.NodeSkipped:
                     return ExplainSkipped(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
+
+                case BehaviorTreeEventKind.NodeTakenOver:
+                    return ExplainTakenOver(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
 
                 case BehaviorTreeEventKind.NodeExit:
                     return ExplainExited(recording, callSiteId, nodeGuid, topology, atTick, subject, path, clauses, episode);
@@ -209,6 +212,93 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             return new BehaviorTreeExplanation(
                 nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.Skipped, headline, clauses, trace);
+        }
+
+        /// <summary>
+        /// A running branch that gave way to a higher-priority sibling.
+        ///
+        /// <para>
+        /// Deliberately its own words, not an abort's. Nothing under this node turned false — something that
+        /// outranks it became able to run — so the place to look next is the preemptor's guard and the write
+        /// that woke it, not this branch at all. The recorder keeps the two apart for exactly this sentence.
+        /// </para>
+        /// </summary>
+        private static BehaviorTreeExplanation ExplainTakenOver(
+            IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, IBehaviorTreeTopology topology,
+            int atTick, string subject, string path, List<BehaviorTreeExplanationClause> clauses, int episode)
+        {
+            var takeover = recording.EventAt(episode);
+            var guardGuid = takeover.RelatedGuid;
+            var guardName = NameOf(topology, guardGuid);
+
+            // The event carries the preemptor twice: its guid in NewValue for the topology and the canvas,
+            // and its name at the moment of recording in Key — which is what an imported recording with no
+            // tree to ask still has.
+            var preemptorGuid = Guid.TryParse(takeover.NewValue, out var parsed) ? parsed : Guid.Empty;
+            var preemptorName = PreemptorName(topology, preemptorGuid, takeover.Key);
+
+            var headline = guardGuid == Guid.Empty
+                ? $"Taken over at tick {takeover.Tick}: '{preemptorName}' took its slot."
+                : $"Taken over at tick {takeover.Tick}: '{preemptorName}' took its slot when guard '{guardName}' allowed it.";
+
+            clauses.Add(new BehaviorTreeExplanationClause(
+                BehaviorTreeClauseRole.Cause,
+                $"'{preemptorName}' outranks it and became able to run, so this branch was stopped to make way "
+                + "— nothing under this node turned false.",
+                preemptorGuid == Guid.Empty
+                    ? BehaviorTreeExplanationLink.ToTick(takeover.Tick, callSiteId, takeover.Sequence)
+                    : BehaviorTreeExplanationLink.ToNode(preemptorGuid, callSiteId, takeover.Tick, takeover.Sequence)));
+
+            AddEnteredClause(recording, callSiteId, nodeGuid, clauses, episode, takeover.Tick);
+
+            var exit = ExitAfterAbort(recording, callSiteId, nodeGuid, episode);
+            if (exit >= 0)
+            {
+                clauses.Add(new BehaviorTreeExplanationClause(
+                    BehaviorTreeClauseRole.Context,
+                    $"It returned {recording.EventAt(exit).Status} to its parent on the same tick.",
+                    BehaviorTreeExplanationLink.ToTick(takeover.Tick, callSiteId, recording.EventAt(exit).Sequence)));
+            }
+
+            GuardTrace trace = null;
+
+            // True, not false: the preemptor's guard opening is what evicted this branch. Everything an abort
+            // hangs off the fall to false hangs here off the rise to true — the trace of what the guard read,
+            // and the write that changed it.
+            var flip = LastGuardTransitionIndex(recording, callSiteId, guardGuid, episode, true);
+            if (flip >= 0)
+            {
+                var flipped = recording.EventAt(flip);
+                clauses.Add(new BehaviorTreeExplanationClause(
+                    BehaviorTreeClauseRole.Evidence,
+                    $"Guard '{guardName}' was last recorded turning true at tick {flipped.Tick} (step {flipped.Sequence}).",
+                    BehaviorTreeExplanationLink.ToTick(flipped.Tick, callSiteId, flipped.Sequence)));
+
+                trace = AddTraceClause(recording, flip, clauses);
+
+                AddWriteCause(recording, topology, guardGuid, flip, clauses);
+            }
+
+            AddOscillationClause(recording, callSiteId, nodeGuid, atTick, clauses);
+            AddClippedCaveat(recording, clauses);
+
+            return new BehaviorTreeExplanation(
+                nodeGuid, callSiteId, subject, path, atTick, BehaviorTreeOutcome.TakenOver, headline, clauses, trace);
+        }
+
+        /// <summary>
+        /// What to call the branch that took the slot: the topology's current name when it has one, the name
+        /// recorded at the moment of the takeover when it does not, and an honest generic when neither exists.
+        /// </summary>
+        private static string PreemptorName(IBehaviorTreeTopology topology, Guid preemptorGuid, string recordedName)
+        {
+            if (topology != null && preemptorGuid != Guid.Empty &&
+                topology.TryGetNode(preemptorGuid, out var info) && !string.IsNullOrEmpty(info.DisplayName))
+            {
+                return info.DisplayName;
+            }
+
+            return string.IsNullOrEmpty(recordedName) ? "a higher-priority branch" : recordedName;
         }
 
         private static BehaviorTreeExplanation ExplainExited(
@@ -561,7 +651,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// abort wins. The resulting status is not lost — it becomes a clause on the abort.
         /// </para>
         /// </summary>
-        private static int PreferAbortOverItsOwnExit(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int episode)
+        /// <summary>
+        /// An abort or a takeover is followed by the node's own exit on the same tick, and the exit is the
+        /// less interesting half: it says the node stopped, where the earlier event says why. Explain that
+        /// one instead.
+        /// </summary>
+        private static int PreferCauseOverItsOwnExit(IBehaviorTreeRecording recording, int callSiteId, Guid nodeGuid, int episode)
         {
             var exit = recording.EventAt(episode);
             if (exit.Kind != BehaviorTreeEventKind.NodeExit) return episode;
@@ -572,9 +667,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (recorded.Tick != exit.Tick) break;
                 if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != nodeGuid) continue;
 
-                // An enter in the same tick means this exit belongs to a later episode than any earlier abort.
+                // An enter in the same tick means this exit belongs to a later episode than any earlier cause.
                 if (recorded.Kind == BehaviorTreeEventKind.NodeEnter) break;
                 if (recorded.Kind == BehaviorTreeEventKind.NodeAborted) return i;
+                if (recorded.Kind == BehaviorTreeEventKind.NodeTakenOver) return i;
             }
 
             return episode;
@@ -620,6 +716,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     case BehaviorTreeEventKind.NodeExit:
                     case BehaviorTreeEventKind.NodeAborted:
                     case BehaviorTreeEventKind.NodeSkipped:
+                    case BehaviorTreeEventKind.NodeTakenOver:
                         return i;
                 }
             }
@@ -640,6 +737,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     case BehaviorTreeEventKind.NodeExit:
                     case BehaviorTreeEventKind.NodeAborted:
                     case BehaviorTreeEventKind.NodeSkipped:
+                    case BehaviorTreeEventKind.NodeTakenOver:
                         return i;
                 }
             }
