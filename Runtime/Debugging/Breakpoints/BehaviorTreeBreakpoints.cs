@@ -240,12 +240,33 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             foreach (var breakpoint in all)
             {
-                breakpoint.HitCount = 0;
-                breakpoint.MatchCount = 0;
+                breakpoint.ResetTallies();
 
                 // Cleared with the counters, not kept. It describes what a value turned out to be in a run that
                 // is over, and leaving it up would blame the new run for the old one's types.
                 breakpoint.Diagnostic = null;
+            }
+        }
+
+        /// <summary>
+        /// Drops everything counted for one agent. Called when its recorder unregisters: a tally that
+        /// outlived its agent describes a run that is over, and holding the recording as a key would keep its
+        /// whole event ring alive for the rest of the editor session.
+        ///
+        /// <para>
+        /// It closes the retention that would last a session rather than every one. A hit the editor stopped
+        /// on still carries its recording through <c>BehaviorTreeBreakpointResponder.Current</c> until play
+        /// resumes, which is deliberate — the panels describe that moment by reading it — and bounded to the
+        /// one recording.
+        /// </para>
+        /// </summary>
+        public static void Forget(IBehaviorTreeRecording recording)
+        {
+            if (recording == null) return;
+
+            foreach (var breakpoint in all)
+            {
+                breakpoint.Forget(recording);
             }
         }
 
@@ -323,14 +344,20 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var breakpoint = MatchOf(recorded, writtenValue);
             if (breakpoint == null) return;
 
-            breakpoint.MatchCount++;
+            var tally = breakpoint.TallyFor(recording);
+
+            tally.Matches++;
 
             // Matching and firing are different things, and both are counted. Skipping to the thirtieth flip
             // of an oscillating guard is the reason this exists; showing "matched 12, fired 0" is what stops
             // that looking like a breakpoint that does not work.
-            if (breakpoint.MatchCount < breakpoint.BreakOnHit) return;
+            //
+            // Counted against this agent's tally rather than a shared one: the breakpoint matches every agent
+            // running the tree, so a single counter would let forty zombies race each other to the Nth match
+            // and stop the editor on whichever arrived first.
+            if (tally.Matches < breakpoint.BreakOnHit) return;
 
-            breakpoint.HitCount++;
+            tally.Hits++;
 
             Hit?.Invoke(new BehaviorTreeBreakpointHit(
                 breakpoint, recording, recording?.AgentName, recorded));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
@@ -141,18 +142,142 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public string TreeName { get; internal set; }
 
         /// <summary>
-        /// How many times this has fired since the counters were last reset. Not persisted — a hit count from
-        /// a previous session is a statement about a run that no longer exists.
+        /// The tallies, one per agent that has reached this breakpoint.
+        ///
+        /// <para>
+        /// <b>Counted per agent, because "the 30th time" means the 30th time <em>this</em> agent got there.</b>
+        /// A breakpoint deliberately matches every agent running the tree — that is what
+        /// <see cref="BehaviorTreeBreakpointHit.CallSiteId"/> exists to report — so one shared counter would
+        /// let forty zombies race each other to <see cref="BreakOnHit"/> and stop the editor on whichever
+        /// arrived first, which is rarely the one being debugged. It also survives changing which agent that
+        /// is: the count belonging to the zombie you were watching stays with that zombie instead of
+        /// becoming a head start for the next one.
+        /// </para>
+        ///
+        /// <para>
+        /// Keyed by the recording rather than by agent name, which is not unique, and dropped when the
+        /// recorder unregisters — a dead agent's tally describes a run that is over, and holding its
+        /// recording as a key would keep the whole event ring alive for the rest of the session.
+        /// </para>
         /// </summary>
-        public int HitCount { get; internal set; }
+        private readonly Dictionary<object, Tally> tallies = new();
 
         /// <summary>
-        /// How many times the condition has held, whether or not it fired. Differs from
+        /// Where a match with no recording is filed. Nothing in the shipped paths passes null — the recorder
+        /// hands itself in — but a count that silently went nowhere would be worse than one filed here.
+        /// </summary>
+        private static readonly object Unattributed = new();
+
+        /// <summary>
+        /// How many times this has fired across every agent since the counters were last reset. Not
+        /// persisted — a hit count from a previous session is a statement about a run that no longer exists.
+        /// <see cref="BreakOnHit"/> is measured against <see cref="HitsFor"/>, not against this.
+        /// </summary>
+        public int HitCount
+        {
+            get
+            {
+                int total = 0;
+
+                foreach (var tally in tallies.Values)
+                {
+                    total += tally.Hits;
+                }
+
+                return total;
+            }
+        }
+
+        /// <summary>
+        /// How many times the condition has held across every agent, whether or not it fired. Differs from
         /// <see cref="HitCount"/> only while <see cref="BreakOnHit"/> is still being counted up to, and that
         /// gap is the whole point of showing both: "matched 12, fired 0" says the breakpoint is working and
         /// you asked to skip past this, where a bare "0" would look like it is broken.
         /// </summary>
-        public int MatchCount { get; internal set; }
+        public int MatchCount
+        {
+            get
+            {
+                int total = 0;
+
+                foreach (var tally in tallies.Values)
+                {
+                    total += tally.Matches;
+                }
+
+                return total;
+            }
+        }
+
+        /// <summary>How many agents have reached this breakpoint since the last reset.</summary>
+        public int AgentsMatched => tallies.Count;
+
+        /// <summary>
+        /// The closest any single agent has come to <see cref="BreakOnHit"/>. What "how near am I" means
+        /// when several agents are counting separately and no one of them speaks for the row.
+        /// </summary>
+        public int PeakMatches
+        {
+            get
+            {
+                int peak = 0;
+
+                foreach (var tally in tallies.Values)
+                {
+                    if (tally.Matches > peak) peak = tally.Matches;
+                }
+
+                return peak;
+            }
+        }
+
+        /// <summary>
+        /// The key an agent is filed under. In one place because reading and writing have to agree: a tally
+        /// written under one key and looked up under another is a count that silently never appears.
+        /// </summary>
+        private static object KeyOf(IBehaviorTreeRecording recording) => (object)recording ?? Unattributed;
+
+        /// <summary>How many times this has fired for one agent — the count that decides when the editor stops.</summary>
+        public int HitsFor(IBehaviorTreeRecording recording) =>
+            tallies.TryGetValue(KeyOf(recording), out var tally) ? tally.Hits : 0;
+
+        /// <summary>How many times the condition has held for one agent, fired or not.</summary>
+        public int MatchesFor(IBehaviorTreeRecording recording) =>
+            tallies.TryGetValue(KeyOf(recording), out var tally) ? tally.Matches : 0;
+
+        /// <summary>This agent's tally, created the first time it reaches here. The matcher's write path.</summary>
+        internal Tally TallyFor(IBehaviorTreeRecording recording)
+        {
+            var key = KeyOf(recording);
+
+            if (!tallies.TryGetValue(key, out var tally)) tallies[key] = tally = new Tally();
+
+            return tally;
+        }
+
+        /// <summary>
+        /// Drops one agent's tally, when its recorder goes away.
+        ///
+        /// <para>
+        /// Deliberately not keyed through <see cref="KeyOf"/>: a null recording is not an agent that went
+        /// away, so forgetting one must not empty the unattributed bucket that every such match shares. Only
+        /// <see cref="ResetTallies"/> clears that.
+        /// </para>
+        /// </summary>
+        internal void Forget(IBehaviorTreeRecording recording)
+        {
+            if (recording != null) tallies.Remove(recording);
+        }
+
+        /// <summary>Drops every tally.</summary>
+        internal void ResetTallies() => tallies.Clear();
+
+        /// <summary>One agent's counts. A class rather than a struct so the matcher can bump it in place.</summary>
+        internal sealed class Tally
+        {
+            internal int Matches;
+            internal int Hits;
+        }
 
         /// <summary>Whether this breakpoint should fire for a node event of the given kind.</summary>
         public bool Matches(BehaviorTreeNodeBreakEvents moment)

@@ -309,6 +309,71 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BreakOnHitCountsPerAgentWithTwoAgentsTickingTogether()
+        {
+            // Two machines on one tree asset, both reaching the same node every frame — the shape "break on
+            // hit #30" is actually used in: a crowd running one behaviour. With a single shared counter the
+            // editor stops once the agents' *combined* count passes the number, which is neither agent's
+            // third and is whichever one happened to tick first.
+            var tree = NewTree();
+            var repeater = Add<Repeater>(tree.graph, 0.0f, 100.0f);
+            var write = Add<SetVariable>(tree.graph, 0.0f, 250.0f);
+
+            SetPrivateField(write, "VariableKind", VariableKind.Object);
+            FeedString(tree.graph, write, write.Key, "tick");
+            FeedBool(tree.graph, write, write.Value, true);
+
+            Connect(tree.graph, tree.graph.EntryNode, repeater);
+            Connect(tree.graph, repeater, write);
+
+            // Repeater restarts its child as soon as it completes and Set Variable completes on the tick it
+            // runs, so the node is entered once per frame on each agent.
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(write.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 3);
+
+            var first = Spawn(tree, (_, variables) => variables.declarations.Set("tick", false));
+
+            var secondAgent = new GameObject("SecondAgent");
+            secondAgent.SetActive(false);
+            extraAgents.Add(secondAgent);
+
+            var second = secondAgent.AddComponent<BehaviorTreeMachine>();
+            secondAgent.GetComponent<Variables>().declarations.Set("tick", false);
+            second.nest.macro = tree;
+            secondAgent.SetActive(true);
+
+            for (int frame = 0; frame < 12; frame++)
+            {
+                yield return null;
+            }
+
+            var a = first.FlightRecorder;
+            var b = second.FlightRecorder;
+
+            Assert.Greater(breakpoint.MatchesFor(a), 0, "Both agents have to have reached it for this to prove anything.");
+            Assert.Greater(breakpoint.MatchesFor(b), 0);
+            Assert.AreEqual(2, breakpoint.AgentsMatched, "Two agents, two tallies.");
+
+            AssertFiredOnItsOwnCount(breakpoint, a, "The first agent");
+            AssertFiredOnItsOwnCount(breakpoint, b, "The second agent");
+        }
+
+        /// <summary>
+        /// Fires from its own hit #N onwards and not before — which is exactly what a shared counter cannot
+        /// satisfy for both agents at once, since one of them would be firing on matches the other made.
+        /// </summary>
+        private static void AssertFiredOnItsOwnCount(
+            BehaviorTreeBreakpoint breakpoint, IBehaviorTreeRecording agent, string who)
+        {
+            int matches = breakpoint.MatchesFor(agent);
+            int expected = matches >= breakpoint.BreakOnHit ? matches - breakpoint.BreakOnHit + 1 : 0;
+
+            Assert.AreEqual(expected, breakpoint.HitsFor(agent),
+                $"{who} matched {matches}× and must have fired {expected}× — from its own hit "
+                + $"#{breakpoint.BreakOnHit} onwards, not from the moment the agents' combined count passed it.");
+        }
+
+        [UnityTest]
         public IEnumerator TheAgentFilterNarrowsRealAgentsToTheOneBeingDebugged()
         {
             // Two live machines on one tree asset — the forty-zombies case the filter exists for, with real
