@@ -22,6 +22,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         /// <summary>A guard was false as it was about to start, so it never entered.</summary>
         Skipped,
+
+        /// <summary>
+        /// A higher-priority sibling became able to run and took its slot. Deliberately not
+        /// <see cref="Aborted"/>: nothing under this node turned false — something better outbid it — and the
+        /// two send whoever is asking to different places.
+        /// </summary>
+        TakenOver,
     }
 
     /// <summary>

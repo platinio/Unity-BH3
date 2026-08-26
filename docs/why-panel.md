@@ -119,6 +119,7 @@ Rows fed by a Visual Scripting graph have a **graph** button — see
 |---|---|---|
 | **Running since tick N** | It's running now and hasn't finished. | Nothing wrong. The clauses list which guards are holding it open. |
 | **Aborted at tick N: guard 'X' turned false** | It *was* running and a guard killed it mid-branch. | The guard chain, and the write that flipped it. This is usually a fact changing at a moment you didn't expect. |
+| **Taken over at tick N: 'X' took its slot** | It *was* running and a higher-priority sibling became able to run. Different from an abort: nothing under this node turned false. | The preemptor's guard and the write that woke it — the answer lives in the branch that won, not in this one. |
 | **Never entered at tick N: guard 'X' was false** | It never started. Different from an abort. | Why the guard was already false — often it has been false far longer than you think, and the clause says since when. |
 | **Exited Success / Failure at tick N** | It ran to completion and returned a status. | If the topology can prove it, a clause names the child whose status caused it. |
 | **Never ran: nothing about this node is in the recording** | No trace of it at all. | The clause naming the higher-priority sibling that won. If the recording is clipped, a CAVEAT says so — it may have run before the buffer's start. |
