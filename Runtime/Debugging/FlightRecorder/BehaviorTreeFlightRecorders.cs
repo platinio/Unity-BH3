@@ -53,6 +53,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (recorder == null) return;
 
             active.Remove(recorder);
+
+            // Breakpoint tallies are counted per agent and keyed by the recording, so they go when the
+            // recording does. Otherwise a destroyed agent's ring stays alive as a dictionary key for the rest
+            // of the session, and its count would still be sitting in the panel's total.
+            BehaviorTreeBreakpoints.Forget(recorder);
         }
 
         /// <summary>
@@ -61,6 +66,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         public static void Reset()
         {
+            foreach (var recorder in active)
+            {
+                BehaviorTreeBreakpoints.Forget(recorder);
+            }
+
             active.Clear();
         }
 

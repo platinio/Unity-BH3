@@ -315,11 +315,36 @@ namespace ArcaneOnyx.BehaviorTree
         /// counted down.
         /// </para>
         /// </summary>
-        private static string HitsLabel(BehaviorTreeBreakpoint breakpoint)
+        private static GUIContent HitsLabel(BehaviorTreeBreakpoint breakpoint)
         {
-            if (breakpoint.HitCount > 0) return $"{breakpoint.HitCount}×";
+            var agent = BehaviorTreeBreakpoints.AgentFilter;
 
-            return breakpoint.MatchCount > 0 ? $"0/{breakpoint.MatchCount}" : "—";
+            // Counts are per agent, so the row speaks for the agent the debugger is pointed at — the same one
+            // the ghosted canvas and the Why panel describe.
+            if (agent != null) return Counted(breakpoint.HitsFor(agent), breakpoint.MatchesFor(agent), null);
+
+            // With no agent resolved the breakpoint is live for every one of them, and no single number can
+            // stand for all. The row totals them and the tooltip says how many are in the total, so a count
+            // that climbs faster than the agent in front of you is never a mystery.
+            if (breakpoint.AgentsMatched <= 1) return Counted(breakpoint.HitCount, breakpoint.MatchCount, null);
+
+            return Counted(
+                breakpoint.HitCount,
+                breakpoint.MatchCount,
+                $"across {breakpoint.AgentsMatched} agents. Hit #{breakpoint.BreakOnHit} is counted per agent, "
+                + $"and the closest any one of them has come is {breakpoint.PeakMatches}");
+        }
+
+        /// <summary>The count as the row shows it, with the long form in the tooltip.</summary>
+        private static GUIContent Counted(int hits, int matches, string note)
+        {
+            var text = hits > 0 ? $"{hits}×" : matches > 0 ? $"0/{matches}" : "—";
+
+            var detail = hits > 0
+                ? $"fired {hits}×"
+                : matches > 0 ? $"matched {matches}×, fired none — you asked to skip past these" : "not fired yet";
+
+            return new GUIContent(text, note == null ? detail : $"{detail} {note}");
         }
 
         /// <summary>The per-row controls: the operator and its operand for a variable, and the hit count for any kind.</summary>

@@ -554,6 +554,115 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void BreakOnHitCountsPerAgentRatherThanAcrossAllOfThem()
+        {
+            // A breakpoint matches every agent running the tree, deliberately. With one shared counter that
+            // makes "break on hit #3" a race: forty zombies reach the combined third almost immediately, and
+            // the editor stops on whichever got there first rather than on the third time the one you are
+            // watching did.
+            var other = new BehaviorTreeFlightRecorder("OtherAgent", "TestTree");
+            var node = BoundNode();
+
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 3);
+
+            // One node, two agents, alternating — the same guid reported by two recordings, which is what a
+            // shared branch running on two agents actually looks like to the matcher.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                node.SetFlightRecorder(recorder);
+                node.OnNodeEnter();
+
+                node.SetFlightRecorder(other);
+                node.OnNodeEnter();
+            }
+
+            Assert.IsEmpty(hits, "Four entries, but only two per agent — neither has reached its own third.");
+            Assert.AreEqual(4, breakpoint.MatchCount, "The total still counts every agent's matches.");
+            Assert.AreEqual(2, breakpoint.AgentsMatched);
+
+            node.SetFlightRecorder(recorder);
+            node.OnNodeEnter();
+
+            Assert.AreEqual(1, hits.Count, "This agent's third is what fires, not the combined fifth.");
+            Assert.AreEqual(1, breakpoint.HitsFor(recorder));
+            Assert.AreEqual(0, breakpoint.HitsFor(other), "The other agent is still one short of its own third.");
+        }
+
+        [Test]
+        public void OneAgentsMatchesAreNotAHeadStartForTheNext()
+        {
+            // The case the agent filter alone does not cover. With the filter set only one agent's events
+            // reach the counter, so a shared count looks per-agent — until you select a different agent, and
+            // its "hit #3" is already two thirds counted by the zombie you were watching before.
+            var other = new BehaviorTreeFlightRecorder("OtherAgent", "TestTree");
+            var node = BoundNode();
+
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 3);
+
+            BehaviorTreeBreakpoints.AgentFilter = recorder;
+
+            node.OnNodeEnter();
+            node.OnNodeEnter();
+
+            Assert.IsEmpty(hits, "Two of the three the watched agent was asked for.");
+
+            // Attention moves to the other agent, the way selecting one in the hierarchy does.
+            node.SetFlightRecorder(other);
+            BehaviorTreeBreakpoints.AgentFilter = other;
+
+            node.OnNodeEnter();
+
+            Assert.IsEmpty(hits, "The newly watched agent has reached this once, not three times.");
+            Assert.AreEqual(1, breakpoint.MatchesFor(other));
+            Assert.AreEqual(2, breakpoint.MatchesFor(recorder), "and the first agent keeps its own count.");
+        }
+
+        [Test]
+        public void ADestroyedAgentTakesItsTallyWithIt()
+        {
+            // Two reasons, and the second is why this is not merely tidy: a count that outlived its agent
+            // would still be sitting in the panel's total, and the tally is keyed by the recording — so
+            // holding it would keep that agent's whole event ring alive for the rest of the session.
+            var node = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(1, breakpoint.HitsFor(recorder));
+            Assert.AreEqual(1, breakpoint.AgentsMatched);
+
+            BehaviorTreeFlightRecorders.Unregister(recorder);
+
+            Assert.AreEqual(0, breakpoint.HitsFor(recorder), "A destroyed agent's count describes a run that is over.");
+            Assert.AreEqual(0, breakpoint.AgentsMatched, "and its recording must not be held as a dictionary key.");
+            Assert.AreEqual(0, breakpoint.HitCount, "so the total stops counting it too.");
+        }
+
+        [Test]
+        public void PeakMatchesIsTheClosestAnySingleAgentHasCome()
+        {
+            // What "how near am I to hit #N" means when several agents are counting separately and no one of
+            // them speaks for the row. The total would answer a question nobody asked.
+            var other = new BehaviorTreeFlightRecorder("OtherAgent", "TestTree");
+            var node = BoundNode();
+
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+            BehaviorTreeBreakpoints.SetBreakOnHit(breakpoint, 10);
+
+            node.OnNodeEnter();
+            node.OnNodeEnter();
+            node.OnNodeEnter();
+
+            node.SetFlightRecorder(other);
+            node.OnNodeEnter();
+
+            Assert.AreEqual(4, breakpoint.MatchCount);
+            Assert.AreEqual(3, breakpoint.PeakMatches, "Three is how close anyone has come, not four.");
+        }
+
+        [Test]
         public void ResetClearsTheMatchCountAndTheDiagnostic()
         {
             var writer = BoundNode();
