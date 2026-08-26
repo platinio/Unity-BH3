@@ -158,15 +158,25 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Writes an agent variable on <paramref name="target"/>, versioning it only when something could be
-        /// watching.
+        /// Writes an agent variable on <paramref name="target"/>, recording and versioning it only when
+        /// something could be watching.
         ///
         /// <para>
         /// A version is only ever <em>read</em> on a GameObject that runs a behavior tree, because a reactive
         /// guard is a node inside one. Recording a version anywhere else is storage nobody will query — and
         /// since <see cref="On"/> is get-or-add, doing it would attach this component, and a
         /// <c>Variables</c> with it, to whatever the write happened to target. A tree writing a flag on a
-        /// door has no business changing the door's component list.
+        /// door has no business changing the door's component list. The recording follows the same rule for
+        /// the same reason with one more: without a machine there is no recorder to write to anyway.
+        /// </para>
+        ///
+        /// <para>
+        /// Goes through <see cref="Write(string, string, object)"/> rather than straight to the store, so the
+        /// write is visible to variable breakpoints, the variable watch and the timeline — a fact that guards
+        /// react to but the debugger cannot see is the silent failure this component exists to prevent. The
+        /// one caller that must not record here is the Set BT Variable unit, which records the write itself
+        /// with context this method does not have; it uses <see cref="SetVersioned"/> so one write cannot
+        /// fire a variable breakpoint twice.
         /// </para>
         ///
         /// <para>
@@ -175,8 +185,38 @@ namespace ArcaneOnyx.BehaviorTree
         /// that only matters if machines are attached dynamically after facts are already being published.
         /// </para>
         /// </summary>
+        /// <param name="sourceName">
+        /// Who to attribute the write to in the recording. Null reads as "(external)"; pass a name so the
+        /// why-inspector and the watch can answer "who wrote this" with something better.
+        /// </param>
         /// <returns>Whether the value changed <em>and</em> the change was versioned.</returns>
-        public static bool SetOn(GameObject target, string key, object value)
+        public static bool SetOn(GameObject target, string key, object value, string sourceName = null)
+        {
+            if (target == null || string.IsNullOrEmpty(key)) return false;
+
+            if (!target.TryGetComponent<BehaviorTreeMachine>(out _))
+            {
+                Variables.Object(target).Set(key, value);
+                return false;
+            }
+
+            return On(target).Write(sourceName, key, value);
+        }
+
+        /// <summary>
+        /// <see cref="SetOn"/> without the recording: sets and versions only, with the same machine check.
+        ///
+        /// <para>
+        /// Internal on purpose. The only caller that may skip recording is one that has already recorded the
+        /// write itself — today that is the Set BT Variable unit, which does so with the machine, the kind
+        /// and the old value in hand — and keeping this out of the public surface is what turns "don't
+        /// double-record" from a convention into something the compiler enforces. Everything outside this
+        /// assembly writes through <see cref="SetOn"/> or <see cref="Write(Component, string, object)"/>,
+        /// so every fact it can publish is one the debugger can see.
+        /// </para>
+        /// </summary>
+        /// <returns>Whether the value changed <em>and</em> the change was versioned.</returns>
+        internal static bool SetVersioned(GameObject target, string key, object value)
         {
             if (target == null || string.IsNullOrEmpty(key)) return false;
 
