@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -7,6 +8,7 @@ using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
@@ -934,6 +936,113 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(2, BehaviorTreeBreakpoints.All.Count);
             Assert.IsNotNull(BehaviorTreeBreakpoints.ForNode(guid));
             Assert.IsNotNull(BehaviorTreeBreakpoints.ForGuard(guid));
+        }
+
+        #endregion
+
+        #region Toggling moments
+
+        // The runtime store's SetNode replaces the whole mask, so "flip one moment" exists only inside
+        // BehaviorTreeBreakpointStore.ToggleNodeEvent. These pin its three cases — no breakpoint yet, other
+        // moments armed, last moment removed — through the editor store, where the toggle actually lives.
+
+        [Test]
+        public void TogglingAMomentOnAnUnarmedNodeArmsJustThatMomentAndSavesIt()
+        {
+            var node = new ScriptedNode(ExecutionStatus.Success);
+
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Exit);
+
+            Assert.AreEqual(BehaviorTreeNodeBreakEvents.Exit, BehaviorTreeBreakpoints.ForNode(node.guid).Events);
+
+            // Arming through the store rather than the runtime is the promise that persisting cannot be
+            // forgotten, so a toggle that does not reach the file is a broken toggle even if the mask is right.
+            BehaviorTreeBreakpointStore.Load();
+
+            Assert.AreEqual(BehaviorTreeNodeBreakEvents.Exit, BehaviorTreeBreakpoints.ForNode(node.guid).Events);
+        }
+
+        [Test]
+        public void TogglingAnArmedMomentOffLeavesTheOthersArmed()
+        {
+            var node = new ScriptedNode(ExecutionStatus.Success);
+
+            BehaviorTreeBreakpointStore.SetNode(
+                node, BehaviorTreeNodeBreakEvents.Enter | BehaviorTreeNodeBreakEvents.Aborted);
+
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Aborted);
+
+            Assert.AreEqual(BehaviorTreeNodeBreakEvents.Enter, BehaviorTreeBreakpoints.ForNode(node.guid).Events);
+        }
+
+        [Test]
+        public void TogglingTheOnlyArmedMomentOffRemovesTheBreakpoint()
+        {
+            var node = new ScriptedNode(ExecutionStatus.Success);
+
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Enter);
+            Assert.IsNotNull(BehaviorTreeBreakpoints.ForNode(node.guid));
+
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Enter);
+
+            Assert.IsNull(BehaviorTreeBreakpoints.ForNode(node.guid));
+            Assert.IsEmpty(BehaviorTreeBreakpoints.All, "Toggling the last moment off is disarming, not an empty mask.");
+        }
+
+        [Test]
+        public void TogglingAMomentTwiceLandsWhereItStarted()
+        {
+            var node = new ScriptedNode(ExecutionStatus.Success);
+            BehaviorTreeBreakpointStore.SetNode(node, BehaviorTreeNodeBreakEvents.Enter);
+
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Exit);
+            BehaviorTreeBreakpointStore.ToggleNodeEvent(node, BehaviorTreeNodeBreakEvents.Exit);
+
+            Assert.AreEqual(BehaviorTreeNodeBreakEvents.Enter, BehaviorTreeBreakpoints.ForNode(node.guid).Events);
+        }
+
+        [Test]
+        public void TogglingANullNodeDoesNothing()
+        {
+            Assert.DoesNotThrow(() => BehaviorTreeBreakpointStore.ToggleNodeEvent(null, BehaviorTreeNodeBreakEvents.Enter));
+            Assert.IsEmpty(BehaviorTreeBreakpoints.All);
+        }
+
+        #endregion
+
+        #region Play transition
+
+        /// <summary>
+        /// Entering play mode zeroes every counter. Today the domain reload does most of the work and the
+        /// store's EnteredPlayMode hook is belt and braces; the observable contract is what this pins, so
+        /// turning domain reload off later cannot quietly bring last session's counts back.
+        ///
+        /// <para>
+        /// After the reload the store has re-run its InitializeOnLoad and loaded whatever the developer's real
+        /// file holds, so the assertion sweeps <see cref="BehaviorTreeBreakpoints.All"/> rather than looking
+        /// for the one armed above — which no longer exists, and whose absence is not what is under test.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EnteringPlayModeZeroesEveryHitCount()
+        {
+            var node = BoundNode();
+            BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            node.OnNodeEnter();
+            Assert.AreEqual(1, BehaviorTreeBreakpoints.ForNode(node.guid).HitCount, "The count has to be nonzero for the reset to prove anything.");
+
+            yield return new EnterPlayMode();
+            yield return null;
+
+            foreach (var breakpoint in BehaviorTreeBreakpoints.All)
+            {
+                Assert.AreEqual(0, breakpoint.HitCount,
+                    $"{breakpoint.Describe()} carries a hit count from before play began — a count about a run that does not exist yet.");
+                Assert.AreEqual(0, breakpoint.MatchCount, $"{breakpoint.Describe()} carries a stale match count.");
+            }
+
+            yield return new ExitPlayMode();
         }
 
         #endregion
