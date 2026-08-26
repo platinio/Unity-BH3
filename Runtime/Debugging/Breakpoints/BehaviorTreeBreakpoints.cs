@@ -252,6 +252,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// Drops everything counted for one agent. Called when its recorder unregisters: a tally that
         /// outlived its agent describes a run that is over, and holding the recording as a key would keep its
         /// whole event ring alive for the rest of the editor session.
+        ///
+        /// <para>
+        /// It closes the retention that would last a session rather than every one. A hit the editor stopped
+        /// on still carries its recording through <c>BehaviorTreeBreakpointResponder.Current</c> until play
+        /// resumes, which is deliberate — the panels describe that moment by reading it — and bounded to the
+        /// one recording.
+        /// </para>
         /// </summary>
         public static void Forget(IBehaviorTreeRecording recording)
         {

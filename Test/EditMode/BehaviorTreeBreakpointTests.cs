@@ -641,6 +641,28 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void ResettingTheRecordersDropsEveryTally()
+        {
+            // Reset drops every recorder at once — a domain reload, or the next fixture starting clean — and
+            // the tallies keyed by those recordings have to go with them for the same reason Unregister's do.
+            // Registering by hand because that is what BehaviorTreeRecorder.Attach does for a real agent; an
+            // edit-mode recorder is built directly and would otherwise never be in the list Reset walks.
+            BehaviorTreeFlightRecorders.Register(recorder);
+
+            var node = BoundNode();
+            var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(1, breakpoint.AgentsMatched, "The tally has to exist for dropping it to prove anything.");
+
+            BehaviorTreeFlightRecorders.Reset();
+
+            Assert.AreEqual(0, breakpoint.AgentsMatched, "A recorder dropped wholesale takes its tally with it.");
+            Assert.AreEqual(0, breakpoint.HitCount);
+        }
+
+        [Test]
         public void PeakMatchesIsTheClosestAnySingleAgentHasCome()
         {
             // What "how near am I to hit #N" means when several agents are counting separately and no one of

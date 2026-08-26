@@ -231,25 +231,39 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             }
         }
 
+        /// <summary>
+        /// The key an agent is filed under. In one place because reading and writing have to agree: a tally
+        /// written under one key and looked up under another is a count that silently never appears.
+        /// </summary>
+        private static object KeyOf(IBehaviorTreeRecording recording) => (object)recording ?? Unattributed;
+
         /// <summary>How many times this has fired for one agent — the count that decides when the editor stops.</summary>
         public int HitsFor(IBehaviorTreeRecording recording) =>
-            tallies.TryGetValue((object)recording ?? Unattributed, out var tally) ? tally.Hits : 0;
+            tallies.TryGetValue(KeyOf(recording), out var tally) ? tally.Hits : 0;
 
         /// <summary>How many times the condition has held for one agent, fired or not.</summary>
         public int MatchesFor(IBehaviorTreeRecording recording) =>
-            tallies.TryGetValue((object)recording ?? Unattributed, out var tally) ? tally.Matches : 0;
+            tallies.TryGetValue(KeyOf(recording), out var tally) ? tally.Matches : 0;
 
         /// <summary>This agent's tally, created the first time it reaches here. The matcher's write path.</summary>
         internal Tally TallyFor(IBehaviorTreeRecording recording)
         {
-            var key = (object)recording ?? Unattributed;
+            var key = KeyOf(recording);
 
             if (!tallies.TryGetValue(key, out var tally)) tallies[key] = tally = new Tally();
 
             return tally;
         }
 
-        /// <summary>Drops one agent's tally, when its recorder goes away.</summary>
+        /// <summary>
+        /// Drops one agent's tally, when its recorder goes away.
+        ///
+        /// <para>
+        /// Deliberately not keyed through <see cref="KeyOf"/>: a null recording is not an agent that went
+        /// away, so forgetting one must not empty the unattributed bucket that every such match shares. Only
+        /// <see cref="ResetTallies"/> clears that.
+        /// </para>
+        /// </summary>
         internal void Forget(IBehaviorTreeRecording recording)
         {
             if (recording != null) tallies.Remove(recording);
