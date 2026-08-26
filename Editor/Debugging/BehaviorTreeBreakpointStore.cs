@@ -102,7 +102,7 @@ namespace ArcaneOnyx.BehaviorTree
             var current = BehaviorTreeBreakpoints.ForNode(node.guid);
             var events = current?.Events ?? BehaviorTreeNodeBreakEvents.None;
 
-            SetNode(node, (events & moment) != 0 ? events & ~moment : events | moment, context);
+            SetNode(node, events.Toggle(moment), context);
         }
 
         /// <summary>

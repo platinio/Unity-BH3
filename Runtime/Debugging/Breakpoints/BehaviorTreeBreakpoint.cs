@@ -282,7 +282,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>Whether this breakpoint should fire for a node event of the given kind.</summary>
         public bool Matches(BehaviorTreeNodeBreakEvents moment)
         {
-            return Kind == BehaviorTreeBreakpointKind.Node && (Events & moment) != 0;
+            return Kind == BehaviorTreeBreakpointKind.Node && Events.Includes(moment);
         }
 
         /// <summary>Whether this breakpoint should fire for a guard that just became <paramref name="result"/>.</summary>

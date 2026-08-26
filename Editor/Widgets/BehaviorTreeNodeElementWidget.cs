@@ -931,7 +931,7 @@ namespace ArcaneOnyx.BehaviorTree
             Debugging.BehaviorTreeBreakpoint armed, Debugging.BehaviorTreeNodeBreakEvents moment, string label)
         {
             var node = element;
-            var isOn = armed != null && (armed.Events & moment) != 0;
+            var isOn = armed != null && armed.Matches(moment);
 
             return new DropdownOption(
                 (Action)(() => BehaviorTreeBreakpointStore.ToggleNodeEvent(node, moment, context)),
