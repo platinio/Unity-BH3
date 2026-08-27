@@ -70,6 +70,14 @@ namespace ArcaneOnyx.BehaviorTree
         private static readonly Color SucceededBar = new(0.3f, 0.65f, 0.35f);
         private static readonly Color FailedBar = new(0.75f, 0.5f, 0.15f);
         private static readonly Color AbortedBar = new(0.8f, 0.25f, 0.2f);
+
+        /// <summary>
+        /// Deliberately not the abort red. Both bars end early, but one says a guard underneath turned false
+        /// and the other says a sibling outbid it — and a reader who cannot tell them apart at a glance goes
+        /// looking in the wrong branch.
+        /// </summary>
+        private static readonly Color TakenOverBar = new(0.55f, 0.35f, 0.75f);
+
         private static readonly Color UnknownBar = new(0.45f, 0.45f, 0.45f);
 
         #endregion
@@ -833,6 +841,7 @@ namespace ArcaneOnyx.BehaviorTree
                 case BehaviorTreeOutcome.Succeeded: return SucceededBar;
                 case BehaviorTreeOutcome.Failed: return FailedBar;
                 case BehaviorTreeOutcome.Aborted: return AbortedBar;
+                case BehaviorTreeOutcome.TakenOver: return TakenOverBar;
                 default: return UnknownBar;
             }
         }

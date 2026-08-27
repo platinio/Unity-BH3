@@ -65,6 +65,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             public RecordingBuilder Aborted(Guid node, Guid guard, int scope = 0) =>
                 Add(BehaviorTreeEventKind.NodeAborted, scope, node, guard);
 
+            public RecordingBuilder TakenOver(Guid victim, Guid guard, string preemptorName, int scope = 0) =>
+                Add(BehaviorTreeEventKind.NodeTakenOver, scope, victim, guard, key: preemptorName);
+
             public RecordingBuilder Skipped(Guid node, Guid guard, int scope = 0) =>
                 Add(BehaviorTreeEventKind.NodeSkipped, scope, node, guard);
 
@@ -259,6 +262,58 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "zero-length segment and reports a dropped enter that never happened.");
             Assert.AreEqual(BehaviorTreeOutcome.Aborted, segments[0].Outcome);
             Assert.AreEqual(Guard, segments[0].GuardGuid);
+        }
+
+        [Test]
+        public void ATakenOverSegmentIsNotColouredAsAnAbort()
+        {
+            // Same shape as an abort — the bar ends early and the node's own exit follows on the tick — but a
+            // different claim: nothing under this branch turned false, a sibling outbid it. A bar that reads
+            // as an abort sends whoever is scrubbing to look inside a branch where there is nothing to find.
+            var recording = new RecordingBuilder()
+                .At(400).Enter(Branch)
+                .At(450).TakenOver(Branch, Guard, "Attack").Exit(Branch, ExecutionStatus.Failure)
+                .Build();
+
+            var timeline = BehaviorTreeTimeline.Build(recording);
+            var segments = AllSegments(timeline).Where(segment => segment.NodeGuid == Branch).ToArray();
+
+            Assert.AreEqual(1, segments.Length, "The trailing exit belongs to the takeover, as it does to an abort.");
+            Assert.AreEqual(BehaviorTreeOutcome.TakenOver, segments[0].Outcome);
+            Assert.AreEqual(400, segments[0].EnterTick);
+            Assert.AreEqual(450, segments[0].ExitTick);
+            Assert.AreEqual(Guard, segments[0].GuardGuid, "The guard that won the slot is still worth carrying.");
+
+            Assert.IsEmpty(timeline.Markers.Where(m => m.Kind == BehaviorTreeTimelineMarkerKind.Abort).ToArray(),
+                "The abort pin means 'a guard killed this', which is the opposite of what happened.");
+        }
+
+        [Test]
+        public void ATakeoverEndsEverythingInsideTheBranchItStopped()
+        {
+            // The abandoned-sub-tree rule, applied to the other way a running branch can be stopped. Nodes
+            // inside a sub-tree record no exit of their own when their caller loses the slot, so without this
+            // they stay open and the ghosted canvas lights them up for the rest of the recording.
+            var recording = new RecordingBuilder()
+                .CallSite(1, 0, "Attack")
+                .At(10).Enter(Root).Enter(RunNode).Pushed(RunNode, "Attack")
+                .At(12).Enter(Child, scope: 1)
+                .At(50).TakenOver(RunNode, Guard, "Flee").Exit(RunNode, ExecutionStatus.Failure)
+                .At(80).Enter(Sibling)
+                .Build();
+
+            var timeline = BehaviorTreeTimeline.Build(recording);
+            var inside = SegmentFor(timeline, Child);
+
+            Assert.IsFalse(inside.IsOpen,
+                "The branch inside stopped when its caller lost the slot, whatever it did or did not record.");
+            Assert.AreEqual(50, inside.ExitTick);
+
+            var state = BehaviorTreeTreeState.At(recording, timeline, 80);
+
+            Assert.IsFalse(state.IsRunning(1, Child),
+                "and the canvas agrees — a node still lit thirty ticks after its tree was abandoned is the "
+                + "failure one source of truth exists to prevent.");
         }
 
         [Test]

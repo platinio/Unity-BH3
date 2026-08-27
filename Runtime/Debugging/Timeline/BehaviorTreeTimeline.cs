@@ -177,7 +177,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             // An aborted node exits on the same tick and the exit is recorded second (Finding 8). The abort
             // already closed the segment, so that trailing exit is swallowed rather than treated as an orphan.
-            private readonly Dictionary<NodeKey, int> abortedAt = new();
+            /// <summary>
+            /// Nodes whose segment was already ended this tick by something other than their own exit — an
+            /// abort or a takeover — so the exit that follows is bookkeeping rather than a second ending.
+            /// </summary>
+            private readonly Dictionary<NodeKey, int> closedAt = new();
 
             private readonly SortedSet<int> changed = new();
 
@@ -227,6 +231,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                             Abort(recorded, key, i);
                             break;
 
+                        case BehaviorTreeEventKind.NodeTakenOver:
+                            TakenOver(recorded, key, i);
+                            break;
+
                         case BehaviorTreeEventKind.NodeExit:
                             Exit(recorded, key, i);
                             break;
@@ -251,7 +259,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             private void Enter(BehaviorTreeEvent recorded, NodeKey key, int index)
             {
-                abortedAt.Remove(key);
+                closedAt.Remove(key);
 
                 // A re-enter without an exit means the exit was dropped. Close the stale one where the new one
                 // starts rather than letting it swallow the gap.
@@ -281,27 +289,55 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             private void Abort(BehaviorTreeEvent recorded, NodeKey key, int index)
             {
-                abortedAt[key] = recorded.Tick;
+                EndByCause(recorded, key, index, BehaviorTreeOutcome.Aborted, pin: true);
+            }
 
-                if (open.TryGetValue(key, out var aborting))
+            /// <summary>
+            /// A branch that lost its slot to a higher-priority sibling.
+            ///
+            /// <para>
+            /// Closed like an abort because the shape is the same — the bar ends here, the node's own exit
+            /// follows on this tick and must not reopen it, and anything running inside it is abandoned — but
+            /// with its own outcome, because nothing under this node turned false and a bar coloured as an
+            /// abort would send a reader to the wrong branch. No pin: the abort marker means "a guard killed
+            /// this", and a takeover is the opposite claim.
+            /// </para>
+            /// </summary>
+            private void TakenOver(BehaviorTreeEvent recorded, NodeKey key, int index)
+            {
+                EndByCause(recorded, key, index, BehaviorTreeOutcome.TakenOver, pin: false);
+            }
+
+            /// <summary>
+            /// Ends a segment at something other than its own exit, and records that so the exit which follows
+            /// on the same tick is swallowed rather than treated as a second ending.
+            /// </summary>
+            private void EndByCause(
+                BehaviorTreeEvent recorded, NodeKey key, int index, BehaviorTreeOutcome outcome, bool pin)
+            {
+                closedAt[key] = recorded.Tick;
+
+                if (open.TryGetValue(key, out var ending))
                 {
                     Forget(key);
 
-                    Segments.Add(aborting.Close(
-                        recorded.Tick, BehaviorTreeOutcome.Aborted, recorded.RelatedGuid, index));
+                    Segments.Add(ending.Close(recorded.Tick, outcome, recorded.RelatedGuid, index));
 
-                    markers.Add(new BehaviorTreeTimelineMarker(
-                        BehaviorTreeTimelineMarkerKind.Abort,
-                        recorded.Tick,
-                        recorded.CallSiteId,
-                        recorded.NodeGuid,
-                        recorded.RelatedGuid,
-                        NameOf(topology, recorded.RelatedGuid),
-                        aborting.Depth,
-                        index));
+                    if (pin)
+                    {
+                        markers.Add(new BehaviorTreeTimelineMarker(
+                            BehaviorTreeTimelineMarkerKind.Abort,
+                            recorded.Tick,
+                            recorded.CallSiteId,
+                            recorded.NodeGuid,
+                            recorded.RelatedGuid,
+                            NameOf(topology, recorded.RelatedGuid),
+                            ending.Depth,
+                            index));
+                    }
 
                     CloseCallSitesUnder(recorded.CallSiteId, recorded.NodeGuid, recorded.Tick,
-                        BehaviorTreeOutcome.Aborted, recorded.RelatedGuid);
+                        outcome, recorded.RelatedGuid);
                 }
 
                 changed.Add(recorded.Tick);
@@ -321,9 +357,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     return;
                 }
 
-                if (abortedAt.TryGetValue(key, out var abortTick) && abortTick == recorded.Tick)
+                if (closedAt.TryGetValue(key, out var closedTick) && closedTick == recorded.Tick)
                 {
-                    abortedAt.Remove(key);
+                    closedAt.Remove(key);
                 }
             }
 
