@@ -6,12 +6,12 @@ namespace ArcaneOnyx.BehaviorTree
     /// What the debugger is currently looking at: which recording, and at which tick.
     ///
     /// <para>
-    /// The timeline owns both answers — it is the panel with the playhead and the one that can open a file —
-    /// so it publishes them here and every other panel reads them. The alternative, each panel resolving its
-    /// own, is what <see cref="BehaviorTreeDebugTarget"/> already exists to prevent for the live agent, and
-    /// the failure is worse once a file is involved: the variable watch would list values from a recording
-    /// while the ghosted canvas beside it showed a different one, with nothing on screen admitting they were
-    /// two different agents.
+    /// The timeline owns every answer — it holds the playhead, and it is the only panel that opens or saves a
+    /// file — so it publishes them here and every other panel reads them. The alternative, each panel
+    /// resolving its own, is what <see cref="BehaviorTreeDebugTarget"/> already exists to prevent for the live
+    /// agent, and the failure is worse once a file is involved: two panels with their own Load buttons are two
+    /// recordings open at once, each panel confidently describing a different agent with nothing on screen
+    /// admitting they are not the same one.
     /// </para>
     ///
     /// <para>
@@ -33,6 +33,19 @@ namespace ArcaneOnyx.BehaviorTree
         public static bool IsScrubbing { get; private set; }
 
         /// <summary>
+        /// Where the recording came from, in the words the timeline shows: an agent and how it was chosen,
+        /// or the file it was opened from.
+        ///
+        /// <para>
+        /// Published rather than re-derived because a panel that cannot open a file also cannot know it is
+        /// reading one. Without this, the only honest thing a reader panel could say about a loaded recording
+        /// was its agent name — which is the name of the agent it was recorded from, and reads exactly like a
+        /// live one.
+        /// </para>
+        /// </summary>
+        public static string Origin { get; private set; }
+
+        /// <summary>
         /// The playhead, but only for the recording it was taken from — otherwise -1.
         ///
         /// <para>
@@ -50,11 +63,12 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>Called by the timeline each time it draws, with whatever it is drawing.</summary>
-        public static void Publish(IBehaviorTreeRecording recording, int tick, bool scrubbing)
+        public static void Publish(IBehaviorTreeRecording recording, int tick, bool scrubbing, string origin)
         {
             Recording = recording;
             Tick = tick;
             IsScrubbing = scrubbing;
+            Origin = origin;
         }
 
         public static void Clear()
@@ -62,6 +76,7 @@ namespace ArcaneOnyx.BehaviorTree
             Recording = null;
             Tick = -1;
             IsScrubbing = false;
+            Origin = null;
         }
     }
 }

@@ -25,6 +25,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// It implements the same <see cref="ISidebarPanelContent"/> contract the sidebar uses, so moving it back
     /// there needs no change here.
     /// </para>
+    ///
+    /// <para>
+    /// It is also the debugger's <b>only</b> Load and Save. Which recording is open is one fact, so one panel
+    /// owns it and publishes it through <see cref="BehaviorTreeDebugSession"/> for the rest to read. A panel
+    /// with its own file buttons has its own answer, and two answers on screen at once are two agents being
+    /// described as though they were one.
+    /// </para>
     /// </summary>
     public sealed class BehaviorTreeTimelinePanel : ISidebarPanelContent
     {
@@ -163,7 +170,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 EditorGUI.LabelField(body, Application.isPlaying
                     ? "No agent in this scene is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
-                    : "Enter play mode to watch an agent, or load an exported recording.", EditorStyles.miniLabel);
+                    : "Enter play mode to watch an agent, or load a saved recording.", EditorStyles.miniLabel);
 
                 BehaviorTreeDebugLifetime.Reset();
                 return;
@@ -178,7 +185,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 // Published even while empty: the watch should name the same agent and say it has nothing yet,
                 // rather than resolve a different one and look like it found something.
-                BehaviorTreeDebugSession.Publish(recording, recording.Tick, false);
+                BehaviorTreeDebugSession.Publish(recording, recording.Tick, false, Origin());
                 return;
             }
 
@@ -187,7 +194,7 @@ namespace ArcaneOnyx.BehaviorTree
             SyncCanvas(recording);
 
             // After playback and scrubbing have settled, so the tick published is the one being drawn.
-            BehaviorTreeDebugSession.Publish(recording, EffectiveTick, IsScrubbing);
+            BehaviorTreeDebugSession.Publish(recording, EffectiveTick, IsScrubbing, Origin());
 
             DrawBody(body, recording);
         }
@@ -489,6 +496,16 @@ namespace ArcaneOnyx.BehaviorTree
             DrawSourceControls(new Rect(x, area.y, Mathf.Max(0.0f, area.xMax - x - 2.0f), area.height));
         }
 
+        /// <summary>
+        /// The recording's source, and the only Load and Save in the debugger.
+        ///
+        /// <para>
+        /// Both buttons live here because this panel already owns which recording everything else is reading —
+        /// see <see cref="BehaviorTreeDebugSession"/>. A second Load elsewhere is not a convenience but a
+        /// second recording open at once, which is how the why-inspector came to explain a file while the
+        /// canvas and the watch beside it described a live agent.
+        /// </para>
+        /// </summary>
         private void DrawSourceControls(Rect area)
         {
             if (area.width < 120.0f) return;
@@ -496,11 +513,14 @@ namespace ArcaneOnyx.BehaviorTree
             var buttonWidth = 52.0f;
             var picker = new Rect(area.x, area.y, area.width - buttonWidth * 2.0f - 4.0f, area.height);
 
+            GUI.Label(picker, Origin(), EditorStyles.miniLabel);
+
+            var second = new Rect(area.xMax - buttonWidth, area.y, buttonWidth, area.height);
+            var first = new Rect(second.x - buttonWidth - 4.0f, area.y, buttonWidth, area.height);
+
             if (loaded != null)
             {
-                GUI.Label(picker, $"File: {loadedFrom}", EditorStyles.miniLabel);
-
-                if (GUI.Button(new Rect(area.xMax - buttonWidth, area.y, buttonWidth, area.height), "Close", EditorStyles.miniButton))
+                if (GUI.Button(second, "Close", EditorStyles.miniButton))
                 {
                     loaded = null;
                     loadedFrom = null;
@@ -511,19 +531,27 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            // A label, not a control: it states which agent is on the timeline and how that was decided, so a
-            // reader can tell "the one this canvas is showing" from "the only one running".
-            var machine = CurrentMachine(out var source);
-
-            GUI.Label(
-                picker,
-                machine != null ? $"{machine.name}  ({source})" : "No agent — nothing says which one to scrub",
-                EditorStyles.miniLabel);
-
-            if (GUI.Button(new Rect(area.xMax - buttonWidth, area.y, buttonWidth, area.height), "Load…", EditorStyles.miniButton))
+            // Only a live recorder can be written out: a loaded recording is already a file, and the dump
+            // reads a recorder's ring rather than the snapshot parsed back from one.
+            using (new EditorGUI.DisabledScope(CurrentRecording() is not BehaviorTreeFlightRecorder))
             {
-                Load();
+                if (GUI.Button(first, "Save…", EditorStyles.miniButton)) Save();
             }
+
+            if (GUI.Button(second, "Load…", EditorStyles.miniButton)) Load();
+        }
+
+        /// <summary>
+        /// Where the recording came from, in one phrase. Shown here and published to every other panel, so
+        /// they say the same thing about it without resolving it themselves.
+        /// </summary>
+        private string Origin()
+        {
+            if (loaded != null) return $"File: {loadedFrom}";
+
+            // Names how the agent was chosen, not just which one: a reader needs to tell "the one this canvas
+            // is showing" from "the only one running".
+            return BehaviorTreeDebugTarget.Describe(context) ?? "No agent — nothing says which one to scrub";
         }
 
         #endregion
@@ -847,6 +875,18 @@ namespace ArcaneOnyx.BehaviorTree
         #endregion
 
         #region Files
+
+        private void Save()
+        {
+            if (CurrentRecording() is not BehaviorTreeFlightRecorder recorder) return;
+
+            var path = EditorUtility.SaveFilePanel(
+                "Save recording", "", $"{recorder.AgentName}-recording.json", "json");
+
+            if (string.IsNullOrEmpty(path)) return;
+
+            File.WriteAllText(path, BehaviorTreeRecordingDump.ToJson(recorder));
+        }
 
         private void Load()
         {

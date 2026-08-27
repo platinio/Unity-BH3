@@ -114,6 +114,21 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// The agent to explain and how it was chosen, as one phrase, or null when nothing says which.
+        ///
+        /// <para>
+        /// Worded once rather than per panel for the same reason the resolution is: two panels describing the
+        /// same agent in different words is a reader's cue that they are looking at two different things.
+        /// </para>
+        /// </summary>
+        public static string Describe(GraphCore.IGraphContext context)
+        {
+            var machine = Resolve(context, out var source);
+
+            return machine != null ? $"{machine.name}  ({source})" : null;
+        }
+
+        /// <summary>
         /// Drops the memo, so the next ask resolves from scratch.
         ///
         /// <para>
