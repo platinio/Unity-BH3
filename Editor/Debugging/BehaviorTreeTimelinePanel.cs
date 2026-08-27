@@ -46,6 +46,34 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Machine ticks advanced per second of wall clock while playing back.</summary>
         private const float PlaybackTicksPerSecond = 60.0f;
 
+        #region Palette
+
+        /// <summary>The scrubbing banner: a wide fill behind white text, so darker than the playhead line.</summary>
+        private static readonly Color ScrubbingBanner = new(0.65f, 0.35f, 0.05f, 0.85f);
+
+        private static readonly Color ScrubbingPlayhead = new(1.0f, 0.65f, 0.1f);
+        private static readonly Color LivePlayhead = new(0.4f, 0.9f, 0.4f);
+
+        private static readonly Color RulerBackgroundPro = new(0.22f, 0.22f, 0.22f);
+        private static readonly Color RulerBackgroundLight = new(0.72f, 0.72f, 0.72f);
+        private static readonly Color RulerTick = new(0.5f, 0.5f, 0.5f);
+
+        private static readonly Color LaneBackgroundPro = new(0.16f, 0.16f, 0.16f);
+        private static readonly Color LaneBackgroundLight = new(0.82f, 0.82f, 0.82f);
+
+        /// <summary>The abort pin, a brighter red than the bar it lands on so it reads against it.</summary>
+        private static readonly Color AbortPin = new(0.95f, 0.25f, 0.2f);
+
+        private static readonly Color SubTreePin = new(0.45f, 0.7f, 1.0f);
+
+        private static readonly Color RunningBar = new(0.25f, 0.55f, 0.85f);
+        private static readonly Color SucceededBar = new(0.3f, 0.65f, 0.35f);
+        private static readonly Color FailedBar = new(0.75f, 0.5f, 0.15f);
+        private static readonly Color AbortedBar = new(0.8f, 0.25f, 0.2f);
+        private static readonly Color UnknownBar = new(0.45f, 0.45f, 0.45f);
+
+        #endregion
+
         /// <summary>
         /// The panel editor-wide scrub requests move: the one that is actually on screen.
         ///
@@ -476,7 +504,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (IsScrubbing)
             {
-                EditorGUI.DrawRect(banner, new Color(0.65f, 0.35f, 0.05f, 0.85f));
+                EditorGUI.DrawRect(banner, ScrubbingBanner);
                 GUI.Label(banner, $"  ⏸ SCRUBBING @ tick {scrubTick} — canvas shows history", EditorStyles.whiteMiniLabel);
                 x += bannerWidth + 4.0f;
 
@@ -592,9 +620,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void DrawRuler(Rect area)
         {
-            EditorGUI.DrawRect(area, EditorGUIUtility.isProSkin
-                ? new Color(0.22f, 0.22f, 0.22f)
-                : new Color(0.72f, 0.72f, 0.72f));
+            EditorGUI.DrawRect(area, EditorGUIUtility.isProSkin ? RulerBackgroundPro : RulerBackgroundLight);
 
             // Roughly one label per 90px, snapped to a round number so the labels do not jitter while playing.
             var target = Mathf.Max(1.0f, viewSpan / Mathf.Max(1.0f, area.width / 90.0f));
@@ -608,7 +634,7 @@ namespace ArcaneOnyx.BehaviorTree
                 var x = TickToX(tick, area);
                 if (x < area.x || x > area.xMax) continue;
 
-                EditorGUI.DrawRect(new Rect(x, area.yMax - 4.0f, 1.0f, 4.0f), new Color(0.5f, 0.5f, 0.5f));
+                EditorGUI.DrawRect(new Rect(x, area.yMax - 4.0f, 1.0f, 4.0f), RulerTick);
                 GUI.Label(new Rect(x + 2.0f, area.y - 1.0f, 70.0f, area.height), ((int)tick).ToString(), EditorStyles.miniLabel);
             }
         }
@@ -620,9 +646,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             var laneTrack = new Rect(track.x, row.y, track.width, row.height);
 
-            EditorGUI.DrawRect(laneTrack, EditorGUIUtility.isProSkin
-                ? new Color(0.16f, 0.16f, 0.16f)
-                : new Color(0.82f, 0.82f, 0.82f));
+            EditorGUI.DrawRect(laneTrack, EditorGUIUtility.isProSkin ? LaneBackgroundPro : LaneBackgroundLight);
 
             foreach (var segment in lane.Segments)
             {
@@ -754,9 +778,7 @@ namespace ArcaneOnyx.BehaviorTree
                 var x = TickToX(marker.Tick, track);
                 if (x < track.x || x > track.xMax) continue;
 
-                var colour = marker.Kind == BehaviorTreeTimelineMarkerKind.Abort
-                    ? new Color(0.95f, 0.25f, 0.2f)
-                    : new Color(0.45f, 0.7f, 1.0f);
+                var colour = marker.Kind == BehaviorTreeTimelineMarkerKind.Abort ? AbortPin : SubTreePin;
 
                 var y = marker.Depth * (LaneHeight + LaneSpacing);
 
@@ -789,7 +811,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (x < track.x || x > track.xMax) return;
 
             EditorGUI.DrawRect(new Rect(x - 1.0f, 0.0f, 2.0f, height),
-                IsScrubbing ? new Color(1.0f, 0.65f, 0.1f) : new Color(0.4f, 0.9f, 0.4f));
+                IsScrubbing ? ScrubbingPlayhead : LivePlayhead);
         }
 
         private void DrawFooter(IBehaviorTreeRecording recording, Rect body)
@@ -807,11 +829,11 @@ namespace ArcaneOnyx.BehaviorTree
         {
             switch (outcome)
             {
-                case BehaviorTreeOutcome.Running: return new Color(0.25f, 0.55f, 0.85f);
-                case BehaviorTreeOutcome.Succeeded: return new Color(0.3f, 0.65f, 0.35f);
-                case BehaviorTreeOutcome.Failed: return new Color(0.75f, 0.5f, 0.15f);
-                case BehaviorTreeOutcome.Aborted: return new Color(0.8f, 0.25f, 0.2f);
-                default: return new Color(0.45f, 0.45f, 0.45f);
+                case BehaviorTreeOutcome.Running: return RunningBar;
+                case BehaviorTreeOutcome.Succeeded: return SucceededBar;
+                case BehaviorTreeOutcome.Failed: return FailedBar;
+                case BehaviorTreeOutcome.Aborted: return AbortedBar;
+                default: return UnknownBar;
             }
         }
 
