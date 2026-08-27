@@ -137,12 +137,25 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             var source = ValueSourceUpstream(guard, new HashSet<Guid>(), 0);
 
+            // A variable read is named by what it reads. Its own NodeName is "Get Variable", which is the same
+            // string for every such guard in the project — exactly the uselessness this walk exists to avoid.
+            if (source is GetVariable read)
+            {
+                var key = ReadKey(read);
+                if (!string.IsNullOrEmpty(key)) return key;
+            }
+
             return source == null ? node.NodeName : source.NodeName;
         }
 
         private static BehaviorTreeNode ValueSourceUpstream(BehaviorTreeNode node, HashSet<Guid> seen, int depth)
         {
             if (node == null || depth > MaxGuardInputDepth || !seen.Add(node.guid)) return null;
+
+            // A variable read is the end of the walk, not a waypoint. Its Key port is fed by a literal holding
+            // the variable's name, so following it names the guard "String Literal" — the plumbing that
+            // supplies the question rather than the thing the guard is asking about.
+            if (depth > 0 && node is GetVariable) return node;
 
             BehaviorTreeNode deepest = null;
 

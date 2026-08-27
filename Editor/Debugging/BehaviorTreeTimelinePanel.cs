@@ -783,6 +783,12 @@ namespace ArcaneOnyx.BehaviorTree
                 case BehaviorTreeOutcome.Succeeded: return new Color(0.3f, 0.65f, 0.35f);
                 case BehaviorTreeOutcome.Failed: return new Color(0.75f, 0.5f, 0.15f);
                 case BehaviorTreeOutcome.Aborted: return new Color(0.8f, 0.25f, 0.2f);
+
+                // Deliberately not the abort red. Both bars end early, but one says a guard underneath turned
+                // false and the other says a sibling outbid it — and a reader who cannot tell them apart at a
+                // glance goes looking in the wrong branch.
+                case BehaviorTreeOutcome.TakenOver: return new Color(0.55f, 0.35f, 0.75f);
+
                 default: return new Color(0.45f, 0.45f, 0.45f);
             }
         }

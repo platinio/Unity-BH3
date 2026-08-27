@@ -65,9 +65,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.AreEqual(BehaviorTreeOutcome.TakenOver, explanation.Outcome,
                 "Idle was outbid, not aborted and not a plain exit — the recording keeps those apart so the answer can.");
             StringAssert.Contains("Taken over", explanation.Headline);
+            StringAssert.Contains("hasTarget", explanation.Headline,
+                "The guard that opened the slot is named by the variable it reads, not by the literal holding "
+                + "that variable's name.");
 
-            // By guid rather than by name: both branches here are WaitTime nodes, so their display names are
-            // identical and the honest check is that the cause clause points at the winner on the canvas.
+            // The preemptor is checked by guid rather than by name: both branches here are WaitTime nodes, so
+            // their display names are identical and the honest check is that the cause clause points at the
+            // winner on the canvas.
             var cause = explanation.Clauses.Single(c => c.Role == BehaviorTreeClauseRole.Cause && c.Text.Contains("outranks"));
 
             Assert.AreEqual(attack, cause.Link.NodeGuid,
