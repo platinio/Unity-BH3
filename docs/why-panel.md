@@ -148,16 +148,26 @@ the value.
 |---|---|
 | **→** | Selects that node on the canvas. Appears only when the node is actually on the open canvas — a node inside a sub-tree instance has no button rather than a dead one. |
 | **graph** | Opens the Visual Scripting graph snapshot for that chain row. |
-| **Export…** | Saves the whole recording to a JSON file. |
-| **Load…** | Opens a recording from a file and explains it with no agent running. |
 | *call-site dropdown* | Appears **only** when the selected node ran in more than one place — a shared branch used by two parents is two different stories, and the canvas can't tell which one you meant. |
 
-> There is deliberately no agent picker. The canvas is already showing one particular agent's tree, so a
-> second control choosing a different one wouldn't just be confusing — clicking a node would explain
-> *another* agent's history for it. One source of truth, and the panel reads it.
+> There is deliberately no agent picker, and no Load or Save. The canvas is already showing one particular
+> agent's tree, so a second control choosing a different one wouldn't just be confusing — clicking a node
+> would explain *another* agent's history for it. One source of truth, and the panel reads it.
 
-**Export and Load** are how you hand a bug to someone else. A recording plus the tree asset is a complete
-account — they can read the same explanations you can, on a machine that never ran your scene.
+The top line of the panel names what is being explained: the agent and how it was chosen, or the file it
+came from.
+
+## Explaining a recording from a file
+
+**Load… and Save… live on the Timeline panel**, and what you open there is what this panel explains. Save
+writes the whole recording to JSON; Load opens one and explains it with no agent running.
+
+That is how you hand a bug to someone else. A recording plus the tree asset is a complete account — they
+can read the same explanations you can, on a machine that never ran your scene.
+
+> Both buttons are on one panel on purpose. When this panel had its own Load, two recordings could be open
+> at once: the explanation named ticks from a file while the canvas beside it was ghosted to a live agent,
+> and nothing on screen admitted they were different agents.
 
 ---
 
