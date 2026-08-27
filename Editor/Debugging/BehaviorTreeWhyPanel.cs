@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
@@ -23,6 +22,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// It reads an <see cref="IBehaviorTreeRecording"/> rather than a live agent, which is why a recording
     /// loaded from a file explains exactly as well as the one running in front of you.
     /// </para>
+    ///
+    /// <para>
+    /// It has no agent picker and no file buttons by design. The timeline owns which recording is open and
+    /// publishes it through <see cref="BehaviorTreeDebugSession"/>; this panel reads that. When it had its own
+    /// Load the two could be open on different recordings at once — an explanation of a file, sentence by
+    /// sentence about ticks that had nothing to do with the agent ghosted onto the canvas beside it.
+    /// </para>
     /// </summary>
     public sealed class BehaviorTreeWhyPanel : ISidebarPanelContent
     {
@@ -30,9 +36,6 @@ namespace ArcaneOnyx.BehaviorTree
         private const float RowSpacing = 4.0f;
         private const float LinkButtonWidth = 26.0f;
         private const float SnapshotButtonWidth = 44.0f;
-
-        private BehaviorTreeRecordingSnapshot loaded;
-        private string loadedFrom;
 
         private int callSiteIndex;
 
@@ -83,7 +86,7 @@ namespace ArcaneOnyx.BehaviorTree
                 DrawHelp(x, ref y, width,
                     Application.isPlaying
                         ? "Select the agent in the hierarchy, or open its tree from the machine. Nothing here says which one to explain."
-                        : "Enter play mode to watch an agent, or load an exported recording.");
+                        : "Enter play mode to watch an agent, or open a saved recording with Load in the Timeline panel.");
                 return;
             }
 
@@ -113,7 +116,7 @@ namespace ArcaneOnyx.BehaviorTree
             EnsureStyles();
 
             var inner = width - Padding * 2.0f;
-            var height = Padding * 2.0f + LineHeight() * 2.0f + RowSpacing * 2.0f;
+            var height = Padding * 2.0f + LineHeight() + RowSpacing;
 
             var recording = CurrentRecording();
             var node = SelectedNode();
@@ -166,11 +169,19 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private static BehaviorTreeMachine SingleRecordingMachine() => BehaviorTreeDebugTarget.SingleRecordingMachine();
 
-        private IBehaviorTreeRecording CurrentRecording()
+        /// <summary>
+        /// Whatever the timeline is showing, and only if the timeline has something to show. The fallback is
+        /// the live agent the rest of the debugger would resolve — which is what makes this panel usable
+        /// before the timeline dock has ever been opened, without giving it a second opinion when it has.
+        ///
+        /// <para>
+        /// Public because this is the half of the panel that can be wrong without looking wrong, and unlike
+        /// the drawing it can be tested — the same reason <see cref="CallSites"/> is.
+        /// </para>
+        /// </summary>
+        public IBehaviorTreeRecording CurrentRecording()
         {
-            if (loaded != null) return loaded;
-
-            return CurrentMachine(out _)?.FlightRecorder;
+            return BehaviorTreeDebugSession.Recording ?? CurrentMachine(out _)?.FlightRecorder;
         }
 
         private IBehaviorTreeTopology CurrentTopology()
@@ -179,7 +190,7 @@ namespace ArcaneOnyx.BehaviorTree
             // That is right more often than it sounds: the reason someone opened the recording is usually that
             // they are looking at the tree it came from. When it is wrong, names simply do not resolve and the
             // explanation degrades to guids rather than lying.
-            if (loaded == null)
+            if (BehaviorTreeDebugSession.Recording is BehaviorTreeFlightRecorder or null)
             {
                 var machine = CurrentMachine(out _);
                 if (machine != null) return BehaviorTreeGraphTopology.From(machine);
@@ -200,53 +211,30 @@ namespace ArcaneOnyx.BehaviorTree
             return null;
         }
 
+        /// <summary>
+        /// A label and nothing else. Saying which recording this is, and why it is that one, is what a reader
+        /// needs; letting them choose a different one here is what would make the answer wrong.
+        /// </summary>
         private float DrawSourceControls(float x, float y, float width)
         {
             var row = new Rect(x, y, width, LineHeight());
 
-            if (loaded != null)
-            {
-                var labelWidth = width - 60.0f;
-                EditorGUI.LabelField(new Rect(x, y, labelWidth, row.height), $"File: {loadedFrom}", EditorStyles.miniLabel);
+            EditorGUI.LabelField(row, SourceLabel(), EditorStyles.miniLabel);
 
-                if (GUI.Button(new Rect(x + labelWidth, y, 60.0f, row.height), "Close", EditorStyles.miniButton))
-                {
-                    loaded = null;
-                    loadedFrom = null;
-                    Invalidate();
-                }
-            }
-            else
-            {
-                // A label rather than a control. Saying which agent this is, and why it is that one, is what
-                // a reader needs; letting them choose a different one is what would make the answer wrong.
-                var machine = CurrentMachine(out var source);
+            return y + row.height + RowSpacing;
+        }
 
-                EditorGUI.LabelField(
-                    row,
-                    machine != null ? $"{machine.name}  ({source})" : "No live agent",
-                    EditorStyles.miniLabel);
-            }
-
-            y += row.height + RowSpacing;
-
-            var buttons = new Rect(x, y, width, LineHeight());
-            var half = width / 2.0f - 2.0f;
-
-            using (new EditorGUI.DisabledScope(CurrentRecording() == null || loaded != null))
-            {
-                if (GUI.Button(new Rect(buttons.x, buttons.y, half, buttons.height), "Export…", EditorStyles.miniButton))
-                {
-                    Export();
-                }
-            }
-
-            if (GUI.Button(new Rect(buttons.x + half + 4.0f, buttons.y, half, buttons.height), "Load…", EditorStyles.miniButton))
-            {
-                Load();
-            }
-
-            return y + buttons.height + RowSpacing;
+        /// <summary>
+        /// Where the explanation is coming from, in the timeline's own words when it has published any — so
+        /// the panel that opened the file and the panel explaining it cannot describe it differently. The
+        /// fallback covers the timeline dock never having been opened, and names the agent through the same
+        /// resolver the timeline would.
+        /// </summary>
+        private string SourceLabel()
+        {
+            return BehaviorTreeDebugSession.Origin
+                   ?? BehaviorTreeDebugTarget.Describe(context)
+                   ?? "No live agent";
         }
 
         private float DrawCallSitePicker(float x, float y, float width, IBehaviorTreeRecording recording, Guid nodeGuid)
@@ -643,37 +631,5 @@ namespace ArcaneOnyx.BehaviorTree
 
         #endregion
 
-        #region Files
-
-        private void Export()
-        {
-            if (CurrentRecording() is not BehaviorTreeFlightRecorder recorder) return;
-
-            var path = EditorUtility.SaveFilePanel(
-                "Export recording", "", $"{recorder.AgentName}-recording.json", "json");
-
-            if (string.IsNullOrEmpty(path)) return;
-
-            File.WriteAllText(path, BehaviorTreeRecordingDump.ToJson(recorder));
-        }
-
-        private void Load()
-        {
-            var path = EditorUtility.OpenFilePanel("Load recording", "", "json");
-            if (string.IsNullOrEmpty(path)) return;
-
-            if (!BehaviorTreeRecordingImport.TryFromJson(File.ReadAllText(path), out var recording))
-            {
-                EditorUtility.DisplayDialog("Load recording", "That file is not a behavior tree recording.", "OK");
-                return;
-            }
-
-            loaded = recording;
-            loadedFrom = Path.GetFileName(path);
-            callSiteIndex = 0;
-            Invalidate();
-        }
-
-        #endregion
     }
 }

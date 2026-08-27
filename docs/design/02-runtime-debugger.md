@@ -129,8 +129,9 @@ as well as a live agent and the model is testable without standing up a scene.
 | `BehaviorTreeTimelineMarker` | A pin: `Abort` (carries the guard), `TreePushed`, `TreePopped`. Things that happen *at* a tick rather than over a span. |
 | `BehaviorTreeTreeState.At(recording, [timeline,] tick)` | Every node's status at one tick. **This is what the canvas is ghosted from.** Also `GuardResult`, `WasAborted`, `RunningCount`. |
 | `BehaviorTreeScrubOverride` (Editor) | The read-only redirect the canvas widgets consult. `StatusOf(node, live)` / `IsRunning(node, live)` return the live value when nothing is scrubbing, so there is one code path. |
-| `BehaviorTreeTimelinePanel` (Editor) | The renderer: lanes, pins, ruler, transport, `Load…`, plus `RequestScrub(tick)` for other panels to move the playhead. Implements `ISidebarPanelContent`, so either dock can host it. |
-| `BehaviorTreeDebugTarget` (Editor) | Which agent the debugging panels are about: canvas reference → hierarchy selection → the only agent recording. Both panels call it. |
+| `BehaviorTreeTimelinePanel` (Editor) | The renderer: lanes, pins, ruler, transport, `Load…` and `Save…`, plus `RequestScrub(tick)` for other panels to move the playhead. Implements `ISidebarPanelContent`, so either dock can host it. **The debugger's only file buttons** — see Component 4's "one source of truth". |
+| `BehaviorTreeDebugTarget` (Editor) | Which agent the debugging panels are about: canvas reference → hierarchy selection → the only agent recording. Every panel calls it. `Describe(context)` words that answer once, so two panels cannot describe the same agent differently. |
+| `BehaviorTreeDebugSession` (Editor) | What the timeline is showing — recording, tick, whether it is scrubbing, and where it came from — published each time it draws and read by every other panel. |
 | `BottomDock` (GraphCore) | A full-width strip under the canvas with a draggable top edge. Generic — it takes `ISidebarPanelContent` and knows nothing about behavior trees. |
 
 **Where the hooks live.** Three reads of live state drive canvas rendering, and all three now go through
@@ -299,9 +300,16 @@ every wire it pushed a value down, so its half is **harvested** from
 `ValueConnection.DebugData.assignedLastValue` rather than recomputed.
 
 **The UI is a sidebar panel**, registered in `BehaviorTreeGraphContext.SidebarPanels()` next to *Blackboard*
-and *Graph Inspector* — **no GraphCore changes were needed**. It reads the canvas selection, picks an agent
-(or a loaded file), and renders clauses; clauses pointing at a node on the open canvas get a `→` button that
-selects it. Export and Load buttons round-trip a recording to JSON.
+and *Graph Inspector* — **no GraphCore changes were needed**. It reads the canvas selection, takes the
+recording the timeline published, and renders clauses; clauses pointing at a node on the open canvas get a
+`→` button that selects it.
+
+It has no file buttons of its own. It shipped with Export and Load, which meant a recording could be opened
+here *and* in the timeline at the same time — the explanation naming ticks from a file while the canvas
+beside it was ghosted to a live agent, with nothing on screen admitting they were different agents. Both
+buttons now live on the timeline (`Load…` and `Save…`) and this panel reads `BehaviorTreeDebugSession` the
+way the variable watch does, falling back to `BehaviorTreeDebugTarget` when the timeline has never been
+opened.
 
 **What it can say.** Aborted (naming the guard, when it flipped, what the guard was reading, and the write
 that flipped it); skipped
@@ -530,6 +538,12 @@ values already have two homes: the Blackboard panel and the Flight Recorder wind
 timeline publishes what it is showing through `BehaviorTreeDebugSession` and the watch reads it, falling back
 to `BehaviorTreeDebugTarget` when the timeline has never been opened. Two independent answers is how one
 panel ends up describing a recording the ghosted canvas is not showing.
+
+This started here and is now the rule for every panel that reads a recording: **the timeline owns which one
+is open, and it is the only panel with `Load…` and `Save…`.** The why-inspector was converted after the
+fact — see Component 3. `BehaviorTreeDebugSession` also carries *where* the recording came from, because a
+panel that cannot open a file cannot know it is reading one, and the only other caption available is the
+agent name, which a loaded recording wears exactly like a live one.
 
 **Verified by** `BehaviorTreeVariableWatchTests` (edit mode, 24 tests), including writes driven through a
 real `GameplayNode` and the real recorder so the model and Component 1 cannot drift apart, a sensor writing

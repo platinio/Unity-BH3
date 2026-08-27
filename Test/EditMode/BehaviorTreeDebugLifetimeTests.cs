@@ -46,7 +46,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var state = BehaviorTreeTreeState.At(recorder, recorder.Tick);
 
             BehaviorTreeScrubOverride.Set(state, recorder.AgentName, recorder);
-            BehaviorTreeDebugSession.Publish(recorder, recorder.Tick, true);
+            BehaviorTreeDebugSession.Publish(recorder, recorder.Tick, true, "Agent  (the only agent recording)");
 
             Assert.IsTrue(BehaviorTreeScrubOverride.IsActive, "Fixture check: nothing to clear otherwise.");
             Assert.IsNotNull(BehaviorTreeDebugSession.Recording, "Fixture check.");
@@ -75,6 +75,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 "The panels drew this as live, and the static pinned its ring for as long as it held it.");
             Assert.AreEqual(-1, BehaviorTreeDebugSession.Tick);
             Assert.IsFalse(BehaviorTreeDebugSession.IsScrubbing);
+
+            // The caption goes with them. A surviving origin captions every panel with a recording that is no
+            // longer open — and it is the one part of the session a reader actually reads.
+            Assert.IsNull(BehaviorTreeDebugSession.Origin);
         }
 
         /// <summary>
