@@ -17,11 +17,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public readonly struct NodeProblem
     {
-        public NodeProblem(NodeProblemSeverity severity, string summary, string fix = null)
+        public NodeProblem(NodeProblemSeverity severity, string summary, string fix = null,
+            NodeProblemRepair repair = null)
         {
             Severity = severity;
             Summary = summary;
             Fix = fix;
+            Repair = repair;
         }
 
         public NodeProblemSeverity Severity { get; }
@@ -35,6 +37,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// instruction is the half people actually need.
         /// </summary>
         public string Fix { get; }
+
+        /// <summary>
+        /// The repair the editor can apply, or null when there is nothing one-click about the fix (an unfed
+        /// port is fixed by wiring, not by a button). Carried by the problem rather than derived beside it so
+        /// a surface can only ever offer a repair for a defect it is simultaneously reporting — the
+        /// "(up to date)" menu entry contradicting the badge next to it is the failure this shape removes.
+        /// </summary>
+        public NodeProblemRepair Repair { get; }
 
         public override string ToString() => Fix == null ? Summary : $"{Summary}  →  {Fix}";
     }

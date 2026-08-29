@@ -238,10 +238,22 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             var description = new System.Text.StringBuilder();
 
+            var repairable = false;
+
             foreach (var problem in problems)
             {
                 if (description.Length > 0) description.AppendLine();
                 description.Append(problem);
+
+                repairable |= problem.Repair != null;
+            }
+
+            // The badge's half of Unity-BH3#24: it names the defect, and this line is what tells the reader
+            // the repair is one selection away instead of leaving them to find a context menu by accident.
+            if (repairable)
+            {
+                description.AppendLine().AppendLine()
+                    .Append("Select the node — its inspector can apply the fix.");
             }
 
             var text = description.ToString();

@@ -169,7 +169,8 @@ reported:
 
 - **The node marks itself on the canvas** — a red border and an error icon, with the problem and its fix on
   hover. You see it when you open the tree, not when you press Play.
-- **Refresh Ports** on the node's right-click menu, or `fn_refresh_ports`, rebuilds it.
+- **Refresh Ports** rebuilds it — a button in the node's inspector, right beside the reported drift; also on
+  the node's right-click menu, or `fn_refresh_ports`. All three run the same repair.
 - Refreshing removes ports the Function no longer declares, **and the connections feeding them**. Both the
   menu and the command say which connections that cost. There is no undo, so the report is the mitigation.
 
@@ -193,6 +194,13 @@ What a Script Graph Variable reports today:
 
 A sub-tree node reports the same shapes against its own contract. Neither used to say anything at all —
 you found out when the tree ran.
+
+**Select a marked node and its inspector shows the same list**, under the node's fields — and where the fix
+is one click, a button that applies it: **Refresh Ports** / **Refresh Parameters** for contract drift,
+**Declare 'x' on IsHurt** for a fact a Function reads without declaring (that one confirms first, because
+the Function is shared). The badge's hover text points there, so hovering is how you learn something is
+wrong and selecting is how you act on it. A problem with no button — an unfed port, say — is fixed on the
+canvas, and its text says so.
 
 This is a **general** mechanism, not a Function one: a node reports itself by implementing
 `BehaviorTreeNode.CollectProblems`, and a rule that lives outside the node registers a provider with

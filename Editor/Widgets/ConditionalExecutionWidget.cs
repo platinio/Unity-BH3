@@ -267,11 +267,7 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     yield return new DropdownOption((System.Action)(() =>
                     {
-                        UndoUtility.RecordEditedObject("Refresh Watched Keys");
-
-                        foreach (var line in guard.RefreshWatchedKeys()) Debug.Log($"[BehaviorTree] {line}");
-
-                        Authoring.NodeProblemCache.Invalidate();
+                        Authoring.NodeProblemRepairs.Run(guard, new RefreshWatchedKeysRepair());
 
                         GUI.changed = true;
                     }), $"Refresh Watched Keys ({missing} declared by the condition, not listed here)");
