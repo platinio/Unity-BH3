@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using ArcaneOnyx.UnityExtensions;
-using Unity.VisualScripting;
+using ArcaneOnyx.VisualScriptingExtension;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging

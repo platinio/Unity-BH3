@@ -675,7 +675,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             var asset = AssetDatabase.LoadAssetAtPath<ScriptGraphAsset>(normalized);
             if (asset == null) throw new ArgumentException($"No ScriptGraphAsset at '{normalized}'.");
 
-            return AsJson(UnityExtensions.FlowGraphDump.ToJson(asset.graph, asset.name));
+            return AsJson(FlowGraphDump.ToJson(asset.graph, asset.name));
         }
 
         [CliCommand("bt_verify",

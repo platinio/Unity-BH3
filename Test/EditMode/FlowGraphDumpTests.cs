@@ -1,4 +1,4 @@
-using ArcaneOnyx.UnityExtensions;
+using ArcaneOnyx.VisualScriptingExtension;
 using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
