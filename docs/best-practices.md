@@ -14,7 +14,7 @@ public class SetNavAgentPosition : BehaviorTreeNode
 {
     public string targetPositionKey;
 
-    public override ExecutionStatus OnUpdate()
+    public override ExecutionStatus OnUpdate(BTContext ctx)
     {
         // fetch information from the blackboard
         Vector3 targetPosition = blackboard.Get<Vector3>(targetPositionKey);
@@ -85,11 +85,11 @@ namespace ArcaneOnyx.BehaviorTree
             NavPosition = ValueInput<Vector3>(nameof(NavPosition));
         }
 
-        public override ExecutionStatus OnUpdate()
+        public override ExecutionStatus OnUpdate(BTContext ctx)
         {
             // we don't care where the value comes from, it can still be a blackboard
-            Vector3 position = NavPosition.GetValue<Vector3>();
-            gameObject.GetComponent<NavMeshAgent>().SetDestination(position);
+            Vector3 position = ctx.GetValue<Vector3>(NavPosition);
+            ctx.GetComponent<NavMeshAgent>().SetDestination(position);
 
             return ExecutionStatus.Success;
         }

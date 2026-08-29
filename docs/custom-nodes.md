@@ -22,10 +22,10 @@ And keep fetching separate from acting. A node that *gets* something exposes a `
 ## The lifecycle
 
 ```csharp
-public override void OnAwake()              // once, when the machine loads the graph
-public override void OnEnter()              // when the node starts
-public override ExecutionStatus OnUpdate()  // every tick while running
-public override void OnExit()               // when the node ends
+public override void OnAwake(BTContext ctx)              // once, when the machine loads the graph
+public override void OnEnter(BTContext ctx)              // when the node starts
+public override ExecutionStatus OnUpdate(BTContext ctx)  // every tick while running
+public override void OnExit(BTContext ctx)               // when the node ends
 ```
 
 Return `Running` from `OnUpdate` for anything that needs more than one frame. See
@@ -35,6 +35,69 @@ Declare ports in `Definition()`, **always calling `base.Definition()` first**.
 
 `[GraphCreateMenu("Category/Node Name")]` controls where the node appears in the canvas right-click menu.
 The type must be concrete with a public parameterless constructor.
+
+### `ctx` is where the agent lives
+
+Everything your node knows about the agent it is running on comes from `ctx`: `ctx.gameObject`,
+`ctx.Machine`, `ctx.GetValue<T>(port)`, `ctx.TryResolve<T>(port, out var c)`, and — most importantly —
+`ctx.Memory<T>()`, covered next.
+
+There are older parameterless versions of all four hooks (`OnEnter()` with no argument, and so on). They
+still work, and nodes written against them keep running untouched, but **don't write new ones**. They exist
+only so that nodes written before `BTContext` existed did not all have to change at once, and every
+remaining use of them is work the shared-tree refactor has to undo by hand.
+
+### Per-agent state goes in `ctx.Memory<T>()`, never in a field
+
+This is the one rule worth internalising, because the C# habit points the wrong way.
+
+A node that needs to remember something between `OnEnter` and `OnUpdate` — a timer, a counter, a component
+it resolved at entry — must **not** put it in an instance field:
+
+```csharp
+private float timer;   // WRONG. This is the field the shared-tree refactor cannot move for you.
+```
+
+Declare a small class instead, and read it through the context:
+
+```csharp
+private sealed class Memory
+{
+    public float Elapsed;
+}
+
+public override void OnEnter(BTContext ctx) => ctx.Memory<Memory>().Elapsed = 0f;
+
+public override ExecutionStatus OnUpdate(BTContext ctx)
+{
+    var memory = ctx.Memory<Memory>();
+    memory.Elapsed += Time.deltaTime;
+    return memory.Elapsed < ctx.GetValue<float>(Duration) ? ExecutionStatus.Running : ExecutionStatus.Success;
+}
+```
+
+One memory class per node, holding every field that node needs; asking for a second type throws.
+
+The reason is what BH3 is becoming. Today the machine deep-clones the whole tree for every agent, which is
+what makes a field on a node private to one agent — and what makes spawning two hundred agents expensive.
+That clone is going away in favour of one shared tree plus a small per-agent state block. On that day a
+field on a node is a field *every* agent writes, and the two hundred of them overwrite each other. State in
+`ctx.Memory<T>()` moves across untouched; state in a field has to be found and rewritten by hand.
+
+**Fields that hold authored settings are fine** and are not flagged — those are one value for every agent
+running the tree, which is exactly what a shared node should carry:
+
+```csharp
+[Serialize, Inspectable] private bool ClearCurrentPath = false;   // fine: a setting, not state
+```
+
+> **Don't reach for `[Serialize]` to make a field look legitimate.** Whether a field is serialized says
+> nothing about whether your node writes to it while it runs, so marking a timer `[Serialize]` makes the
+> underlying problem worse. A serialized field is part of the *shared* tree, so after the instancing change
+> it is one value every agent writes in turn, which is the bug the rule exists to prevent, now with nothing
+> left to report it. Ask which of the two a field is: something a designer sets and the node only reads, or
+> something the node writes while it runs. The second belongs in `ctx.Memory<T>()` whatever attributes it
+> carries.
 
 ---
 
@@ -64,21 +127,21 @@ public class DealDamageNode : GameplayNode
         Damage = ValueInput<float>(nameof(Damage), 10f);
     }
 
-    public override void OnEnter()
+    public override void OnEnter(BTContext ctx)
     {
-        var target = Target.GetValue<GameObject>();
-        var damage = Damage.GetValue<float>();
+        var target = ctx.GetValue<GameObject>(Target);
+        var damage = ctx.GetValue<float>(Damage);
         target?.GetComponent<HealthComponent>()?.TakeDamage(damage);
     }
 
-    public override ExecutionStatus OnUpdate() => ExecutionStatus.Success;
+    public override ExecutionStatus OnUpdate(BTContext ctx) => ExecutionStatus.Success;
 }
 ```
 
 `Description` is optional but worth setting — it shows in the Graph Inspector when the node is selected.
 
-Read every port with `GetValue<T>()` at the type the port declares, as above. Casting `GetValue()` compiles
-and then throws on any connection whose types merely convert — see
+Read every port with `ctx.GetValue<T>(port)` at the type the port declares, as above. Casting an untyped
+`GetValue()` compiles and then throws on any connection whose types merely convert — see
 [What "compatible" means](ports-and-wiring.md#what-compatible-means).
 
 Note that `Target` declares **no default**, so it must be connected; `Damage` declares `10f`, so it need not
@@ -133,6 +196,12 @@ public class HasAmmoConditionalExecution : ConditionalExecution
 For simple cases you don't need a type at all — use the built-in **Boolean Conditional** and wire any boolean
 source into its port.
 
+> **Conditions and guards do not take a context yet.** `Evaluate()` has no `BTContext` overload, so these two
+> node families still reach the agent through `gameObject` and read ports directly, as shown above. That is a
+> known gap rather than a recommendation — they will get the same treatment as the lifecycle hooks in a later
+> release. Until then, keep `Evaluate()` bodies free of remembered state for the same reason the lifecycle
+> hooks avoid instance fields: whatever you store there is state the shared-tree refactor will have to move.
+
 ## A custom decorator
 
 Derive from `Decorator`. A decorator wraps exactly one child, so declare that:
@@ -149,7 +218,10 @@ public class MaxAttempts : Decorator
 
     public override int MaxChildrenLimit => 1;
 
-    private int used;
+    private sealed class Memory
+    {
+        public int Used;
+    }
 
     protected override void Definition()
     {
@@ -157,12 +229,12 @@ public class MaxAttempts : Decorator
         Attempts = ValueInput<int>(nameof(Attempts), 3);
     }
 
-    public override void OnEnter()
+    public override void OnEnter(BTContext ctx)
     {
-        used = 0;
+        ctx.Memory<Memory>().Used = 0;
     }
 
-    public override ExecutionStatus OnUpdate()
+    public override ExecutionStatus OnUpdate(BTContext ctx)
     {
         if (GetChildren().Count == 0) return ExecutionStatus.Success;
 
@@ -172,8 +244,9 @@ public class MaxAttempts : Decorator
         if (result == ExecutionStatus.Running) return ExecutionStatus.Running;
         if (result == ExecutionStatus.Success) return ExecutionStatus.Success;
 
-        used++;
-        if (used >= Attempts.GetValue<int>()) return ExecutionStatus.Failure;
+        var memory = ctx.Memory<Memory>();
+        memory.Used++;
+        if (memory.Used >= ctx.GetValue<int>(Attempts)) return ExecutionStatus.Failure;
 
         child.OnNodeExit();
         return ExecutionStatus.Running;

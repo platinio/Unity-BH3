@@ -358,7 +358,9 @@ namespace ArcaneOnyx.BehaviorTree
             defaultValues = new Dictionary<string, object>();
         }
 
-        protected BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
+        // protected internal rather than protected: BTContext forwards to these, and it is a separate type
+        // in this assembly rather than a subclass. Subclasses keep exactly the access they had.
+        protected internal BehaviorTreeMachine BehaviorTreeMachine => Machine as BehaviorTreeMachine;
 
         [DoNotSerialize]
         private BehaviorTreeVariableScope variableScope;
@@ -431,18 +433,18 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         /// </summary>
         [DoNotSerialize]
-        protected VariableDeclarations ScriptGraphVariables =>
+        protected internal VariableDeclarations ScriptGraphVariables =>
             VariableScope?.Flatten() ?? BehaviorTreeMachine?.GraphInstance?.declarations;
 
         public virtual int MaxChildrenLimit => 0;
         
-        protected GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable)
+        protected internal GameObject GetTargetGameObject(GameObjectBlackboardVariable gameObjectVariable)
         {
             var target = gameObjectVariable.GetValue(BehaviorTreeMachine, VariableScope);
             return target == null ? gameObject : target;
         }
         
-        protected T GetComponent<T>(ValueInput valueInput) where T : Component
+        protected internal T GetComponent<T>(ValueInput valueInput) where T : Component
         {
             var component = valueInput.GetComponent<T>();
             if (component == null) return gameObject.GetComponent<T>();
@@ -486,7 +488,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         /// </summary>
         /// <returns>False when nothing was found, in which case the node should fail rather than continue.</returns>
-        protected bool TryResolve<T>(ValueInput port, out T component) where T : Component
+        protected internal bool TryResolve<T>(ValueInput port, out T component) where T : Component
         {
             component = GetComponent<T>(port);
 
@@ -781,6 +783,114 @@ namespace ArcaneOnyx.BehaviorTree
 
             return base.OnUpdateInternal();
         }
+
+        #region CONTEXT_SEAM
+
+        /// <summary>
+        /// The agent-facing view handed to this node's body. Cheap by construction — a
+        /// <see cref="BTContext"/> is a <c>readonly struct</c> over this node, so building one per call
+        /// allocates nothing.
+        /// <para>
+        /// This property is the single place the context comes from, and that is deliberate: when the
+        /// shared-tree refactor lands, a context stops being derivable from a node and starts being handed
+        /// down by the machine along with that agent's memory block. Every node body already reads its
+        /// context through here, so that day changes this one line rather than every composite, decorator
+        /// and container that would otherwise have to thread a parameter down the tree.
+        /// </para>
+        /// </summary>
+        protected internal BTContext Context => new BTContext(this);
+
+        /// <summary>
+        /// Routes the lifecycle to the context-taking overloads.
+        /// <para>
+        /// Sealed for the same reason <see cref="OnNodeEnter"/> is: this is the one place the context is
+        /// attached, and a node that intercepted it could hand its own body something other than what the
+        /// machine meant. Override <see cref="OnEnter(BTContext)"/> and friends instead.
+        /// </para>
+        /// </summary>
+        protected sealed override void InvokeAwake() => OnAwake(Context);
+
+        /// <inheritdoc cref="InvokeAwake"/>
+        protected sealed override void InvokeEnter() => OnEnter(Context);
+
+        /// <inheritdoc cref="InvokeAwake"/>
+        protected sealed override ExecutionStatus InvokeUpdate() => OnUpdate(Context);
+
+        /// <inheritdoc cref="InvokeAwake"/>
+        protected sealed override void InvokeExit() => OnExit(Context);
+
+        /// <summary>
+        /// Runs this node's awake body. The graph's awake pass calls nodes directly rather than through
+        /// <c>OnNodeAwake</c>, so this is where that pass enters the context seam.
+        /// </summary>
+        public void AwakeNode() => InvokeAwake();
+
+        [DoNotSerialize]
+        private object nodeMemory;
+
+        /// <summary>
+        /// This node's per-agent state, created on first use. Reached through
+        /// <see cref="BTContext.Memory{T}"/> rather than called directly.
+        ///
+        /// <para>
+        /// Today the block hangs off the node, which is correct because the node is already private to one
+        /// agent — <see cref="BehaviorTreeMachine"/> clones the tree per agent. After spec 07 flips the
+        /// instancing it will be a slot in that agent's memory array instead. <b>Both mean the same thing</b>
+        /// — storage private to this node on this agent — which is what makes moving it a change to this
+        /// method rather than to every node that stores anything.
+        /// </para>
+        ///
+        /// <para>
+        /// One block per node, so asking for a second type is an authoring mistake rather than a second
+        /// allocation: it means two different bodies on the same node disagree about what its state is, and
+        /// the flip would have no way to size the slot. It throws rather than silently handing back a fresh
+        /// object, because the silent version presents as state that resets itself for no visible reason.
+        /// </para>
+        /// </summary>
+        internal T MemorySlot<T>() where T : class, new()
+        {
+            if (nodeMemory == null)
+            {
+                var created = new T();
+                nodeMemory = created;
+                return created;
+            }
+
+            if (nodeMemory is T typed) return typed;
+
+            throw new InvalidOperationException(
+                $"'{NodeName}' already stores its per-agent state as {nodeMemory.GetType().Name} and cannot "
+                + $"also store it as {typeof(T).Name}. A node has one memory type; give it a single memory "
+                + $"class holding every field it needs.");
+        }
+
+        /// <summary>
+        /// Called once, when the machine loads the graph.
+        /// <para>
+        /// <b>Write new nodes against this overload, not the parameterless one.</b> Everything a node body
+        /// legitimately knows about its agent is on <paramref name="ctx"/>; anything reached through
+        /// <c>this</c> instead is state that stops being per-agent the day BH3 shares one tree between every
+        /// agent running it. <see cref="BTContext"/> explains what that costs.
+        /// </para>
+        /// <para>
+        /// The default forwards to the parameterless <see cref="BaseGraphNode{TGraph,TNode,TNodeTransition}.OnAwake"/>
+        /// so nodes written before this overload existed keep working untouched. That forwarding is a
+        /// migration path, not a second supported style. Every remaining use of the parameterless hooks is
+        /// work the shared-tree refactor has to undo by hand, so the number of them is meant to reach zero.
+        /// </para>
+        /// </summary>
+        public virtual void OnAwake(BTContext ctx) => OnAwake();
+
+        /// <summary>Called when the node starts. <inheritdoc cref="OnAwake(BTContext)"/></summary>
+        public virtual void OnEnter(BTContext ctx) => OnEnter();
+
+        /// <summary>Called every tick while the node runs. <inheritdoc cref="OnAwake(BTContext)"/></summary>
+        public virtual ExecutionStatus OnUpdate(BTContext ctx) => OnUpdate();
+
+        /// <summary>Called when the node ends. <inheritdoc cref="OnAwake(BTContext)"/></summary>
+        public virtual void OnExit(BTContext ctx) => OnExit();
+
+        #endregion
     }
 }
 

@@ -379,7 +379,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             foreach (var node in nodes)
             {
-                node.OnAwake();
+                node.AwakeNode();
             }
         }
 

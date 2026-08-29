@@ -1,9 +1,26 @@
-# Shared immutable trees + per-agent instance memory
+﻿# Shared immutable trees + per-agent instance memory
 
 **Status:** design spec for implementation by an AI or engineer with access to the BH3 source.
 Written from BH3's design documentation — verify exact type/member names against the code before building.
 **This is the largest refactor in the set — measure first (step 0), and only proceed if the numbers
 justify it.**
+
+> ## Implementation status — 2026-08-23
+>
+> **Migration step 1 is DONE. Steps 0 and 2–5 are NOT.**
+> Step 2's enforcement was built and then removed before merge, deliberately — see "What step 1 actually
+> shipped". Step 0 has been measured on a separate branch but its numbers are not recorded here yet.
+> The seam is in; the instancing flip is not. `BehaviorTreeMachine.Awake` still calls
+> `Instantiate(macro)` and every node still runs on a per-agent clone — behaviour is unchanged by design.
+>
+> Branches: `feature/lifecycle-context-seam` in **Unity-BH3**, **graph-core-library** and the superproject.
+> PRs, in merge order — GraphCore first, because BH3 does not compile without it:
+> [graph-core-library#4](https://github.com/platinio/graph-core-library/pull/4) →
+> [Unity-BH3#75](https://github.com/platinio/Unity-BH3/pull/75) →
+> [bh3-development#41](https://github.com/platinio/bh3-development/pull/41).
+>
+> See "What step 1 actually shipped" at the bottom of this file for the decisions, the deviations from
+> this spec, and what the next person needs to know.
 
 ## Current model (the cost)
 
@@ -99,3 +116,114 @@ indexed by node.
    scenario.
 4. Architecture test allowlist at zero; writing a new node with mutable instance fields fails CI with a
    message pointing at the memory pattern.
+
+---
+
+# What step 1 actually shipped (2026-08-23)
+
+Scope was deliberately limited to the **authoring seam**: freeze the API node authors write against, so the
+instancing flip later is not a breaking change for them. Nothing about instancing changed.
+
+## Files
+
+**graph-core-library** (`Modules/GraphCore`), branch `feature/lifecycle-context-seam`
+- `Runtime/Nodes/BaseGraphNode.cs` — four `protected virtual` dispatchers `InvokeAwake/InvokeEnter/
+  InvokeUpdate/InvokeExit`, each defaulting to exactly the call it replaced; the four internal call sites
+  now go through them.
+
+**Unity-BH3** (`Assets/ArcaneOnyx/BH3`), branch `feature/lifecycle-context-seam`
+- `Runtime/Nodes/BTContext.cs` — new. The context type.
+- `Runtime/Nodes/BehaviorTreeNode.cs` — `Context` property, the four sealed dispatcher overrides, the four
+  `OnX(BTContext)` virtuals forwarding to the legacy hooks, `AwakeNode()`, and the `nodeMemory` slot.
+- `Runtime/Graphs/BehaviorTreeGraph.cs` — the awake fan-out calls `AwakeNode()` instead of `OnAwake()`.
+- No tests. The seam shipped with a behaviour fixture and a convention fixture holding two shrinking
+  allowlists; **both were dropped before merge**, deliberately, to keep the first landing minimal. Step 2
+  of the migration path above is therefore *not* done: nothing currently fails the build when a new node
+  overrides a legacy hook or declares per-agent instance fields. Re-adding that enforcement is the
+  precondition for step 3, because without it the codebase regresses faster than it migrates.
+- `docs/custom-nodes.md`, `docs/api-reference.md`, `docs/best-practices.md` — teach only the ctx style.
+
+## Decisions made, and why
+
+1. **The dispatch indirection lives in GraphCore, not BH3.** `BaseGraphNode` owns what "entering a node"
+   means (`isRunning`, colour state, the rule that a node whose `OnEnter` threw never entered). Routing the
+   context from BH3 alone would have meant reimplementing that bookkeeping in `BehaviorTreeNode` — a second
+   copy of a decision that would silently miss the next fix to it, exactly like graph-core-library PR #2.
+   Cost: two submodule PRs instead of one.
+
+2. **`BTContext` lives in BH3, and the GraphCore dispatchers take no parameter.** GraphCore cannot see BH3
+   (asmdef direction), so a context declared on `BaseGraphNode`'s signature would have had to live in
+   GraphCore, dragging BT vocabulary into a generic graph library for a second consumer that does not exist
+   (`BehaviorTreeNode` is the only subclass of `BaseGraphNode` in the repo).
+
+3. **Each node builds its own context; nothing is threaded through composites.** `Context` is one property
+   on `BehaviorTreeNode`. No composite, container, decorator or the machine changed. When the flip lands,
+   a context stops being derivable from a node and starts carrying the agent's memory block — that is a
+   change to **one property**, not to every container that would otherwise be threading a parameter down.
+
+4. **`ctx.Memory<T>()` SHIPPED, contradicting this spec's "start with class-per-node instances in one
+   array".** It is backed by a single `[DoNotSerialize] object` on the node today. This was not in the
+   original plan for step 1 and was added because **without it the step-2 architecture test is
+   unsatisfiable**: the rule forbids per-agent instance fields, and with no memory accessor a node author
+   who needs a timer has no legal way to write one. The semantics are identical before and after the flip
+   — "storage private to this node on this agent" — so this is a seam, not a stub. `[DoNotSerialize]` is
+   what makes each agent's clone start with its own null slot.
+   Signature deviates from the spec's `ctx.Memory<T>(this)`: the context already knows its node, which
+   removes the one way that call could be got wrong.
+
+5. **One memory type per node, enforced by throwing.** A second type on the same node means two bodies
+   disagree about what the node's state is, and the flip would have no way to size the slot.
+
+## Deviations from this spec worth knowing
+
+- Step 2 says to flag "any node overriding the legacy methods, **or** declaring non-serialized mutable
+  instance fields". Both rules shipped, as two separate allowlists, because they shrink independently —
+  a node can be migrated off the legacy hooks before its state moves, and usually will be.
+- The allowlists carried a second guard this spec does not mention, worth rebuilding when step 2 returns:
+  a test also fails if a listed name **no longer offends**. Without it the list rots into a permanent
+  opt-out and stops being a progress bar, which is what makes "the allowlist going to zero" true rather
+  than aspirational.
+
+## Where the debt actually is (measured, not estimated)
+
+78 node types scanned. **49 still override a legacy hook. 30 still hold per-agent instance state.**
+Both numbers were enumerated in the (now removed) allowlists and are the remaining step-3 work.
+The heaviest are the composites/containers (`currentExecutingChildIndex`, `childrenTaskStatus`,
+`callOnEnter`, `children`) and `RunBehaviorTreeGraphNode`.
+
+## Known gaps — read before doing step 3
+
+- **Guards and conditions are not seamed at all.** `Condition.Evaluate()`,
+  `ConditionalExecution.Evaluate()` and `ReactiveGuard.Ask(bool)` take no context, and `ReactiveGuard` /
+  `GuardTrigger` hold the densest per-agent state in the codebase (`hasCachedResult`, `cachedResult`,
+  `lastEvaluatedAt`, `seenVersions`, `cachedAgent`, `cachedWriter`). This is the largest un-seamed public
+  surface, and a third-party guard written against v2 has nothing to migrate to. Doing this is the natural
+  step 2.5 — **planned in [13-guard-and-subobject-context.md](13-guard-and-subobject-context.md)**, which
+  also covers the two non-node holders of per-agent state (`GuardTrigger`, `ScriptGraphVariable`) that no
+  rule here can see.
+- **No test asserts on `ctx.Machine` / `ctx.gameObject` / `ctx.transform`.** The dispatch path itself *is*
+  covered against a live machine — the existing PlayMode suite runs real trees through real machines, and
+  those runs go `BehaviorTreeMachine.Update -> OnUpdateInternal -> InvokeUpdate -> OnUpdate(BTContext) ->
+  TickChild -> InvokeEnter -> OnEnter(BTContext) -> <legacy node body>`, which is the whole seam plus the
+  forwarding. What is not covered is the agent-facing *members* of the context: the new edit-mode tests
+  tick nodes directly, so `Machine` is null throughout and those three accessors are never read. Closing
+  that needs a machine-backed fixture, which the PlayMode suite deliberately avoids standing up today.
+- **`ValueOutput` lambdas capture `this`** (`ValueOutput<T>(key, () => Compute())`). That is the
+  "closures and events" trap named above, it is untouched, and it will need the same treatment.
+- **`BaseGraphNode.OnNodeAwake()` is dead code** — nothing calls it; the graph calls the node's awake body
+  directly. It was left alone rather than revived, because routing awake through it would have added
+  `isRunning = false` and exception capture to a path that has neither today, which is a behaviour change.
+  Worth deleting or adopting deliberately.
+- **The instance-state rule can be evaded with `[Serialize]`.** It asks whether a field is serialized, not
+  whether the node writes it while running, so `[Serialize] private float timer;` passes and is *worse*
+  than the failure it silences — a serialized field is part of the shared tree, so after the flip it is one
+  value every agent writes, and nothing reports it. Closing it means checking assignment sites, not
+  declarations: an IL scan of the four lifecycle bodies for `stfld` against a serialized field, or a source
+  scan in the style of `PortReadConventionTests`. Deliberately not built for v2 — a naive IL byte scan
+  produces false positives from operand bytes, and a wrong rule here is worse than a documented one.
+  `custom-nodes.md` warns authors off it explicitly.
+- **`private static` mutable state is not checked at all** and would be a sharper version of the same bug.
+  Same fix would cover it.
+- **The canvas colour-lerp state** (`currentColor`, `startLerpColor`, `colorTimer`) lives on
+  `BaseGraphNode` and is per-agent too. It is outside BH3's allowlists because the scan only covers the BH3
+  runtime assembly. The flip has to deal with it.
