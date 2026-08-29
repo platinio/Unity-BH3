@@ -487,6 +487,113 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "on the next reload");
         }
 
+        // ------------------------------------------------------------------ what was refused, and why
+
+        /// <summary>
+        /// A Function whose one output carries a name other than <c>Result</c> — the mistake the refusal
+        /// list exists to make visible, because such a Function evaluates fine and is offered nowhere.
+        /// </summary>
+        private static FunctionGraphAsset Misnamed(string assetName, string outputKey, Type type)
+        {
+            var function = ScriptableObject.CreateInstance<FunctionGraphAsset>();
+            var graph = function.graph;
+
+            graph.units.Add(new ScriptGraphInput { position = new Vector2(-400.0f, 0.0f) });
+            graph.units.Add(new ScriptGraphOutput { position = new Vector2(400.0f, 0.0f) });
+
+            graph.controlInputDefinitions.Add(new ControlInputDefinition
+            {
+                key = FunctionGraphAsset.EnterKey, label = FunctionGraphAsset.EnterKey
+            });
+            graph.controlOutputDefinitions.Add(new ControlOutputDefinition
+            {
+                key = FunctionGraphAsset.ExitKey, label = FunctionGraphAsset.ExitKey
+            });
+
+            graph.valueOutputDefinitions.Add(new Unity.VisualScripting.ValueOutputDefinition
+            {
+                key = outputKey, label = outputKey, type = type
+            });
+
+            graph.PortDefinitionsChanged();
+            AssetDatabase.CreateAsset(function, $"{Folder}/{assetName}.asset");
+            return function;
+        }
+
+        [Test]
+        public void RefusalsAreTheOffersExactComplement()
+        {
+            Function("IsHurt", typeof(bool));
+            Function("ReadHp", typeof(float));
+            Misnamed("PickSpot", "SelectedPosition", typeof(Vector3));
+
+            var constraint = FunctionPortConstraint.For(NodeFeedingABooleanGuard());
+
+            CollectionAssert.AreEquivalent(
+                new[] { "IsHurt" },
+                NamesOf(FunctionPickerCatalog.Offer(constraint, AllFunctions())));
+
+            CollectionAssert.AreEquivalent(
+                new[] { "PickSpot", "ReadHp" },
+                FunctionPickerCatalog.Refuse(constraint, AllFunctions()).Select(r => r.Entry.Name).ToList(),
+                "every Function is either offered or refused-with-a-reason, so 'where is my Function?' "
+                + "always has an answer on screen");
+        }
+
+        [Test]
+        public void AMisnamedLoneOutput_IsRefusedByTheNameItDoesHave()
+        {
+            Misnamed("PickSpot", "SelectedPosition", typeof(Vector3));
+
+            var refused = FunctionPickerCatalog.Refuse(
+                FunctionPortConstraint.For(NodeFeedingNothing()), AllFunctions());
+
+            Assert.AreEqual(1, refused.Count);
+            Assert.That(refused[0].Reason, Does.Contain("'SelectedPosition'"));
+            Assert.That(refused[0].Reason, Does.Contain($"'{FunctionGraphAsset.ResultKey}'"),
+                "the author who named the output something descriptive needs to hear the convention, not "
+                + "'declares no Result' while their output sits right there on the canvas");
+        }
+
+        [Test]
+        public void AWrongTypedResult_IsRefusedNamingBothTypes()
+        {
+            Function("ReadHp", typeof(float));
+
+            var refused = FunctionPickerCatalog.Refuse(
+                FunctionPortConstraint.For(NodeFeedingABooleanGuard()), AllFunctions());
+
+            Assert.AreEqual(1, refused.Count);
+            Assert.That(refused[0].Reason, Does.Contain("Single"));
+            Assert.That(refused[0].Reason, Does.Contain("Boolean"),
+                "what it returns and what the node feeds are both halves of the mismatch");
+        }
+
+        [Test]
+        public void AVoidFunction_IsRefusedAsDeclaringNoResult()
+        {
+            Function("Ping", null);
+
+            var refused = FunctionPickerCatalog.Refuse(
+                FunctionPortConstraint.For(NodeFeedingNothing()), AllFunctions());
+
+            Assert.AreEqual(1, refused.Count);
+            Assert.That(refused[0].Reason, Does.Contain("no Result"),
+                "with no outputs at all there is no misnaming story to tell");
+        }
+
+        [Test]
+        public void ASideEffectSlot_RefusesNothing()
+        {
+            Function("Ping", null);
+            Misnamed("PickSpot", "SelectedPosition", typeof(Vector3));
+
+            CollectionAssert.IsEmpty(
+                FunctionPickerCatalog.Refuse(FunctionPortConstraint.ForSideEffects(), AllFunctions()),
+                "a slot that runs a Function for its effects accepts every Function, so there is nothing "
+                + "to explain");
+        }
+
         // ------------------------------------------------------------------ a Script Graph node's slots
 
         /// <summary>

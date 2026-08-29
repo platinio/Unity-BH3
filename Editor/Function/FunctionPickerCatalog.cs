@@ -71,6 +71,21 @@ namespace ArcaneOnyx.BehaviorTree
         }
     }
 
+    /// <summary>One Function the picker did not offer, and the sentence saying why.</summary>
+    public sealed class FunctionPickerRefusal
+    {
+        public FunctionPickerEntry Entry { get; }
+
+        /// <summary>Why this Function is not in the list, phrased for the row that shows it.</summary>
+        public string Reason { get; }
+
+        public FunctionPickerRefusal(FunctionPickerEntry entry, string reason)
+        {
+            Entry = entry;
+            Reason = reason;
+        }
+    }
+
     /// <summary>
     /// Which Functions may legally fill a port, and how each one reads in the dropdown.
     ///
@@ -132,6 +147,75 @@ namespace ArcaneOnyx.BehaviorTree
             });
 
             return offered;
+        }
+
+        /// <summary>
+        /// Every Function the constraint refuses, each with the reason, sorted by name. The offer's exact
+        /// complement — so between <see cref="Offer(FunctionPortConstraint, IEnumerable{FunctionGraphAsset})"/>
+        /// and this, every Function in the project appears somewhere, and "where is my Function?" always has
+        /// an answer on screen instead of a silence.
+        /// </summary>
+        public static List<FunctionPickerRefusal> Refuse(
+            FunctionPortConstraint constraint, IEnumerable<FunctionGraphAsset> functions)
+        {
+            var refused = new List<FunctionGraphAsset>();
+            if (functions == null) return new List<FunctionPickerRefusal>();
+
+            foreach (var function in functions)
+            {
+                if (function == null) continue;
+                if (constraint.Satisfies(function.ResultType)) continue;
+
+                refused.Add(function);
+            }
+
+            var entries = DescribeAll(refused);
+            var refusals = new List<FunctionPickerRefusal>(entries.Count);
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                refusals.Add(new FunctionPickerRefusal(entries[i], RefusalReason(refused[i], constraint)));
+            }
+
+            refusals.Sort((left, right) =>
+            {
+                var byName = string.Compare(
+                    left.Entry.Name, right.Entry.Name, System.StringComparison.OrdinalIgnoreCase);
+
+                return byName != 0
+                    ? byName
+                    : string.Compare(left.Entry.Label, right.Entry.Label, System.StringComparison.OrdinalIgnoreCase);
+            });
+
+            return refusals;
+        }
+
+        /// <summary>
+        /// Why one Function was refused. The no-Result case is split in two on purpose: a Function whose
+        /// outputs exist but carry other names is almost always one whose author did not know callers read
+        /// the output named <c>Result</c> specifically — and "declares no Result" would send them counting
+        /// ports that are right there on the canvas.
+        /// </summary>
+        private static string RefusalReason(FunctionGraphAsset function, FunctionPortConstraint constraint)
+        {
+            var result = function.ResultType;
+            if (result != null) return $"returns {result.Name}, not {constraint.Describe()}";
+
+            string lone = null;
+            var declared = 0;
+
+            foreach (var output in function.Outputs)
+            {
+                declared++;
+                lone ??= output.key;
+            }
+
+            var resultKey = FunctionGraphAsset.ResultKey;
+
+            if (declared == 1) return $"its output is named '{lone}', not '{resultKey}'";
+            if (declared > 1) return $"none of its {declared} outputs is named '{resultKey}'";
+
+            return "declares no Result to read";
         }
 
         /// <summary>

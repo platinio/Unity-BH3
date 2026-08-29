@@ -93,6 +93,66 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return $"value ({resultType.Name})";
         }
 
+        /// <summary>
+        /// Renames a declared output, carrying the wires that fed it across to the new name.
+        ///
+        /// <para>
+        /// This exists for one repair: a Function whose author named the output something descriptive —
+        /// <c>SelectedPosition</c> — not knowing that callers read the output named
+        /// <see cref="FunctionGraphAsset.ResultKey"/> specifically. Such a Function evaluates fine and is
+        /// offered nowhere, and until this helper the only fix was editing the definition and re-wiring by
+        /// hand in the graph window.
+        /// </para>
+        ///
+        /// <para>
+        /// The wires are detached <em>before</em> the definition changes and reconnected after
+        /// <c>PortDefinitionsChanged()</c> rebuilds the graph-output unit's ports — a connection into a port
+        /// that no longer exists is exactly the stale-port state a definition edit leaves behind otherwise.
+        /// </para>
+        /// </summary>
+        public static void RenameOutput(FunctionGraphAsset function, string fromKey, string toKey)
+        {
+            if (function == null || function.graph == null)
+                throw new ArgumentException("A Function with a graph is required.");
+            if (string.IsNullOrWhiteSpace(fromKey) || string.IsNullOrWhiteSpace(toKey))
+                throw new ArgumentException("Both the current and the new output name are required.");
+            if (fromKey == toKey) return;
+
+            var graph = function.graph;
+            var definition = graph.valueOutputDefinitions.FirstOrDefault(candidate => candidate.key == fromKey);
+
+            if (definition == null)
+                throw new ArgumentException($"'{function.name}' declares no output named '{fromKey}'.");
+            if (graph.valueOutputDefinitions.Any(candidate => candidate.key == toKey))
+                throw new ArgumentException($"'{function.name}' already declares an output named '{toKey}'.");
+
+            var rewire = new List<(Unity.VisualScripting.ValueOutput source, ScriptGraphOutput unit)>();
+
+            foreach (var connection in graph.valueConnections
+                         .Where(c => c.destination.unit is ScriptGraphOutput && c.destination.key == fromKey)
+                         .ToList())
+            {
+                rewire.Add((connection.source, (ScriptGraphOutput)connection.destination.unit));
+                graph.valueConnections.Remove(connection);
+            }
+
+            definition.key = toKey;
+            definition.label = toKey;
+            graph.PortDefinitionsChanged();
+
+            foreach (var (source, unit) in rewire)
+            {
+                source.ValidlyConnectTo(unit.valueInputs[toKey]);
+            }
+
+            EditorUtility.SetDirty(function);
+            AssetDatabase.SaveAssets();
+
+            // The contract just changed, so cached bindings and every canvas badge are stale.
+            FunctionEvaluator.Invalidate(function);
+            NodeProblemCache.Invalidate();
+        }
+
         private static string NormalizePath(string path)
         {
             var normalized = path.Replace('\\', '/');
@@ -251,6 +311,21 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             AssetDatabase.SaveAssets();
 
             FunctionEvaluator.Invalidate(asset);
+
+            return DescribeContract(asset);
+        }
+
+        [CliCommand("fn_rename_output",
+            "Rename a declared output of a Function, carrying the wires that fed it to the new name. The " +
+            "main use is repairing a Function whose result is not named 'Result' — it evaluates fine but " +
+            "callers read nothing and no picker offers it.")]
+        public static object RenameOutputCommand(
+            [CliArg("function", "Asset path of the Function.", Required = true)] string function,
+            [CliArg("from", "Current name of the output.", Required = true)] string from,
+            [CliArg("to", "New name. Omit for 'Result', the name callers read.")] string to = null)
+        {
+            var asset = ResolveFunction(function, out _);
+            RenameOutput(asset, from, string.IsNullOrWhiteSpace(to) ? FunctionGraphAsset.ResultKey : to);
 
             return DescribeContract(asset);
         }

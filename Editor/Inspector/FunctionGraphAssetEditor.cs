@@ -86,10 +86,59 @@ namespace ArcaneOnyx.BehaviorTree
                     ? $"Result : {Function.ResultType.Name}"
                     : "(no Result declared — a node reading this has nothing to read)");
 
+                DrawMisnamedResult();
+
                 // The plan is what evaluation actually resolves against, so a Function can look complete here
                 // and still refuse to run.
                 var plan = FunctionBindingPlan.Resolve(Function);
                 if (!plan.IsUsable) EditorGUILayout.HelpBox(plan.Error, MessageType.Error);
+            }
+        }
+
+        /// <summary>
+        /// The output-named-anything-but-Result mistake, said out loud with the repair a click away.
+        ///
+        /// <para>
+        /// Callers read the output named <see cref="FunctionGraphAsset.ResultKey"/> specifically, and the
+        /// graph editor lets an author name an output anything — so a Function whose one output is
+        /// <c>SelectedPosition</c> evaluates fine, is offered by no picker, and nothing anywhere said why.
+        /// A declared output under another name is evidence of intent to return something, which is what
+        /// separates this from the legitimately void Function above (no outputs at all, run for its
+        /// effects) that must stay unbothered.
+        /// </para>
+        /// </summary>
+        private void DrawMisnamedResult()
+        {
+            if (Function.ResultType != null) return;
+
+            var outputs = Function.Outputs.ToList();
+            if (outputs.Count == 0) return;
+
+            var resultKey = FunctionGraphAsset.ResultKey;
+
+            if (outputs.Count > 1)
+            {
+                EditorGUILayout.HelpBox(
+                    $"None of its {outputs.Count} outputs is named '{resultKey}', which is the one callers "
+                    + "read — so a node reading this Function gets nothing, and no picker offers it. Rename "
+                    + "whichever output is the result in the graph window.",
+                    MessageType.Warning);
+                return;
+            }
+
+            var lone = outputs[0];
+
+            EditorGUILayout.HelpBox(
+                $"Its output is named '{lone.key}', but callers read the output named '{resultKey}' — so a "
+                + "node reading this Function gets nothing, and no picker offers it.",
+                MessageType.Warning);
+
+            if (GUILayout.Button($"Rename '{lone.key}' to '{resultKey}'"))
+            {
+                Undo.RecordObject(Function, "Rename Function output");
+                FunctionGraphAuthoring.RenameOutput(Function, lone.key, resultKey);
+
+                Debug.Log($"[BehaviorTree] {Function.name}: renamed output '{lone.key}' to '{resultKey}'.");
             }
         }
 

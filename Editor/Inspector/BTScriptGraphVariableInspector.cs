@@ -425,12 +425,12 @@ namespace ArcaneOnyx.BehaviorTree
                 root.AddChild(new FunctionDropdownItem("Create new Function…", null, createsNew: true));
                 root.AddSeparator();
 
-                var offered = FunctionPickerCatalog.Offer(constraint);
+                var functions = Authoring.FunctionGraphAuthoring.FindFunctions();
+                var offered = FunctionPickerCatalog.Offer(constraint, functions);
 
                 if (offered.Count == 0)
                 {
                     root.AddChild(new AdvancedDropdownItem(NothingOffered()) { enabled = false });
-                    return root;
                 }
 
                 var groups = new Dictionary<string, AdvancedDropdownItem>();
@@ -447,7 +447,39 @@ namespace ArcaneOnyx.BehaviorTree
                     group.AddChild(new FunctionDropdownItem(entry.Label, entry.Function));
                 }
 
+                AddRefusals(root, functions);
+
                 return root;
+            }
+
+            /// <summary>
+            /// The Functions this port refuses, each with its reason, as unpickable rows under one heading.
+            ///
+            /// <para>
+            /// This section is the answer to "why is my Function not in the list?", which used to have none:
+            /// the filter simply omitted, and a designer whose Function's output was misnamed stared at a
+            /// dropdown that looked like their asset did not exist. The rows are disabled rather than absent
+            /// — the refusal is the information.
+            /// </para>
+            /// </summary>
+            private void AddRefusals(AdvancedDropdownItem root, List<FunctionGraphAsset> functions)
+            {
+                var refused = FunctionPickerCatalog.Refuse(constraint, functions);
+                if (refused.Count == 0) return;
+
+                root.AddSeparator();
+
+                var section = new AdvancedDropdownItem($"Not offered here ({refused.Count})");
+                root.AddChild(section);
+
+                foreach (var refusal in refused)
+                {
+                    var name = refusal.Entry.Qualifier == null
+                        ? refusal.Entry.Name
+                        : $"{refusal.Entry.Name} ({refusal.Entry.Qualifier})";
+
+                    section.AddChild(new AdvancedDropdownItem($"{name} — {refusal.Reason}") { enabled = false });
+                }
             }
 
             /// <summary>
