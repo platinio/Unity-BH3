@@ -114,7 +114,7 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Warning,
                     "Nothing is connected to this guard's condition, so it reads its own default and depends "
                     + "on nothing — but it still watches keys.",
-                    "Connect a condition, or remove the key trigger."));
+                    "Connect a condition on the canvas, or remove the key trigger in this guard's inspector."));
             }
 
             // The sharper failure, and the reason it is reported on the guard as well as on the node holding
@@ -122,12 +122,25 @@ namespace ArcaneOnyx.BehaviorTree
             // but never declares schedules nothing, so the branch quietly stops firing -- and unlike the
             // trigger drift below, refreshing this guard's keys cannot fix it, because that copies the
             // declaration that is missing the key.
-            foreach (var key in InheritedWatchedKeys.ResolveUndeclaredReads(this))
+            // Walked per declarer rather than as the unioned key list, because the repair needs to know
+            // which Function to declare the key on — one condition can reach several.
+            foreach (var declarer in InheritedWatchedKeys.ResolveIncompleteDeclarers(this))
             {
-                into.Add(new NodeProblem(NodeProblemSeverity.Warning,
-                    $"This guard's condition reads '{key}' without declaring it, so the guard never wakes "
-                    + "on it and its branch can stop firing with nothing to point at.",
-                    "Declare it on the Function the condition reads, not here."));
+                var function = declarer.DeclarationOwner as VisualScriptingExtension.FunctionGraphAsset;
+
+                foreach (var key in declarer.UndeclaredReadKeys)
+                {
+                    into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                        $"This guard's condition reads '{key}' without declaring it, so the guard never wakes "
+                        + "on it and its branch can stop firing with nothing to point at.",
+                        function != null
+                            ? "Declare it on the Function the condition reads, not here."
+                            // Keys hand-declared in C#, or an embedded graph: there is no asset to write the
+                            // declaration onto, so no repair is offered either.
+                            : "Declare it where those keys are defined — this condition's declarer is not an "
+                              + "editable asset.",
+                        function != null ? new DeclareWatchedKeyRepair(function, key) : null));
+                }
             }
 
             if (declared.Length == 0) return;
@@ -142,7 +155,10 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Warning,
                     $"This trigger does not list {missing}, which its condition declares. The guard does wake "
                     + "on it at runtime, so what the asset shows and what runs disagree.",
-                    "Refresh Watched Keys."));
+                    "Refresh Watched Keys.",
+                    // The refresh lives on ReactiveGuard, which is also the only kind whose triggers are
+                    // serialized and can therefore drift.
+                    this is ReactiveGuard ? new RefreshWatchedKeysRepair() : null));
             }
         }
 

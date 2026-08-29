@@ -155,25 +155,6 @@ namespace ArcaneOnyx.BehaviorTree
             return rows;
         }
 
-        /// <summary>
-        /// How tall a help box is for this text at this width. Measured with the icon in the content,
-        /// because <c>EditorGUI.HelpBox</c> draws one and it takes a column off the text, so a text-only
-        /// measurement wraps one line too few. The floor is the icon's own height, or a one-line message
-        /// draws a box too short for its own picture.
-        /// </summary>
-        private static float HelpBoxHeight(string text, float width, MessageType type)
-        {
-            var icon = type == MessageType.Error
-                ? EditorGUIUtility.IconContent("console.erroricon").image
-                : EditorGUIUtility.IconContent("console.warnicon").image;
-
-            var measured = EditorStyles.helpBox.CalcHeight(new GUIContent(text, icon), width);
-
-            return Mathf.Max(measured, MinHelpBoxHeight);
-        }
-
-        private const float MinHelpBoxHeight = 38.0f;
-
         protected override float GetHeight(float width, GUIContent label)
         {
             var rows = Describe();
@@ -182,7 +163,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (rows.HasButtons) height += Spacing + Row;
 
             // The boxes span the full block width, so this is exactly the width they are drawn at.
-            if (rows.Mismatch != null) height += Spacing + HelpBoxHeight(rows.Mismatch, width, MessageType.Error);
+            if (rows.Mismatch != null) height += Spacing + HelpBoxes.HeightFor(rows.Mismatch, width, MessageType.Error);
 
             return height;
         }
@@ -214,7 +195,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (rows.Mismatch != null)
             {
                 y += Spacing;
-                var height = HelpBoxHeight(rows.Mismatch, position.width, MessageType.Error);
+                var height = HelpBoxes.HeightFor(rows.Mismatch, position.width, MessageType.Error);
                 EditorGUI.HelpBox(position.VerticalSection(ref y, height), rows.Mismatch, MessageType.Error);
             }
 

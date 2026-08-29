@@ -52,26 +52,10 @@ namespace ArcaneOnyx.BehaviorTree
 
                 yield return new DropdownOption((System.Action)(() =>
                 {
-                    UndoUtility.RecordEditedObject("Refresh Function Ports");
-
-                    if (drift.Count > 0)
-                    {
-                        Debug.Log($"[{variableNode.NodeName}] refreshed ports:{System.Environment.NewLine}  " +
-                                  string.Join(System.Environment.NewLine + "  ", drift));
-                    }
-
-                    // Losing a wire is a warning rather than a log: it is the one part of a refresh the
-                    // author did not ask for and cannot undo.
-                    foreach (var line in variableNode.RefreshParameters())
-                    {
-                        Debug.LogWarning($"[BehaviorTree] {line}");
-                    }
-
-                    Authoring.ContractPortLayout.ResizeToFitPorts(variableNode);
-
-                    // The refresh is the fix for whatever the badge was reporting, so it has to stop
-                    // reporting it now rather than at the next import.
-                    Authoring.NodeProblemCache.Invalidate();
+                    // The runner owns what a refresh involves -- undo, saying what changed, warning about
+                    // dropped wires, the resize, the cache -- so this entry and the inspector's button
+                    // cannot drift apart.
+                    Authoring.NodeProblemRepairs.Run(variableNode, new RefreshContractPortsRepair("Refresh Ports"));
 
                     GUI.changed = true;
                 }), label);

@@ -383,27 +383,10 @@ namespace ArcaneOnyx.BehaviorTree
 
                 yield return new DropdownOption((System.Action)(() =>
                 {
-                    UndoUtility.RecordEditedObject("Refresh Sub-Tree Parameters");
-
-                    // Say what it did. A refresh that removes a port silently removes whatever fed it, and the
-                    // canvas alone will not make that obvious on a large tree.
-                    if (drift.Count > 0)
-                    {
-                        Debug.Log($"[{runNode.NodeName}] refreshed parameters:{System.Environment.NewLine}  " +
-                                  string.Join(System.Environment.NewLine + "  ", drift));
-                    }
-
-                    var dropped = runNode.RefreshParameters();
-
-                    foreach (var line in dropped) Debug.LogWarning($"[BehaviorTree] {line}");
-
-                    // The contract just changed, which is the one moment this node is resized. Doing it here
-                    // rather than on the draw path is what keeps an author's own drag from being overwritten.
-                    Authoring.ContractPortLayout.ResizeToFitPorts(runNode);
-
-                    // The refresh is the fix for whatever the badge was reporting, so it has to stop
-                    // reporting it now rather than at the next import.
-                    Authoring.NodeProblemCache.Invalidate();
+                    // The runner owns what a refresh involves -- undo, saying what changed, warning about
+                    // dropped wires, the resize, the cache -- so this entry and the inspector's button
+                    // cannot drift apart.
+                    Authoring.NodeProblemRepairs.Run(runNode, new RefreshContractPortsRepair("Refresh Parameters"));
 
                     GUI.changed = true;
                 }), label);

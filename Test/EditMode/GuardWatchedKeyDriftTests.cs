@@ -244,7 +244,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var problems = NodeProblemCache.For(node);
 
             Assert.That(problems.Select(problem => problem.Summary), Has.Some.Contains("stamina"));
-            Assert.That(problems.Select(problem => problem.Fix), Has.Some.Contains("fn_set_metadata"),
+            Assert.That(problems.Select(problem => problem.Fix), Has.Some.Contains("on the Function"),
                 "refreshing the guard's keys would not help -- it copies the declaration that is missing the "
                 + "key -- so the fix named must be the one on the Function");
         }

@@ -3,6 +3,8 @@
 **Status:** **IMPLEMENTED** on `feature/guard-watched-key-drift` (BH3 submodule), stacked on
 `feature/function-graph-ports`. Written after the fact rather than before it: this began as one lint inside
 spec 10 step 2b and grew into a general mechanism during review, which is the reason it has its own number.
+**Extended** by `feature/node-problem-inspector` (Unity-BH3#24) — see *Follow-up: problems in the node
+inspector* below; the first known gap is closed.
 
 Everything marked *verified* was read from the current source or measured in the Editor.
 
@@ -161,12 +163,36 @@ disagree.
 6. An undeclared read is reported on both the Function-backed node and the guard. Duplication is accepted
    because both are genuinely broken.
 
-## Known gaps
+## Follow-up: problems in the node inspector (Unity-BH3#24, implemented)
 
-- **The node inspector says nothing.** Problems are visible only by hovering the badge, and the badge does
-  not say *where* the fix is — three of the five repairs live in a context menu and nothing hints at that.
-  Filed as **Unity-BH3#24**, with options; `NodeProblem.Fix` being prose rather than an action is the
-  underlying reason a second surface cannot offer the repairs today.
+Issue #24's option 3 with 2 folded in, on `feature/node-problem-inspector`:
+
+- **A problem carries its repair as data.** `NodeProblem.Repair` is an optional `NodeProblemRepair` —
+  `RefreshContractPortsRepair`, `RefreshWatchedKeysRepair`, or `DeclareWatchedKeyRepair(function, key)`.
+  Data rather than a delegate because the two halves live in different assemblies: the node knows *what*
+  would fix it, and the editor-only `NodeProblemRepairs.Run` is the one place that knows *how* — undo (the
+  `FunctionAssignment` owner pattern), drift logging, dropped-wire warnings, the port resize, cache
+  invalidation. Carried by the problem so a surface can only offer a repair for a defect it is
+  simultaneously reporting: the "(up to date)" menu contradiction is unrepresentable on any surface built
+  from these.
+- **`BehaviorTreeNodeEditor` draws the problems under the node's fields** — a help box per problem, its
+  repair button beneath it, deduplicated when several drift lines share one repair. Fields first, problems
+  after, at the tool owner's direction.
+- **The three context menus now call the same runner**, so the menu entry and the inspector button cannot
+  drift apart. Menu labels and their offer-conditions stay menu-owned (still derived independently — full
+  unification is option 4, not taken).
+- **The badge tooltip points at the inspector** ("Select the node — its inspector can apply the fix") when
+  any reported problem carries a repair, which closes the "nothing hints at that" half of the issue.
+- **`IRefreshesContractPorts`** (new, runtime) is the capability the refresh repair depends on — the
+  Function reader and the sub-tree caller both hold a contract copy and repair identically, and the runner
+  names the capability instead of either concrete node.
+- Prose-only fixes now name where to act in designer vocabulary (no `fn_set_metadata` in a tooltip); the
+  no-asset declarer case stays prose-only, stated rather than buttoned.
+- Tests: `NodeProblemRepairTests` — which problems carry which repair, that running a repair fixes the
+  problem it arrived on, that prose-only problems carry none. `DeclareWatchedKeyRepair` is asserted as data
+  only; its performer opens the confirm dialog, which a test cannot answer.
+
+## Known gaps
 - **A badge only helps on a canvas you have open.** A stale caller in a tree nobody opens is invisible until
   Play. There is no project-level problem list; `bt_verify` is that, for the wrong audience.
 - **Fan-in through a condition is defensive, not exercised.** The walks are DAG-safe with a visited set, but

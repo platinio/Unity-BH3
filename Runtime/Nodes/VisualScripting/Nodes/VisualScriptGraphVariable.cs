@@ -6,7 +6,8 @@ using Unity.VisualScripting;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
-    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments
+    public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments,
+        IRefreshesContractPorts
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable ScriptGraphVariable = null;
 
@@ -338,13 +339,15 @@ namespace ArcaneOnyx.BehaviorTree
             if (Function == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    "No Function assigned, so this node has nothing to read."));
+                    "No Function assigned, so this node has nothing to read.",
+                    "Pick a Function in this node's inspector."));
                 return;
             }
 
             foreach (var line in DescribeContractDrift())
             {
-                into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Ports."));
+                into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Ports.",
+                    new RefreshContractPortsRepair("Refresh Ports")));
             }
 
             ReportUndeclaredReads(into);
@@ -383,7 +386,8 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(new NodeProblem(NodeProblemSeverity.Warning,
                     $"{Function.name} reads '{key}' but does not declare it as a watched key, so a reactive "
                     + "guard reading this Function will never wake on it.",
-                    "Declare it on the Function: fn_set_metadata --watched_keys."));
+                    $"Declare '{key}' on the Function.",
+                    new DeclareWatchedKeyRepair(Function, key)));
             }
         }
 

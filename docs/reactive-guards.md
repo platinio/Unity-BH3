@@ -170,7 +170,8 @@ exists. It is now reported rather than silent:
 
 - **On the canvas**, as an amber badge on the guard, naming the key it fails to mention.
 - **`bt_verify`** reports the same thing.
-- **Refresh Watched Keys**, on the guard's right-click menu or `bt_refresh_guard_keys`, repairs it.
+- **Refresh Watched Keys** repairs it — a button in the guard's inspector beside the reported drift, the
+  guard's right-click menu, or `bt_refresh_guard_keys`. All three run the same repair.
 
 **The repair adds and never removes.** A key in the list that nothing declares might be a deliberate
 hand-typed one naming a fact no walk can see, and seeded and hand-typed keys are byte-identical once
@@ -199,7 +200,11 @@ Both the Function-backed node and any guard reading it now say so:
 > branch can stop firing with nothing to point at.
 
 **Refresh Watched Keys cannot fix this**, and the menu says so rather than pretending — a refresh copies the
-declaration, and the declaration is the thing missing the key. The repair is on the Function:
+declaration, and the declaration is the thing missing the key. The repair is on the Function, and it is
+offered where the problem is reported: select the guard (or the Function-backed node) and its inspector
+shows a **Declare 'stamina' on IsHurt** button, also on both nodes' right-click menus. It confirms first,
+naming the other trees reading the Function, because declaring a key changes behaviour everywhere the
+Function is used. Headless:
 
 ```bash
 unity command fn_set_metadata --function Assets/AI/Functions/IsHurt.asset --watched_keys hp,stamina

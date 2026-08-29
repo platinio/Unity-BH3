@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace ArcaneOnyx.BehaviorTree
 {
     [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
-    public class RunBehaviorTreeGraphNode : GameplayNode
+    public class RunBehaviorTreeGraphNode : GameplayNode, IRefreshesContractPorts
     {
         [Serialize, Inspectable]
         private BehaviorTreeGraphAsset behaviorTreeGraphAsset;
@@ -229,13 +229,15 @@ namespace ArcaneOnyx.BehaviorTree
             if (behaviorTreeGraphAsset == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    "No sub-tree assigned, so this node runs nothing."));
+                    "No sub-tree assigned, so this node runs nothing.",
+                    "Pick a tree in this node's inspector."));
                 return;
             }
 
             foreach (var line in DescribeContractDrift())
             {
-                into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Parameters."));
+                into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Parameters.",
+                    new RefreshContractPortsRepair("Refresh Parameters")));
             }
 
             // An unfed required parameter is just an unset port, which the base reports for every node.

@@ -142,7 +142,8 @@ namespace ArcaneOnyx.BehaviorTree
 
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
                     $"Input '{port.key}' has nothing connected and declares no default, so reading it throws.",
-                    "Connect a value, or feed it a literal."));
+                    "Connect a value to it on the canvas, for a fixed value, add a Literal node and wire "
+                    + "it in."));
             }
         }
 
