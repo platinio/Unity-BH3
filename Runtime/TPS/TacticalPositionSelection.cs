@@ -58,7 +58,14 @@ namespace ArcaneOnyx.BehaviorTree
         public override string Description => "Runs the selected tactical position query and feeds the winning position to other nodes";
         public override bool CanBeUsedAsTransitionDestination => false;
 
+        // Wide enough for TargetPosition and SelectedPosition to sit on one row without clipping —
+        // ContractPortLayout.ResizeToFitPorts measures these ports at 288. StartingSize is the right tool
+        // here, unlike on contract-driven nodes: these four ports are fixed, so the size chosen at
+        // creation never goes stale.
+        public override Vector2 StartingSize => new(290.0f, 110.0f);
+
         private const string AIDebugModeTogglePrefKey = "AIDebugModeEnabled";
+      
 
         protected override void Definition()
         {
