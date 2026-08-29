@@ -1,4 +1,4 @@
-# Shared immutable trees + per-agent instance memory
+﻿# Shared immutable trees + per-agent instance memory
 
 **Status:** design spec for implementation by an AI or engineer with access to the BH3 source.
 Written from BH3's design documentation — verify exact type/member names against the code before building.
@@ -7,7 +7,9 @@ justify it.**
 
 > ## Implementation status — 2026-08-23
 >
-> **Migration steps 1 and 2 are DONE and shipping in v2. Steps 0 and 3–5 are NOT started.**
+> **Migration step 1 is DONE. Steps 0 and 2–5 are NOT.**
+> Step 2's enforcement was built and then removed before merge, deliberately — see "What step 1 actually
+> shipped". Step 0 has been measured on a separate branch but its numbers are not recorded here yet.
 > The seam is in; the instancing flip is not. `BehaviorTreeMachine.Awake` still calls
 > `Instantiate(macro)` and every node still runs on a per-agent clone — behaviour is unchanged by design.
 >
@@ -17,7 +19,7 @@ justify it.**
 > [Unity-BH3#75](https://github.com/platinio/Unity-BH3/pull/75) →
 > [bh3-development#41](https://github.com/platinio/bh3-development/pull/41).
 >
-> See "What step 1–2 actually shipped" at the bottom of this file for the decisions, the deviations from
+> See "What step 1 actually shipped" at the bottom of this file for the decisions, the deviations from
 > this spec, and what the next person needs to know.
 
 ## Current model (the cost)
@@ -117,7 +119,7 @@ indexed by node.
 
 ---
 
-# What step 1–2 actually shipped (2026-08-23)
+# What step 1 actually shipped (2026-08-23)
 
 Scope was deliberately limited to the **authoring seam**: freeze the API node authors write against, so the
 instancing flip later is not a breaking change for them. Nothing about instancing changed.
@@ -134,8 +136,11 @@ instancing flip later is not a breaking change for them. Nothing about instancin
 - `Runtime/Nodes/BehaviorTreeNode.cs` — `Context` property, the four sealed dispatcher overrides, the four
   `OnX(BTContext)` virtuals forwarding to the legacy hooks, `AwakeNode()`, and the `nodeMemory` slot.
 - `Runtime/Graphs/BehaviorTreeGraph.cs` — the awake fan-out calls `AwakeNode()` instead of `OnAwake()`.
-- `Test/EditMode/NodeContextSeamTests.cs` — new, 13 tests.
-- `Test/EditMode/NodeContextConventionTests.cs` — new, 5 tests, holds the two allowlists.
+- No tests. The seam shipped with a behaviour fixture and a convention fixture holding two shrinking
+  allowlists; **both were dropped before merge**, deliberately, to keep the first landing minimal. Step 2
+  of the migration path above is therefore *not* done: nothing currently fails the build when a new node
+  overrides a legacy hook or declares per-agent instance fields. Re-adding that enforcement is the
+  precondition for step 3, because without it the codebase regresses faster than it migrates.
 - `docs/custom-nodes.md`, `docs/api-reference.md`, `docs/best-practices.md` — teach only the ctx style.
 
 ## Decisions made, and why
@@ -174,14 +179,15 @@ instancing flip later is not a breaking change for them. Nothing about instancin
 - Step 2 says to flag "any node overriding the legacy methods, **or** declaring non-serialized mutable
   instance fields". Both rules shipped, as two separate allowlists, because they shrink independently —
   a node can be migrated off the legacy hooks before its state moves, and usually will be.
-- The allowlists have a second guard this spec does not mention: a test fails if a listed name **no longer
-  offends**. Without it the list rots into a permanent opt-out and stops being a progress bar. This is the
-  mechanism that makes "the allowlist going to zero" true rather than aspirational.
+- The allowlists carried a second guard this spec does not mention, worth rebuilding when step 2 returns:
+  a test also fails if a listed name **no longer offends**. Without it the list rots into a permanent
+  opt-out and stops being a progress bar, which is what makes "the allowlist going to zero" true rather
+  than aspirational.
 
 ## Where the debt actually is (measured, not estimated)
 
 78 node types scanned. **49 still override a legacy hook. 30 still hold per-agent instance state.**
-Both numbers are in the allowlists in `NodeContextConventionTests.cs` and are the remaining step-3 work.
+Both numbers were enumerated in the (now removed) allowlists and are the remaining step-3 work.
 The heaviest are the composites/containers (`currentExecutingChildIndex`, `childrenTaskStatus`,
 `callOnEnter`, `children`) and `RunBehaviorTreeGraphNode`.
 

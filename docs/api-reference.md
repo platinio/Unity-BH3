@@ -49,7 +49,7 @@ Return `Running` from `OnUpdate` for anything spanning more than one frame.
 | `ctx.FlightRecorder` | Where the node reports what it did, or null when nothing is recording |
 
 Each hook also has an older parameterless form (`OnEnter()` and so on). Nodes written against those keep
-working, but new nodes must use the context overloads — a convention test fails the build otherwise. See
+working, but new nodes must use the context overloads. See
 [Per-agent state](custom-nodes.md#per-agent-state-goes-in-ctxmemoryt-never-in-a-field) for why, and note that
 `Condition.Evaluate()` and `ConditionalExecution.Evaluate()` have no context overload yet.
 

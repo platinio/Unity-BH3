@@ -1,4 +1,4 @@
-# The guard seam, and per-agent state in things that are not nodes
+﻿# The guard seam, and per-agent state in things that are not nodes
 
 **Status:** plan, not yet implemented. Written 2026-08-23, after spec 07 steps 1–2 landed
 ([Unity-BH3#75](https://github.com/platinio/Unity-BH3/pull/75)). Verify member names against the code
@@ -7,7 +7,7 @@ before building — this was written from a read of the guard path, not from run
 ## Why this is the piece with a deadline
 
 Spec 07's seam froze the node lifecycle: `OnEnter(BTContext)` and friends, with `ctx.Memory<T>()` for
-per-agent state, enforced by `NodeContextConventionTests`. After it, **the instancing flip is no longer
+per-agent state. After it, **the instancing flip is no longer
 time-sensitive** — it changes no signature a node author sees, so it can land whenever the numbers justify
 it.
 
@@ -20,7 +20,7 @@ debt we cannot pay off on a user's behalf.
 3. **`ScriptGraphVariable`** (the Function slot) holds per-agent state and is not a node.
 
 (2) and (3) are the same problem wearing different hats, and neither is visible to any rule spec 07 added —
-`NodeContextConventionTests` only scans types assignable to `BehaviorTreeNode`.
+any such rule scans types assignable to `BehaviorTreeNode`, and neither of these is one.
 
 ## What actually breaks when the tree is shared
 
@@ -152,7 +152,7 @@ passed separately, because the context carries it.
 
 1. **Part A first, on its own.** Context overloads on `Condition` and `ConditionalExecution` with forwarding
    defaults, `Ask` threaded, triggers taking the context. Behaviour unchanged; nothing moves off a field yet.
-2. **Third allowlist** in `NodeContextConventionTests` — guards still overriding the parameterless
+2. **A third allowlist**, when step 2's enforcement is rebuilt — guards still overriding the parameterless
    `Evaluate()`. Same shrink-only rule, same stale-entry guard.
 3. **The agent-access rule** (see "Open questions" — it belongs with this work). A convention test banning
    bare `gameObject` / `transform` / `Machine` / `Variables` inside lifecycle and evaluate bodies. Without

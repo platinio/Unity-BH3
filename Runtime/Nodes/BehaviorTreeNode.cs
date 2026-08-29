@@ -875,8 +875,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// <para>
         /// The default forwards to the parameterless <see cref="BaseGraphNode{TGraph,TNode,TNodeTransition}.OnAwake"/>
         /// so nodes written before this overload existed keep working untouched. That forwarding is a
-        /// migration path, not a second supported style — <c>NodeContextConventionTests</c> holds the list of
-        /// nodes still using it, and that list is meant to reach zero.
+        /// migration path, not a second supported style. Every remaining use of the parameterless hooks is
+        /// work the shared-tree refactor has to undo by hand, so the number of them is meant to reach zero.
         /// </para>
         /// </summary>
         public virtual void OnAwake(BTContext ctx) => OnAwake();

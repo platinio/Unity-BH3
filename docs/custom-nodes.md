@@ -43,9 +43,9 @@ Everything your node knows about the agent it is running on comes from `ctx`: `c
 `ctx.Memory<T>()`, covered next.
 
 There are older parameterless versions of all four hooks (`OnEnter()` with no argument, and so on). They
-still work, and nodes written against them keep running untouched, but **don't write new ones**: a
-convention test fails the build for a node that overrides them. They exist only so that nodes written
-before `BTContext` existed did not all have to change at once.
+still work, and nodes written against them keep running untouched, but **don't write new ones**. They exist
+only so that nodes written before `BTContext` existed did not all have to change at once, and every
+remaining use of them is work the shared-tree refactor has to undo by hand.
 
 ### Per-agent state goes in `ctx.Memory<T>()`, never in a field
 
@@ -55,7 +55,7 @@ A node that needs to remember something between `OnEnter` and `OnUpdate` — a t
 it resolved at entry — must **not** put it in an instance field:
 
 ```csharp
-private float timer;   // WRONG. A convention test will fail the build for this.
+private float timer;   // WRONG. This is the field the shared-tree refactor cannot move for you.
 ```
 
 Declare a small class instead, and read it through the context:
@@ -91,8 +91,8 @@ running the tree, which is exactly what a shared node should carry:
 [Serialize, Inspectable] private bool ClearCurrentPath = false;   // fine: a setting, not state
 ```
 
-> **Don't use `[Serialize]` to silence the check.** The test asks whether a field is serialized, not whether
-> your node writes to it, so marking a timer `[Serialize]` does make the failure go away — and makes the
+> **Don't reach for `[Serialize]` to make a field look legitimate.** Whether a field is serialized says
+> nothing about whether your node writes to it while it runs, so marking a timer `[Serialize]` makes the
 > underlying problem worse. A serialized field is part of the *shared* tree, so after the instancing change
 > it is one value every agent writes in turn, which is the bug the rule exists to prevent, now with nothing
 > left to report it. Ask which of the two a field is: something a designer sets and the node only reads, or
