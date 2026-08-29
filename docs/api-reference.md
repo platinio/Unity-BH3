@@ -23,13 +23,35 @@ runtime sets — you read them, you don't usually return them.
 ## Node lifecycle
 
 ```csharp
-public override void OnAwake()              // once, when the machine loads the graph
-public override void OnEnter()              // when the node starts
-public override ExecutionStatus OnUpdate()  // every tick while running
-public override void OnExit()               // when the node ends
+public override void OnAwake(BTContext ctx)              // once, when the machine loads the graph
+public override void OnEnter(BTContext ctx)              // when the node starts
+public override ExecutionStatus OnUpdate(BTContext ctx)  // every tick while running
+public override void OnExit(BTContext ctx)               // when the node ends
 ```
 
 Return `Running` from `OnUpdate` for anything spanning more than one frame.
+
+### `BTContext`
+
+`ctx` is everything the node's body knows about the agent it is running on:
+
+| Member | What it gives you |
+|---|---|
+| `ctx.Memory<T>()` | This node's per-agent state, created on first use. **Where a node's fields belong.** |
+| `ctx.gameObject` / `ctx.transform` | The agent |
+| `ctx.Machine` | The `BehaviorTreeMachine` running the tree, or null in an edit-mode test |
+| `ctx.GetValue<T>(port)` | Reads a port at the type it declares |
+| `ctx.GetComponent<T>()` | A component on the agent |
+| `ctx.GetComponent<T>(port)` | The component a port points at, falling back to the agent's |
+| `ctx.TryResolve<T>(port, out c)` | The same, reporting by name when it finds nothing |
+| `ctx.GetTargetGameObject(variable)` | The GameObject a blackboard variable names |
+| `ctx.VariableScope` | The variables this node can see, innermost sub-tree first |
+| `ctx.FlightRecorder` | Where the node reports what it did, or null when nothing is recording |
+
+Each hook also has an older parameterless form (`OnEnter()` and so on). Nodes written against those keep
+working, but new nodes must use the context overloads — a convention test fails the build otherwise. See
+[Per-agent state](custom-nodes.md#per-agent-state-goes-in-ctxmemoryt-never-in-a-field) for why, and note that
+`Condition.Evaluate()` and `ConditionalExecution.Evaluate()` have no context overload yet.
 
 **`OnUpdate` only ever runs on a node that entered**, so it may assume everything `OnEnter` set up. Entry
 is not guaranteed, in two ways. A guard on the node can turn it away at the door; and if `OnEnter` throws

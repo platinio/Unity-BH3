@@ -16,9 +16,16 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput Axis { get; private set; }
        
-        private Transform targetTransform;
-        private float speed;
-        private Vector3 axis;
+        /// <summary>
+        /// What used to be three instance fields. Migrated (spec 07 step 3) — the resolved transform is
+        /// this agent's, and so are the values captured at entry.
+        /// </summary>
+        private sealed class Memory
+        {
+            public Transform Target;
+            public float Speed;
+            public Vector3 Axis;
+        }
 
         public override string NodeName => "Rotate";
         public override string Description => "Spins the transform around Axis at Speed degrees per second";
@@ -39,21 +46,23 @@ namespace ArcaneOnyx.BehaviorTree
             Axis = ValueInput<Vector3>(nameof(Axis), Vector3.up);
         }
         
-        public override void OnEnter()
+        public override void OnEnter(BTContext ctx)
         {
-            base.OnEnter();
-            
-            targetTransform = GetComponent<Transform>(Target);
-            speed = Speed.GetValue<float>();
-            axis = Axis.GetValue<Vector3>();
+            var memory = ctx.Memory<Memory>();
+
+            memory.Target = ctx.GetComponent<Transform>(Target);
+            memory.Speed = ctx.GetValue<float>(Speed);
+            memory.Axis = ctx.GetValue<Vector3>(Axis);
         }
 
-        public override ExecutionStatus OnUpdate()
+        public override ExecutionStatus OnUpdate(BTContext ctx)
         {
+            var memory = ctx.Memory<Memory>();
+
             // Per second, not per frame. Without deltaTime the same tree spins at a rate set by the machine
             // it runs on, which is the bug that only shows up on someone else's hardware. FaceTarget already
             // scales its speed this way.
-            targetTransform.Rotate(axis, speed * Time.deltaTime);
+            memory.Target.Rotate(memory.Axis, memory.Speed * Time.deltaTime);
             return ExecutionStatus.Running;
         }
     }

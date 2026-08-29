@@ -148,6 +148,24 @@ namespace ArcaneOnyx.BehaviorTree
             }
         }
 
+        /// <summary>
+        /// <b>Deliberately NOT migrated to the context overload</b>, and the reason is a trap worth naming.
+        ///
+        /// <para>
+        /// Overriding <c>OnUpdate(BTContext)</c> here would make this the most-derived implementation of
+        /// that signature for every container that has not migrated yet — every decorator, both parallels,
+        /// both randoms. Their legacy <c>OnUpdate()</c> overrides would then never be called: the context
+        /// dispatch would stop at this class and tick children generically instead. Nothing would fail to
+        /// compile; a Repeater would simply stop repeating.
+        /// </para>
+        ///
+        /// <para>
+        /// So a base class is the last thing in its family to migrate, not the first. Spec 07 step 3 says
+        /// "migrate by traffic", and this is the constraint that ordering has to respect: migrate a
+        /// subclass freely, but only migrate the base once every subclass overriding the same hook has
+        /// already moved.
+        /// </para>
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             if (CanExecute)
@@ -163,6 +181,7 @@ namespace ArcaneOnyx.BehaviorTree
             return ExecutionStatus.Running;
         }
 
+        /// <inheritdoc cref="OnUpdate()"/>
         public override void OnExit()
         {
             base.OnExit();

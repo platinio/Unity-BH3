@@ -156,7 +156,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var selector = new Selector();
 
-            Assert.AreEqual(ExecutionStatus.Failure, selector.OnUpdate());
+            // Through OnUpdateInternal, not the bare OnUpdate(): Selector is migrated to the context
+            // overload, so the parameterless hook is no longer its body -- it now falls through to
+            // ContainerNode's generic child sweep. OnUpdateInternal is what the machine calls anyway.
+            Assert.AreEqual(ExecutionStatus.Failure, selector.OnUpdateInternal());
         }
     }
 }

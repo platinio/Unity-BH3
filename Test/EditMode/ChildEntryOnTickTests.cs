@@ -170,6 +170,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // Declares TickChild, and calls OnUpdateInternal inside it.
             "ContainerNode.cs",
 
+            // Declares the context's own TickChild -- the universal form of ContainerNode's, and the one a
+            // migrated composite uses. It pairs entry with the tick in the same call, and answers "is this
+            // child running" from the agent's instance on a shared tree or from the node on a clone, which
+            // is precisely the pairing this rule exists to require.
+            "BTContext.cs",
+
             // Its own base call -- BehaviorTreeNode.OnUpdateInternal chaining to BaseGraphNode's.
             "BehaviorTreeNode.cs",
 

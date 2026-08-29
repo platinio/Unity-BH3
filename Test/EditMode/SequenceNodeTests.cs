@@ -120,7 +120,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var sequence = new Sequence();
 
-            Assert.AreEqual(ExecutionStatus.Success, sequence.OnUpdate());
+            // See EmptySelector_Fails: migrated nodes are exercised through OnUpdateInternal.
+            Assert.AreEqual(ExecutionStatus.Success, sequence.OnUpdateInternal());
         }
     }
 }
