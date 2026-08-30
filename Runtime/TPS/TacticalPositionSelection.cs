@@ -49,6 +49,9 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput MinimumScore { get; private set; }
 
         [DoNotSerialize]
+        public ValueInput DrawDebug { get; private set; }
+
+        [DoNotSerialize]
         public ValueOutput SelectedPosition { get; private set; }
 
         [DoNotSerialize]
@@ -67,12 +70,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         // Wide enough for TargetPosition and SelectedPosition to sit on one row without clipping —
         // ContractPortLayout.ResizeToFitPorts measures these ports at 288. StartingSize is the right tool
-        // here, unlike on contract-driven nodes: these six ports are fixed, so the size chosen at
+        // here, unlike on contract-driven nodes: these seven ports are fixed, so the size chosen at
         // creation never goes stale.
-        public override Vector2 StartingSize => new(240.0f, 170.0f);
-
-        private const string AIDebugModeTogglePrefKey = "AIDebugModeEnabled";
-      
+        public override Vector2 StartingSize => new(240.0f, 200.0f);
 
         protected override void Definition()
         {
@@ -92,6 +92,13 @@ namespace ArcaneOnyx.BehaviorTree
             // The act/no-act bar is the caller's, so it lives here on the tree rather than on the query
             // asset: 0 accepts any non-vetoed winner, and HasPosition reports what the bar rejected.
             MinimumScore = ValueInput<float>(nameof(MinimumScore), 0f);
+
+            // Which query is being watched is a per-node question, so it is asked on the node. It used to
+            // be a PlayerPrefs key read at every run: invisible on the canvas, all-or-nothing across every
+            // agent in the scene, and carried between sessions by a value nothing in the project wrote.
+            // A port also takes a connection, so "draw this one while the boss fight is running" is
+            // authorable rather than a global switch someone has to remember to turn back off.
+            DrawDebug = ValueInput<bool>(nameof(DrawDebug), false);
 
             SelectedPosition = ValueOutput<Vector3>(nameof(SelectedPosition), () => Select().Position);
             HasPosition = ValueOutput<bool>(nameof(HasPosition), () =>
@@ -131,7 +138,9 @@ namespace ArcaneOnyx.BehaviorTree
             // assigned or the Function fails the query contract.
             using var selection = item.CreateTacticalPositionSelectionQuery(evaluator);
 
-            var debug = PlayerPrefs.GetInt(AIDebugModeTogglePrefKey, 0) == 1;
+            // The gizmo applies its own IsDebugEnabled check on top of this, so a tree left with the port
+            // on does not draw in a scene where the overlay is off.
+            var debug = DrawDebug.GetValue<bool>();
 
             var minimumScore = MinimumScore.GetValue<float>();
 
