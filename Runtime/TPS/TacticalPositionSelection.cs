@@ -62,7 +62,7 @@ namespace ArcaneOnyx.BehaviorTree
         // ContractPortLayout.ResizeToFitPorts measures these ports at 288. StartingSize is the right tool
         // here, unlike on contract-driven nodes: these four ports are fixed, so the size chosen at
         // creation never goes stale.
-        public override Vector2 StartingSize => new(290.0f, 110.0f);
+        public override Vector2 StartingSize => new(240.0f, 110.0f);
 
         private const string AIDebugModeTogglePrefKey = "AIDebugModeEnabled";
       
