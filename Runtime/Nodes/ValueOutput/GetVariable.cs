@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine.SceneManagement;
@@ -21,8 +22,17 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
 
-            Key = ValueInput<string>(nameof(Key));
-            Value = ValueOutput<object>(nameof(Value), () => GetValue(Key.GetValue<string>(), BehaviorTreeMachine));
+            // Declared with a default so the canvas offers the inline field; VariableKeyPort keeps the
+            // forgotten-key failure as loud as the bare port used to.
+            Key = ValueInput<string>(nameof(Key), null);
+            Value = ValueOutput<object>(nameof(Value),
+                () => GetValue(VariableKeyPort.Resolve(Key, NodeName), BehaviorTreeMachine));
+        }
+
+        public override void CollectProblems(List<NodeProblem> into)
+        {
+            base.CollectProblems(into);
+            VariableKeyPort.CollectProblems(Key, into);
         }
         
         public object GetValue(string key, BehaviorTreeMachine machine)
