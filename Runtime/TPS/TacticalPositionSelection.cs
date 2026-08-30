@@ -30,7 +30,14 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Navigation/Tactical Position Selection")]
     public class TacticalPositionSelection : GameplayNode
     {
-        [Serialize] [Inspectable] private TacticalPositionSelectionQueryItem query;
+        // The pre-port serialized slot, kept (without [Inspectable]) so trees authored before Query was a
+        // port keep their selection: ResolveQuery falls back to it whenever the port yields nothing. The
+        // one edge that buys: a port cleared back to None on such a tree resolves to the legacy value —
+        // pick a query and save once to leave the legacy slot behind for good.
+        [Serialize] private TacticalPositionSelectionQueryItem query;
+
+        [DoNotSerialize]
+        public ValueInput Query { get; private set; }
 
         [DoNotSerialize]
         public ValueInput TargetPosition { get; private set; }
@@ -54,19 +61,15 @@ namespace ArcaneOnyx.BehaviorTree
 
         [DoNotSerialize] private int lastFrame = -1;
 
-        /// <summary>The query preset this node runs, or null when none is selected yet.</summary>
-        [DoNotSerialize]
-        public TacticalPositionSelectionQueryItem Query => query;
-
         public override string NodeName => "Tactical Position Selection";
         public override string Description => "Runs the selected tactical position query and feeds the winning position to other nodes";
         public override bool CanBeUsedAsTransitionDestination => false;
 
         // Wide enough for TargetPosition and SelectedPosition to sit on one row without clipping —
         // ContractPortLayout.ResizeToFitPorts measures these ports at 288. StartingSize is the right tool
-        // here, unlike on contract-driven nodes: these five ports are fixed, so the size chosen at
+        // here, unlike on contract-driven nodes: these six ports are fixed, so the size chosen at
         // creation never goes stale.
-        public override Vector2 StartingSize => new(240.0f, 140.0f);
+        public override Vector2 StartingSize => new(240.0f, 170.0f);
 
         private const string AIDebugModeTogglePrefKey = "AIDebugModeEnabled";
       
@@ -74,6 +77,12 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void Definition()
         {
             base.Definition();
+
+            // A port rather than an inspector field, so a query can arrive the way any other argument
+            // does — a graph, a variable, a sub-tree parameter — while the inline default keeps the
+            // dropdown workflow (the item type's registered Inspector draws it). Declared with the legacy
+            // field as its default so pre-port trees migrate on load without an asset touch.
+            Query = ValueInput<TacticalPositionSelectionQueryItem>(nameof(Query), query);
 
             // Both inputs have a meaning when unconnected — see ResolveEvaluator and Select — so neither
             // may be reported as a missing connection.
@@ -110,15 +119,17 @@ namespace ArcaneOnyx.BehaviorTree
                     $"'{gameObject?.name}' has no GameEntity to fall back to.");
             }
 
-            if (query == null)
+            var item = ResolveQuery();
+
+            if (item == null)
             {
                 throw new System.InvalidOperationException(
-                    $"'{NodeName}' has no query selected. Pick one in this node's inspector.");
+                    $"'{NodeName}' has no query: nothing feeds the Query port and no inline value is set.");
             }
 
             // CreateTacticalPositionSelectionQuery already throws, naming the item, when no Function is
             // assigned or the Function fails the query contract.
-            using var selection = query.CreateTacticalPositionSelectionQuery(evaluator);
+            using var selection = item.CreateTacticalPositionSelectionQuery(evaluator);
 
             var debug = PlayerPrefs.GetInt(AIDebugModeTogglePrefKey, 0) == 1;
 
@@ -145,22 +156,36 @@ namespace ArcaneOnyx.BehaviorTree
             return TPSAdapters.GetAgent(gameObject != null ? gameObject.GetComponent<GameEntity>() : null);
         }
 
+        /// <summary>The port's answer — connection or inline value — falling back to the legacy field.</summary>
+        private TacticalPositionSelectionQueryItem ResolveQuery()
+        {
+            var item = Query.GetValue<TacticalPositionSelectionQueryItem>();
+
+            return item != null ? item : query;
+        }
+
         public override void CollectProblems(List<NodeProblem> into)
         {
             base.CollectProblems(into);
 
-            if (query == null)
+            // A connected port is a runtime answer; there is nothing to check statically without pulling
+            // the connection, which a problem scan must not do.
+            if (Query.hasValidConnection) return;
+
+            var item = ResolveQuery();
+
+            if (item == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
                     "No query selected, so this node has nothing to run.",
-                    "Pick a query in this node's inspector."));
+                    "Pick a query on the Query port, or feed the port a connection."));
                 return;
             }
 
-            if (query.GeneratorFunction == null)
+            if (item.GeneratorFunction == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Query '{query.Name}' has no Function assigned, so it cannot build a query.",
+                    $"Query '{item.Name}' has no Function assigned, so it cannot build a query.",
                     "Assign a Function on the query item."));
             }
         }
