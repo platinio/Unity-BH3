@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
@@ -19,7 +20,16 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void Definition()
         {
             base.Definition();
-            Key = ValueInput<string>(nameof(Key));
+
+            // Declared with a default so the canvas offers the inline field; VariableKeyPort keeps the
+            // forgotten-key failure as loud as the bare port used to.
+            Key = ValueInput<string>(nameof(Key), null);
+        }
+
+        public override void CollectProblems(List<NodeProblem> into)
+        {
+            base.CollectProblems(into);
+            VariableKeyPort.CollectProblems(Key, into);
         }
 
         public override void OnEnter()
@@ -32,7 +42,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            string key = Key.GetValue<string>();
+            string key = VariableKeyPort.Resolve(Key, NodeName);
             variableDeclarationCollection.Remove(key);
             
             return ExecutionStatus.Success;
