@@ -9,8 +9,9 @@ namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// Feeds a tactical position into the tree: runs the selected query preset through
-    /// <c>TrySelectPosition</c> and offers the winning position plus whether it cleared the query's
-    /// acceptable score.
+    /// <c>TrySelectPosition</c> and offers the winning position plus whether it cleared this node's
+    /// <see cref="MinimumScore"/> — the act/no-act bar is authored where the acting happens, not on the
+    /// query asset.
     ///
     /// <para>
     /// <b>A data node, not an action.</b> It never enters the execution flow
@@ -38,6 +39,9 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Evaluator { get; private set; }
 
         [DoNotSerialize]
+        public ValueInput MinimumScore { get; private set; }
+
+        [DoNotSerialize]
         public ValueOutput SelectedPosition { get; private set; }
 
         [DoNotSerialize]
@@ -60,9 +64,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         // Wide enough for TargetPosition and SelectedPosition to sit on one row without clipping —
         // ContractPortLayout.ResizeToFitPorts measures these ports at 288. StartingSize is the right tool
-        // here, unlike on contract-driven nodes: these four ports are fixed, so the size chosen at
+        // here, unlike on contract-driven nodes: these five ports are fixed, so the size chosen at
         // creation never goes stale.
-        public override Vector2 StartingSize => new(240.0f, 110.0f);
+        public override Vector2 StartingSize => new(240.0f, 140.0f);
 
         private const string AIDebugModeTogglePrefKey = "AIDebugModeEnabled";
       
@@ -75,6 +79,10 @@ namespace ArcaneOnyx.BehaviorTree
             // may be reported as a missing connection.
             TargetPosition = ValueInput<Vector3>(nameof(TargetPosition)).SafeToLeaveUnconnected();
             Evaluator = ValueInput<ITacticalAgent>(nameof(Evaluator)).SafeToLeaveUnconnected();
+
+            // The act/no-act bar is the caller's, so it lives here on the tree rather than on the query
+            // asset: 0 accepts any non-vetoed winner, and HasPosition reports what the bar rejected.
+            MinimumScore = ValueInput<float>(nameof(MinimumScore), 0f);
 
             SelectedPosition = ValueOutput<Vector3>(nameof(SelectedPosition), () => Select().Position);
             HasPosition = ValueOutput<bool>(nameof(HasPosition), () =>
@@ -114,11 +122,14 @@ namespace ArcaneOnyx.BehaviorTree
 
             var debug = PlayerPrefs.GetInt(AIDebugModeTogglePrefKey, 0) == 1;
 
+            var minimumScore = MinimumScore.GetValue<float>();
+
             // An unconnected target runs the targetless overload, which centres target-relative knobs on
             // the querier instead of on a zero nobody chose.
             var valid = TargetPosition.hasValidConnection
-                ? selection.TrySelectPosition(evaluator, TargetPosition.GetValue<Vector3>(), out var result, debug)
-                : selection.TrySelectPosition(evaluator, out result, debug);
+                ? selection.TrySelectPosition(
+                    evaluator, TargetPosition.GetValue<Vector3>(), out var result, minimumScore, debug)
+                : selection.TrySelectPosition(evaluator, out result, minimumScore, debug);
 
             lastValid = valid;
             lastResult = valid ? result : TPSQueryResult.None;
