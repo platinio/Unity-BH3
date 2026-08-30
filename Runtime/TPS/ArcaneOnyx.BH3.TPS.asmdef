@@ -1,0 +1,26 @@
+{
+    "name": "ArcaneOnyx.BH3.TPS",
+    "rootNamespace": "",
+    "references": [
+        "ArcaneOnyx.BehaviorTree",
+        "ArcaneOnyx.GraphCore",
+        "ArcaneOnyx.UnityTacticalPositionSelection.Runtime",
+        "ArcaneOnyx.UnityTacticalPositionSelection.Adapters.Runtime",
+        "ArcaneOnyx.AIEntities.Runtime",
+        "ArcaneOnyx.ScriptableObjectDatabase",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
+        "Unity.VisualScripting.Core",
+        "Unity.VisualScripting.Flow"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MODULE_TACTICAL_POSITION_SELECTION_EXIST"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
