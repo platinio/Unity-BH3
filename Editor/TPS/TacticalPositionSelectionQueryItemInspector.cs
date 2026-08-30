@@ -11,6 +11,15 @@ namespace ArcaneOnyx.BehaviorTree
     /// one is choosing from what exists rather than dragging an object nobody can enumerate.
     ///
     /// <para>
+    /// Registered for <see cref="TPSQueryPickerAttribute"/>, not for the item type — a type registration
+    /// is unreachable here, because <c>InspectorProvider.ResolveDecoratorType</c> hands every
+    /// <c>UnityEngine.Object</c>-derived type to the stock <c>UnityObjectInspector</c> before consulting
+    /// the registry. <c>GetDecoratedType</c> checks a member's attributes first, which is the sanctioned
+    /// way past that short-circuit; the cost is that only tagged <i>fields</i> get the dropdown, so a
+    /// port's inline default stays a plain object picker.
+    /// </para>
+    ///
+    /// <para>
     /// An <c>Inspector</c> rather than a <c>PropertyDrawer</c> for the reason
     /// <see cref="BTScriptGraphVariableInspector"/> documents: the drawer bridge hands a throwaway host
     /// object, while a registered <c>Inspector</c> receives the real metadata chain. The assignment runs
@@ -20,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// records nothing and the pick evaporates on the next domain reload.
     /// </para>
     /// </summary>
-    [Inspector(typeof(TacticalPositionSelectionQueryItem))]
+    [Inspector(typeof(TPSQueryPickerAttribute))]
     public class TacticalPositionSelectionQueryItemInspector : Inspector
     {
         public TacticalPositionSelectionQueryItemInspector(Metadata metadata) : base(metadata) { }

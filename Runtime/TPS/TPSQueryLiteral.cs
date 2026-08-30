@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Literal/TPS Query")]
     public class TPSQueryLiteral : Literal
     {
-        [Serialize, Inspectable] private TacticalPositionSelectionQueryItem value;
+        [Serialize, Inspectable, TPSQueryPicker] private TacticalPositionSelectionQueryItem value;
 
         [DoNotSerialize]
         public ValueOutput Value { get; private set; }
