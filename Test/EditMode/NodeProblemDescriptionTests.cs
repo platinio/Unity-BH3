@@ -41,12 +41,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             NodeProblemCache.Invalidate();
         }
 
-        private WaitTime UnfedWait(string assetName)
+        private SetNavAgentPosition UnfedMove(string assetName)
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/{assetName}.asset");
 
-            // Wait.Time declares no default, so an untouched Wait node reports exactly one problem.
-            return BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            // SetNavAgentPosition.NavPosition declares no default (Target is safe unconnected), so an
+            // untouched node reports exactly one problem.
+            return BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
         }
 
         [Test]
@@ -64,16 +65,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ADescription_NamesTheProblem()
         {
-            Assert.That(NodeProblemCache.DescriptionOf(UnfedWait("Named")), Does.Contain("Time"));
+            Assert.That(NodeProblemCache.DescriptionOf(UnfedMove("Named")), Does.Contain("NavPosition"));
         }
 
         [Test]
         public void SeveralProblems_GetALineEach()
         {
-            var wait = UnfedWait("Several");
+            var move = UnfedMove("Several");
 
             System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = candidate =>
-                candidate is WaitTime
+                candidate is SetNavAgentPosition
                     ? new[] { new NodeProblem(NodeProblemSeverity.Warning, "second problem") }
                     : Enumerable.Empty<NodeProblem>();
 
@@ -81,10 +82,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             try
             {
-                var description = NodeProblemCache.DescriptionOf(wait);
+                var description = NodeProblemCache.DescriptionOf(move);
 
-                Assert.That(description, Does.Contain("Time").And.Contain("second problem"));
-                Assert.That(description.Split('\n').Length, Is.EqualTo(NodeProblemCache.For(wait).Count),
+                Assert.That(description, Does.Contain("NavPosition").And.Contain("second problem"));
+                Assert.That(description.Split('\n').Length, Is.EqualTo(NodeProblemCache.For(move).Count),
                     "one problem per line, or a two-problem node reads as one run-on sentence");
             }
             finally
@@ -97,9 +98,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ReadingTwice_DoesNotRebuildTheText()
         {
-            var wait = UnfedWait("Cached");
+            var move = UnfedMove("Cached");
 
-            Assert.That(NodeProblemCache.DescriptionOf(wait), Is.SameAs(NodeProblemCache.DescriptionOf(wait)),
+            Assert.That(NodeProblemCache.DescriptionOf(move), Is.SameAs(NodeProblemCache.DescriptionOf(move)),
                 "the same instance is the only observable difference between caching and rebuilding, and " +
                 "rebuilding is what this text was moved out of the repaint path to stop");
         }
@@ -107,12 +108,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AfterInvalidation_TheDescriptionIsRecomputed()
         {
-            var wait = UnfedWait("Stale");
+            var move = UnfedMove("Stale");
 
-            Assert.That(NodeProblemCache.DescriptionOf(wait), Does.Not.Contain("added later"));
+            Assert.That(NodeProblemCache.DescriptionOf(move), Does.Not.Contain("added later"));
 
             System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = candidate =>
-                candidate is WaitTime
+                candidate is SetNavAgentPosition
                     ? new[] { new NodeProblem(NodeProblemSeverity.Error, "added later") }
                     : Enumerable.Empty<NodeProblem>();
 
@@ -121,7 +122,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             try
             {
-                Assert.That(NodeProblemCache.DescriptionOf(wait), Does.Contain("added later"),
+                Assert.That(NodeProblemCache.DescriptionOf(move), Does.Contain("added later"),
                     "a tooltip that survived the invalidation would contradict the badge drawn beside it");
             }
             finally
