@@ -49,7 +49,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput MinimumScore { get; private set; }
 
         [DoNotSerialize]
-        public ValueInput DrawDebug { get; private set; }
+        public ValueInput DrawGizmo { get; private set; }
 
         [DoNotSerialize]
         public ValueOutput SelectedPosition { get; private set; }
@@ -98,7 +98,7 @@ namespace ArcaneOnyx.BehaviorTree
             // agent in the scene, and carried between sessions by a value nothing in the project wrote.
             // A port also takes a connection, so "draw this one while the boss fight is running" is
             // authorable rather than a global switch someone has to remember to turn back off.
-            DrawDebug = ValueInput<bool>(nameof(DrawDebug), false);
+            DrawGizmo = ValueInput<bool>(nameof(DrawGizmo), false);
 
             SelectedPosition = ValueOutput<Vector3>(nameof(SelectedPosition), () => Select().Position);
             HasPosition = ValueOutput<bool>(nameof(HasPosition), () =>
@@ -140,7 +140,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             // The gizmo applies its own IsDebugEnabled check on top of this, so a tree left with the port
             // on does not draw in a scene where the overlay is off.
-            var debug = DrawDebug.GetValue<bool>();
+            var debug = DrawGizmo.GetValue<bool>();
 
             var minimumScore = MinimumScore.GetValue<float>();
 
