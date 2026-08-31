@@ -1,3 +1,4 @@
+#if MODULE_TACTICAL_POSITION_SELECTION_EXIST
 using System.Collections.Generic;
 using ArcaneOnyx.AIEntities;
 using ArcaneOnyx.GraphCore;
@@ -200,3 +201,4 @@ namespace ArcaneOnyx.BehaviorTree
         }
     }
 }
+#endif
