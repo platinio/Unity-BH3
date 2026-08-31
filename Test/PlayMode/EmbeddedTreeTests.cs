@@ -226,9 +226,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             yield return Settle();
 
-            // An unset Time throws when the node is entered, so entering it at all is the assertion: the
-            // literal's connection was rebuilt on the clone rather than dropped. SetDefaultValue would not
-            // survive here, which is why the fixture connects a literal instead.
+            // Time defaults to 0, so a dropped connection would not throw - it would wait no time and
+            // report Success. Running is therefore the assertion that the literal's connection was rebuilt
+            // on the clone rather than dropped.
             Assert.IsTrue(Entered(machine.FlightRecorder, wait.guid));
             Assert.AreEqual(ArcaneOnyx.GraphCore.ExecutionStatus.Running,
                 RunningNode<WaitTime>(machine).LastExecutionStatus,

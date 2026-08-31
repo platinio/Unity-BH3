@@ -22,8 +22,11 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
             
-            minTime = ValueInput<float>(nameof(minTime));
-            maxTime = ValueInput<float>(nameof(maxTime));
+            // Declared with defaults, which is what makes the canvas offer inline fields and what makes the
+            // typed values survive a reload. Zero is a real answer here - "wait no time" - so an unfed
+            // port is not a problem to report, unlike a variable key where empty means nothing at all.
+            minTime = ValueInput<float>(nameof(minTime), 0.0f);
+            maxTime = ValueInput<float>(nameof(maxTime), 0.0f);
         }
         
         public override void OnEnter()

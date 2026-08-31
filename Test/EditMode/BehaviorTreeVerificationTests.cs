@@ -37,22 +37,48 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void InlineValueOnABarePortIsLostAcrossAReload()
         {
-            // WaitTime.Time is declared as ValueInput<float>(nameof(Time)) — no default — so this is the
-            // trap: it holds in memory and vanishes on reload, with nothing warning you in between.
+            // SetNavAgentPosition.NavPosition is declared as ValueInput<Vector3>(nameof(NavPosition)) — no
+            // default — so this is the trap: it holds in memory and vanishes on reload, with nothing
+            // warning you in between. (It stands in for WaitTime.Time, which used to be the example here
+            // and now declares a default so designers can type a duration on the canvas.)
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 100.0f);
-            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, wait);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            wait.Time.SetDefaultValue(1.5f);
-            Assert.IsTrue(wait.Time.behaviorTreeNode.defaultValues.ContainsKey("Time"),
+            move.NavPosition.SetDefaultValue(UnityEngine.Vector3.one);
+            Assert.IsTrue(move.NavPosition.behaviorTreeNode.defaultValues.ContainsKey("NavPosition"),
                 "In the generating run the value is present, which is why a same-run dump cannot catch this.");
 
             BehaviorTreeAuthoring.Save(asset);
             var reloaded = BehaviorTreeVerification.Reload(TreePath);
 
-            var reloadedWait = reloaded.graph.Nodes.OfType<WaitTime>().Single();
-            Assert.IsFalse(reloadedWait.defaultValues.ContainsKey("Time"),
+            var reloadedMove = reloaded.graph.Nodes.OfType<SetNavAgentPosition>().Single();
+            Assert.IsFalse(reloadedMove.defaultValues.ContainsKey("NavPosition"),
                 "A bare port cannot hold an inline value across serialization — this is why SetValue exists.");
+        }
+
+        /// <summary>
+        /// The other half of the same rule, and the reason the wait nodes were changed: a port that
+        /// <i>does</i> declare a default keeps what was typed into it, so the inline field the canvas
+        /// offers is honest.
+        /// </summary>
+        [Test]
+        public void InlineValueOnADeclaredDefaultPortSurvivesAReload()
+        {
+            var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, wait);
+
+            wait.Time.SetDefaultValue(1.5f);
+            BehaviorTreeAuthoring.Save(asset);
+
+            var reloaded = BehaviorTreeVerification.Reload(TreePath);
+            var reloadedWait = reloaded.graph.Nodes.OfType<WaitTime>().Single();
+
+            Assert.AreEqual(1.5f, reloadedWait.defaultValues["Time"],
+                "Definition declares Time's default, so Definition puts the typed value back on reload.");
+            Assert.IsEmpty(BehaviorTreeVerification.Verify(TreePath),
+                "A declared default is fed by definition, so it is not an unset port.");
         }
 
         /// <summary>
@@ -85,15 +111,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void VerifyReportsAPortThatWillThrow()
         {
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 100.0f);
-            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, wait);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            wait.Time.SetDefaultValue(1.5f);   // the mistake
+            move.NavPosition.SetDefaultValue(UnityEngine.Vector3.one);   // the mistake
             BehaviorTreeAuthoring.Save(asset);
 
             var findings = BehaviorTreeVerification.Verify(TreePath);
 
-            Assert.IsTrue(findings.Any(f => f.Contains("Time")),
+            Assert.IsTrue(findings.Any(f => f.Contains("NavPosition")),
                 "The verifier's whole purpose is catching this one, so it must not come back clean:\n  " +
                 string.Join("\n  ", findings));
         }
@@ -102,16 +128,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void SetValueSurvivesAReload()
         {
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(asset, 0.0f, 100.0f);
-            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, wait);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            BehaviorTreeAuthoring.SetValue(asset, wait.Time, 1.5f, -200.0f, 100.0f);
+            BehaviorTreeAuthoring.SetValue(asset, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 100.0f);
             BehaviorTreeAuthoring.Save(asset);
 
             var reloaded = BehaviorTreeVerification.Reload(TreePath);
-            var reloadedWait = reloaded.graph.Nodes.OfType<WaitTime>().Single();
+            var reloadedMove = reloaded.graph.Nodes.OfType<SetNavAgentPosition>().Single();
 
-            Assert.IsTrue(reloadedWait.Time.hasValidConnection,
+            Assert.IsTrue(reloadedMove.NavPosition.hasValidConnection,
                 "SetValue must route a bare port to a connected literal, which is what survives.");
             Assert.IsEmpty(BehaviorTreeVerification.Verify(TreePath),
                 "A tree built with SetValue should verify clean.");
