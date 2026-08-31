@@ -269,14 +269,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ConnectingAPort_ClearsTheBadgeWithoutAnExplicitInvalidate()
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Connected.asset");
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait), Is.Not.Empty,
+            Assert.That(NodeProblemCache.For(move), Is.Not.Empty,
                 "precondition: the unfed port is reported, and now cached as reported");
 
-            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+            BehaviorTreeAuthoring.SetValue(tree, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+            Assert.That(NodeProblemCache.For(move), Is.Empty,
                 "a badge that survives the connection that fixes it teaches people to ignore badges");
         }
 
@@ -289,16 +289,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void DisconnectingARequiredPort_BringsTheBadgeBackWithoutAnExplicitInvalidate()
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Disconnected.asset");
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
-            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.SetValue(tree, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+            Assert.That(NodeProblemCache.For(move), Is.Empty,
                 "precondition: the fed node is clean, and now cached as clean");
 
-            wait.Time.Disconnect();
+            move.NavPosition.Disconnect();
 
-            Assert.That(NodeProblemCache.For(wait).Select(problem => problem.Summary),
-                Has.Some.Contains("Time"),
+            Assert.That(NodeProblemCache.For(move).Select(problem => problem.Summary),
+                Has.Some.Contains("NavPosition"),
                 "the node is broken again and must stop drawing as healthy");
         }
 
@@ -318,16 +318,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/LateJoiner.asset");
 
             // Defined but not in any graph, which is the state a node is built in before it is added.
-            var wait = new WaitTime();
-            wait.Define();
+            var move = new SetNavAgentPosition();
+            move.Define();
 
-            Assert.That(NodeProblemCache.For(wait), Is.Not.Empty,
+            Assert.That(NodeProblemCache.For(move), Is.Not.Empty,
                 "precondition: the unfed port is reported even without a graph");
 
-            tree.graph.Nodes.Add(wait);
-            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+            tree.graph.Nodes.Add(move);
+            BehaviorTreeAuthoring.SetValue(tree, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+            Assert.That(NodeProblemCache.For(move), Is.Empty,
                 "an answer cached before the node had a graph has no signal that can ever drop it, so the "
                 + "badge would outlive the fix forever");
         }
@@ -335,30 +335,49 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         // ------------------------------------------------------------------ unset ports, for every node
 
         /// <summary>
-        /// The universal check, on a node that knows nothing about Functions. <c>WaitTime.Time</c> is one of
-        /// the 22 shipped ports that declare no default and throw on first read.
+        /// The universal check, on a node that knows nothing about Functions.
+        /// <c>SetNavAgentPosition.NavPosition</c> is one of the shipped ports that declare no default and
+        /// throw on first read.
         /// </summary>
         [Test]
         public void AnyNodeWithAnUnfedRequiredPort_IsReported()
         {
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Move.asset");
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
+
+            Assert.That(NodeProblemCache.For(move).Select(problem => problem.Summary),
+                Has.Some.Contains("NavPosition"),
+                "a port that throws on first read is a problem on any node, not just contract-driven ones");
+        }
+
+        /// <summary>
+        /// The converse, and the reason the wait nodes now declare defaults: a port with one is fed by
+        /// definition, so it is never an unfed-required problem however it is left. Zero seconds is a real
+        /// answer, unlike an empty variable key.
+        /// </summary>
+        [Test]
+        public void APortWithADeclaredDefault_IsNotReported()
+        {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Wait.asset");
             var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var range = BehaviorTreeAuthoring.AddNode<WaitTimeRandomRange>(tree, 200.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait).Select(problem => problem.Summary),
-                Has.Some.Contains("Time"),
-                "a port that throws on first read is a problem on any node, not just contract-driven ones");
+            Assert.That(NodeProblemCache.For(wait), Is.Empty,
+                "Wait defaults to 0 seconds, which is a value and not a missing one.");
+            Assert.That(NodeProblemCache.For(range), Is.Empty,
+                "Wait Range defaults to 0..0 for the same reason.");
         }
 
         [Test]
         public void FeedingThePort_ClearsIt()
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Fed.asset");
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
 
-            BehaviorTreeAuthoring.SetValue(tree, wait.Time, 1.5f, -200.0f, 0.0f);
+            BehaviorTreeAuthoring.SetValue(tree, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 0.0f);
             NodeProblemCache.Invalidate();
 
-            Assert.That(NodeProblemCache.For(wait), Is.Empty);
+            Assert.That(NodeProblemCache.For(move), Is.Empty);
         }
 
         /// <summary>
@@ -400,14 +419,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void Verify_ReportsAnUnfedRequiredPortAndNamesTheNode()
         {
-            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/VerifyWait.asset");
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
-            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, wait, 0);
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/VerifyMove.asset");
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(tree, tree.graph.EntryNode, move, 0);
             BehaviorTreeAuthoring.Save(tree);
 
-            var findings = BehaviorTreeVerification.Verify($"{Folder}/VerifyWait.asset");
+            var findings = BehaviorTreeVerification.Verify($"{Folder}/VerifyMove.asset");
 
-            Assert.That(findings, Has.Some.Contains("Time"));
+            Assert.That(findings, Has.Some.Contains("NavPosition"));
             Assert.That(findings, Has.Some.Contains("unset and will throw"));
         }
 

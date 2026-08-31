@@ -213,10 +213,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AnUnfedRequiredPort_CarriesNoRepair()
         {
-            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Wait.asset");
-            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Move.asset");
+            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
 
-            Assert.That(NodeProblemCache.For(wait).Select(problem => problem.Repair), Has.All.Null,
+            var problems = NodeProblemCache.For(move);
+
+            Assert.That(problems, Is.Not.Empty,
+                "the fixture must actually raise the problem, or Has.All.Null passes on an empty list");
+            Assert.That(problems.Select(problem => problem.Repair), Has.All.Null,
                 "wiring a port is canvas work; a button that cannot do it must not exist");
         }
 
