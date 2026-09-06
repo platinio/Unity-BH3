@@ -1,4 +1,5 @@
-﻿using ArcaneOnyx.GraphCore;
+﻿using System.Collections.Generic;
+using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -39,14 +40,20 @@ namespace ArcaneOnyx.BehaviorTree
             PositionKey = ValueInput<string>(nameof(PositionKey), string.Empty);
         }
 
-        public override void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
+        public override void CollectProblems(List<NodeProblem> into)
         {
             base.CollectProblems(into);
+            VariableKeyPort.CollectProblems(PositionKey, into);
             VariableKindField.CollectProblems(VariableKind, into);
         }
 
         public override ExecutionStatus OnUpdate()
         {
+            // Before any sampling. A node with no key cannot succeed however many points it tries, so the
+            // work is wasted and the complaint arrives late — and until this resolved through
+            // VariableKeyPort at all, an empty key wrote a variable called "" and still reported Success.
+            string positionKey = VariableKeyPort.Resolve(PositionKey, NodeName);
+
             // Read once rather than per iteration: the loop condition re-evaluated the port every pass, and a
             // port read can reach a variable lookup or a whole script graph.
             int maxTries = MaxTries.GetValue<int>();
@@ -61,7 +68,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (NavMesh.SamplePosition(randomPosition, out var hit, sampleDistance, NavMesh.AllAreas))
                 {
-                    SavePosition(hit.position);
+                    SaveVariable(positionKey, VariableKind, hit.position);
                     return ExecutionStatus.Success;
                 }
             }
@@ -69,10 +76,6 @@ namespace ArcaneOnyx.BehaviorTree
             return ExecutionStatus.Failure;
         }
 
-        private void SavePosition(Vector3 value)
-        {
-            SaveVariable(PositionKey.GetValue<string>(), VariableKind, value);
-        }
     }
 }
 

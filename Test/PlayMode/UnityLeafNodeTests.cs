@@ -88,7 +88,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         public IEnumerator GenerateRandomNavMeshPositionFailsCleanlyWhenThereIsNoNavMesh()
         {
             var tree = NewTree();
-            var node = Add<GenerateRandomNavMeshPosition>(tree.graph, 0.0f, 100.0f);
+            var node = AddNavMeshPosition(tree.graph, 0.0f, 100.0f);
             Connect(tree.graph, tree.graph.EntryNode, node);
 
             var machine = Spawn(tree);

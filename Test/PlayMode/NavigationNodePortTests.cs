@@ -27,9 +27,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var tree = NewTree();
             var graph = tree.graph;
 
-            var node = Add<GenerateRandomNavMeshPosition>(graph, 0.0f, 200.0f);
+            var node = AddNavMeshPosition(graph, 0.0f, 200.0f);
             FeedFloat(graph, node, node.SampleDistance, 4.0f);
-            FeedString(graph, node, node.PositionKey, "probePoint");
             Connect(graph, graph.EntryNode, node);
 
             var guid = node.guid;

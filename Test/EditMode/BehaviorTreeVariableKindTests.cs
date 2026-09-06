@@ -161,6 +161,63 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "until something runs them:\n" + string.Join("\n", silent));
         }
 
+        /// <summary>
+        /// The Key rule reaches the same four nodes as the store rule.
+        /// </summary>
+        /// <remarks>
+        /// <c>GenerateRandomNavMeshPosition</c> was the odd one out: it read <c>PositionKey</c> raw instead
+        /// of through <see cref="VariableKeyPort"/>, so an empty key wrote a variable named <c>""</c> and
+        /// still reported Success — a fact published under a name no guard will ever watch, with nothing on
+        /// the canvas to say so. Checked across the set rather than on that one node, because the way this
+        /// gap appears is a node being written without the shared rule wired in.
+        /// </remarks>
+        [Test]
+        public void EveryStoreHonouringNode_ReportsItselfWhenNoKeyIsChosen()
+        {
+            var silent = StoreHonouringNodes
+                .Where(type => !ProblemsOf(Node(type, BehaviorTreeVariableKind.Object, key: string.Empty))
+                    .Any(problem => problem.Summary.Contains("variable key")))
+                .Select(type => type.Name)
+                .ToArray();
+
+            CollectionAssert.IsEmpty(silent,
+                "These nodes act on a variable by name and stay quiet when the name is blank:\n"
+                + string.Join("\n", silent));
+        }
+
+        /// <summary>
+        /// The runtime half of the same rule, on the node that was missing it.
+        /// </summary>
+        /// <remarks>
+        /// Reaches the throw without a baked navmesh precisely because the key resolves before any sampling:
+        /// <c>NavMesh.SamplePosition</c> would find nothing here, the loop would fall through to Failure, and
+        /// a key resolved at the write site would never be reached at all — which is what let the raw read
+        /// survive unnoticed.
+        /// </remarks>
+        [Test]
+        public void GeneratingAPositionWithNoKey_ThrowsNamingTheNode()
+        {
+            var agent = new UnityEngine.GameObject("Zombie");
+
+            try
+            {
+                var machine = agent.AddComponent<BindableMachine>();
+                machine.BindVariables();
+
+                var node = Node<GenerateRandomNavMeshPosition>(
+                    BehaviorTreeVariableKind.Object, key: string.Empty);
+                node.SetMachine(machine);
+
+                var thrown = Assert.Throws<InvalidOperationException>(() => node.OnUpdate());
+
+                StringAssert.Contains(node.NodeName, thrown.Message);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(agent);
+            }
+        }
+
         [Test]
         public void AConfiguredNode_ReportsNoStoreProblem()
         {

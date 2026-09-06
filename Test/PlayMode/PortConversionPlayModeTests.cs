@@ -38,7 +38,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         public IEnumerator AFloatLiteralOnAnIntegerPortIsReadRatherThanThrown()
         {
             var tree = NewTree();
-            var node = Add<GenerateRandomNavMeshPosition>(tree.graph, 0.0f, 100.0f);
+            var node = AddNavMeshPosition(tree.graph, 0.0f, 100.0f);
 
             FeedFloat(tree.graph, node, node.MaxTries, 3.0f);
 
