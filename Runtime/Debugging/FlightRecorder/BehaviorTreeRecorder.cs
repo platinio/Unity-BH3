@@ -162,7 +162,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public static void VariableWrite(
             BehaviorTreeNode writer,
             string key,
-            Unity.VisualScripting.VariableKind variableKind,
+            BehaviorTreeVariableKind variableKind,
             object oldValue,
             object newValue)
         {
@@ -218,15 +218,45 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             object oldValue,
             object newValue)
         {
+            var kind = StoreOf(variableKind);
             var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
 
             if (owner != null)
             {
-                owner.FlightRecorder?.VariableWrite(owner, key, variableKind, oldValue, newValue);
+                owner.FlightRecorder?.VariableWrite(owner, key, kind, oldValue, newValue);
                 return;
             }
 
-            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, variableKind);
+            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, kind);
+        }
+
+        /// <summary>
+        /// The one place a Visual Scripting kind becomes a behavior tree one.
+        /// </summary>
+        /// <remarks>
+        /// The caller above is a script graph unit, so its kind is Unity's — it runs in a flow, where
+        /// <c>Flow</c> is a real store. The recording is BH3's, where it is not. Rather than push that
+        /// mismatch onto the unit, the facade absorbs it here, for the same reason it already decides
+        /// writer attribution here: everything in this class compiles out of a shipped build, and a
+        /// translation the call site never performs is a translation that costs nothing to ship.
+        /// <para>
+        /// Flow scratch records as <see cref="BehaviorTreeVariableKind.None"/> rather than being dropped.
+        /// The write happened and the value changed; what the watch cannot offer is a store to group it
+        /// under, because a per-invocation flow is gone before anyone could inspect it.
+        /// </para>
+        /// </remarks>
+        private static BehaviorTreeVariableKind StoreOf(Unity.VisualScripting.VariableKind kind)
+        {
+            switch (kind)
+            {
+                case Unity.VisualScripting.VariableKind.Graph: return BehaviorTreeVariableKind.Graph;
+                case Unity.VisualScripting.VariableKind.Object: return BehaviorTreeVariableKind.Object;
+                case Unity.VisualScripting.VariableKind.Scene: return BehaviorTreeVariableKind.Scene;
+                case Unity.VisualScripting.VariableKind.Application:
+                    return BehaviorTreeVariableKind.Application;
+                case Unity.VisualScripting.VariableKind.Saved: return BehaviorTreeVariableKind.Saved;
+                default: return BehaviorTreeVariableKind.None;
+            }
         }
 
         /// <summary>
@@ -245,7 +275,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key,
             object oldValue,
             object newValue,
-            Unity.VisualScripting.VariableKind variableKind = Unity.VisualScripting.VariableKind.Object)
+            BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object)
         {
             machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, variableKind);
         }

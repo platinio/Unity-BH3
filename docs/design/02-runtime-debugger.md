@@ -22,7 +22,7 @@ and **why**," which is what's missing.
 
 - Trees are `BehaviorTreeGraphAsset`s; `BehaviorTreeMachine.Awake` instantiates the graph per agent.
 - Sub-trees run via `RunBehaviorTreeGraphNode`, instantiated per call site, each with its own variable
-  scope; reads walk outward, `VariableKind.Graph` writes stay local, `VariableKind.Object` lives on the
+  scope; reads walk outward, `BehaviorTreeVariableKind.Graph` writes stay local, `BehaviorTreeVariableKind.Object` lives on the
   agent's Variables component.
 - Guards (`ConditionalExecution` nodes) attach to an owner and are re-evaluated **every tick** while the
   owner runs; turning false aborts the owner's branch immediately. This means branch changes are caused by
@@ -514,7 +514,7 @@ live agent and the model is testable without a scene.
 | Type | What it is |
 |---|---|
 | `BehaviorTreeVariableWatch.At(recording, tick, topology?, historyLimit?)` | The whole model: `Scopes`, `Tick`, `IsEmpty`. Negative tick means end-of-recording, matching `Explain`. Topology is optional and supplies writer names only. |
-| `BehaviorTreeVariableWatchScope` | One store: `Kind`, `CallSiteId`, `Label`, `Rows`. Grouped by `VariableKind` first, by call site only within `Graph`. |
+| `BehaviorTreeVariableWatchScope` | One store: `Kind`, `CallSiteId`, `Label`, `Rows`. Grouped by `BehaviorTreeVariableKind` first, by call site only within `Graph`. |
 | `BehaviorTreeVariableWatchRow` | One variable at the tick: `Key`, `Value`, `LastWriteTick`, `History`, `WriteCount`, `HistoryClipped`. |
 | `BehaviorTreeVariableWatchWrite` | One change: tick, sequence, old, new, `WriterGuid` + `WriterName`, `HasLocatableWriter`. |
 | `BehaviorTreeDebugSession` (Editor) | What the debugger is looking at — recording, playhead, `IsScrubbing` — published by the timeline, read by everyone else. `TickFor(recording)` returns the tick only for its own recording. |
@@ -522,11 +522,18 @@ live agent and the model is testable without a scene.
 | `IAnchoredSidebarPanelContent` (GraphCore) | Lets a panel state a preferred anchor, applied once when the panel is first created. |
 | `AgentVariableWriter` (`Runtime/Variables/`) | The component a sensor writes through, replacing `AgentFactPublisher`. `Write(this, key, value)` — the caller names itself, so several components can share one writer. |
 
-**`VariableKind` is now recorded on every write** (`BehaviorTreeEvent.VariableKind`, emitted as
+**The store is now recorded on every write** (`BehaviorTreeEvent.VariableKind`, emitted as
 `"variableKind"` in the dump — it was `"scope"` when this was written, see Finding 30). It had to be: `CallSiteId` is where a write came *from*, not where the value lives, so a node
-inside Combat writing agent state would otherwise be filed as Combat's private scratch. `Flow` is the
-not-applicable slot on every other event kind — BH3 rejects Flow variables outright, so it cannot collide
-with a real write. Recordings exported before this import as `Object` rather than as the enum's default.
+inside Combat writing agent state would otherwise be filed as Combat's private scratch.
+`BehaviorTreeVariableKind.None` is the not-applicable slot on every other event kind; no store answers to
+that name, so it cannot collide with a real write. Recordings exported before this import as `Object`
+rather than as the enum's default.
+
+> The field was a `Unity.VisualScripting.VariableKind` when this was written, and "not applicable" was
+> spelled `Flow` — borrowed from the one kind BH3 rejects. It is now BH3's own
+> `BehaviorTreeVariableKind`, which has no `Flow` and an explicit `None`. Stores keep Unity's names, so
+> dumps are unchanged for every real write. A pre-change recording storing `"Flow"` no longer parses and
+> lands on the same `Object` fallback as one with no store recorded at all.
 
 **The table answers for the playhead, never for the present**, which is the rule Component 2 established and
 the reason there is no live-value column. A variable that was declared but never written therefore has no
@@ -600,7 +607,7 @@ rather than committing the diff. It reappears on every play session, so it will 
 
 **30. Two naming corrections, both worth the churn while only one recording format exists.** The dump wrote
 the variable's store as `"scope"`, which is too generic and does not match the C# field; it is now
-`"variableKind"`, matching Unity's enum and `BehaviorTreeEvent.VariableKind`. It could not simply be `"kind"`
+`"variableKind"`, matching `BehaviorTreeEvent.VariableKind` (Unity's enum, at the time). It could not simply be `"kind"`
 because the same JSON object already uses that for the *event* kind. The importer reads both, so recordings
 exported in the interim still group correctly. Separately, `AgentFactPublisher` became the
 `AgentVariableWriter` **component**: a base class spends the one inheritance slot a sensor usually needs for

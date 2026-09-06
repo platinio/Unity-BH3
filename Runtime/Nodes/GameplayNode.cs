@@ -1,5 +1,4 @@
 using Unity.VisualScripting;
-using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace ArcaneOnyx.BehaviorTree
@@ -9,8 +8,14 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public class GameplayNode : BehaviorTreeNode
     {
-        protected void SaveVariable(string key, VariableKind variableKind, object value)
+        protected void SaveVariable(string key, BehaviorTreeVariableKind variableKind, object value)
         {
+            // Before the recording, not after. A write with no store never happens, so recording one would
+            // put a value into the variable watch that nothing ever held -- a phantom row in the one tool
+            // whose whole job is to be believed. Every write funnels through here, so this is the guard that
+            // covers nodes which have no reason to resolve the kind themselves.
+            variableKind = VariableKindField.Resolve(variableKind, NodeName);
+
             // Recorded before the write, because afterwards the previous value is gone and "what did it change
             // from" is half of what makes a write worth recording. The call and everything inside its
             // arguments — the read included — are removed by the compiler outside the editor and dev builds,
@@ -23,27 +28,25 @@ namespace ArcaneOnyx.BehaviorTree
                 // Writes land in this node's own scope and go no further. A branch cannot reach its caller's
                 // variables, so scratch state cannot leak sideways into a sibling which is what makes the
                 // same branch safe to reuse across unrelated agents. State that genuinely belongs to the whole
-                // agent has a home already: VariableKind.Object, on the agent's Variables component.
-                case VariableKind.Graph:
+                // agent has a home already: BehaviorTreeVariableKind.Object, on the agent's Variables
+                // component.
+                case BehaviorTreeVariableKind.Graph:
                     VariableScope?.Set(key, value);
                     break;
-                case VariableKind.Object:
+                case BehaviorTreeVariableKind.Object:
                     // Set and version bump together, so the bump cannot be forgotten here or by the next
                     // writer added -- see AgentVariableWriter.SetAgentVariable. Get-or-add is right at a
                     // write site: a fact was just published, so guards need something to read versions from.
                     AgentVariableWriter.On(gameObject).SetAgentVariable(key, value);
                     break;
-                case VariableKind.Scene:
+                case BehaviorTreeVariableKind.Scene:
                     SceneVariables.Instance(SceneManager.GetActiveScene()).variables.declarations.Set(key, value);
                     break;
-                case VariableKind.Application:
+                case BehaviorTreeVariableKind.Application:
                     ApplicationVariables.current.Set(key, value);
                     break;
-                case VariableKind.Saved:
+                case BehaviorTreeVariableKind.Saved:
                     SavedVariables.current.Set(key, value);
-                    break;
-                case VariableKind.Flow:
-                    Debug.LogError($"BehaviorTree doesnt support Flow VariableKind Node={NodeName} Key={key}");
                     break;
             }
         }
@@ -56,21 +59,21 @@ namespace ArcaneOnyx.BehaviorTree
         /// recording should say about a value that did not exist.
         /// </para>
         /// </summary>
-        private object ReadVariable(string key, VariableKind variableKind)
+        private object ReadVariable(string key, BehaviorTreeVariableKind variableKind)
         {
             if (string.IsNullOrEmpty(key)) return null;
 
             switch (variableKind)
             {
-                case VariableKind.Graph:
+                case BehaviorTreeVariableKind.Graph:
                     return VariableScope != null && VariableScope.TryGet(key, out var scoped) ? scoped : null;
-                case VariableKind.Object:
+                case BehaviorTreeVariableKind.Object:
                     return Read(BehaviorTreeMachine != null ? BehaviorTreeMachine.Variables?.declarations : null, key);
-                case VariableKind.Scene:
+                case BehaviorTreeVariableKind.Scene:
                     return Read(SceneVariables.Instance(SceneManager.GetActiveScene())?.variables?.declarations, key);
-                case VariableKind.Application:
+                case BehaviorTreeVariableKind.Application:
                     return Read(ApplicationVariables.current, key);
-                case VariableKind.Saved:
+                case BehaviorTreeVariableKind.Saved:
                     return Read(SavedVariables.current, key);
                 default:
                     return null;

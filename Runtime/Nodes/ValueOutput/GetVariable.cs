@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Variables/Get Variable")]
     public class GetVariable : Literal
     {
-        [Serialize, Inspectable] private VariableKind VariableKind;
+        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
         
         [DoNotSerialize]
         public ValueInput Key { get; private set; }
@@ -33,24 +33,25 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.CollectProblems(into);
             VariableKeyPort.CollectProblems(Key, into);
+            VariableKindField.CollectProblems(VariableKind, into);
         }
         
         public object GetValue(string key, BehaviorTreeMachine machine)
         {
-            switch (VariableKind)
+            switch (VariableKindField.Resolve(VariableKind, NodeName))
             {
-                case VariableKind.Graph:
+                case BehaviorTreeVariableKind.Graph:
                     return GetValueFromGraph(key, machine);
-                case VariableKind.Object:
+                case BehaviorTreeVariableKind.Object:
                     return GetValueFromObject(key, machine);
-                case VariableKind.Scene:
+                case BehaviorTreeVariableKind.Scene:
                     return GetValueFromScene(key);
-                case VariableKind.Application:
+                case BehaviorTreeVariableKind.Application:
                     return GetValueFromApp(key);
-                case VariableKind.Saved:
+                case BehaviorTreeVariableKind.Saved:
                     return GetValueFromSaved(key);
             }
-           
+
             return default;
         }
        

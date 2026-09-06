@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Variables/Remove Variable")]
     public class RemoveVariable : GameplayNode
     {
-        [Serialize, Inspectable] private VariableKind VariableKind;
+        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
         
         [DoNotSerialize]
         public ValueInput Key { get; private set; }

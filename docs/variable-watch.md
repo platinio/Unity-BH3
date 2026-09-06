@@ -75,7 +75,7 @@ VW_Demo_Engage #2  (Graph)
 
 | Group | What it is |
 |---|---|
-| **agent (Object)** | State belonging to the whole agent — the facts sensors publish, and anything a node writes with `VariableKind.Object`. |
+| **agent (Object)** | State belonging to the whole agent — the facts sensors publish, and anything a node writes with `BehaviorTreeVariableKind.Object`. |
 | **`<TreeName>` (Graph)** | The root tree's own variables. |
 | **`<Branch>` (Graph)** | One running branch's private scratch. |
 | **scene / application / saved** | The wider Unity stores, listed last. |

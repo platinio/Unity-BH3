@@ -133,15 +133,15 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// order — which is the order the branches were entered — and the process-wide stores last, since a
         /// behaviour bug is almost never in them.
         /// </summary>
-        private static int Rank(VariableKind kind)
+        private static int Rank(BehaviorTreeVariableKind kind)
         {
             switch (kind)
             {
-                case VariableKind.Object: return 0;
-                case VariableKind.Graph: return 1;
-                case VariableKind.Scene: return 2;
-                case VariableKind.Application: return 3;
-                case VariableKind.Saved: return 4;
+                case BehaviorTreeVariableKind.Object: return 0;
+                case BehaviorTreeVariableKind.Graph: return 1;
+                case BehaviorTreeVariableKind.Scene: return 2;
+                case BehaviorTreeVariableKind.Application: return 3;
+                case BehaviorTreeVariableKind.Saved: return 4;
                 default: return 5;
             }
         }
@@ -180,10 +180,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             switch (key.Kind)
             {
-                case VariableKind.Object: return "agent";
-                case VariableKind.Scene: return "scene";
-                case VariableKind.Application: return "application";
-                case VariableKind.Saved: return "saved";
+                case BehaviorTreeVariableKind.Object: return "agent";
+                case BehaviorTreeVariableKind.Scene: return "scene";
+                case BehaviorTreeVariableKind.Application: return "application";
+                case BehaviorTreeVariableKind.Saved: return "saved";
             }
 
             if (key.CallSiteId == BehaviorTreeCallSite.RootId)
@@ -208,16 +208,16 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// Identifies a store. Only <see cref="VariableKind.Graph"/> is per call site — everything else is one
-        /// store the whole tree shares, so folding the call site in would split agent state into a group per
-        /// branch that happened to write it.
+        /// Identifies a store. Only <see cref="BehaviorTreeVariableKind.Graph"/> is per call site —
+        /// everything else is one store the whole tree shares, so folding the call site in would split
+        /// agent state into a group per branch that happened to write it.
         /// </summary>
         private readonly struct ScopeKey : IEquatable<ScopeKey>
         {
-            public readonly VariableKind Kind;
+            public readonly BehaviorTreeVariableKind Kind;
             public readonly int CallSiteId;
 
-            private ScopeKey(VariableKind kind, int callSiteId)
+            private ScopeKey(BehaviorTreeVariableKind kind, int callSiteId)
             {
                 Kind = kind;
                 CallSiteId = callSiteId;
@@ -225,8 +225,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             public static ScopeKey For(in BehaviorTreeEvent recorded)
             {
-                return recorded.VariableKind == VariableKind.Graph
-                    ? new ScopeKey(VariableKind.Graph, recorded.CallSiteId)
+                return recorded.VariableKind == BehaviorTreeVariableKind.Graph
+                    ? new ScopeKey(BehaviorTreeVariableKind.Graph, recorded.CallSiteId)
                     : new ScopeKey(recorded.VariableKind, -1);
             }
 

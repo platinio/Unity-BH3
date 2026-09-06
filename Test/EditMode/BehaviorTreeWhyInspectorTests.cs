@@ -103,13 +103,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             public RecordingBuilder Write(
                 string key, string from, string to, Guid writer, int scope = 0,
-                VariableKind variableKind = VariableKind.Object) =>
+                BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object) =>
                 Add(BehaviorTreeEventKind.VariableWrite, scope, Guid.Empty, writer,
                     key: key, oldValue: from, newValue: to, variableKind: variableKind);
 
             public RecordingBuilder ExternalWrite(
                 string key, string from, string to, string writer, int scope = 0,
-                VariableKind variableKind = VariableKind.Object) =>
+                BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object) =>
                 Add(BehaviorTreeEventKind.VariableWrite, scope, Guid.Empty,
                     key: key, oldValue: from, newValue: to, variableKind: variableKind, writer: writer);
 
@@ -117,7 +117,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 BehaviorTreeEventKind kind, int scope, Guid node, Guid related = default,
                 ExecutionStatus status = ExecutionStatus.None, bool flag = false,
                 string key = null, string oldValue = null, string newValue = null,
-                VariableKind variableKind = VariableKind.Flow, string writer = null)
+                BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.None, string writer = null)
             {
                 events.Add(BehaviorTreeEvent.Create(
                     kind, tick, sequence++, tick, tick * 0.02f, scope, node, related, status, flag,
@@ -864,7 +864,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // What VisualScriptGraphVariable does around the graph it runs.
             BehaviorTreeRecorder.PushScriptGraphOwner(node);
             BehaviorTreeRecorder.ScriptGraphVariableWrite(
-                null, "Script Graph", "hasTarget", VariableKind.Object, false, true);
+                null, "Script Graph", "hasTarget", Unity.VisualScripting.VariableKind.Object, false, true);
             BehaviorTreeRecorder.PopScriptGraphOwner();
 
             var written = recorder.EventAt(0);
@@ -887,7 +887,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 // No push: a graph run outside a tree still has a writer worth recording, just not one the
                 // canvas can point at.
                 BehaviorTreeRecorder.ScriptGraphVariableWrite(
-                    machine, "VisionCheck", "hasTarget", VariableKind.Object, false, true);
+                    machine, "VisionCheck", "hasTarget", Unity.VisualScripting.VariableKind.Object, false, true);
 
                 var written = recorder.EventAt(0);
 

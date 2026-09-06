@@ -289,7 +289,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// in, which the call site cannot answer — see <see cref="BehaviorTreeEvent.VariableKind"/>.
         /// </summary>
         public void VariableWrite(
-            BehaviorTreeNode writer, string key, VariableKind variableKind, object oldValue, object newValue)
+            BehaviorTreeNode writer, string key, BehaviorTreeVariableKind variableKind,
+            object oldValue, object newValue)
         {
             if (!IsRecording || string.IsNullOrEmpty(key)) return;
 
@@ -314,8 +315,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// it with its own name; there is no node guid to give.
         /// </para>
         /// <para>
-        /// The kind defaults to <see cref="VariableKind.Object"/> because a writer outside the tree has no
-        /// branch scope to write into: agent state is the only store it can reach through the machine.
+        /// The kind defaults to <see cref="BehaviorTreeVariableKind.Object"/> because a writer outside the
+        /// tree has no branch scope to write into: agent state is the only store it can reach through the
+        /// machine.
         /// </para>
         /// </summary>
         public void ExternalVariableWrite(
@@ -323,7 +325,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key,
             object oldValue,
             object newValue,
-            VariableKind variableKind = VariableKind.Object)
+            BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object)
         {
             if (!IsRecording || string.IsNullOrEmpty(key)) return;
 
@@ -348,7 +350,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key = null,
             string oldValue = null,
             string newValue = null,
-            VariableKind variableKind = VariableKind.Flow,
+            BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.None,
             string writer = null,
             object writtenValue = null)
         {

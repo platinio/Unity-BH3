@@ -17,7 +17,7 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput SampleDistance { get; private set; }
 
-        [Serialize, Inspectable] private VariableKind VariableKind;
+        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
         [DoNotSerialize]
         public ValueInput PositionKey { get; private set; }
 
@@ -37,6 +37,12 @@ namespace ArcaneOnyx.BehaviorTree
             // finds a surface under a point that is roughly on one.
             SampleDistance = ValueInput<float>(nameof(SampleDistance), 1.0f);
             PositionKey = ValueInput<string>(nameof(PositionKey), string.Empty);
+        }
+
+        public override void CollectProblems(System.Collections.Generic.List<NodeProblem> into)
+        {
+            base.CollectProblems(into);
+            VariableKindField.CollectProblems(VariableKind, into);
         }
 
         public override ExecutionStatus OnUpdate()

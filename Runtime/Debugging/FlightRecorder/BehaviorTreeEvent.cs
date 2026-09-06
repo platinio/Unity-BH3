@@ -150,9 +150,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public readonly string NewValue;
 
         /// <summary>
-        /// Which store the write landed in, and therefore whose value it is: <see cref="VariableKind.Graph"/>
-        /// is scratch belonging to the one branch instance named by <see cref="CallSiteId"/>, while
-        /// <see cref="VariableKind.Object"/> is agent state every branch can see.
+        /// Which store the write landed in, and therefore whose value it is:
+        /// <see cref="BehaviorTreeVariableKind.Graph"/> is scratch belonging to the one branch instance
+        /// named by <see cref="CallSiteId"/>, while <see cref="BehaviorTreeVariableKind.Object"/> is agent
+        /// state every branch can see.
         /// <para>
         /// Recorded because <see cref="CallSiteId"/> cannot stand in for it. That is where the write was made
         /// <i>from</i>, not where the value lives — a node inside Combat writing agent state would otherwise
@@ -160,12 +161,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// scratch.
         /// </para>
         /// <para>
-        /// <see cref="VariableKind.Flow"/> on every kind that is not a write, meaning "not applicable". It is
-        /// the enum's default and BH3 rejects Flow variables outright, so it can never collide with a real
-        /// recorded write.
+        /// <see cref="BehaviorTreeVariableKind.None"/> on every kind that is not a write, meaning "not
+        /// applicable". No store answers to that name, so it cannot collide with a real recorded write —
+        /// which is why the enum carries the value rather than the recorder borrowing one, as it did when
+        /// this field was a <c>Unity.VisualScripting.VariableKind</c> and "not a write" was spelled
+        /// <c>Flow</c>.
         /// </para>
         /// </summary>
-        public readonly VariableKind VariableKind;
+        public readonly BehaviorTreeVariableKind VariableKind;
 
         /// <summary>
         /// Who wrote it, when the writer is not a node in the tree — a perception sensor, or anything else
@@ -194,7 +197,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key,
             string oldValue,
             string newValue,
-            VariableKind variableKind,
+            BehaviorTreeVariableKind variableKind,
             string writer)
         {
             Kind = kind;
@@ -236,7 +239,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             string key = null,
             string oldValue = null,
             string newValue = null,
-            VariableKind variableKind = VariableKind.Flow,
+            BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.None,
             string writer = null)
         {
             return new BehaviorTreeEvent(

@@ -306,8 +306,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("hasTarget");
 
-            recorder.VariableWrite(writer, "hasTarget", VariableKind.Object, false, true);
-            recorder.VariableWrite(writer, "hasTarget", VariableKind.Object, true, false);
+            recorder.VariableWrite(writer, "hasTarget", BehaviorTreeVariableKind.Object, false, true);
+            recorder.VariableWrite(writer, "hasTarget", BehaviorTreeVariableKind.Object, true, false);
 
             Assert.AreEqual(2, hits.Count);
         }
@@ -318,12 +318,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("ammo", "0");
 
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 3, 2);
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 2, 1);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 3, 2);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 2, 1);
 
             Assert.IsEmpty(hits, "Neither write landed on the value asked for.");
 
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 1, 0);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 1, 0);
 
             Assert.AreEqual(1, hits.Count);
             Assert.AreEqual("0", hits[0].Cause.NewValue);
@@ -338,7 +338,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("hasTarget");
 
-            recorder.VariableWrite(writer, "hasTarget", VariableKind.Object, false, true);
+            recorder.VariableWrite(writer, "hasTarget", BehaviorTreeVariableKind.Object, false, true);
 
             Assert.AreEqual(1, hits.Count);
             Assert.AreEqual(writer.guid, hits[0].SubjectGuid);
@@ -353,7 +353,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("speed", "3.5", BehaviorTreeVariableCompare.Equals);
 
-            recorder.VariableWrite(writer, "speed", VariableKind.Object, 0.0f, 3.5f);
+            recorder.VariableWrite(writer, "speed", BehaviorTreeVariableKind.Object, 0.0f, 3.5f);
 
             Assert.AreEqual(1, hits.Count);
         }
@@ -373,7 +373,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 var writer = BoundNode();
                 BehaviorTreeBreakpoints.SetVariable("speed", "3,5", BehaviorTreeVariableCompare.Equals);
 
-                recorder.VariableWrite(writer, "speed", VariableKind.Object, 0.0f, 3.5f);
+                recorder.VariableWrite(writer, "speed", BehaviorTreeVariableKind.Object, 0.0f, 3.5f);
 
                 Assert.AreEqual(1, hits.Count, "A comma-decimal machine renders 3.5 as \"3,5\".");
             }
@@ -390,7 +390,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("hasTarget", "true", BehaviorTreeVariableCompare.Equals);
 
-            recorder.VariableWrite(writer, "hasTarget", VariableKind.Object, false, true);
+            recorder.VariableWrite(writer, "hasTarget", BehaviorTreeVariableKind.Object, false, true);
 
             Assert.AreEqual(1, hits.Count);
         }
@@ -401,10 +401,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("ammo", "0", BehaviorTreeVariableCompare.NotEquals);
 
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 3, 2);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 3, 2);
             Assert.AreEqual(1, hits.Count);
 
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 2, 0);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 2, 0);
             Assert.AreEqual(1, hits.Count, "Landing on the excluded value must not fire.");
         }
 
@@ -420,7 +420,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("hp", "5", compare);
 
-            recorder.VariableWrite(writer, "hp", VariableKind.Object, 100, written);
+            recorder.VariableWrite(writer, "hp", BehaviorTreeVariableKind.Object, 100, written);
 
             Assert.AreEqual(shouldFire ? 1 : 0, hits.Count);
         }
@@ -433,7 +433,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             var breakpoint = BehaviorTreeBreakpoints.SetVariable("target", "5", BehaviorTreeVariableCompare.LessThan);
 
-            recorder.VariableWrite(writer, "target", VariableKind.Object, null, "Zombie");
+            recorder.VariableWrite(writer, "target", BehaviorTreeVariableKind.Object, null, "Zombie");
 
             Assert.IsEmpty(hits, "'Zombie' is not a number, so nothing should fire.");
             Assert.IsNotNull(breakpoint.Diagnostic, "…but it has to say why.");
@@ -446,11 +446,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             BehaviorTreeBreakpoints.SetVariable("state", "Attack", BehaviorTreeVariableCompare.Contains);
 
-            recorder.VariableWrite(writer, "state", VariableKind.Object, "Idle", "AttackMelee");
+            recorder.VariableWrite(writer, "state", BehaviorTreeVariableKind.Object, "Idle", "AttackMelee");
 
             Assert.AreEqual(1, hits.Count);
 
-            recorder.VariableWrite(writer, "state", VariableKind.Object, "AttackMelee", "Flee");
+            recorder.VariableWrite(writer, "state", BehaviorTreeVariableKind.Object, "AttackMelee", "Flee");
 
             Assert.AreEqual(1, hits.Count);
         }
@@ -464,10 +464,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             var breakpoint = BehaviorTreeBreakpoints.SetVariable("alertLevel", "1", BehaviorTreeVariableCompare.Contains);
 
-            recorder.VariableWrite(writer, "alertLevel", VariableKind.Object, 0, 1);
+            recorder.VariableWrite(writer, "alertLevel", BehaviorTreeVariableKind.Object, 0, 1);
             Assert.AreEqual(1, hits.Count);
 
-            recorder.VariableWrite(writer, "alertLevel", VariableKind.Object, 9, 10);
+            recorder.VariableWrite(writer, "alertLevel", BehaviorTreeVariableKind.Object, 9, 10);
             Assert.AreEqual(2, hits.Count, "10 contains the text \"1\", which is the trap.");
 
             Assert.IsNotNull(breakpoint.Diagnostic);
@@ -484,7 +484,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(BehaviorTreeVariableCompare.Changed, breakpoint.Compare);
 
-            recorder.VariableWrite(writer, "ammo", VariableKind.Object, 3, 2);
+            recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, 3, 2);
 
             Assert.AreEqual(1, hits.Count);
         }
@@ -690,7 +690,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var writer = BoundNode();
             var breakpoint = BehaviorTreeBreakpoints.SetVariable("target", "5", BehaviorTreeVariableCompare.LessThan);
 
-            recorder.VariableWrite(writer, "target", VariableKind.Object, null, "Zombie");
+            recorder.VariableWrite(writer, "target", BehaviorTreeVariableKind.Object, null, "Zombie");
             Assert.IsNotNull(breakpoint.Diagnostic);
 
             BehaviorTreeBreakpoints.ResetHitCounts();
@@ -840,7 +840,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 recorder.BeginTick();
                 node.OnNodeEnter();
                 recorder.GuardEval(node, guard, tick % 2 == 0);
-                recorder.VariableWrite(writer, "ammo", VariableKind.Object, tick, tick + 1);
+                recorder.VariableWrite(writer, "ammo", BehaviorTreeVariableKind.Object, tick, tick + 1);
                 node.OnNodeExit();
             }
 

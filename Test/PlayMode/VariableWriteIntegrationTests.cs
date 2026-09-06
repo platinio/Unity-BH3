@@ -16,9 +16,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
     /// move the version — by calling <c>Write</c> and <c>SetAgentVariable</c> on a bare GameObject. What it
     /// does not cover is that a tree node reaches that rule at all. The node path is longer and has its own
     /// chances to go wrong: <c>SetVariable.OnUpdate</c> pulls two ports, hands them to
-    /// <c>GameplayNode.SaveVariable</c>, which switches on <see cref="VariableKind"/> and, for
-    /// <see cref="VariableKind.Object"/> only, routes to <c>AgentVariableWriter.On(gameObject)</c> — a
-    /// get-or-add against a GameObject the node reaches through its machine.
+    /// <c>GameplayNode.SaveVariable</c>, which switches on <see cref="BehaviorTreeVariableKind"/> and, for
+    /// <see cref="BehaviorTreeVariableKind.Object"/> only, routes to <c>AgentVariableWriter.On(gameObject)</c>
+    /// — a get-or-add against a GameObject the node reaches through its machine.
     /// </para>
     ///
     /// <para>
@@ -207,7 +207,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             BehaviorTreeGraph graph, string key, bool value, float x, float y)
         {
             var write = Add<SetVariable>(graph, x, y);
-            SetPrivateField(write, "VariableKind", VariableKind.Object);
+            SetPrivateField(write, "VariableKind", BehaviorTreeVariableKind.Object);
 
             FeedString(graph, write, write.Key, key);
             FeedBool(graph, write, write.Value, value);

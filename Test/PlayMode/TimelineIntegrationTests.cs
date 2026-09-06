@@ -161,7 +161,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
             var write = Add<SetVariable>(graph, 0.0f, 250.0f);
 
-            SetPrivateField(write, "VariableKind", VariableKind.Object);
+            SetPrivateField(write, "VariableKind", BehaviorTreeVariableKind.Object);
             FeedString(graph, write, write.Key, "spin");
             FeedBool(graph, write, write.Value, true);
 

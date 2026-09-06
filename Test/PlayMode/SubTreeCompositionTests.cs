@@ -132,11 +132,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             if (!string.IsNullOrEmpty(writesTo))
             {
                 var publish = Add<SetVariable>(graph, -200.0f, 250.0f);
-                SetPrivateField(publish, "VariableKind", VariableKind.Object);
+                SetPrivateField(publish, "VariableKind", BehaviorTreeVariableKind.Object);
                 FeedString(graph, publish, publish.Key, writesTo);
 
                 // Graph scope: the branch reads its own parameter, not an agent fact.
-                var read = ReadScopedVariable(graph, parameter, VariableKind.Graph, -600.0f, 400.0f);
+                var read = ReadScopedVariable(graph, parameter, BehaviorTreeVariableKind.Graph, -600.0f, 400.0f);
                 read.Value.ValidlyConnectTo(publish.Value);
 
                 Connect(graph, sequence, publish);
@@ -177,7 +177,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
         /// <summary>A Visual Scripting read of a variable in a chosen scope.</summary>
         private static GetVariable ReadScopedVariable(
-            BehaviorTreeGraph graph, string key, VariableKind kind, float x, float y)
+            BehaviorTreeGraph graph, string key, BehaviorTreeVariableKind kind, float x, float y)
         {
             var keyLiteral = Add<StringLiteral>(graph, x - 200.0f, y);
             SetPrivateField(keyLiteral, "value", key);

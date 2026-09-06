@@ -16,7 +16,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     /// for the present — most of what could go wrong here is a value leaking backwards or forwards in time,
     /// so several tests park a vantage point mid-recording and assert the future is invisible. Second, scope
     /// is <see cref="VariableKind"/> first and call site only within
-    /// <see cref="VariableKind.Graph"/>; the call site alone is where the write came <i>from</i>, which is a
+    /// <see cref="BehaviorTreeVariableKind.Graph"/>; the call site alone is where the write came <i>from</i>, which is a
     /// different question and the reason the kind had to be recorded at all.
     /// </para>
     /// </summary>
@@ -54,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             /// <summary>A write by a node in the tree.</summary>
             public RecordingBuilder Write(
-                string key, string from, string to, VariableKind kind, int callSite = 0, Guid? writer = null)
+                string key, string from, string to, BehaviorTreeVariableKind kind, int callSite = 0, Guid? writer = null)
             {
                 events.Add(BehaviorTreeEvent.Create(
                     BehaviorTreeEventKind.VariableWrite, tick, sequence++, tick, tick * 0.02f, callSite,
@@ -69,7 +69,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 events.Add(BehaviorTreeEvent.Create(
                     BehaviorTreeEventKind.VariableWrite, tick, sequence++, tick, tick * 0.02f,
                     BehaviorTreeCallSite.RootId, Guid.Empty, Guid.Empty, ExecutionStatus.None, false,
-                    key, from, to, VariableKind.Object, writer));
+                    key, from, to, BehaviorTreeVariableKind.Object, writer));
 
                 return this;
             }
@@ -107,9 +107,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         private static BehaviorTreeVariableWatchScope ScopeOf(
-            BehaviorTreeVariableWatch watch, VariableKind kind, int callSite = -1)
+            BehaviorTreeVariableWatch watch, BehaviorTreeVariableKind kind, int callSite = -1)
         {
-            return watch.Scopes.FirstOrDefault(s => s.Kind == kind && (kind != VariableKind.Graph || s.CallSiteId == callSite));
+            return watch.Scopes.FirstOrDefault(s => s.Kind == kind && (kind != BehaviorTreeVariableKind.Graph || s.CallSiteId == callSite));
         }
 
         private static BehaviorTreeVariableWatchRow RowOf(BehaviorTreeVariableWatchScope scope, string key)
@@ -125,14 +125,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AValueIsTheOneItHeldAtTheVantageTickNotTheLatest()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("alertLevel", "0", "1", VariableKind.Object)
-                .At(20).Write("alertLevel", "1", "2", VariableKind.Object)
-                .At(30).Write("alertLevel", "2", "3", VariableKind.Object)
+                .At(10).Write("alertLevel", "0", "1", BehaviorTreeVariableKind.Object)
+                .At(20).Write("alertLevel", "1", "2", BehaviorTreeVariableKind.Object)
+                .At(30).Write("alertLevel", "2", "3", BehaviorTreeVariableKind.Object)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording, 20);
 
-            Assert.AreEqual("2", RowOf(ScopeOf(watch, VariableKind.Object), "alertLevel").Value,
+            Assert.AreEqual("2", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "alertLevel").Value,
                 "Parked at tick 20, the table must show what tick 20 knew — the tick-30 write has not happened yet.");
         }
 
@@ -140,29 +140,29 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AVariableFirstWrittenAfterTheVantageTickIsAbsent()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("hasTarget", "null", "True", VariableKind.Object)
-                .At(40).Write("lastKnownPos", "null", "(1.0, 0.0, 2.0)", VariableKind.Object)
+                .At(10).Write("hasTarget", "null", "True", BehaviorTreeVariableKind.Object)
+                .At(40).Write("lastKnownPos", "null", "(1.0, 0.0, 2.0)", BehaviorTreeVariableKind.Object)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording, 20);
 
-            Assert.IsNull(RowOf(ScopeOf(watch, VariableKind.Object), "lastKnownPos"),
+            Assert.IsNull(RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "lastKnownPos"),
                 "A row for a variable whose first write is in the future would leak the future into the past.");
-            Assert.IsNotNull(RowOf(ScopeOf(watch, VariableKind.Object), "hasTarget"));
+            Assert.IsNotNull(RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "hasTarget"));
         }
 
         [Test]
         public void ANegativeTickMeansTheEndOfTheRecording()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("alertLevel", "0", "1", VariableKind.Object)
-                .At(30).Write("alertLevel", "1", "9", VariableKind.Object)
+                .At(10).Write("alertLevel", "0", "1", BehaviorTreeVariableKind.Object)
+                .At(30).Write("alertLevel", "1", "9", BehaviorTreeVariableKind.Object)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
             Assert.AreEqual(30, watch.Tick, "The default vantage point matches Explain's: the end of the recording.");
-            Assert.AreEqual("9", RowOf(ScopeOf(watch, VariableKind.Object), "alertLevel").Value);
+            Assert.AreEqual("9", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "alertLevel").Value);
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var recording = new RecordingBuilder()
                 .At(5).Enter(Writer)
-                .At(6).Write("hasTarget", "null", "True", VariableKind.Object)
+                .At(6).Write("hasTarget", "null", "True", BehaviorTreeVariableKind.Object)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
@@ -186,19 +186,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void AnObjectWriteFromInsideABranchBelongsToTheAgentNotTheBranch()
         {
-            // The reason VariableKind is recorded at all. The write was made from call site 3, but it landed
+            // The reason BehaviorTreeVariableKind is recorded at all. The write was made from call site 3, but it landed
             // on the agent's Variables component, and filing it under Combat would show agent-wide state as
             // that branch's private scratch.
             var recording = new RecordingBuilder()
                 .CallSite(3, 0, "Combat")
-                .At(10).Write("alertLevel", "0", "1", VariableKind.Object, callSite: 3)
+                .At(10).Write("alertLevel", "0", "1", BehaviorTreeVariableKind.Object, callSite: 3)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
-            Assert.IsNotNull(RowOf(ScopeOf(watch, VariableKind.Object), "alertLevel"),
+            Assert.IsNotNull(RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "alertLevel"),
                 "An Object write belongs to the agent scope whatever branch it was made from.");
-            Assert.IsNull(ScopeOf(watch, VariableKind.Graph, 3),
+            Assert.IsNull(ScopeOf(watch, BehaviorTreeVariableKind.Graph, 3),
                 "No Graph scope should exist — nothing wrote branch-local state.");
         }
 
@@ -208,14 +208,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var recording = new RecordingBuilder()
                 .CallSite(1, 0, "Attack")
                 .CallSite(2, 0, "Attack")
-                .At(10).Write("attempts", "0", "1", VariableKind.Graph, callSite: 1)
-                .At(11).Write("attempts", "0", "7", VariableKind.Graph, callSite: 2)
+                .At(10).Write("attempts", "0", "1", BehaviorTreeVariableKind.Graph, callSite: 1)
+                .At(11).Write("attempts", "0", "7", BehaviorTreeVariableKind.Graph, callSite: 2)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
-            Assert.AreEqual("1", RowOf(ScopeOf(watch, VariableKind.Graph, 1), "attempts").Value);
-            Assert.AreEqual("7", RowOf(ScopeOf(watch, VariableKind.Graph, 2), "attempts").Value,
+            Assert.AreEqual("1", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Graph, 1), "attempts").Value);
+            Assert.AreEqual("7", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Graph, 2), "attempts").Value,
                 "Two instances of one shared branch have separate scratch; merging them would invent a contradiction.");
         }
 
@@ -226,16 +226,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 .CallSite(1, 0, "Attack")
                 .CallSite(2, 0, "Attack")
                 .CallSite(3, 0, "Idle")
-                .At(10).Write("attempts", "0", "1", VariableKind.Graph, callSite: 1)
-                .At(11).Write("attempts", "0", "7", VariableKind.Graph, callSite: 2)
-                .At(12).Write("waited", "0", "3", VariableKind.Graph, callSite: 3)
+                .At(10).Write("attempts", "0", "1", BehaviorTreeVariableKind.Graph, callSite: 1)
+                .At(11).Write("attempts", "0", "7", BehaviorTreeVariableKind.Graph, callSite: 2)
+                .At(12).Write("waited", "0", "3", BehaviorTreeVariableKind.Graph, callSite: 3)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
-            Assert.AreEqual("Attack #1", ScopeOf(watch, VariableKind.Graph, 1).Label);
-            Assert.AreEqual("Attack #2", ScopeOf(watch, VariableKind.Graph, 2).Label);
-            Assert.AreEqual("Idle", ScopeOf(watch, VariableKind.Graph, 3).Label,
+            Assert.AreEqual("Attack #1", ScopeOf(watch, BehaviorTreeVariableKind.Graph, 1).Label);
+            Assert.AreEqual("Attack #2", ScopeOf(watch, BehaviorTreeVariableKind.Graph, 2).Label);
+            Assert.AreEqual("Idle", ScopeOf(watch, BehaviorTreeVariableKind.Graph, 3).Label,
                 "A name that does not collide stays clean — '#3' everywhere would be noise.");
         }
 
@@ -244,40 +244,40 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var recording = new RecordingBuilder()
                 .CallSite(1, 0, "Combat")
-                .At(10).Write("attempts", "0", "1", VariableKind.Graph, callSite: 1)
-                .At(11).Write("hasTarget", "null", "True", VariableKind.Object)
-                .At(12).Write("difficulty", "0", "2", VariableKind.Application)
+                .At(10).Write("attempts", "0", "1", BehaviorTreeVariableKind.Graph, callSite: 1)
+                .At(11).Write("hasTarget", "null", "True", BehaviorTreeVariableKind.Object)
+                .At(12).Write("difficulty", "0", "2", BehaviorTreeVariableKind.Application)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
-            Assert.AreEqual(VariableKind.Object, watch.Scopes[0].Kind, "Agent state is what a designer looks for first.");
-            Assert.AreEqual(VariableKind.Graph, watch.Scopes[1].Kind);
-            Assert.AreEqual(VariableKind.Application, watch.Scopes[2].Kind, "The process-wide stores come last.");
+            Assert.AreEqual(BehaviorTreeVariableKind.Object, watch.Scopes[0].Kind, "Agent state is what a designer looks for first.");
+            Assert.AreEqual(BehaviorTreeVariableKind.Graph, watch.Scopes[1].Kind);
+            Assert.AreEqual(BehaviorTreeVariableKind.Application, watch.Scopes[2].Kind, "The process-wide stores come last.");
         }
 
         [Test]
         public void TheRootGraphScopeIsNamedAfterTheTree()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("patrolIndex", "0", "1", VariableKind.Graph)
+                .At(10).Write("patrolIndex", "0", "1", BehaviorTreeVariableKind.Graph)
                 .Build();
 
             var watch = BehaviorTreeVariableWatch.At(recording);
 
-            Assert.AreEqual("ZombieTree", ScopeOf(watch, VariableKind.Graph, BehaviorTreeCallSite.RootId).Label);
+            Assert.AreEqual("ZombieTree", ScopeOf(watch, BehaviorTreeVariableKind.Graph, BehaviorTreeCallSite.RootId).Label);
         }
 
         [Test]
         public void RowsAreSortedByKeySoTheyDoNotMoveAsThePlayheadDoes()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("zeta", "0", "1", VariableKind.Object)
-                .At(11).Write("alpha", "0", "1", VariableKind.Object)
-                .At(12).Write("mid", "0", "1", VariableKind.Object)
+                .At(10).Write("zeta", "0", "1", BehaviorTreeVariableKind.Object)
+                .At(11).Write("alpha", "0", "1", BehaviorTreeVariableKind.Object)
+                .At(12).Write("mid", "0", "1", BehaviorTreeVariableKind.Object)
                 .Build();
 
-            var keys = ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object)
+            var keys = ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object)
                 .Rows.Select(r => r.Key).ToArray();
 
             CollectionAssert.AreEqual(new[] { "alpha", "mid", "zeta" }, keys);
@@ -291,11 +291,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void HistoryIsMostRecentFirstAndCarriesBothValues()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("hasTarget", "null", "True", VariableKind.Object)
-                .At(20).Write("hasTarget", "True", "False", VariableKind.Object)
+                .At(10).Write("hasTarget", "null", "True", BehaviorTreeVariableKind.Object)
+                .At(20).Write("hasTarget", "True", "False", BehaviorTreeVariableKind.Object)
                 .Build();
 
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object), "hasTarget");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object), "hasTarget");
 
             Assert.AreEqual(20, row.History[0].Tick, "The latest write leads, so Value and History[0] cannot disagree.");
             Assert.AreEqual("True", row.History[0].OldValue);
@@ -310,11 +310,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             for (int i = 1; i <= 20; i++)
             {
-                builder.At(i).Write("counter", (i - 1).ToString(), i.ToString(), VariableKind.Object);
+                builder.At(i).Write("counter", (i - 1).ToString(), i.ToString(), BehaviorTreeVariableKind.Object);
             }
 
             var row = RowOf(
-                ScopeOf(BehaviorTreeVariableWatch.At(builder.Build(), -1, null, historyLimit: 5), VariableKind.Object),
+                ScopeOf(BehaviorTreeVariableWatch.At(builder.Build(), -1, null, historyLimit: 5), BehaviorTreeVariableKind.Object),
                 "counter");
 
             Assert.AreEqual(5, row.History.Count);
@@ -330,10 +330,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             for (int i = 1; i <= 10; i++)
             {
-                builder.At(i).Write("counter", (i - 1).ToString(), i.ToString(), VariableKind.Object);
+                builder.At(i).Write("counter", (i - 1).ToString(), i.ToString(), BehaviorTreeVariableKind.Object);
             }
 
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(builder.Build(), 4), VariableKind.Object), "counter");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(builder.Build(), 4), BehaviorTreeVariableKind.Object), "counter");
 
             Assert.AreEqual(4, row.WriteCount, "Counting writes the vantage point cannot see would leak the future.");
         }
@@ -342,11 +342,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ANodeWriterIsNamedByTheTopologyAndStaysLocatable()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("alertLevel", "0", "1", VariableKind.Object, writer: Writer)
+                .At(10).Write("alertLevel", "0", "1", BehaviorTreeVariableKind.Object, writer: Writer)
                 .Build();
 
             var topology = new StubTopology().Node(Writer, "Raise Alert");
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording, -1, topology), VariableKind.Object), "alertLevel");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording, -1, topology), BehaviorTreeVariableKind.Object), "alertLevel");
 
             Assert.AreEqual("Raise Alert", row.Latest.WriterName);
             Assert.AreEqual(Writer, row.Latest.WriterGuid);
@@ -357,10 +357,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void WithoutATopologyANodeWriterFallsBackToItsGuid()
         {
             var recording = new RecordingBuilder()
-                .At(10).Write("alertLevel", "0", "1", VariableKind.Object, writer: Writer)
+                .At(10).Write("alertLevel", "0", "1", BehaviorTreeVariableKind.Object, writer: Writer)
                 .Build();
 
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object), "alertLevel");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object), "alertLevel");
 
             Assert.AreEqual(Writer.ToString(), row.Latest.WriterName,
                 "A guid is honest where a name is unavailable; inventing one would be worse.");
@@ -375,12 +375,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // branch's own asset.
             var recording = new RecordingBuilder()
                 .CallSite(4, 0, "Engage")
-                .At(10).Write("lastEngageAlert", "0", "3", VariableKind.Object, callSite: 4, writer: Writer)
+                .At(10).Write("lastEngageAlert", "0", "3", BehaviorTreeVariableKind.Object, callSite: 4, writer: Writer)
                 .Build();
 
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object), "lastEngageAlert");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object), "lastEngageAlert");
 
-            Assert.AreEqual(VariableKind.Object, ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object).Kind);
+            Assert.AreEqual(BehaviorTreeVariableKind.Object, ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object).Kind);
             Assert.AreEqual(4, row.Latest.CallSiteId,
                 "The agent scope hides which branch wrote this; the write itself has to carry it.");
         }
@@ -392,7 +392,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 .At(10).ExternalWrite("hasTarget", "null", "True", "VisionSensor")
                 .Build();
 
-            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Object), "hasTarget");
+            var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Object), "hasTarget");
 
             Assert.AreEqual("VisionSensor", row.Latest.WriterName);
             Assert.IsFalse(row.Latest.HasLocatableWriter,
@@ -426,10 +426,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // Possible on a clipped recording: the sub-tree push scrolled out of the ring while its writes
             // did not. Losing the row would hide a real value; naming it by id is the honest fallback.
             var recording = new RecordingBuilder()
-                .At(10).Write("attempts", "0", "1", VariableKind.Graph, callSite: 9)
+                .At(10).Write("attempts", "0", "1", BehaviorTreeVariableKind.Graph, callSite: 9)
                 .Build();
 
-            Assert.AreEqual("call site 9", ScopeOf(BehaviorTreeVariableWatch.At(recording), VariableKind.Graph, 9).Label);
+            Assert.AreEqual("call site 9", ScopeOf(BehaviorTreeVariableWatch.At(recording), BehaviorTreeVariableKind.Graph, 9).Label);
         }
 
         #endregion
@@ -449,9 +449,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 var watch = BehaviorTreeVariableWatch.At(recorder);
 
-                Assert.AreEqual("1", RowOf(ScopeOf(watch, VariableKind.Graph, BehaviorTreeCallSite.RootId), "attempts")?.Value,
+                Assert.AreEqual("1", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Graph, BehaviorTreeCallSite.RootId), "attempts")?.Value,
                     "A Graph write must land in the branch scope the write was made from.");
-                Assert.AreEqual("2", RowOf(ScopeOf(watch, VariableKind.Object), "alertLevel")?.Value,
+                Assert.AreEqual("2", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "alertLevel")?.Value,
                     "An Object write must land in the agent scope.");
             }
             finally
@@ -466,7 +466,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         ///
         /// <para>
         /// A real machine is needed rather than a bare node: <c>SaveVariable</c> resolves
-        /// <see cref="VariableKind.Object"/> against the agent's Variables component, so an Object write
+        /// <see cref="BehaviorTreeVariableKind.Object"/> against the agent's Variables component, so an Object write
         /// without one throws — which is also why this is the write path worth covering rather than assuming.
         /// </para>
         /// </summary>
@@ -485,8 +485,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.SetMachine(machine);
             node.SetFlightRecorder(recorder);
 
-            node.Write("attempts", VariableKind.Graph, 1);
-            node.Write("alertLevel", VariableKind.Object, 2);
+            node.Write("attempts", BehaviorTreeVariableKind.Graph, 1);
+            node.Write("alertLevel", BehaviorTreeVariableKind.Object, 2);
 
             return recorder;
         }
@@ -530,7 +530,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                     "An unchanged value is dropped, or a fact recomputed every frame fills the buffer with 'still true'.");
                 Assert.IsTrue(writer.Write(sensor, "hasTarget", false));
 
-                var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recorder), VariableKind.Object), "hasTarget");
+                var row = RowOf(ScopeOf(BehaviorTreeVariableWatch.At(recorder), BehaviorTreeVariableKind.Object), "hasTarget");
 
                 Assert.AreEqual("False", row.Value);
                 Assert.AreEqual(2, row.WriteCount, "The duplicate must not appear as a third write.");
@@ -554,7 +554,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             public override string NodeName => "Writing Test Node";
 
-            public void Write(string key, VariableKind kind, object value) => SaveVariable(key, kind, value);
+            public void Write(string key, BehaviorTreeVariableKind kind, object value) => SaveVariable(key, kind, value);
         }
 
         #endregion
@@ -576,9 +576,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
                 var watch = BehaviorTreeVariableWatch.At(imported);
 
-                Assert.AreEqual("1", RowOf(ScopeOf(watch, VariableKind.Graph, BehaviorTreeCallSite.RootId), "attempts")?.Value,
+                Assert.AreEqual("1", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Graph, BehaviorTreeCallSite.RootId), "attempts")?.Value,
                     "A Graph scope that imported as anything else would regroup the whole table.");
-                Assert.AreEqual("2", RowOf(ScopeOf(watch, VariableKind.Object), "alertLevel")?.Value);
+                Assert.AreEqual("2", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "alertLevel")?.Value);
             }
             finally
             {
@@ -603,8 +603,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var watch = BehaviorTreeVariableWatch.At(imported);
 
-            Assert.AreEqual("True", RowOf(ScopeOf(watch, VariableKind.Object), "hasTarget")?.Value);
-            Assert.AreEqual("VisionSensor", RowOf(ScopeOf(watch, VariableKind.Object), "hasTarget").Latest.WriterName);
+            Assert.AreEqual("True", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "hasTarget")?.Value);
+            Assert.AreEqual("VisionSensor", RowOf(ScopeOf(watch, BehaviorTreeVariableKind.Object), "hasTarget").Latest.WriterName);
         }
 
         #endregion
