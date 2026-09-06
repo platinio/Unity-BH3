@@ -132,31 +132,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
-        /// A Generate Random Navmesh Position that is actually configured — it writes somewhere, under a
-        /// name.
-        /// </summary>
-        /// <remarks>
-        /// Both halves are required before the node will run at all, and neither is what the tests using
-        /// this are about: they care that it reaches an answer rather than throwing while reading a port.
-        /// The node used to tolerate having neither, sampling a position and discarding it, which made it a
-        /// convenient fixture and hid that an unkeyed one can never do anything useful.
-        /// <para>
-        /// The key goes through a literal rather than <c>SetDefaultValue</c> for the reason
-        /// <see cref="FeedFloat"/> gives: a default written after <c>Definition()</c> does not survive the
-        /// machine instantiating the macro.
-        /// </para>
-        /// </remarks>
-        protected static GenerateRandomNavMeshPosition AddNavMeshPosition(
-            BehaviorTreeGraph graph, float x, float y)
-        {
-            var node = Add<GenerateRandomNavMeshPosition>(graph, x, y);
-            SetPrivateField(node, "VariableKind", BehaviorTreeVariableKind.Object);
-            FeedString(graph, node, node.PositionKey, "sampledPoint");
-
-            return node;
-        }
-
-        /// <summary>
         /// A Visual Scripting read of an agent variable, as a value source for a guard.
         /// </summary>
         protected static GetVariable ReadAgentVariable(BehaviorTreeGraph graph, string key, float x, float y)

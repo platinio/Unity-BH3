@@ -1,11 +1,36 @@
-﻿using System.Collections.Generic;
-using ArcaneOnyx.GraphCore;
+﻿using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
+    /// <summary>
+    /// Offers a random point on the navmesh near the agent, plus whether it found one.
+    ///
+    /// <para>
+    /// <b>A data node, not an action.</b> It never enters the execution flow
+    /// (<see cref="CanBeUsedAsTransitionDestination"/> is false) and runs nothing on its own schedule; the
+    /// sample happens when another node pulls one of the outputs. It used to be an action that wrote its
+    /// answer into a variable and reported Success or Failure, which meant a caller wanting the position
+    /// had to agree with it on a key, read that key back through a second node, and trust that nothing
+    /// else wrote the same name in between. A value belongs on a port.
+    /// </para>
+    ///
+    /// <para>
+    /// Both outputs describe the <em>same</em> sample — one per frame, cached — for the reason
+    /// <c>TacticalPositionSelection</c> caches: the pick is random, so a second run answers differently,
+    /// and a validity flag from one run beside a position from another is a lie with two ports.
+    /// </para>
+    ///
+    /// <para>
+    /// Failing to find a point is an ordinary outcome, not a misconfiguration, so it is reported rather
+    /// than thrown: <see cref="HasPosition"/> goes false and <see cref="Position"/> answers
+    /// <see cref="Vector3.zero"/>. A branch that must not act without a point gates on
+    /// <see cref="HasPosition"/> through a Boolean Condition — which is what the Failure this node used to
+    /// return was doing, made explicit on the canvas.
+    /// </para>
+    /// </summary>
     [GraphCreateMenu("Unity/Navigation/Generate Random Navmesh Position")]
     public class GenerateRandomNavMeshPosition : GameplayNode
     {
@@ -18,12 +43,29 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueInput SampleDistance { get; private set; }
 
-        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
         [DoNotSerialize]
-        public ValueInput PositionKey { get; private set; }
+        public ValueOutput Position { get; private set; }
+
+        [DoNotSerialize]
+        public ValueOutput HasPosition { get; private set; }
+
+        /// <summary>The sample both outputs describe. Valid only for <see cref="lastFrame"/>.</summary>
+        [DoNotSerialize] private Vector3 lastPosition;
+
+        [DoNotSerialize] private bool lastFound;
+
+        [DoNotSerialize] private int lastFrame = -1;
 
         public override string NodeName => "Generate Random Nav Position";
-        public override string Description => "Generates a random nav mesh position, returns SUCCESS/FAILURE indicating if it was possible to generate";
+
+        public override string Description =>
+            "Offers a random navmesh position near the agent, and whether one was found";
+
+        public override bool CanBeUsedAsTransitionDestination => false;
+
+        // Four inputs and two outputs, all fixed, so the size chosen at creation never goes stale --
+        // the same reason TacticalPositionSelection sets one.
+        public override Vector2 StartingSize => new(240.0f, 180.0f);
 
         protected override void Definition()
         {
@@ -33,49 +75,60 @@ namespace ArcaneOnyx.BehaviorTree
             MaxDistance = ValueInput<float>(nameof(MaxDistance), 0.0f);
             MaxTries = ValueInput<int>(nameof(MaxTries), 3);
 
-            // A sample radius of zero can never hit the navmesh, so the old default made this node return
-            // Failure forever for anyone who left it alone. One metre is the smallest radius that actually
+            // A sample radius of zero can never hit the navmesh, so the old default made this node find
+            // nothing forever for anyone who left it alone. One metre is the smallest radius that actually
             // finds a surface under a point that is roughly on one.
             SampleDistance = ValueInput<float>(nameof(SampleDistance), 1.0f);
-            PositionKey = ValueInput<string>(nameof(PositionKey), string.Empty);
+
+            Position = ValueOutput<Vector3>(nameof(Position), () =>
+            {
+                Sample();
+                return lastPosition;
+            });
+
+            HasPosition = ValueOutput<bool>(nameof(HasPosition), () =>
+            {
+                Sample();
+                return lastFound;
+            });
         }
 
-        public override void CollectProblems(List<NodeProblem> into)
+        /// <summary>
+        /// The frame's sample, run on the first pull and reread by every later one. The cache is written
+        /// only after a run completes, so a pull that throws leaves nothing stale behind.
+        /// </summary>
+        private void Sample()
         {
-            base.CollectProblems(into);
-            VariableKeyPort.CollectProblems(PositionKey, into);
-            VariableKindField.CollectProblems(VariableKind, into);
-        }
+            if (lastFrame == Time.frameCount) return;
 
-        public override ExecutionStatus OnUpdate()
-        {
-            // Before any sampling. A node with no key cannot succeed however many points it tries, so the
-            // work is wasted and the complaint arrives late — and until this resolved through
-            // VariableKeyPort at all, an empty key wrote a variable called "" and still reported Success.
-            string positionKey = VariableKeyPort.Resolve(PositionKey, NodeName);
-
-            // Read once rather than per iteration: the loop condition re-evaluated the port every pass, and a
-            // port read can reach a variable lookup or a whole script graph.
+            // Read once rather than per iteration: the loop condition re-evaluated the port every pass, and
+            // a port read can reach a variable lookup or a whole script graph.
             int maxTries = MaxTries.GetValue<int>();
             float sampleDistance = SampleDistance.GetValue<float>();
+            float minDistance = MinDistance.GetValue<float>();
+            float maxDistance = MaxDistance.GetValue<float>();
+
+            var origin = transform.position;
+            var found = false;
+            var position = Vector3.zero;
 
             for (int i = 0; i < maxTries; i++)
             {
-                Vector2 dir = Random.insideUnitCircle;
-                float d = Random.Range(MinDistance.GetValue<float>(), MaxDistance.GetValue<float>());
+                Vector2 direction = Random.insideUnitCircle;
+                float distance = Random.Range(minDistance, maxDistance);
 
-                Vector3 randomPosition = transform.position + (new Vector3(dir.x, 0.0f, dir.y) * d);
+                Vector3 candidate = origin + (new Vector3(direction.x, 0.0f, direction.y) * distance);
 
-                if (NavMesh.SamplePosition(randomPosition, out var hit, sampleDistance, NavMesh.AllAreas))
-                {
-                    SaveVariable(positionKey, VariableKind, hit.position);
-                    return ExecutionStatus.Success;
-                }
+                if (!NavMesh.SamplePosition(candidate, out var hit, sampleDistance, NavMesh.AllAreas)) continue;
+
+                position = hit.position;
+                found = true;
+                break;
             }
 
-            return ExecutionStatus.Failure;
+            lastPosition = position;
+            lastFound = found;
+            lastFrame = Time.frameCount;
         }
-
     }
 }
-

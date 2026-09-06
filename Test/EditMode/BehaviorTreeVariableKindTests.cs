@@ -33,8 +33,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// <summary>Every node whose store field actually decides where it goes.</summary>
         private static readonly Type[] StoreHonouringNodes =
         {
-            typeof(GetVariable), typeof(SetVariable), typeof(RemoveVariable),
-            typeof(GenerateRandomNavMeshPosition)
+            typeof(GetVariable), typeof(SetVariable), typeof(RemoveVariable)
         };
 
         private static FieldInfo KindField(Type nodeType) =>
@@ -46,8 +45,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.Define();
             KindField(nodeType).SetValue(node, kind);
 
-            var keyProperty = nodeType.GetProperty("Key") ?? nodeType.GetProperty("PositionKey");
-            ((ValueInput)keyProperty?.GetValue(node))?.SetDefaultValue(key);
+            ((ValueInput)nodeType.GetProperty("Key")?.GetValue(node))?.SetDefaultValue(key);
 
             return node;
         }
@@ -162,14 +160,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>
-        /// The Key rule reaches the same four nodes as the store rule.
+        /// The Key rule reaches every node that names a variable, not just the ones someone remembered.
         /// </summary>
         /// <remarks>
-        /// <c>GenerateRandomNavMeshPosition</c> was the odd one out: it read <c>PositionKey</c> raw instead
-        /// of through <see cref="VariableKeyPort"/>, so an empty key wrote a variable named <c>""</c> and
-        /// still reported Success — a fact published under a name no guard will ever watch, with nothing on
-        /// the canvas to say so. Checked across the set rather than on that one node, because the way this
-        /// gap appears is a node being written without the shared rule wired in.
+        /// Checked across the set rather than node by node, because the way this gap appears is a node
+        /// written without the shared rule wired in — which is how <c>GenerateRandomNavMeshPosition</c> read
+        /// its key raw for as long as it had one, publishing under the name <c>""</c> and reporting Success.
         /// </remarks>
         [Test]
         public void EveryStoreHonouringNode_ReportsItselfWhenNoKeyIsChosen()
@@ -183,39 +179,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             CollectionAssert.IsEmpty(silent,
                 "These nodes act on a variable by name and stay quiet when the name is blank:\n"
                 + string.Join("\n", silent));
-        }
-
-        /// <summary>
-        /// The runtime half of the same rule, on the node that was missing it.
-        /// </summary>
-        /// <remarks>
-        /// Reaches the throw without a baked navmesh precisely because the key resolves before any sampling:
-        /// <c>NavMesh.SamplePosition</c> would find nothing here, the loop would fall through to Failure, and
-        /// a key resolved at the write site would never be reached at all — which is what let the raw read
-        /// survive unnoticed.
-        /// </remarks>
-        [Test]
-        public void GeneratingAPositionWithNoKey_ThrowsNamingTheNode()
-        {
-            var agent = new UnityEngine.GameObject("Zombie");
-
-            try
-            {
-                var machine = agent.AddComponent<BindableMachine>();
-                machine.BindVariables();
-
-                var node = Node<GenerateRandomNavMeshPosition>(
-                    BehaviorTreeVariableKind.Object, key: string.Empty);
-                node.SetMachine(machine);
-
-                var thrown = Assert.Throws<InvalidOperationException>(() => node.OnUpdate());
-
-                StringAssert.Contains(node.NodeName, thrown.Message);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(agent);
-            }
         }
 
         [Test]
