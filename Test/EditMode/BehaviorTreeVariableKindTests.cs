@@ -461,6 +461,74 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(GraphCore.ExecutionStatus.Failure, node.OnUpdate());
         }
 
+        /// <summary>
+        /// A branch removes its own copy of a shadowed name and leaves its caller's alone.
+        /// </summary>
+        /// <remarks>
+        /// Scope isolation is what makes a sub-tree safe to reuse: two agents running the same branch must
+        /// not be able to reach each other's scratch, and a branch must not be able to reach its caller's.
+        /// A removal that walked the chain the way a <em>read</em> does would break that in the most
+        /// destructive direction available — deleting a name out from under the caller rather than merely
+        /// reading it.
+        /// </remarks>
+        [Test]
+        public void RemovingAGraphVariable_TakesTheBranchsOwnCopyOnly()
+        {
+            var caller = new BehaviorTreeVariableScope(new VariableDeclarations());
+            caller.Set("attempts", "callers");
+
+            var branch = new BehaviorTreeVariableScope(new VariableDeclarations(), caller);
+            branch.Set("attempts", "branchs");
+
+            var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Graph, "attempts");
+            node.SetVariableScope(branch);
+
+            Assert.AreEqual(GraphCore.ExecutionStatus.Success, node.OnUpdate());
+
+            Assert.IsFalse(branch.Local.IsDefined("attempts"), "the branch's own copy is the one removed");
+            Assert.AreEqual("callers", caller.Local.Get("attempts"),
+                "a branch cannot delete a name out from under its caller");
+        }
+
+        /// <summary>
+        /// A name only the caller defines is not this branch's to remove, so nothing happens and nothing is
+        /// recorded.
+        /// </summary>
+        /// <remarks>
+        /// The same isolation from the other side, and the case that would look like success if the removal
+        /// walked outward: the node would report Success having deleted the caller's variable, and the
+        /// recording would carry a write the branch had no business making.
+        /// </remarks>
+        [Test]
+        public void RemovingAGraphVariableOnlyTheCallerDefines_ChangesNothing()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+
+            try
+            {
+                var caller = new BehaviorTreeVariableScope(new VariableDeclarations());
+                caller.Set("attempts", "callers");
+
+                var branch = new BehaviorTreeVariableScope(new VariableDeclarations(), caller);
+
+                var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Graph, "attempts");
+                node.SetVariableScope(branch);
+                node.SetFlightRecorder(recorder);
+
+                Assert.AreEqual(GraphCore.ExecutionStatus.Success, node.OnUpdate(),
+                    "there was a store to remove from; the name simply was not in it");
+
+                Assert.AreEqual("callers", caller.Local.Get("attempts"),
+                    "the caller's variable is not this branch's to delete");
+                Assert.AreEqual(0, recorder.EventCount,
+                    "nothing changed, so the recording must not claim something did");
+            }
+            finally
+            {
+                BehaviorTreeFlightRecorders.Reset();
+            }
+        }
+
         [Test]
         public void AConfiguredRead_ReachesItsStore()
         {

@@ -64,6 +64,11 @@ namespace ArcaneOnyx.BehaviorTree
         /// A key that is already gone is the asked-for state, so it is not an error and is not recorded —
         /// nothing changed. Having nowhere to remove <em>from</em> is different, and the caller is told.
         /// </para>
+        /// <para>
+        /// Removes from one store and no further, which for <see cref="BehaviorTreeVariableKind.Graph"/>
+        /// means the node's own scope — the same rule <see cref="SaveVariable"/> follows, and deliberately
+        /// not the outward walk a read does. A branch cannot delete a name out from under its caller.
+        /// </para>
         /// </remarks>
         /// <returns>Whether there was a store to remove from.</returns>
         protected bool EraseVariable(string key, BehaviorTreeVariableKind variableKind)
@@ -75,8 +80,13 @@ namespace ArcaneOnyx.BehaviorTree
 
             // Recorded before the removal, while the value still exists, for the reason SaveVariable gives:
             // afterwards there is nothing to say what it was. Compiles out with the rest of the facade.
+            //
+            // Read from the store being mutated rather than through ReadVariable. The two agree today --
+            // the early return above means this store holds the key, and a scope read checks its own
+            // declarations before walking outward -- but that is two facts holding hands, and only one of
+            // them is in this method. Reading the object being changed needs neither.
             Debugging.BehaviorTreeRecorder.VariableWrite(
-                this, key, variableKind, ReadVariable(key, variableKind), null);
+                this, key, variableKind, Read(declarations, key), null);
 
             if (variableKind == BehaviorTreeVariableKind.Object)
             {
