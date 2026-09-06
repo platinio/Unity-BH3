@@ -235,7 +235,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var repeater = Add<Repeater>(tree.graph, 0.0f, 100.0f);
             var write = Add<SetVariable>(tree.graph, 0.0f, 250.0f);
 
-            SetPrivateField(write, "VariableKind", VariableKind.Object);
+            SetPrivateField(write, "VariableKind", BehaviorTreeVariableKind.Object);
             FeedString(tree.graph, write, write.Key, "hasTarget");
             FeedBool(tree.graph, write, write.Value, true);
 
@@ -319,7 +319,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var repeater = Add<Repeater>(tree.graph, 0.0f, 100.0f);
             var write = Add<SetVariable>(tree.graph, 0.0f, 250.0f);
 
-            SetPrivateField(write, "VariableKind", VariableKind.Object);
+            SetPrivateField(write, "VariableKind", BehaviorTreeVariableKind.Object);
             FeedString(tree.graph, write, write.Key, "tick");
             FeedBool(tree.graph, write, write.Value, true);
 

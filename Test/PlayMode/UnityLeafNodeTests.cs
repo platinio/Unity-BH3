@@ -75,29 +75,38 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
-        /// <c>GenerateRandomNavMeshPosition</c> reports Failure with no navmesh, rather than throwing.
+        /// <c>GenerateRandomNavMeshPosition</c> answers "no position" with no navmesh, rather than throwing.
         ///
         /// <para>
         /// It read its own <c>float</c> sample-distance port with an <c>(int)</c> cast, and unboxing does not
-        /// convert — so the node threw <see cref="System.InvalidCastException"/> on its first tick, with its
-        /// own defaults, before anyone connected anything to it. There is no navmesh in this scene, so Failure
-        /// is the correct answer; the point is that it is an answer at all.
+        /// convert — so the node threw <see cref="System.InvalidCastException"/> the first time it sampled,
+        /// with its own defaults, before anyone connected anything to it. There is no navmesh in this scene,
+        /// so "no position" is the correct answer; the point is that it is an answer at all.
         /// </para>
         /// </summary>
         [UnityTest]
-        public IEnumerator GenerateRandomNavMeshPositionFailsCleanlyWhenThereIsNoNavMesh()
+        public IEnumerator GenerateRandomNavMeshPositionReportsNoPositionWhenThereIsNoNavMesh()
         {
             var tree = NewTree();
-            var node = Add<GenerateRandomNavMeshPosition>(tree.graph, 0.0f, 100.0f);
-            Connect(tree.graph, tree.graph.EntryNode, node);
+
+            // The node sits beside the flow rather than in it -- it is a data node and cannot be a
+            // transition destination -- so the tree needs something else to run.
+            var wait = Add<WaitTime>(tree.graph, 0.0f, 100.0f);
+            Connect(tree.graph, tree.graph.EntryNode, wait);
+            Add<GenerateRandomNavMeshPosition>(tree.graph, 300.0f, 100.0f);
 
             var machine = Spawn(tree);
 
             yield return Frames(3);
 
-            Assert.AreEqual(ExecutionStatus.Failure, machine.LastExecutionStatus,
-                "With no navmesh to sample there is nowhere to go, so Failure is right. Exception would mean "
-                + "the node cannot read its own default sample distance.");
+            var node = RunningNode<GenerateRandomNavMeshPosition>(machine);
+
+            Assert.IsFalse((bool)node.HasPosition.GetPortValue(),
+                "With no navmesh to sample there is nowhere to go, and saying so is the node's job now that "
+                + "it cannot fail a branch.");
+            Assert.AreEqual(Vector3.zero, (Vector3)node.Position.GetPortValue(),
+                "A position nobody found must not read as somewhere. Exception would mean the node cannot "
+                + "read its own default sample distance.");
         }
 
         /// <summary>

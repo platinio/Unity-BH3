@@ -224,7 +224,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var cooldown = Add<Cooldown>(graph, 0.0f, 250.0f);
 
             var child = Add<SetVariable>(graph, 0.0f, 400.0f);
-            SetPrivateField(child, "VariableKind", VariableKind.Object);
+            SetPrivateField(child, "VariableKind", BehaviorTreeVariableKind.Object);
             FeedString(graph, child, child.Key, "marker");
             FeedBool(graph, child, child.Value, true);
 

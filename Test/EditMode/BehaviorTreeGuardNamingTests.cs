@@ -83,7 +83,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             SetPrivateField(keyLiteral, "value", key);
 
             var read = AddNode<GetVariable>(graph);
-            SetPrivateField(read, "VariableKind", Unity.VisualScripting.VariableKind.Object);
+            SetPrivateField(read, "VariableKind", BehaviorTreeVariableKind.Object);
             keyLiteral.Value.ValidlyConnectTo(read.Key);
 
             return read;

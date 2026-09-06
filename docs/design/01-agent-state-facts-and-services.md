@@ -10,8 +10,8 @@ BH3 is a Unity behavior tree system built on visual scripting. Key existing mech
 - Branches are separate `BehaviorTreeGraphAsset`s run via `RunBehaviorTreeGraphNode`. A branch declares
   **Required/Optional variables** which become input ports on the calling node — parameters passed at the
   call site. Deliberately **no output ports**.
-- Variable scopes: reads walk outward (branch → caller → root), writes with `VariableKind.Graph` stay
-  local to the branch instance. Agent-wide state uses `VariableKind.Object` on the agent's Variables
+- Variable scopes: reads walk outward (branch → caller → root), writes with `BehaviorTreeVariableKind.Graph` stay
+  local to the branch instance. Agent-wide state uses `BehaviorTreeVariableKind.Object` on the agent's Variables
   component.
 - `BooleanConditionalExecution` / `ConditionalExecution`: guard nodes that name an owner via
   `UpdateOwner(node)`, armed during `BehaviorTreeGraph.OnAwake` by `AddConditionalExecutionNodes`,
@@ -22,7 +22,7 @@ BH3 is a Unity behavior tree system built on visual scripting. Key existing mech
 ## The problem
 
 A tree has Chase and Attack branches. Chase writes `lastKnownPosition` (agent state,
-`VariableKind.Object`). Attack reads it. But the selector can enter Attack directly — the agent spawned
+`BehaviorTreeVariableKind.Object`). Attack reads it. But the selector can enter Attack directly — the agent spawned
 next to an enemy — so Chase never ran and `lastKnownPosition` was never written. The designer assumed the
 value would be there. It wasn't.
 
@@ -68,7 +68,7 @@ sees it on the first perception update, the fact exists, Attack works — Chase 
 |---|---|---|---|---|
 | **Facts** (knowledge) | lastKnownTargetPos, visibleEnemies, alertLevel | Sensors (MonoBehaviours) and Services (new node kind, below) — always-on relative to their scope | Root-tree wiring, which feeds branch **parameters** | Fact-provider registry: compose-time + spawn-time check (below) |
 | **Resources** (claims) | attack token, reserved slot, cover point claim | Acquire/release nodes inside branches | The resource system | Scope-bound auto-release on branch exit/abort (below) |
-| **Scratch** | timers, retry counters | The branch itself, `VariableKind.Graph` | Same branch | Already solved — scoped, cannot leak |
+| **Scratch** | timers, retry counters | The branch itself, `BehaviorTreeVariableKind.Graph` | Same branch | Already solved — scoped, cannot leak |
 | **Parameters** | attackRange, moveSpeed | Caller, at the call site | The branch | Already solved — Required port unset = `bt_verify` error |
 
 With this taxonomy, **no legal branch-to-branch state handoff remains**, so nothing needs "declared
@@ -95,7 +95,7 @@ Same attachment pattern, opposite data direction.
 
 ## Mechanism 2: Fact providers + registry (the enforceable contract)
 
-Facts keep living where agent state lives today — `VariableKind.Object` on the Variables component. The
+Facts keep living where agent state lives today — `BehaviorTreeVariableKind.Object` on the Variables component. The
 registry is **metadata + validation**, not a new runtime store.
 
 - `[ProvidesFact("lastKnownTargetPos", typeof(Vector3))]` — attribute on sensor MonoBehaviours and on

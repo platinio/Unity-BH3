@@ -359,7 +359,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             SetPrivateField(key, "value", "hasTarget");
 
             var read = Add<GetVariable>(graph, -400.0f, 0.0f);
-            SetPrivateField(read, "VariableKind", VariableKind.Object);
+            SetPrivateField(read, "VariableKind", BehaviorTreeVariableKind.Object);
             key.Value.ValidlyConnectTo(read.Key);
 
             var guard = Add<BooleanReactiveGuard>(graph, -900.0f, 250.0f);
@@ -417,7 +417,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             // the same shape CreateVariableReadFunction produces.
             var read = new Unity.VisualScripting.GetVariable
             {
-                kind = VariableKind.Object,
+                kind = Unity.VisualScripting.VariableKind.Object,
                 specifyFallback = true,
                 position = new Vector2(-160.0f, 0.0f)
             };

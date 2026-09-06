@@ -27,25 +27,26 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var tree = NewTree();
             var graph = tree.graph;
 
-            var node = Add<GenerateRandomNavMeshPosition>(graph, 0.0f, 200.0f);
-            FeedFloat(graph, node, node.SampleDistance, 4.0f);
-            FeedString(graph, node, node.PositionKey, "probePoint");
-            Connect(graph, graph.EntryNode, node);
+            var wait = Add<WaitTime>(graph, 0.0f, 200.0f);
+            Connect(graph, graph.EntryNode, wait);
 
-            var guid = node.guid;
+            var node = Add<GenerateRandomNavMeshPosition>(graph, 300.0f, 200.0f);
+            FeedFloat(graph, node, node.SampleDistance, 4.0f);
+
             var machine = Spawn(tree);
 
-            // One real frame is enough: the cast sits in OnUpdate's argument evaluation, so a broken node
-            // throws before it can succeed or fail. With no NavMesh in the test scene the healthy outcome is
-            // a clean Failure — what matters is that the node exits at all instead of throwing every tick.
             yield return null;
             yield return null;
 
-            Assert.IsTrue(Entered(machine.FlightRecorder, guid),
-                "The node never entered — the fixture wiring is wrong, not the cast under test.");
-            Assert.GreaterOrEqual(ExitCount(machine.FlightRecorder, guid), 1,
-                "The node entered but never exited: its OnUpdate cannot complete, which is exactly what an "
-                + "InvalidCastException on a port read looks like from outside.");
+            var running = RunningNode<GenerateRandomNavMeshPosition>(machine);
+
+            // The cast sits in the sample's port reads, so a broken node throws on the pull rather than
+            // answering. With no NavMesh in the test scene the healthy answer is "no position" — what
+            // matters is that it reaches an answer at all.
+            Assert.DoesNotThrow(() => running.HasPosition.GetPortValue(),
+                "Reading SampleDistance as anything but the float its port declares throws "
+                + "InvalidCastException, and the node can then never answer.");
+            Assert.IsFalse((bool)running.HasPosition.GetPortValue());
         }
 
         /// <summary>

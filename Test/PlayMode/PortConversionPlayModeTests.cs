@@ -30,7 +30,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         ///
         /// <para>
         /// <c>GenerateRandomNavMeshPosition</c> is the subject because it answers without a navmesh: with
-        /// nothing to sample it reports Failure, which is a real answer. What is being tested is that it
+        /// nothing to sample it reports no position, which is a real answer. What is being tested is that it
         /// reaches an answer at all rather than throwing while reading <c>MaxTries</c>.
         /// </para>
         /// </summary>
@@ -38,19 +38,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         public IEnumerator AFloatLiteralOnAnIntegerPortIsReadRatherThanThrown()
         {
             var tree = NewTree();
-            var node = Add<GenerateRandomNavMeshPosition>(tree.graph, 0.0f, 100.0f);
 
+            var wait = Add<WaitTime>(tree.graph, 0.0f, 100.0f);
+            Connect(tree.graph, tree.graph.EntryNode, wait);
+
+            var node = Add<GenerateRandomNavMeshPosition>(tree.graph, 300.0f, 100.0f);
             FeedFloat(tree.graph, node, node.MaxTries, 3.0f);
-
-            Connect(tree.graph, tree.graph.EntryNode, node);
 
             var machine = Spawn(tree);
 
             yield return Frames(3);
 
-            Assert.AreEqual(ExecutionStatus.Failure, machine.LastExecutionStatus,
-                "There is no navmesh here, so Failure is the right answer. Exception would mean the node "
-                + "could not read a port the editor let the author fill in.");
+            var running = RunningNode<GenerateRandomNavMeshPosition>(machine);
+
+            Assert.IsFalse((bool)running.HasPosition.GetPortValue(),
+                "There is no navmesh here, so no position is the right answer. Exception would mean the "
+                + "node could not read a port the editor let the author fill in.");
         }
 
         /// <summary>

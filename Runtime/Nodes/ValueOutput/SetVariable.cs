@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -9,7 +9,7 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Variables/Set Variable")]
     public class SetVariable : GameplayNode
     {
-        [Serialize, Inspectable] private VariableKind VariableKind;
+        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
       
         [DoNotSerialize]
         public ValueInput Key { get; private set; }
@@ -33,16 +33,18 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.CollectProblems(into);
             VariableKeyPort.CollectProblems(Key, into);
+            VariableKindField.CollectProblems(VariableKind, into);
         }
 
         public override ExecutionStatus OnUpdate()
         {
             string key = VariableKeyPort.Resolve(Key, NodeName);
+            var kind = VariableKindField.Resolve(VariableKind, NodeName);
             object value = Value.GetValue();
 
             // Same switch as GameplayNode.SaveVariable, which is why this defers to it: two copies of the
             // rule about where a Graph write lands is exactly one copy too many.
-            SaveVariable(key, VariableKind, value);
+            SaveVariable(key, kind, value);
 
             return ExecutionStatus.Success;
         }

@@ -229,7 +229,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // What a designer does in the graph window: add a read, declare nothing.
             var get = new Unity.VisualScripting.GetVariable
             {
-                kind = VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
+                kind = Unity.VisualScripting.VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
             };
             function.graph.units.Add(get);
             get.Define();
@@ -260,7 +260,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var get = new Unity.VisualScripting.GetVariable
             {
-                kind = VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
+                kind = Unity.VisualScripting.VariableKind.Object, position = new Vector2(-300.0f, 0.0f)
             };
             function.graph.units.Add(get);
             get.Define();

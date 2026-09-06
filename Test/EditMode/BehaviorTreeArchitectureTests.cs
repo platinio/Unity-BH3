@@ -353,5 +353,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 $"{nameof(BehaviorTreeMachine)} must [RequireComponent(typeof(Variables))] — it depends on " +
                 $"a Variables component being present on the same GameObject.");
         }
+
+        /// <summary>
+        /// No node offers Unity's <see cref="Unity.VisualScripting.VariableKind"/> as an authorable field.
+        ///
+        /// <para>
+        /// That enum's zero value is <c>Flow</c>, so a node serializing one starts on a store a behavior
+        /// tree cannot reach — and, because the field is only read when the node runs, says nothing about it
+        /// until then. Four nodes shipped that way and one of them is still misconfigured in a demo asset.
+        /// <see cref="BehaviorTreeVariableKind"/> exists to make the state unrepresentable, which only holds
+        /// while nobody reintroduces the original field by copying an older node.
+        /// </para>
+        ///
+        /// <para>
+        /// Scoped to serialized instance fields on purpose. The Visual Scripting units in
+        /// <c>Runtime/Nodes/VisualScripting/Units/</c> legitimately carry Unity's kind — they run inside a
+        /// flow, where Flow is a store like any other — but they are units, not
+        /// <see cref="BehaviorTreeNode"/>s, so they are outside this scan by construction.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void Nodes_DoNotSerializeUnitysVariableKind()
+        {
+            var offenders = RuntimeTypes()
+                .Where(type => type.IsClass && !type.IsAbstract && typeof(BehaviorTreeNode).IsAssignableFrom(type))
+                .SelectMany(type => type
+                    .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Where(field => field.FieldType == typeof(Unity.VisualScripting.VariableKind))
+                    .Where(field => field.GetCustomAttribute<SerializeAttribute>() != null
+                                    || field.GetCustomAttribute<UnityEngine.SerializeField>() != null)
+                    .Select(field => $"{type.Name}.{field.Name}"))
+                .OrderBy(name => name)
+                .ToArray();
+
+            CollectionAssert.IsEmpty(offenders,
+                "A node's store field must be ArcaneOnyx.BehaviorTree.BehaviorTreeVariableKind. Unity's "
+                + "VariableKind defaults to Flow, which a tree cannot serve, so the node silently does "
+                + "nothing until someone runs it:\n" + string.Join("\n", offenders));
+        }
     }
 }

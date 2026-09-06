@@ -136,6 +136,25 @@ Guards on the same owner are ANDed: attach several and the node runs only when a
 | Set Variable | Writes a variable by key |
 | Remove Variable | Removes a variable by key |
 
+Each of these takes a **key** (the variable's name) and a **Variable Kind** (which store to look in). The
+key goes on a port, so it can be typed inline or driven by a graph; the kind is a dropdown on the node.
+
+| Variable Kind | Where the value lives |
+|---|---|
+| `Graph` | The running tree, through the calling chain — a branch sees its own values first, then its caller's, out to the agent. A branch's writes stay in the branch, which is what makes one safe to reuse across unrelated agents. |
+| `Object` | The agent's own `Variables` component. Facts every branch on that agent can see, and the ones reactive guards watch. |
+| `Scene` | Everything in the active scene. |
+| `Application` | Shared across scenes, reset when the application quits. |
+| `Saved` | Outlives the application. Unity object references are not supported. |
+
+**A new node starts with no store chosen**, and says so: the canvas marks it with a problem, and running it
+throws naming the node rather than quietly reading nothing. Pick a kind, the same way you would fill in the
+key. `Generate Random Navmesh Position` carries the same field for the position it writes.
+
+> Older trees may contain a node whose store was `Flow` — a Visual Scripting kind a behavior tree could
+> never serve, and the value nodes used to default to. Those load as unset and light up on the canvas.
+> Pick the store the node was always meant to use.
+
 ### Literal
 
 Literals exist to give a port a typed, inspector-editable value. They are the standard way to fill a port

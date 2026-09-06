@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Reflection;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 
@@ -8,15 +7,13 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Unity/Variables/Remove Variable")]
     public class RemoveVariable : GameplayNode
     {
-        [Serialize, Inspectable] private VariableKind VariableKind;
-        
+        [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;
+
         [DoNotSerialize]
         public ValueInput Key { get; private set; }
 
         public override string NodeName => "Remove Variable";
 
-        private VariableDeclarationCollection variableDeclarationCollection;
-        
         protected override void Definition()
         {
             base.Definition();
@@ -30,22 +27,20 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.CollectProblems(into);
             VariableKeyPort.CollectProblems(Key, into);
+            VariableKindField.CollectProblems(VariableKind, into);
         }
 
-        public override void OnEnter()
-        {
-            if (variableDeclarationCollection != null) return;
-            
-            FieldInfo collectionProperty = typeof(VariableDeclarations).GetField("collection", BindingFlags.NonPublic | BindingFlags.Instance);
-            variableDeclarationCollection = collectionProperty.GetValue(BehaviorTreeMachine.Variables.declarations) as VariableDeclarationCollection;
-        }
-
+        /// <summary>
+        /// Failure means there was no store to remove from — a Graph removal on a graph running without a
+        /// scope, which is the only reachable case. Removing a key that was already gone is Success: that is
+        /// the state the node was asked for.
+        /// </summary>
         public override ExecutionStatus OnUpdate()
         {
             string key = VariableKeyPort.Resolve(Key, NodeName);
-            variableDeclarationCollection.Remove(key);
-            
-            return ExecutionStatus.Success;
+            var kind = VariableKindField.Resolve(VariableKind, NodeName);
+
+            return EraseVariable(key, kind) ? ExecutionStatus.Success : ExecutionStatus.Failure;
         }
     }
 }

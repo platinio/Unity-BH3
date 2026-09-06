@@ -133,6 +133,34 @@ namespace ArcaneOnyx.BehaviorTree
             return changed;
         }
 
+        /// <summary>
+        /// Undefines an agent variable and records that it moved, in one call — the removal half of
+        /// <see cref="SetAgentVariable"/>, and for the same reason.
+        ///
+        /// <para>
+        /// A removal is a change like any other, and the louder one: a guard watching <c>hasTarget</c> is
+        /// watching for it to stop being true, and a key that vanishes without the version moving leaves
+        /// that guard holding a cached answer forever. Removing through
+        /// <see cref="VariableDeclarationsExtensions.Undefine"/> directly is exactly the "fourth writer
+        /// breaks the rule" case this type's summary warns about, and it is what
+        /// <c>Remove Variable</c> used to do.
+        /// </para>
+        /// </summary>
+        /// <returns>Whether the key was there to remove.</returns>
+        public bool RemoveAgentVariable(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return false;
+
+            Bind();
+
+            if (variables == null) return false;
+            if (!variables.declarations.Undefine(key)) return false;
+
+            Bump(key);
+
+            return true;
+        }
+
         /// <summary>Records that a key changed. Private, so the bump cannot be issued without the write.</summary>
         private void Bump(string key)
         {

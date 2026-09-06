@@ -140,7 +140,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             SetPrivateField(keyLiteral, "value", key);
 
             var read = Add<GetVariable>(graph, x, y);
-            SetPrivateField(read, "VariableKind", VariableKind.Object);
+            SetPrivateField(read, "VariableKind", BehaviorTreeVariableKind.Object);
             keyLiteral.Value.ValidlyConnectTo(read.Key);
 
             return read;
