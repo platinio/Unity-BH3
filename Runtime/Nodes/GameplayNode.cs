@@ -52,6 +52,35 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// The one store a write or a removal of <paramref name="variableKind"/> acts on, or null when there
+        /// is none to reach yet.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="BehaviorTreeVariableKind.Graph"/> resolves to the node's own scope and no further,
+        /// which is the same rule <see cref="SaveVariable"/> applies and deliberately not the rule a
+        /// <em>read</em> follows — a read walks the calling chain outward. Anything that must see a caller's
+        /// value has to go through <see cref="VariableScope"/> rather than through here.
+        /// </remarks>
+        protected VariableDeclarations DeclarationsFor(BehaviorTreeVariableKind variableKind)
+        {
+            switch (variableKind)
+            {
+                case BehaviorTreeVariableKind.Graph:
+                    return VariableScope?.Local;
+                case BehaviorTreeVariableKind.Object:
+                    return BehaviorTreeMachine != null ? BehaviorTreeMachine.Variables?.declarations : null;
+                case BehaviorTreeVariableKind.Scene:
+                    return SceneVariables.Instance(SceneManager.GetActiveScene())?.variables?.declarations;
+                case BehaviorTreeVariableKind.Application:
+                    return ApplicationVariables.current;
+                case BehaviorTreeVariableKind.Saved:
+                    return SavedVariables.current;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
         /// The value a write is about to replace, or null when there isn't one yet.
         /// <para>
         /// Never throws. Every store here throws on an undefined name, and a debugging read has no business
@@ -63,21 +92,14 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (string.IsNullOrEmpty(key)) return null;
 
-            switch (variableKind)
+            // Graph is the one kind that is not a single store: a read sees the branch's own values first
+            // and its caller's underneath, which is exactly what DeclarationsFor does not do.
+            if (variableKind == BehaviorTreeVariableKind.Graph)
             {
-                case BehaviorTreeVariableKind.Graph:
-                    return VariableScope != null && VariableScope.TryGet(key, out var scoped) ? scoped : null;
-                case BehaviorTreeVariableKind.Object:
-                    return Read(BehaviorTreeMachine != null ? BehaviorTreeMachine.Variables?.declarations : null, key);
-                case BehaviorTreeVariableKind.Scene:
-                    return Read(SceneVariables.Instance(SceneManager.GetActiveScene())?.variables?.declarations, key);
-                case BehaviorTreeVariableKind.Application:
-                    return Read(ApplicationVariables.current, key);
-                case BehaviorTreeVariableKind.Saved:
-                    return Read(SavedVariables.current, key);
-                default:
-                    return null;
+                return VariableScope != null && VariableScope.TryGet(key, out var scoped) ? scoped : null;
             }
+
+            return Read(DeclarationsFor(variableKind), key);
         }
 
         private static object Read(VariableDeclarations declarations, string key)

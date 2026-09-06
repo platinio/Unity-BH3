@@ -30,19 +30,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class BehaviorTreeVariableKindTests
     {
-        /// <summary>
-        /// Every node whose store field actually decides where it goes.
-        /// </summary>
-        /// <remarks>
-        /// <c>RemoveVariable</c> is missing on purpose. It serializes the same field and never reads it —
-        /// <c>OnUpdate</c> always removes from the agent's own declarations, whatever the dropdown says — so
-        /// the canvas rule the others share would be telling an author to make a choice that has no effect.
-        /// A pre-existing defect, carried through this change rather than fixed by it; when it is fixed,
-        /// add the type here and this rule starts covering it.
-        /// </remarks>
+        /// <summary>Every node whose store field actually decides where it goes.</summary>
         private static readonly Type[] StoreHonouringNodes =
         {
-            typeof(GetVariable), typeof(SetVariable), typeof(GenerateRandomNavMeshPosition)
+            typeof(GetVariable), typeof(SetVariable), typeof(RemoveVariable),
+            typeof(GenerateRandomNavMeshPosition)
         };
 
         private static FieldInfo KindField(Type nodeType) =>
@@ -276,6 +268,47 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private sealed class BindableMachine : BehaviorTreeMachine
         {
             public void BindVariables() => Variables = GetComponent<Variables>();
+        }
+
+        /// <summary>
+        /// The dropdown decides which store loses the key, which it did not used to.
+        /// </summary>
+        /// <remarks>
+        /// <c>RemoveVariable</c> resolved its collection once from the agent's own declarations and removed
+        /// from it whatever the author had picked, so choosing Application deleted an agent variable and
+        /// reported Success — the node did something, just not the something on the node.
+        /// </remarks>
+        [Test]
+        public void RemovingFromOneStore_LeavesTheOthersAlone()
+        {
+            var agent = new UnityEngine.GameObject("Zombie");
+
+            try
+            {
+                var machine = agent.AddComponent<BindableMachine>();
+                machine.BindVariables();
+
+                // The same name in two stores, so a removal from the wrong one is visible rather than
+                // indistinguishable from a removal from the right one.
+                machine.Variables.declarations.Set("doomed", "agent");
+                Variables.Application.Set("doomed", "application");
+
+                var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Application, "doomed");
+                node.SetMachine(machine);
+
+                Assert.AreEqual(GraphCore.ExecutionStatus.Success, node.OnUpdate());
+
+                Assert.IsFalse(Variables.Application.IsDefined("doomed"),
+                    "the chosen store is the one that loses the key");
+                Assert.IsTrue(machine.Variables.declarations.IsDefined("doomed"),
+                    "the agent store is not the chosen one and must be untouched");
+            }
+            finally
+            {
+                // No Application cleanup: removing "doomed" is what the node under test does, and Clear()
+                // would take the other fixtures' keys with it.
+                UnityEngine.Object.DestroyImmediate(agent);
+            }
         }
 
         [Test]
