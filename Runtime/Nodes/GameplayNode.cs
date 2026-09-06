@@ -52,6 +52,45 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// Undefines a variable, routed and recorded exactly like a write — because that is what it is.
+        /// </summary>
+        /// <remarks>
+        /// A removal is a change to null, and every consumer of the recording treats it as one: the watch
+        /// wants a history entry saying the value went away, a variable breakpoint should fire, and a
+        /// reactive guard has to notice. Agent scope therefore goes through
+        /// <see cref="AgentVariableWriter"/> like every other agent write, so the version bump guards
+        /// compare against rides along; the alternative is the silent failure that type's summary describes.
+        /// <para>
+        /// A key that is already gone is the asked-for state, so it is not an error and is not recorded —
+        /// nothing changed. Having nowhere to remove <em>from</em> is different, and the caller is told.
+        /// </para>
+        /// </remarks>
+        /// <returns>Whether there was a store to remove from.</returns>
+        protected bool EraseVariable(string key, BehaviorTreeVariableKind variableKind)
+        {
+            var declarations = DeclarationsFor(variableKind);
+            if (declarations == null) return false;
+
+            if (!declarations.IsDefined(key)) return true;
+
+            // Recorded before the removal, while the value still exists, for the reason SaveVariable gives:
+            // afterwards there is nothing to say what it was. Compiles out with the rest of the facade.
+            Debugging.BehaviorTreeRecorder.VariableWrite(
+                this, key, variableKind, ReadVariable(key, variableKind), null);
+
+            if (variableKind == BehaviorTreeVariableKind.Object)
+            {
+                AgentVariableWriter.On(gameObject).RemoveAgentVariable(key);
+            }
+            else
+            {
+                declarations.Undefine(key);
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// The one store a write or a removal of <paramref name="variableKind"/> acts on, or null when there
         /// is none to reach yet.
         /// </summary>
@@ -70,7 +109,11 @@ namespace ArcaneOnyx.BehaviorTree
                 case BehaviorTreeVariableKind.Object:
                     return BehaviorTreeMachine != null ? BehaviorTreeMachine.Variables?.declarations : null;
                 case BehaviorTreeVariableKind.Scene:
-                    return SceneVariables.Instance(SceneManager.GetActiveScene())?.variables?.declarations;
+                    // Not `?.` -- that skips Unity's destroyed check on a MonoBehaviour. Instance
+                    // get-or-creates, so this cannot be null today; the shape should not have to be
+                    // re-derived to stay safe if that ever changes.
+                    var scene = SceneVariables.Instance(SceneManager.GetActiveScene());
+                    return scene != null ? scene.variables?.declarations : null;
                 case BehaviorTreeVariableKind.Application:
                     return ApplicationVariables.current;
                 case BehaviorTreeVariableKind.Saved:

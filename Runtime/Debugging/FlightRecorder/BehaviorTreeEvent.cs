@@ -162,10 +162,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </para>
         /// <para>
         /// <see cref="BehaviorTreeVariableKind.None"/> on every kind that is not a write, meaning "not
-        /// applicable". No store answers to that name, so it cannot collide with a real recorded write —
-        /// which is why the enum carries the value rather than the recorder borrowing one, as it did when
-        /// this field was a <c>Unity.VisualScripting.VariableKind</c> and "not a write" was spelled
-        /// <c>Flow</c>.
+        /// applicable" — and never on a <see cref="BehaviorTreeEventKind.VariableWrite"/>, because no store
+        /// answers to that name. A script graph writing flow scratch is the one case that could have
+        /// produced one, and <c>BehaviorTreeRecorder.ScriptGraphVariableWrite</c> drops it rather than
+        /// record a write to a store the watch cannot show. The enum carries the value rather than the
+        /// recorder borrowing one, as it did when this field was a
+        /// <c>Unity.VisualScripting.VariableKind</c> and "not a write" was spelled <c>Flow</c>.
         /// </para>
         /// </summary>
         public readonly BehaviorTreeVariableKind VariableKind;

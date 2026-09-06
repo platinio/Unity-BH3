@@ -219,6 +219,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             object newValue)
         {
             var kind = StoreOf(variableKind);
+
+            // A flow variable is not tree state and never becomes any: no node can read it, no guard can
+            // watch it, and the flow holding it is gone before anyone could look. Recording one puts a row
+            // in the variable watch under a store that does not exist -- the same phantom the guard above
+            // SaveVariable exists to prevent, arrived by a different route.
+            if (kind == BehaviorTreeVariableKind.None) return;
+
             var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
 
             if (owner != null)
@@ -240,9 +247,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// writer attribution here: everything in this class compiles out of a shipped build, and a
         /// translation the call site never performs is a translation that costs nothing to ship.
         /// <para>
-        /// Flow scratch records as <see cref="BehaviorTreeVariableKind.None"/> rather than being dropped.
-        /// The write happened and the value changed; what the watch cannot offer is a store to group it
-        /// under, because a per-invocation flow is gone before anyone could inspect it.
+        /// Flow scratch maps to <see cref="BehaviorTreeVariableKind.None"/>, and the caller drops it. The
+        /// write happened, but there is no store to group it under and nothing in a tree can ever read it,
+        /// so a recorded one is a row about a value no reader can reach. Keeping
+        /// <see cref="BehaviorTreeVariableKind.None"/> meaning exactly "not a variable write" is worth more
+        /// than an event only the flow that already ended could have used.
         /// </para>
         /// </remarks>
         private static BehaviorTreeVariableKind StoreOf(Unity.VisualScripting.VariableKind kind)

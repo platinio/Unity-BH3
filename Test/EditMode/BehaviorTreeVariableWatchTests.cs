@@ -15,9 +15,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     /// Two things are worth knowing before reading these. First, the model answers for a <b>tick</b>, never
     /// for the present — most of what could go wrong here is a value leaking backwards or forwards in time,
     /// so several tests park a vantage point mid-recording and assert the future is invisible. Second, scope
-    /// is <see cref="VariableKind"/> first and call site only within
-    /// <see cref="BehaviorTreeVariableKind.Graph"/>; the call site alone is where the write came <i>from</i>, which is a
-    /// different question and the reason the kind had to be recorded at all.
+    /// is <see cref="BehaviorTreeVariableKind"/> first and call site only within
+    /// <see cref="BehaviorTreeVariableKind.Graph"/>; the call site alone is where the write came
+    /// <i>from</i>, which is a different question and the reason the kind had to be recorded at all.
     /// </para>
     /// </summary>
     [TestFixture]

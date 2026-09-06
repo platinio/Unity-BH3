@@ -368,6 +368,99 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
         }
 
+        /// <summary>
+        /// Removing an agent variable moves the version reactive guards compare against.
+        /// </summary>
+        /// <remarks>
+        /// The node used to mutate the declarations directly. A guard watching <c>hasTarget</c> caches the
+        /// version it last saw and only re-reads when it moves, so a key that vanished without a bump left
+        /// the guard holding "true" forever — the branch kept running against a fact that no longer
+        /// existed. Silent, and invisible to the watch and to breakpoints too, since nothing was recorded.
+        /// </remarks>
+        [Test]
+        public void RemovingAnAgentVariable_MovesTheVersionAndIsRecorded()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            var agent = new UnityEngine.GameObject("Zombie");
+
+            try
+            {
+                var machine = agent.AddComponent<BindableMachine>();
+                machine.BindVariables();
+                machine.SetFlightRecorder(recorder);
+
+                var writer = AgentVariableWriter.On(agent);
+                writer.SetAgentVariable("hasTarget", true);
+
+                int before = writer.VersionOf("hasTarget");
+
+                var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Object, "hasTarget");
+                node.SetMachine(machine);
+                node.SetFlightRecorder(recorder);
+
+                Assert.AreEqual(GraphCore.ExecutionStatus.Success, node.OnUpdate());
+
+                Assert.IsFalse(machine.Variables.declarations.IsDefined("hasTarget"),
+                    "precondition: the key is actually gone");
+                Assert.Greater(writer.VersionOf("hasTarget"), before,
+                    "A guard only re-reads when the version moves, so a removal that does not bump it "
+                    + "leaves the guard holding a value that no longer exists.");
+                Assert.AreEqual(1, recorder.EventCount,
+                    "A removal is a change to null, and the watch and breakpoints need to see it.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(agent);
+                BehaviorTreeFlightRecorders.Reset();
+            }
+        }
+
+        /// <summary>
+        /// Removing a key that was never there is the state the node was asked for, so it is not an error
+        /// and there is nothing to record.
+        /// </summary>
+        [Test]
+        public void RemovingAKeyThatIsNotThere_SucceedsAndRecordsNothing()
+        {
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            var agent = new UnityEngine.GameObject("Zombie");
+
+            try
+            {
+                var machine = agent.AddComponent<BindableMachine>();
+                machine.BindVariables();
+                machine.SetFlightRecorder(recorder);
+
+                var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Object, "neverSet");
+                node.SetMachine(machine);
+                node.SetFlightRecorder(recorder);
+
+                Assert.AreEqual(GraphCore.ExecutionStatus.Success, node.OnUpdate());
+                Assert.AreEqual(0, recorder.EventCount, "nothing changed, so nothing to say");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(agent);
+                BehaviorTreeFlightRecorders.Reset();
+            }
+        }
+
+        /// <summary>
+        /// Having nowhere to remove from is a different answer from having nothing to remove.
+        /// </summary>
+        /// <remarks>
+        /// A Graph removal on a graph running without a scope is the only reachable case. Failure is a real
+        /// answer a designer can see on the canvas; Success would be the quiet no-op this node spent years
+        /// being.
+        /// </remarks>
+        [Test]
+        public void RemovingFromAStoreThatIsNotThere_Fails()
+        {
+            var node = Node<RemoveVariable>(BehaviorTreeVariableKind.Graph, "scratch");
+
+            Assert.AreEqual(GraphCore.ExecutionStatus.Failure, node.OnUpdate());
+        }
+
         [Test]
         public void AConfiguredRead_ReachesItsStore()
         {
