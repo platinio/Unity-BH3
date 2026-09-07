@@ -378,7 +378,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var node in BehaviorTreeGraphInstance.Nodes)
             {
-                node.OnNodeExit();
+                ExitDuringTeardown(node);
             }
         }
 

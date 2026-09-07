@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 // The same call the Failure path below makes, so teardown parity is automatic rather than
                 // a second implementation that has to be kept in step.
-                victim.OnNodeExit();
+                ExitDuringTeardown(victim);
 
                 currentExecutingChildIndex = preemptorIndex;
                 callOnEnter = true;
@@ -99,15 +99,18 @@ namespace ArcaneOnyx.BehaviorTree
 
                 var result = task.OnUpdateInternal();
 
+                // Exits that cannot throw past this point, because the bookkeeping after them is what keeps
+                // callOnEnter honest: an exit fault that skipped the index advance would leave this selector
+                // resuming, next frame, on a child whose OnExit already ran.
                 if (result == ExecutionStatus.Success)
                 {
-                    task.OnNodeExit();
+                    ExitDuringTeardown(task);
                     return ExecutionStatus.Success;
                 }
 
                 if (result == ExecutionStatus.Failure)
                 {
-                    task.OnNodeExit();
+                    ExitDuringTeardown(task);
 
                     currentExecutingChildIndex++;
                     callOnEnter = true;

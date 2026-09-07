@@ -20,10 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnExit()
         {
-            for (int i = 0; i < GetChildren().Count; i++)
-            {
-                GetChildren()[i].OnNodeExit();
-            }
+            ExitChildren();
         }
 
         /// <summary>

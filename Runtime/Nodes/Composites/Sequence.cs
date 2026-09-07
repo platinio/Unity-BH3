@@ -48,9 +48,11 @@ namespace ArcaneOnyx.BehaviorTree
 
                 var result = task.OnUpdateInternal();
 
+                // Exits that cannot throw past this point, for the reason Selector gives: the bookkeeping
+                // after them is what keeps callOnEnter in step with IsRunning.
                 if (result == ExecutionStatus.Success)
                 {
-                    task.OnNodeExit();
+                    ExitDuringTeardown(task);
 
                     currentExecutingChildIndex++;
                     callOnEnter = true;
@@ -59,7 +61,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 if (result == ExecutionStatus.Failure)
                 {
-                    task.OnNodeExit();
+                    ExitDuringTeardown(task);
 
                     currentExecutingChildIndex = 0;
                     callOnEnter = true;
