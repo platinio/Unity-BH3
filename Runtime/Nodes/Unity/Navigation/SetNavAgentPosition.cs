@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree
             
             // Read through GetComponent, which never calls GetValue -- unconnected falls back to the agent.
             Target = ValueInput<Object>(nameof(Target)).SafeToLeaveUnconnected();
-            NavPosition = ValueInput<Vector3>(nameof(NavPosition));
+            NavPosition = ValueInput<Vector3>(nameof(NavPosition), Vector3.zero);
         }
         
         public override void OnEnter()
