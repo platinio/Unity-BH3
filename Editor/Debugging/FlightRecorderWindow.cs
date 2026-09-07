@@ -54,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private Remembered<BehaviorTreeMachine> machineLookup;
         private double machineLookupAt = double.NegativeInfinity;
 
-        [MenuItem("Tools/BH3/Flight Recorder", priority = 0)]
+        [MenuItem("Tools/BH3/Open Flight Recorder Window", priority = 0)]
         public static void Open()
         {
             GetWindow<FlightRecorderWindow>("Flight Recorder").Show();
@@ -93,11 +93,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 MessageType.Info);
 
             EditorGUILayout.Space();
-
-            if (GUILayout.Button("Build the demo scene"))
-            {
-                FlightRecorderDemoBuilder.Build();
-            }
 
             BehaviorTreeFlightRecorders.GloballyEnabled = EditorGUILayout.ToggleLeft(
                 "Recording globally enabled", BehaviorTreeFlightRecorders.GloballyEnabled);
