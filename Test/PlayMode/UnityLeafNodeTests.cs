@@ -227,14 +227,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             literal.Value.ValidlyConnectTo(port);
         }
 
-        private static IEnumerator Frames(int count)
-        {
-            for (int frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
-        }
-
         #endregion
     }
 }

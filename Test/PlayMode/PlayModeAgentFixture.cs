@@ -183,6 +183,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             return node;
         }
 
+        /// <summary>Yields <paramref name="count"/> player-loop frames.</summary>
+        protected static System.Collections.IEnumerator Frames(int count)
+        {
+            for (int frame = 0; frame < count; frame++)
+            {
+                yield return null;
+            }
+        }
+
         protected static bool Entered(BehaviorTreeFlightRecorder recorder, Guid node)
         {
             AssertNothingDropped(recorder);

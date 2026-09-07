@@ -59,6 +59,12 @@ A takeover only fires when **every** guard on the candidate passes. Anything les
 branch and then fail the candidate's real entry check, restarting the victim from scratch — potentially
 every tick.
 
+The same holds for several reactive guards on one node: they are ANDed, at entry, on the running tick and in
+the takeover poll. What stays separate is everything else — each guard keeps its own trigger list and its own
+capability flags, so a `targetInRange` polled on an interval can sit beside a `hasTarget` woken by a key
+write without either schedule being forced onto the other. Two guards with the same triggers and the same
+flags are just an `And` paid for twice; reach for two when the schedules or the capabilities differ.
+
 ## Triggers: when a guard may recompute
 
 A reactive guard holds a list of triggers, OR'd together. **A trigger does not evaluate the guard — it marks

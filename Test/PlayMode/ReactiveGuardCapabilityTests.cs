@@ -149,6 +149,67 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 "and the branch below must not be given the slot, because the branch above never gave it up.");
         }
 
+        // ---------------------------------------------------------------- Both off
+
+        /// <summary>
+        /// <c>abortsOwner: false, preempts: false</c> — the fourth cell of the matrix, and the one a designer
+        /// reaches by mistake expecting it to switch the guard off. It does not: the guard still decides
+        /// entry every time the branch is tried. What it has given up is only the two ways of acting
+        /// <em>between</em> entries — it cannot bid for a slot and it cannot end its own run.
+        /// <para>
+        /// The fallback is short here, so the Selector completes, the Repeater re-enters it, and the guarded
+        /// branch is tried again and again through ordinary selection. With both branches long-running there
+        /// would be no second entry to observe, since a guard that cannot take over never gets one.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BothOffStillGatesEntryAndDoesNothingElse()
+        {
+            var machine = SpawnTwoBranches(
+                startsEligible: false, stopsItsOwnBranch: false, takesOverLowerPriority: false,
+                fallbackSeconds: 0.1f);
+
+            Time.captureDeltaTime = 0.05f;
+
+            yield return Frames(10);
+
+            var recorder = machine.FlightRecorder;
+
+            Assert.GreaterOrEqual(EnterCount(recorder, fallback), 2,
+                "The fallback must have finished and been re-entered, or the guarded branch was only ever "
+                + "tried once and the assertion below is about a single entry rather than gating.");
+            Assert.IsFalse(Entered(recorder, guarded),
+                "With both capabilities off the guard still turns its branch away at every attempt. A guard "
+                + "with nothing switched on is a doorman, not a guard that has been removed.");
+
+            int mark = Mark(recorder);
+            PublishFact(machine, "eligible", true);
+
+            yield return Frames(10);
+
+            Assert.IsTrue(EnteredSince(recorder, mark, guarded),
+                "Once the condition holds, the next ordinary selection admits the branch,");
+            Assert.IsFalse(TakenOverSince(recorder, mark, fallback),
+                "and it got there by waiting its turn: nothing lost a slot, because a guard that cannot take "
+                + "over is never polled.");
+
+            mark = Mark(recorder);
+            PublishFact(machine, "eligible", false);
+
+            yield return Frames(5);
+
+            Assert.IsFalse(AbortedSince(recorder, mark, guarded),
+                "The condition failing mid-run must not end the branch, since Stops Its Own Branch is off,");
+            Assert.IsFalse(EnteredSince(recorder, mark, fallback),
+                "so the branch below never gets the slot back.");
+        }
+
+        [TearDown]
+        public void ReleaseTheClock()
+        {
+            Time.captureDeltaTime = 0.0f;
+        }
+
         #region Fixture
 
         /// <summary>
@@ -156,7 +217,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         /// thing which can ever change which one holds the slot is the guard.
         /// </summary>
         private BehaviorTreeMachine SpawnTwoBranches(
-            bool startsEligible, bool stopsItsOwnBranch, bool takesOverLowerPriority)
+            bool startsEligible, bool stopsItsOwnBranch, bool takesOverLowerPriority,
+            float fallbackSeconds = 999.0f)
         {
             var tree = NewTree();
             var graph = tree.graph;
@@ -168,7 +230,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             var fallbackNode = Add<WaitTime>(graph, 400.0f, 500.0f);
 
             FeedFloat(graph, guardedNode, guardedNode.Time, 999.0f);
-            FeedFloat(graph, fallbackNode, fallbackNode.Time, 999.0f);
+            FeedFloat(graph, fallbackNode, fallbackNode.Time, fallbackSeconds);
 
             Connect(graph, graph.EntryNode, repeater);
             Connect(graph, repeater, selector);
@@ -187,14 +249,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             fallback = fallbackNode.guid;
 
             return Spawn(tree, (_, variables) => variables.declarations.Set("eligible", startsEligible));
-        }
-
-        private static IEnumerator Frames(int count)
-        {
-            for (int frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
         }
 
         #endregion

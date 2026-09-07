@@ -227,14 +227,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             guard.AddTrigger(GuardTrigger.KeyChanged(key));
         }
 
-        private static IEnumerator Frames(int count)
-        {
-            for (int frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
-        }
-
         #endregion
     }
 }
