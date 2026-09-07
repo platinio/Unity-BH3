@@ -224,6 +224,38 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     }
 
     /// <summary>
+    /// A node with one required port and nothing else: <see cref="Position"/> is declared without a default,
+    /// so an unconnected one throws on first read and is exactly one unset-port problem.
+    ///
+    /// <para>
+    /// The unset-port fixtures used to stand on <c>SetNavAgentPosition.NavPosition</c>, which was the shipped
+    /// port that declared no default — until it gained one so designers can type a position on the canvas.
+    /// Pinning them to shipped content means they break whenever a node gets friendlier, which is the wrong
+    /// thing to make expensive. <c>SafetyIsPerPort_NotPerPortName</c> still covers a shipped required port.
+    /// </para>
+    /// </summary>
+    internal sealed class BarePortNode : BehaviorTreeNode
+    {
+        [DoNotSerialize]
+        public ValueInput Position { get; private set; }
+
+        public override string NodeName => "Bare Port Test Node";
+
+        protected override void Definition()
+        {
+            base.Definition();
+
+            Position = ValueInput<UnityEngine.Vector3>(nameof(Position));
+        }
+
+        public override ExecutionStatus OnUpdate()
+        {
+            Position.GetValue<UnityEngine.Vector3>();
+            return ExecutionStatus.Success;
+        }
+    }
+
+    /// <summary>
     /// A node with one <see cref="ValueInput"/> declared as <typeparamref name="T"/> and nothing else —
     /// <see cref="ValueSource{T}"/>'s counterpart, so a test can stand up any (output type, input type) pair
     /// and ask the two questions the production code asks: may this connect, and can the value be read.

@@ -214,7 +214,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AnUnfedRequiredPort_CarriesNoRepair()
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Move.asset");
-            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
+            var move = BehaviorTreeAuthoring.AddNode<BarePortNode>(tree, 0.0f, 0.0f);
 
             var problems = NodeProblemCache.For(move);
 

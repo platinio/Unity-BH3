@@ -41,13 +41,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             NodeProblemCache.Invalidate();
         }
 
-        private SetNavAgentPosition UnfedMove(string assetName)
+        private BarePortNode UnfedMove(string assetName)
         {
             var tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/{assetName}.asset");
 
-            // SetNavAgentPosition.NavPosition declares no default (Target is safe unconnected), so an
-            // untouched node reports exactly one problem.
-            return BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(tree, 0.0f, 0.0f);
+            // BarePortNode.Position declares no default and is the node's only port, so an untouched node
+            // reports exactly one problem.
+            return BehaviorTreeAuthoring.AddNode<BarePortNode>(tree, 0.0f, 0.0f);
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ADescription_NamesTheProblem()
         {
-            Assert.That(NodeProblemCache.DescriptionOf(UnfedMove("Named")), Does.Contain("NavPosition"));
+            Assert.That(NodeProblemCache.DescriptionOf(UnfedMove("Named")), Does.Contain("Position"));
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var move = UnfedMove("Several");
 
             System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = candidate =>
-                candidate is SetNavAgentPosition
+                candidate is BarePortNode
                     ? new[] { new NodeProblem(NodeProblemSeverity.Warning, "second problem") }
                     : Enumerable.Empty<NodeProblem>();
 
@@ -84,7 +84,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 var description = NodeProblemCache.DescriptionOf(move);
 
-                Assert.That(description, Does.Contain("NavPosition").And.Contain("second problem"));
+                Assert.That(description, Does.Contain("Position").And.Contain("second problem"));
                 Assert.That(description.Split('\n').Length, Is.EqualTo(NodeProblemCache.For(move).Count),
                     "one problem per line, or a two-problem node reads as one run-on sentence");
             }
@@ -113,7 +113,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(NodeProblemCache.DescriptionOf(move), Does.Not.Contain("added later"));
 
             System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = candidate =>
-                candidate is SetNavAgentPosition
+                candidate is BarePortNode
                     ? new[] { new NodeProblem(NodeProblemSeverity.Error, "added later") }
                     : Enumerable.Empty<NodeProblem>();
 

@@ -37,23 +37,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void InlineValueOnABarePortIsLostAcrossAReload()
         {
-            // SetNavAgentPosition.NavPosition is declared as ValueInput<Vector3>(nameof(NavPosition)) — no
+            // BarePortNode.Position is declared as ValueInput<Vector3>(nameof(Position)) — no
             // default — so this is the trap: it holds in memory and vanishes on reload, with nothing
-            // warning you in between. (It stands in for WaitTime.Time, which used to be the example here
-            // and now declares a default so designers can type a duration on the canvas.)
+            // warning you in between. (A test double on purpose: WaitTime.Time and then
+            // SetNavAgentPosition.NavPosition were the examples here, and each gained a default so
+            // designers can type a value on the canvas.)
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            var move = BehaviorTreeAuthoring.AddNode<BarePortNode>(asset, 0.0f, 100.0f);
             BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            move.NavPosition.SetDefaultValue(UnityEngine.Vector3.one);
-            Assert.IsTrue(move.NavPosition.behaviorTreeNode.defaultValues.ContainsKey("NavPosition"),
+            move.Position.SetDefaultValue(UnityEngine.Vector3.one);
+            Assert.IsTrue(move.Position.behaviorTreeNode.defaultValues.ContainsKey("Position"),
                 "In the generating run the value is present, which is why a same-run dump cannot catch this.");
 
             BehaviorTreeAuthoring.Save(asset);
             var reloaded = BehaviorTreeVerification.Reload(TreePath);
 
-            var reloadedMove = reloaded.graph.Nodes.OfType<SetNavAgentPosition>().Single();
-            Assert.IsFalse(reloadedMove.defaultValues.ContainsKey("NavPosition"),
+            var reloadedMove = reloaded.graph.Nodes.OfType<BarePortNode>().Single();
+            Assert.IsFalse(reloadedMove.defaultValues.ContainsKey("Position"),
                 "A bare port cannot hold an inline value across serialization — this is why SetValue exists.");
         }
 
@@ -111,15 +112,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void VerifyReportsAPortThatWillThrow()
         {
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            var move = BehaviorTreeAuthoring.AddNode<BarePortNode>(asset, 0.0f, 100.0f);
             BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            move.NavPosition.SetDefaultValue(UnityEngine.Vector3.one);   // the mistake
+            move.Position.SetDefaultValue(UnityEngine.Vector3.one);   // the mistake
             BehaviorTreeAuthoring.Save(asset);
 
             var findings = BehaviorTreeVerification.Verify(TreePath);
 
-            Assert.IsTrue(findings.Any(f => f.Contains("NavPosition")),
+            Assert.IsTrue(findings.Any(f => f.Contains("Position")),
                 "The verifier's whole purpose is catching this one, so it must not come back clean:\n  " +
                 string.Join("\n  ", findings));
         }
@@ -128,16 +129,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void SetValueSurvivesAReload()
         {
             var asset = BehaviorTreeAuthoring.CreateTree(TreePath);
-            var move = BehaviorTreeAuthoring.AddNode<SetNavAgentPosition>(asset, 0.0f, 100.0f);
+            var move = BehaviorTreeAuthoring.AddNode<BarePortNode>(asset, 0.0f, 100.0f);
             BehaviorTreeAuthoring.Connect(asset, asset.graph.EntryNode, move);
 
-            BehaviorTreeAuthoring.SetValue(asset, move.NavPosition, UnityEngine.Vector3.one, -200.0f, 100.0f);
+            BehaviorTreeAuthoring.SetValue(asset, move.Position, UnityEngine.Vector3.one, -200.0f, 100.0f);
             BehaviorTreeAuthoring.Save(asset);
 
             var reloaded = BehaviorTreeVerification.Reload(TreePath);
-            var reloadedMove = reloaded.graph.Nodes.OfType<SetNavAgentPosition>().Single();
+            var reloadedMove = reloaded.graph.Nodes.OfType<BarePortNode>().Single();
 
-            Assert.IsTrue(reloadedMove.NavPosition.hasValidConnection,
+            Assert.IsTrue(reloadedMove.Position.hasValidConnection,
                 "SetValue must route a bare port to a connected literal, which is what survives.");
             Assert.IsEmpty(BehaviorTreeVerification.Verify(TreePath),
                 "A tree built with SetValue should verify clean.");
