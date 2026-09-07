@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     // the class name is what assets serialize, so correcting it would break every tree holding one
     // unless the deserializer is taught the old name as an alias first.
     [GraphCreateMenu("Unity/Game Object/Instantiate Object")]
-    public class InstanteObject : GameplayNode
+    public class InstantiateObject : GameplayNode
     {
         [DoNotSerialize]
         public ValueInput Prefab { get; private set; }
