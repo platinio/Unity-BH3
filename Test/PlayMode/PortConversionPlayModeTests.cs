@@ -98,13 +98,5 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         // its stale value -- so the branch reports Success as though the wait had elapsed. That is
         // pre-existing and was identical under the old InvalidCastException; a test asserting otherwise
         // would be pinning behaviour the codebase does not have. It is reported as a separate finding.
-
-        private static IEnumerator Frames(int count)
-        {
-            for (int frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
-        }
     }
 }

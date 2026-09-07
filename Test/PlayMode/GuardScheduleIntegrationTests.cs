@@ -164,7 +164,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         [UnityTest]
         public IEnumerator AGuardWithNoTriggersRecomputesEveryTick()
         {
-            var machine = SpawnPolledGuard(trigger: null);
+            var machine = SpawnPolledGuard();
 
             Time.captureDeltaTime = FrameSeconds;
 
@@ -185,6 +185,84 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.That(guard.Evaluations - start, Is.InRange(8, 12),
                 "An empty trigger list means always due, so this is the per-frame cost the other schedules "
                 + "are being compared against.");
+        }
+
+        /// <summary>
+        /// <see cref="GuardTriggerKind.EveryFrame"/> costs what an empty list costs. The point of the kind is
+        /// that the cost is written down rather than inherited, so the test first checks that the trigger is
+        /// really there — a list that arrived empty would pass this for the opposite reason.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AnEveryFrameTriggerRecomputesEveryTick()
+        {
+            var machine = SpawnPolledGuard(GuardTrigger.EveryFrame());
+
+            Time.captureDeltaTime = FrameSeconds;
+
+            var guard = RunningNode<ReactiveGuard>(machine);
+
+            Assert.AreEqual(1, guard.Triggers.Count, "The trigger must survive the machine's Instantiate.");
+            Assert.AreEqual(GuardTriggerKind.EveryFrame, guard.Triggers[0].Kind);
+
+            yield return Frames(4);
+
+            int start = guard.Evaluations;
+
+            yield return Frames(10);
+
+            Assert.That(guard.Evaluations - start, Is.InRange(8, 12),
+                "Every Frame is the honest spelling of an empty list, so it must pay exactly what an empty "
+                + "list pays -- one recompute per tick.");
+        }
+
+        /// <summary>
+        /// Triggers are OR'd: whichever one comes due wakes the guard, and the others saying no do not hold
+        /// it back. Pinned in edit mode for the pair interval-plus-every-frame, where one side is always due;
+        /// here each side is quiet until made to fire, so the wake can be attributed to one trigger at a time.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TriggersCombineAsAnOr_EitherOneComingDueWakesTheGuard()
+        {
+            const float longInterval = 2.0f;
+
+            // The key is one the condition does not read -- a hand-typed dependency, which is legal and is
+            // what keeps the guard's answer false so a wake never turns into an entry.
+            var machine = SpawnPolledGuard(GuardTrigger.Interval(longInterval), GuardTrigger.KeyChanged("alarm"));
+
+            Time.captureDeltaTime = FrameSeconds;
+
+            var guard = RunningNode<ReactiveGuard>(machine);
+
+            Assert.AreEqual(2, guard.Triggers.Count, "Both triggers must survive the machine's Instantiate.");
+
+            yield return Frames(4);
+
+            int start = guard.Evaluations;
+
+            yield return Frames(10);
+
+            Assert.AreEqual(0, guard.Evaluations - start,
+                "Neither trigger is due -- the interval has not elapsed and the key has not been written -- "
+                + "so the guard must not recompute. If it did, an OR of two quiet triggers is not quiet.");
+
+            PublishFact(machine, "alarm", 1);
+
+            yield return Frames(3);
+
+            Assert.AreEqual(1, guard.Evaluations - start,
+                "The key trigger came due and the interval did not, and that is enough: one wake, exactly. "
+                + "Zero means a trigger that says no is vetoing one that says yes; more than one means the "
+                + "wake did not rearm the key trigger.");
+
+            // Now the other side. Bigger frames run the clock past the interval without touching the key.
+            Time.captureDeltaTime = 0.25f;
+
+            yield return Frames(10);
+
+            Assert.AreEqual(2, guard.Evaluations - start,
+                $"2.5s at 0.25s a frame crosses a {longInterval}s interval once and only once, with the key "
+                + "still unchanged. The interval trigger must wake the guard on its own just as the key "
+                + "trigger did, or the OR only works in one direction.");
         }
 
         /// <summary>
@@ -279,7 +357,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         /// count would measure nothing.
         /// </para>
         /// </summary>
-        private BehaviorTreeMachine SpawnPolledGuard(GuardTrigger trigger)
+        private BehaviorTreeMachine SpawnPolledGuard(params GuardTrigger[] triggers)
         {
             var tree = NewTree();
             var graph = tree.graph;
@@ -304,7 +382,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             guard.UpdateOwner(guarded);
             read.Value.ValidlyConnectTo(guard.Value);
 
-            if (trigger != null) guard.AddTrigger(trigger);
+            foreach (var trigger in triggers)
+            {
+                guard.AddTrigger(trigger);
+            }
 
             return Spawn(tree, (_, variables) => variables.declarations.Set("canAttack", false));
         }

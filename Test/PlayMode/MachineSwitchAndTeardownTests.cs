@@ -544,14 +544,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             variables.declarations.Set("alwaysFalse", false);
         }
 
-        private static IEnumerator Frames(int count)
-        {
-            for (int frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
-        }
-
         #endregion
     }
 }
