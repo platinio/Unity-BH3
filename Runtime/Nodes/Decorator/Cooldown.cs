@@ -14,6 +14,7 @@ namespace ArcaneOnyx.BehaviorTree
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Cooldown";
+        public override bool ShowIcon => false;
 
         public override string Description =>
             "Runs the child, then blocks it for Duration seconds.\nReturns FAILURE while still cooling down.";
