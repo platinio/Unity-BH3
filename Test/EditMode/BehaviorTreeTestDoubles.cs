@@ -214,13 +214,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     {
         public int EnterCalls { get; private set; }
 
+        /// <summary>
+        /// What each tick answers. Running by default, so the node is mid-flight when something exits it;
+        /// a composite test sets Success or Failure to make the composite itself the thing that exits it.
+        /// </summary>
+        public ExecutionStatus Result { get; set; } = ExecutionStatus.Running;
+
         public override string NodeName => "Throws On Exit Test Node";
 
         public override void OnEnter() => EnterCalls++;
 
         public override void OnExit() => throw new InvalidOperationException("OnExit failed");
 
-        public override ExecutionStatus OnUpdate() => ExecutionStatus.Running;
+        public override ExecutionStatus OnUpdate() => Result;
     }
 
     /// <summary>

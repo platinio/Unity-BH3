@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
-using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -140,11 +138,30 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     // The sweep has to finish even if an exit throws: a second fault must not strand the
                     // siblings this method exists to release, and the entry exception is the diagnosis.
-                    try { toEnter[i].OnNodeExit(); }
-                    catch (Exception exitException) { Debug.LogException(exitException); }
+                    ExitDuringTeardown(toEnter[i]);
                 }
 
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Exits every child, and keeps going when one of them throws on the way out.
+        /// <para>
+        /// The sweep exists so that nothing is left running when this container ends, and a sweep that only
+        /// completes while nothing goes wrong is not that guarantee: one child faulting in <c>OnExit</c> would
+        /// leave every sibling after it marked running with nothing left to exit it, and the next entry would
+        /// enter those siblings a second time with no exit in between. The same shape the entry unwind above
+        /// already closes, on the ordinary teardown path.
+        /// </para>
+        /// </summary>
+        protected void ExitChildren()
+        {
+            var toExit = GetChildren();
+
+            for (int i = 0; i < toExit.Count; i++)
+            {
+                ExitDuringTeardown(toExit[i]);
             }
         }
 
@@ -167,11 +184,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnExit();
 
-            //call children on exit by hand if they havent finished yet
-            for (int i = 0; i < GetChildren().Count; i++)
-            {
-                GetChildren()[i].OnNodeExit();
-            }
+            ExitChildren();
         }
     }
 }

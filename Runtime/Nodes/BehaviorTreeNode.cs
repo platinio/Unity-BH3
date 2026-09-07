@@ -730,6 +730,39 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
+        /// Exits a node on a path that has to finish whatever that node's <c>OnExit</c> does.
+        ///
+        /// <para>
+        /// <c>OnExit</c> is author code and <see cref="OnNodeExit"/> lets whatever it throws out. That is
+        /// right for the node itself — the fault lands on it as <see cref="ExecutionStatus.Exception"/> —
+        /// but wrong for whoever called it as one step of a teardown. A container sweeping its children
+        /// stops at the first throw and strands every sibling after it marked running, with nothing left that
+        /// will ever exit them; a composite that exits a child and then advances its resume index never
+        /// advances, and the next tick runs <c>OnUpdate</c> on a node whose <c>OnExit</c> already ran. Both
+        /// end in the double-entry and stale-tick hazards the composites warn about by name, and both are
+        /// quieter than the exception that caused them.
+        /// </para>
+        ///
+        /// <para>
+        /// So the fault is logged here and the caller carries on. Nothing about the failure is lost: the
+        /// exception is on the console with its stack, and the node that raised it keeps
+        /// <see cref="ExecutionStatus.Exception"/> and shows it on the canvas. What is gained is that the
+        /// teardown's own invariant — nothing is left behind — holds whether or not an exit went wrong.
+        /// </para>
+        /// </summary>
+        protected static void ExitDuringTeardown(BehaviorTreeNode node)
+        {
+            try
+            {
+                node.OnNodeExit();
+            }
+            catch (System.Exception exitException)
+            {
+                Debug.LogException(exitException);
+            }
+        }
+
+        /// <summary>
         /// Asks only the guards that claim <see cref="ConditionalExecution.StopsItsOwnBranch"/>.
         /// <para>
         /// A plain <see cref="ConditionalExecution"/> does not, so it no longer interrupts a branch it
