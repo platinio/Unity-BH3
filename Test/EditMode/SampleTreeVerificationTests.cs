@@ -56,8 +56,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // Nothing reaches or reads these.
             { "orphan node", 2 },
 
-            // Ports that will throw the moment they are read.
-            { "unset port", 2 },
+            // Ports that will throw the moment they are read. Was 2 until Set Nav Agent Position's NavPosition
+            // gained a default, which fed both.
+            { "unset port", 0 },
 
             // A reactive guard re-checking every tick although its condition declares what it watches.
             { "guard with no triggers", 1 },
