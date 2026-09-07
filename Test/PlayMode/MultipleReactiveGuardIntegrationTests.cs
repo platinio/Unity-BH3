@@ -115,7 +115,123 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 + "schedules, which is the whole reason two guards differ from one.");
         }
 
+        /// <summary>
+        /// A reactive guard beside a plain Conditional Execution on one node: the trigger and the veto.
+        ///
+        /// <para>
+        /// The reactive guard is what makes the node pollable and what can end its run. The conditional gets
+        /// a vote in the takeover poll but can neither cause a takeover nor abort — and the poll asking it at
+        /// all is the whole correctness of preemption. Were only the reactive guard polled, the node would
+        /// evict the running branch the moment its bid turned true, fail its own entry on the veto, fall
+        /// through, and restart the victim from scratch, potentially every tick. Edit mode pins the veto
+        /// half; this walks all four moments against a real machine, with the facts arriving as sensor writes.
+        /// </para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AReactiveGuardBesideAConditional_TheConditionalVetoesButNeverFires()
+        {
+            var machine = SpawnTriggerAndVeto(targetInRange: false, hasToken: false);
+
+            Time.captureDeltaTime = FrameSeconds;
+
+            yield return Frames(3);
+
+            var recorder = machine.FlightRecorder;
+
+            Assert.IsTrue(Entered(recorder, fallback), "With both guards false the fallback holds the slot.");
+            Assert.IsFalse(Entered(recorder, guarded));
+
+            int mark = Mark(recorder);
+            PublishFact(machine, "targetInRange", true);
+
+            yield return Frames(5);
+
+            Assert.IsFalse(EnteredSince(recorder, mark, guarded),
+                "The reactive guard's bid is true but the conditional says no, so the node must not enter,");
+            Assert.IsFalse(TakenOverSince(recorder, mark, fallback),
+                "and nothing may be recorded as losing a slot for a takeover that cannot happen.");
+            Assert.AreEqual(1, EnterCount(recorder, fallback),
+                "The victim must be left untouched -- not exited and restarted -- which is the failure a "
+                + "poll that skipped the conditional would produce on every tick.");
+
+            mark = Mark(recorder);
+            PublishFact(machine, "hasToken", true);
+
+            yield return Frames(3);
+
+            Assert.IsTrue(EnteredSince(recorder, mark, guarded),
+                "With the veto lifted the reactive guard's standing bid goes through. The conditional was "
+                + "asked fresh in the poll -- a doorman has no cache -- so no trigger on it was needed.");
+            Assert.IsTrue(TakenOverSince(recorder, mark, fallback),
+                "and it arrives as a takeover, named by the reactive guard.");
+
+            mark = Mark(recorder);
+            PublishFact(machine, "hasToken", false);
+
+            yield return Frames(5);
+
+            Assert.IsFalse(AbortedSince(recorder, mark, guarded),
+                "The conditional turning false mid-run must change nothing: it decided entry and stopped "
+                + "caring, and the running-tick walk does not ask it.");
+            Assert.IsFalse(EnteredSince(recorder, mark, fallback), "so the branch below stays out.");
+
+            mark = Mark(recorder);
+            PublishFact(machine, "targetInRange", false);
+
+            yield return Frames(3);
+
+            Assert.IsTrue(AbortedSince(recorder, mark, guarded),
+                "The reactive guard is the one that can end the run, and it does when its own fact drops.");
+            Assert.IsTrue(EnteredSince(recorder, mark, fallback), "and the slot falls through.");
+        }
+
         #region Fixture
+
+        /// <summary>
+        /// The same two-branch selector, with the guarded branch carrying a reactive guard on
+        /// <c>targetInRange</c> (key-triggered, default capabilities) beside a plain
+        /// <see cref="BooleanConditionalExecution"/> on <c>hasToken</c> — the Attack shape from the docs,
+        /// where the range is the trigger and the attack token is a veto.
+        /// </summary>
+        private BehaviorTreeMachine SpawnTriggerAndVeto(bool targetInRange, bool hasToken)
+        {
+            var tree = NewTree();
+            var graph = tree.graph;
+
+            var repeater = Add<Repeater>(graph, 0.0f, 100.0f);
+            var selector = Add<Selector>(graph, 0.0f, 250.0f);
+
+            var guardedNode = Add<WaitTime>(graph, -400.0f, 500.0f);
+            var fallbackNode = Add<WaitTime>(graph, 400.0f, 500.0f);
+
+            FeedFloat(graph, guardedNode, guardedNode.Time, 999.0f);
+            FeedFloat(graph, fallbackNode, fallbackNode.Time, 999.0f);
+
+            Connect(graph, graph.EntryNode, repeater);
+            Connect(graph, repeater, selector);
+            Connect(graph, selector, guardedNode);
+            Connect(graph, selector, fallbackNode);
+
+            var readRange = ReadAgentVariable(graph, "targetInRange", -900.0f, 300.0f);
+            var trigger = Add<BooleanReactiveGuard>(graph, -600.0f, 300.0f);
+            trigger.UpdateOwner(guardedNode);
+            readRange.Value.ValidlyConnectTo(trigger.Value);
+            trigger.AddTrigger(GuardTrigger.KeyChanged("targetInRange"));
+
+            var readToken = ReadAgentVariable(graph, "hasToken", -900.0f, 400.0f);
+            var veto = Add<BooleanConditionalExecution>(graph, -600.0f, 400.0f);
+            veto.UpdateOwner(guardedNode);
+            readToken.Value.ValidlyConnectTo(veto.Value);
+
+            guarded = guardedNode.guid;
+            fallback = fallbackNode.guid;
+
+            return Spawn(tree, (_, variables) =>
+            {
+                variables.declarations.Set("targetInRange", targetInRange);
+                variables.declarations.Set("hasToken", hasToken);
+            });
+        }
 
         /// <summary>
         /// Entry -&gt; Repeater -&gt; Selector -&gt; [ guarded, fallback ], both long-running. The guarded
