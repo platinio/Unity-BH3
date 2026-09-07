@@ -20,6 +20,8 @@ namespace ArcaneOnyx.BehaviorTree
             "Rolls once on enter. Runs the child when the roll passes, otherwise returns FAILURE without ticking it.";
 
         public override int MaxChildrenLimit => 1;
+        
+        public override bool ShowIcon => false;
 
         private bool rollPassed = false;
 
