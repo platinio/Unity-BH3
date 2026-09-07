@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Literal/Float")]
+    [GraphCreateMenu("Literal/Float")]
     public class FloatLiteral : Literal
     {
         [Serialize, Inspectable] private float value;

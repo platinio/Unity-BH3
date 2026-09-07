@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Animation/Cross Fade Animation")]
+    [GraphCreateMenu("Animation/Cross Fade Animation")]
     public class CrossFadeAnimation : GameplayNode
     {
         [DoNotSerialize]

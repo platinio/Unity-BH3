@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Navigation/Stop NavAgent")]
+    [GraphCreateMenu("Navigation/Stop Nav Agent")]
     public class StopNavAgent : GameplayNode
     {
         [DoNotSerialize]

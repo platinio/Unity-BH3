@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Decorator/Create Until Failure")]
+    [GraphCreateMenu("Decorator/Until Failure")]
     public class UntilFailure : Decorator
     {
         protected override string NodeIconPath => "NodeIcons/UntilFailure";

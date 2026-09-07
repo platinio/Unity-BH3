@@ -14,10 +14,10 @@ leftmost first.
 
 | Menu | Type | Behavior |
 |---|---|---|
-| Create Sequence | `Sequence` | Children in order, left to right. Ends when a child returns `FAILURE` |
-| Create Selector | `Selector` | Children in order, left to right. Ends when a child returns `SUCCESS` |
-| Create Parallel Sequence | `ParallelSequence` | All children at the same time. Ends when any returns `FAILURE` |
-| Create Parallel Selector | `ParallelSelector` | All children at the same time. Ends when any returns `SUCCESS` |
+| Sequence | `Sequence` | Children in order, left to right. Ends when a child returns `FAILURE` |
+| Selector | `Selector` | Children in order, left to right. Ends when a child returns `SUCCESS` |
+| Parallel Sequence | `ParallelSequence` | All children at the same time. Ends when any returns `FAILURE` |
+| Parallel Selector | `ParallelSelector` | All children at the same time. Ends when any returns `SUCCESS` |
 | Random Sequence | `RandomSequence` | Children in random order. Ends when any returns `FAILURE` |
 | Random Selector | `RandomSelector` | Children in random order. Ends when any returns `SUCCESS` |
 
@@ -30,13 +30,13 @@ Decorators wrap **exactly one** child and change how its result is interpreted, 
 
 | Menu | Type | Behavior |
 |---|---|---|
-| Create Repeater | `Repeater` | Re-enters the child forever. Always returns `Running` — never `Success` or `Failure` |
-| Create Until Success | `UntilSuccess` | Re-runs the child until it returns `SUCCESS` |
-| Create Until Failure | `UntilFailure` | Re-runs the child until it returns `FAILURE` |
-| Create Return Success | `ReturnSuccess` | Overrides the child's result with `SUCCESS` |
-| Create Return Failure | `ReturnFailure` | Overrides the child's result with `FAILURE` |
-| Create Cooldown | `Cooldown` | Runs the child, then blocks it for `Duration` seconds. Returns `FAILURE` while cooling down |
-| Create Random Chance | `RandomChance` | Rolls once on enter. Runs the child if the roll passes, else returns `FAILURE` without ticking it |
+| Repeater | `Repeater` | Re-enters the child forever. Always returns `Running` — never `Success` or `Failure` |
+| Until Success | `UntilSuccess` | Re-runs the child until it returns `SUCCESS` |
+| Until Failure | `UntilFailure` | Re-runs the child until it returns `FAILURE` |
+| Return Success | `ReturnSuccess` | Overrides the child's result with `SUCCESS` |
+| Return Failure | `ReturnFailure` | Overrides the child's result with `FAILURE` |
+| Cooldown | `Cooldown` | Runs the child, then blocks it for `Duration` seconds. Returns `FAILURE` while cooling down |
+| Random Chance | `RandomChance` | Rolls once on enter. Runs the child if the roll passes, else returns `FAILURE` without ticking it |
 
 `Cooldown` defaults to 5 seconds; `RandomChance` to 0.5. A chance of 0 never fires and 1 always does — the
 bounds are handled explicitly rather than left to floating-point luck.
@@ -49,86 +49,26 @@ bounds are handled explicitly rather than left to floating-point luck.
 | Menu | Type | Behavior |
 |---|---|---|
 | Boolean Condition | `BooleanCondition` | Returns `SUCCESS` while the input boolean is true, `FAILURE` otherwise |
+| Conditional Execution | `BooleanConditionalExecution` | Only lets the node it guards start while the input boolean is true |
+| Reactive Guard | `BooleanReactiveGuard` | A guard that keeps watching: aborts its own branch when the boolean turns false, and can take over from a lower-priority branch when it turns true |
 
-## Add Conditional Execution
-
-| Menu | Type | Behavior |
-|---|---|---|
-| Boolean Conditional | `BooleanConditionalExecution` | Only executes the node it guards while the input boolean is true |
-
-**A Conditional Execution is not a decorator.** It isn't parented to anything — it attaches to an owner node
-as a *guard*, and it is re-evaluated on **every tick** while that node runs. If it turns false mid-branch,
-the branch is aborted immediately. That difference is the whole reason to prefer it over a Condition for
-interruptions — see [Best Practices](best-practices.md#prefer-conditional-executions-over-condition-nodes-for-interruptions).
+**A guard is not a decorator.** It isn't parented to anything — it attaches to an owner node as a
+precondition. A Conditional Execution asks *may I start?* once, at entry. A Reactive Guard asks *is this
+still true?* while its owner runs, and that is the tool for interruptions — see
+[Reactive Guards](reactive-guards.md) and
+[Best Practices](best-practices.md#prefer-conditional-executions-over-condition-nodes-for-interruptions).
 
 Guards on the same owner are ANDed: attach several and the node runs only when all of them hold.
 
-## Gameplay
+## Flow
 
 | Menu | Type | Behavior |
 |---|---|---|
 | Wait | `WaitTime` | Waits `Time` seconds |
 | Wait Range | `WaitTimeRandomRange` | Waits a random time between `minTime` and `maxTime` |
-| Face Target | `FaceTarget` | Rotates the target transform to face `TransformTarget` |
 | Run Behavior Tree Graph | `RunBehaviorTreeGraphNode` | Executes another Behavior Tree asset — see [Sub-Behavior Trees](sub-behavior-trees.md) |
 
-## Logic
-
-| Menu | Type | Behavior |
-|---|---|---|
-| Not | `Not` | Outputs the inverse of `Value` |
-| Is Not Null | `IsNotNull` | Outputs true when `Value` references a live object |
-
-## Unity
-
-### Animation
-
-| Menu | Behavior |
-|---|---|
-| Set Animator Value | Sets a value in the animator — int, float or bool |
-| Set Animator Trigger | Sets `triggerName` in the animator |
-| Cross Fade Animation | Cross-fades to `StateName` |
-
-### Transform
-
-| Menu | Behavior |
-|---|---|
-| Set Position | Sets the transform's position |
-| Look At | Rotates `Target` to look at `LookTarget` |
-| Rotate | Spins the transform around `Axis` at `Speed` degrees per second; runs until something stops it |
-| Set Rotation | Turns the transform to `TargetRotation` over `Duration`, then succeeds |
-
-> `Rotate` keeps spinning and never finishes on its own, so put it under something that will stop it — a
-> guard, or a sibling that succeeds. `Set Rotation` is the one that ends. A `Duration` of `0` means "face
-> there now": it snaps to the target and succeeds on the first tick.
-
-### Physics
-
-| Menu | Behavior |
-|---|---|
-| Add Force | Applies physics force to the target Rigidbody |
-| Add Torque | Applies torque to the target Rigidbody |
-| Add Explosive Force | Applies a force simulating an explosion to the target Rigidbody |
-
-### Navigation
-
-| Menu | Behavior |
-|---|---|
-| Set NavAgent Position | Updates the nav agent's destination |
-| Generate Random Navmesh Position | Generates a random NavMesh position; returns `SUCCESS`/`FAILURE` depending on whether one was found. `SampleDistance` is how far from the random point it will look for navmesh — the default of `1` suits human-scale agents, and `0` can never hit anything |
-| Wait Until Reach Nav Target Position | Runs until the agent reaches its destination |
-| Stop NavAgent | Stops the nav agent |
-
-### Game Object
-
-| Menu | Behavior |
-|---|---|
-| Instante Object | Clones the original object *(the menu label has a typo in the source; the node is `InstantiateObject`)* |
-| Destroy Object | Destroys the input GameObject, component or asset |
-| Find Game Object | Finds a GameObject in the scene |
-| Dont Destroy On Load | Keeps the target object alive across scene loads |
-
-### Variables
+## Variables
 
 | Menu | Behavior |
 |---|---|
@@ -149,35 +89,92 @@ key goes on a port, so it can be typed inline or driven by a graph; the kind is 
 
 **A new node starts with no store chosen**, and says so: the canvas marks it with a problem, and running it
 throws naming the node rather than quietly reading nothing. Pick a kind, the same way you would fill in the
-key. `Generate Random Navmesh Position` carries the same field for the position it writes.
+key. `Generate Random NavMesh Position` carries the same field for the position it writes.
 
 > Older trees may contain a node whose store was `Flow` — a Visual Scripting kind a behavior tree could
 > never serve, and the value nodes used to default to. Those load as unset and light up on the canvas.
 > Pick the store the node was always meant to use.
 
-### Literal
+## Literal
 
 Literals exist to give a port a typed, inspector-editable value. They are the standard way to fill a port
 that declares no default (see below).
 
-`Boolean` · `Float` · `Integer` · `String` · `Vector2` · `Vector3` · `Variable Key` ·
-`This/GameObject` · `This/Transform`
+`Boolean` · `Float` · `Integer` · `String` · `Vector2` · `Vector3` · `Variable Key` · `TPS Query` ·
+`This GameObject` · `This Transform`
 
-### Math
+## Math
 
-`Sum (A + B)` · `Subtract (A - B)` · `Multiply (A x B)` · `Divide (A / B)` · `Modulo (A % B)`
+`Add (A + B)` · `Subtract (A - B)` · `Multiply (A x B)` · `Divide (A / B)` · `Modulo (A % B)`
 
-### Logs
+## Logic
 
-`Debug Log` · `Debug Log Warning` · `Debug Log Error`
+| Menu | Type | Behavior |
+|---|---|---|
+| Not | `Not` | Outputs the inverse of `Value` |
+| Is Not Null | `IsNotNull` | Outputs true when `Value` references a live object |
 
-### Other
+## Navigation
+
+| Menu | Behavior |
+|---|---|
+| Set Nav Agent Position | Updates the nav agent's destination |
+| Generate Random NavMesh Position | Generates a random NavMesh position; returns `SUCCESS`/`FAILURE` depending on whether one was found. `SampleDistance` is how far from the random point it will look for navmesh — the default of `1` suits human-scale agents, and `0` can never hit anything |
+| Wait Until Reach Nav Target Position | Runs until the agent reaches its destination |
+| Stop Nav Agent | Stops the nav agent |
+| Tactical Position Selection | Runs a TPS query and outputs the chosen position |
+
+## Transform
+
+| Menu | Behavior |
+|---|---|
+| Set Position | Sets the transform's position |
+| Look At | Rotates `Target` to look at `LookTarget` |
+| Face Target | Rotates the target transform to face `TransformTarget` |
+| Rotate | Spins the transform around `Axis` at `Speed` degrees per second; runs until something stops it |
+| Set Rotation | Turns the transform to `TargetRotation` over `Duration`, then succeeds |
+
+> `Rotate` keeps spinning and never finishes on its own, so put it under something that will stop it — a
+> guard, or a sibling that succeeds. `Set Rotation` is the one that ends. A `Duration` of `0` means "face
+> there now": it snaps to the target and succeeds on the first tick.
+
+## Physics
+
+| Menu | Behavior |
+|---|---|
+| Add Force | Applies physics force to the target Rigidbody |
+| Add Torque | Applies torque to the target Rigidbody |
+| Add Explosive Force | Applies a force simulating an explosion to the target Rigidbody |
+
+## Animation
+
+| Menu | Behavior |
+|---|---|
+| Set Animator Value | Sets a value in the animator — int, float or bool |
+| Set Animator Trigger | Sets `triggerName` in the animator |
+| Cross Fade Animation | Cross-fades to `StateName` |
+
+## Game Object
+
+| Menu | Behavior |
+|---|---|
+| Instantiate Object | Clones the original object |
+| Destroy Object | Destroys the input GameObject, component or asset |
+| Find Game Object | Finds a GameObject in the scene by name |
+| Find Game Object With Tag | Finds a GameObject in the scene by tag |
+| Dont Destroy On Load | Keeps the target object alive across scene loads |
+
+## Audio
 
 | Menu | Behavior |
 |---|---|
 | Play Audio | Plays an audio clip |
 
-### Visual Scripting
+## Debug
+
+`Debug Log` · `Debug Log Warning` · `Debug Log Error`
+
+## Visual Scripting
 
 | Menu | Behavior |
 |---|---|

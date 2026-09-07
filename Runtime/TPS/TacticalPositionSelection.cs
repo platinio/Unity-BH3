@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// does.
     /// </para>
     /// </summary>
-    [GraphCreateMenu("Unity/Navigation/Tactical Position Selection")]
+    [GraphCreateMenu("Navigation/Tactical Position Selection")]
     public class TacticalPositionSelection : GameplayNode
     {
         // The pre-port serialized slot, kept (without [Inspectable]) so trees authored before Query was a

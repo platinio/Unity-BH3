@@ -5,7 +5,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// <summary>
     /// selector task running all children at the same time
     /// </summary>
-    [GraphCreateMenu("Composite/Create Parallel Selector")]
+    [GraphCreateMenu("Composite/Parallel Selector")]
     public class ParallelSelector : Parallel
     {
         public override string NodeName => "Parallel Selector";

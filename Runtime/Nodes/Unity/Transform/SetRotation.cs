@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     // the two was unreachable in the create menu, and an author looking at an existing tree could not tell
     // which of them an asset actually contained. The class name is deliberately unchanged: that is what
     // assets serialize, so renaming it would break every tree holding one.
-    [GraphCreateMenu("Unity/Transform/Set Rotation")]
+    [GraphCreateMenu("Transform/Set Rotation")]
     public class SetRotation : GameplayNode
     {
         [DoNotSerialize]

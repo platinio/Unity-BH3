@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Navigation/Wait Until Reach Nav Target Position")]
+    [GraphCreateMenu("Navigation/Wait Until Reach Nav Target Position")]
     public class WaitUntilReachNavTargetPosition : GameplayNode
     {
         [DoNotSerialize]

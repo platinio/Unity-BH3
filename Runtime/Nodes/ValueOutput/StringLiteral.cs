@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Literal/String")]
+    [GraphCreateMenu("Literal/String")]
     public class StringLiteral : Literal
     {
         [Serialize, Inspectable] private string value;

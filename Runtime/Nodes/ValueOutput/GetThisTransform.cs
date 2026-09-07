@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Literal/This/Transform")]
+    [GraphCreateMenu("Literal/This Transform")]
     public class GetThisTransform : Literal
     {
         public override string NodeName => string.IsNullOrEmpty(NodeComment)? "Transform" : NodeComment;

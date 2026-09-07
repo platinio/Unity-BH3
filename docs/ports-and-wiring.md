@@ -201,7 +201,7 @@ Here's the whole loop on a small tree — `Entry → Repeater → Sequence → (
 
 ![A behavior tree: Entry connects to a Repeater, then a Sequence whose children are a Wait node and an Add Force node with Target and Force ports](images/entry-repeater-sequence-example.png)
 
-**1. Create the node** — `Unity/Visual Scripting/Script Graph Variable`. Select it, click its **Function**
+**1. Create the node** — `Visual Scripting/Script Graph Variable`. Select it, click its **Function**
 field, and choose **Create new Function…**. Save it somewhere in the project; it opens for editing.
 
 > **This step changed.** The node used to hold an anonymous graph welded inside the tree asset, created by

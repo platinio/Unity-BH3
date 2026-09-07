@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Other/Play Audio")]
+    [GraphCreateMenu("Audio/Play Audio")]
     public class PlayAudio : GameplayNode
     {
         [DoNotSerialize]

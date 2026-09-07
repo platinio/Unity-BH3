@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Math/Modulo")]
+    [GraphCreateMenu("Math/Modulo")]
     public class Modulo : GameplayNode
     {
         [DoNotSerialize]

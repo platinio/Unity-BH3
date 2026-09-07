@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Face Target")]
+    [GraphCreateMenu("Transform/Face Target")]
     public class FaceTarget : GameplayNode
     {
         [DoNotSerialize]

@@ -179,7 +179,7 @@ Derive from `ConditionalExecution` and implement `Evaluate()`. Unlike a Conditio
 node as a guard and is re-checked every tick — if it turns false mid-branch, the branch aborts.
 
 ```csharp
-[GraphCreateMenu("Add Conditional Execution/Has Ammo")]
+[GraphCreateMenu("Condition/Has Ammo")]
 public class HasAmmoConditionalExecution : ConditionalExecution
 {
     public override string NodeName => "Has Ammo";
@@ -207,7 +207,7 @@ source into its port.
 Derive from `Decorator`. A decorator wraps exactly one child, so declare that:
 
 ```csharp
-[GraphCreateMenu("Decorator/Create Max Attempts")]
+[GraphCreateMenu("Decorator/Max Attempts")]
 public class MaxAttempts : Decorator
 {
     [DoNotSerialize] public ValueInput Attempts { get; private set; }

@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Decorator/Create Return Failure")]
+    [GraphCreateMenu("Decorator/Return Failure")]
     public class ReturnFailure : Decorator
     {
         public override string NodeName => "Return Failure";

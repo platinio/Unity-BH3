@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Game Object/Destroy Object")]
+    [GraphCreateMenu("Game Object/Destroy Object")]
     public class DestroyObject : GameplayNode
     {
         [DoNotSerialize]

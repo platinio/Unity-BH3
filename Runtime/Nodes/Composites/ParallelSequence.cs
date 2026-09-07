@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// and it runs them until one of them fails. At that point, the Parallel task as a whole fails.
     /// If all of the child tasks complete successfully, the Parallel task returns with success
     /// </summary>
-    [GraphCreateMenu("Composite/Create Parallel Sequence")]
+    [GraphCreateMenu("Composite/Parallel Sequence")]
     public class ParallelSequence : Parallel
     {
         protected override string NodeIconPath => "NodeIcons/ParallelSequence";

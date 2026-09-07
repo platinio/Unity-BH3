@@ -35,8 +35,10 @@ Right-click anywhere on the canvas and pick a node from the menu.
 
 ![The canvas right-click menu, open on the Composite submenu, listing Create Parallel Selector, Create Parallel Sequence, Random Selector, Random Sequence, Create Selector and Create Sequence](images/create-node-menu-composite.png)
 
-The top-level categories are `Composite`, `Decorator`, `Condition`, `Add Conditional Execution`, `Gameplay`,
-`Logic` and `Unity`. Every node that ships is listed in the [Node Reference](node-reference.md).
+Categories are named for what the node does, not where it came from: `Composite`, `Decorator`, `Condition`,
+`Flow`, `Variables`, `Literal`, `Math`, `Logic`, `Navigation`, `Transform`, `Physics`, `Animation`,
+`Game Object`, `Audio`, `Debug` and `Visual Scripting`. Every node that ships is listed in the
+[Node Reference](node-reference.md).
 
 | Action | Shortcut |
 |---|---|

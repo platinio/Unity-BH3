@@ -31,7 +31,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// return was doing, made explicit on the canvas.
     /// </para>
     /// </summary>
-    [GraphCreateMenu("Unity/Navigation/Generate Random Navmesh Position")]
+    [GraphCreateMenu("Navigation/Generate Random NavMesh Position")]
     public class GenerateRandomNavMeshPosition : GameplayNode
     {
         [DoNotSerialize]

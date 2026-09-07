@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Wait")]
+    [GraphCreateMenu("Flow/Wait")]
     public class WaitTime : GameplayNode
     {
         [DoNotSerialize]

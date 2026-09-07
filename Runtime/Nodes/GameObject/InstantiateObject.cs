@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     // The menu path is spelled properly; the class name is not, and stays that way deliberately --
     // the class name is what assets serialize, so correcting it would break every tree holding one
     // unless the deserializer is taught the old name as an alias first.
-    [GraphCreateMenu("Unity/Game Object/Instantiate Object")]
+    [GraphCreateMenu("Game Object/Instantiate Object")]
     public class InstantiateObject : GameplayNode
     {
         [DoNotSerialize]

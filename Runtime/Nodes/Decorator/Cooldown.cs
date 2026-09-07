@@ -7,7 +7,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// <summary>
     /// Gates a branch behind a cooldown time.
     /// </summary>
-    [GraphCreateMenu("Decorator/Create Cooldown")]
+    [GraphCreateMenu("Decorator/Cooldown")]
     public class Cooldown : Decorator
     {
         [DoNotSerialize]

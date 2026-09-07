@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Transform/Look At")]
+    [GraphCreateMenu("Transform/Look At")]
     public class LookAt : GameplayNode
     {
         [DoNotSerialize]

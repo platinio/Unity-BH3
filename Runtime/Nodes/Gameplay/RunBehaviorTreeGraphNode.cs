@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Run Behavior Tree Graph")]
+    [GraphCreateMenu("Flow/Run Behavior Tree Graph")]
     public class RunBehaviorTreeGraphNode : GameplayNode, IRefreshesContractPorts
     {
         [Serialize, Inspectable]

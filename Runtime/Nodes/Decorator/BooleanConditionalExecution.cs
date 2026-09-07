@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Add Conditional Execution/Boolean Conditional")]
+    [GraphCreateMenu("Condition/Conditional Execution")]
     public class BooleanConditionalExecution : ConditionalExecution
     {
         [DoNotSerialize]

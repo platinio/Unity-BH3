@@ -8,7 +8,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// Rolls once when the branch is entered so a behavior only fires part of the time. Useful for giving
     /// several agents running the same tree an unpredictable choice of attack.
     /// </summary>
-    [GraphCreateMenu("Decorator/Create Random Chance")]
+    [GraphCreateMenu("Decorator/Random Chance")]
     public class RandomChance : Decorator
     {
         [DoNotSerialize]

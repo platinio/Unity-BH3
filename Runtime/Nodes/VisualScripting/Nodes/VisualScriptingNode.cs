@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Visual Scripting/Script Graph")]
+    [GraphCreateMenu("Visual Scripting/Script Graph")]
     public class VisualScriptingNode : BaseVisualScriptingNode
     {
         [Serialize] [Inspectable] private BTScriptGraphVariable OnAwakeGraph = null;

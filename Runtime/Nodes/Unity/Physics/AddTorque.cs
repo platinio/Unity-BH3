@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Physics/Add Torque")]
+    [GraphCreateMenu("Physics/Add Torque")]
     public class AddTorque : GameplayNode
     {
         [DoNotSerialize]
