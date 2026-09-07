@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Transform/Set Position")]
+    [GraphCreateMenu("Transform/Set Position")]
     public class SetPosition : GameplayNode
     {
         [DoNotSerialize]

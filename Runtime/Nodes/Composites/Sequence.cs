@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Composite/Create Sequence")]
+    [GraphCreateMenu("Composite/Sequence")]
     public class Sequence : Composite
     {
         protected override string NodeIconPath => "NodeIcons/Sequence";

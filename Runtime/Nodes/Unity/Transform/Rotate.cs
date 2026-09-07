@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Transform/Rotate")]
+    [GraphCreateMenu("Transform/Rotate")]
     public class Rotate : GameplayNode
     {
         [DoNotSerialize]

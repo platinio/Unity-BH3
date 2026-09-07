@@ -333,7 +333,7 @@ dirty-flag caching and the preemption behaviour, and leaves only *how do I get m
 `BooleanReactiveGuard` is just the version that reads a port.
 
 ```csharp
-[GraphCreateMenu("Add Conditional Execution/Target In Range")]
+[GraphCreateMenu("Condition/Target In Range")]
 public class TargetInRangeGuard : ReactiveGuard
 {
     [DoNotSerialize]

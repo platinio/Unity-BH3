@@ -15,7 +15,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// executing the condition would cost exactly what it was meant to save.
     /// </para>
     /// </summary>
-    [GraphCreateMenu("Add Conditional Execution/Reactive Guard")]
+    [GraphCreateMenu("Condition/Reactive Guard")]
     public class BooleanReactiveGuard : ReactiveGuard
     {
         [DoNotSerialize]

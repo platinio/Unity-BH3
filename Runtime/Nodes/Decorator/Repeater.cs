@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Decorator/Create Repeater")]
+    [GraphCreateMenu("Decorator/Repeater")]
     public class Repeater : Decorator
     {
         protected override string NodeIconPath => "NodeIcons/Cycle";

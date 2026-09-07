@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Variables/Remove Variable")]
+    [GraphCreateMenu("Variables/Remove Variable")]
     public class RemoveVariable : GameplayNode
     {
         [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;

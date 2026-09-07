@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Decorator/Create Return Success")]
+    [GraphCreateMenu("Decorator/Return Success")]
     public class ReturnSuccess : Decorator
     {
         public override string NodeName => "Return Success";

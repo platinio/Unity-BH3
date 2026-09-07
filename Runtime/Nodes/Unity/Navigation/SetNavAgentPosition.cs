@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Navigation/Set NavAgent Position")]
+    [GraphCreateMenu("Navigation/Set Nav Agent Position")]
     public class SetNavAgentPosition : GameplayNode
     {
         [DoNotSerialize]

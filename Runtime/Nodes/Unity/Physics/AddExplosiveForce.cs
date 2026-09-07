@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Physics/Add Explosive Force")]
+    [GraphCreateMenu("Physics/Add Explosive Force")]
     public class AddExplosiveForce : GameplayNode
     {
         [DoNotSerialize]

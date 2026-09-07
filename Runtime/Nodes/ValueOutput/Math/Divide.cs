@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Math/Divide")]
+    [GraphCreateMenu("Math/Divide")]
     public class Divide : GameplayNode
     {
         [DoNotSerialize]

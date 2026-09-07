@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Logs/Debug Log")]
+    [GraphCreateMenu("Debug/Debug Log")]
     public class DebugLog : GameplayNode
     {
         [DoNotSerialize]

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Game Object/Dont Destroy On Load")]
+    [GraphCreateMenu("Game Object/Dont Destroy On Load")]
     public class DontDestroyOnLoad : GameplayNode
     {
         [DoNotSerialize]

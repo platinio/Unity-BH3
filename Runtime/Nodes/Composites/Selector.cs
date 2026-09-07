@@ -2,7 +2,7 @@
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Composite/Create Selector")]
+    [GraphCreateMenu("Composite/Selector")]
     public class Selector : Composite
     {
         protected override string NodeIconPath => "NodeIcons/Selector";

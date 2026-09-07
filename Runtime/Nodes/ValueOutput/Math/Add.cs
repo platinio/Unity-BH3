@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Math/Sum")]
+    [GraphCreateMenu("Math/Add")]
     public class Add : GameplayNode
     {
         [DoNotSerialize]

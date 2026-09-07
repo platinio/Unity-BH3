@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Gameplay/Wait Range")]
+    [GraphCreateMenu("Flow/Wait Range")]
     public class WaitTimeRandomRange : GameplayNode
     {
         [DoNotSerialize]

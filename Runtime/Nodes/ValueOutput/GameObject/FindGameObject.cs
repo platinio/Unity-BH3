@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Game Object/Find Game Object")]
+    [GraphCreateMenu("Game Object/Find Game Object")]
     public class FindGameObject : GameplayNode
     {
         [DoNotSerialize]

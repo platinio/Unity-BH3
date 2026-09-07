@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Physics/Add Force")]
+    [GraphCreateMenu("Physics/Add Force")]
     public class AddForce : GameplayNode
     {
         [DoNotSerialize]

@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Math/Multiply")]
+    [GraphCreateMenu("Math/Multiply")]
     public class Multiply : GameplayNode
     {
         [DoNotSerialize]

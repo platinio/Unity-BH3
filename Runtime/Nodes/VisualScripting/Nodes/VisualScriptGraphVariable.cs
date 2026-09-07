@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Visual Scripting/Script Graph Variable")]
+    [GraphCreateMenu("Visual Scripting/Script Graph Variable")]
     public class VisualScriptGraphVariable : BaseVisualScriptingNode, IDeclaresWatchedKeys, IFunctionArguments,
         IRefreshesContractPorts
     {

@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Variables/Get Variable")]
+    [GraphCreateMenu("Variables/Get Variable")]
     public class GetVariable : Literal
     {
         [Serialize, Inspectable] private BehaviorTreeVariableKind VariableKind;

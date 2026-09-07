@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Literal/Integer")]
+    [GraphCreateMenu("Literal/Integer")]
     public class IntegerLiteral : Literal
     {
         [Serialize, Inspectable] private int value;

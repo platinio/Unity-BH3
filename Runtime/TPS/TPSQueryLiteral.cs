@@ -22,7 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// This node merely holds a reference to a finished preset.
     /// </para>
     /// </summary>
-    [GraphCreateMenu("Unity/Literal/TPS Query")]
+    [GraphCreateMenu("Literal/TPS Query")]
     public class TPSQueryLiteral : Literal
     {
         [Serialize, Inspectable, TPSQueryPicker] private TacticalPositionSelectionQueryItem value;

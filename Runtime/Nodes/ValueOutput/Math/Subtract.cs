@@ -3,7 +3,7 @@ using Unity.VisualScripting;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Math/Subtract")]
+    [GraphCreateMenu("Math/Subtract")]
     public class Subtract : GameplayNode
     {
         [DoNotSerialize]

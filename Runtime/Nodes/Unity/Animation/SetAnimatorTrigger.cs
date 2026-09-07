@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    [GraphCreateMenu("Unity/Animation/Set Animator Trigger")]
+    [GraphCreateMenu("Animation/Set Animator Trigger")]
     public class SetAnimatorTrigger : GameplayNode
     {
         [DoNotSerialize]

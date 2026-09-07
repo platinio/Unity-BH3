@@ -762,7 +762,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "Pass --type for one node's full port list, or --category to narrow the listing.")]
         public static object ListNodes(
             [CliArg("type", "Show full port detail for one node type, e.g. WaitTime.")] string type = null,
-            [CliArg("category", "Filter by create-menu category, e.g. Gameplay, Navigation, Composite.")] string category = null)
+            [CliArg("category", "Filter by create-menu category, e.g. Flow, Navigation, Composite.")] string category = null)
         {
             // ports only exist once Define() has run, which happens when a node joins a graph
             var scratch = ScriptableObject.CreateInstance<BehaviorTreeGraphAsset>();
