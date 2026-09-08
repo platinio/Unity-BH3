@@ -146,7 +146,7 @@ A reactive guard's condition is a natural Function: small, pure, and asked repea
 | Command | What it does |
 |---|---|
 | `fn_create --path <asset>` | New Function, already runnable end to end |
-| `fn_list [--folder <f>]` | Every Function with flavour, contract size and purity |
+| `fn_list [--folder <f>]` | Every Function with its flavour (predicate, query or value, from the result type), contract size and purity |
 | `fn_describe --function <asset>` | Full contract, and why it cannot be evaluated if it cannot |
 | `fn_set_metadata --function <asset> [--pure] [--watched_keys] [--description]` | Asset-level metadata |
 | `fn_rename_output --function <asset> ...` | Rename the Function's output |

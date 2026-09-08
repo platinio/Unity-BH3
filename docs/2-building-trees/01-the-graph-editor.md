@@ -1,6 +1,6 @@
 # The graph editor
 
-The window where you create, connect and inspect nodes, and the panels that live in it.
+The **Behavior Tree** window, where you create, connect and inspect nodes, and the panels that live in it.
 
 ---
 
@@ -9,6 +9,10 @@ The window where you create, connect and inspect nodes, and the panels that live
 Double-click a Behavior Tree asset, or use the **Edit Graph** button on the asset's inspector or on a
 **Behavior Tree Machine** component. Opening through the machine is worth doing while debugging: the
 window then knows which agent it is showing.
+
+The machine's **Source** dropdown chooses where its tree comes from. **Graph** references a tree asset,
+which is what you want almost always: the same asset drives many agents, and every guide here assumes it.
+**Embed** stores a private tree on the component itself, for a one-off that no other object will run.
 
 ![The Inspector showing a Behavior Tree Graph Asset with its Edit Graph button highlighted](../images/open-graph-from-asset.png)
 
@@ -36,10 +40,17 @@ Four more panels share the window. They are described in [Debugging](../3-debugg
 
 | Panel | Where | Answers |
 |---|---|---|
-| **Why** | Left sidebar, beside Blackboard | Why a node did what it did |
+| **Why** | Left sidebar, below Blackboard | Why a node did what it did |
 | **Breakpoints** | Left sidebar | Where the editor should pause |
 | **Variable Watch** | Right sidebar (drag its anchor button to move it) | What a variable held at a tick, and who wrote it |
 | **Timeline** | A strip under the canvas | What the tree looked like at any tick |
+
+A sidebar stacks its panels, each under a header bar with the panel's name. Click a header to collapse or
+expand that panel, and drag the border between the sidebar and the canvas to resize it. The Timeline
+collapses with the small triangle in its own header.
+
+BH3's other editor tools sit under two menus: **Tools → BH3** (the raw Flight Recorder window) and
+**Window → Arcane Onyx → BH3** (the broken-graph finder).
 
 ---
 
@@ -52,8 +63,8 @@ Right-click anywhere on the canvas and pick a node from the menu.
 Categories are named for what the node does: **Composite**, **Decorator**, **Condition**, **Flow**,
 **Variables**, **Literal**, **Math**, **Logic**, **Navigation**, **Transform**, **Physics**, **Animation**,
 **Game Object**, **Audio**, **Debug** and **Visual Scripting**. Every node is listed in the
-[Node reference](02-node-reference.md). Your own C# nodes appear under whatever category their
-`[GraphCreateMenu]` attribute names.
+[Node reference](02-node-reference.md). Your own C# nodes appear under whatever category you give them;
+see [Custom nodes](../4-extending-with-csharp/01-custom-nodes.md).
 
 | Action | How |
 |---|---|

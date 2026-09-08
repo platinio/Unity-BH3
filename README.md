@@ -48,6 +48,7 @@ in **[docs/README.md](docs/README.md)**.
 3. Right-click the canvas to add nodes. Hold `Ctrl` and drag from a parent to a child to connect them.
 4. Put a **Behavior Tree Machine** component on a GameObject and drag the asset into its **Graph** field.
 5. Press Play. The machine loads the tree on `Awake`, enters it on `Start` and ticks it every `Update`.
+   Keep the Behavior Tree window open and the running branch lights up.
 
 > **Put a Repeater under Entry.** The machine stops ticking once the root returns Success or Failure, so a
 > tree without one runs exactly once and goes quiet. This catches nearly everyone the first time.

@@ -95,7 +95,8 @@ built its node library.
 3. Under **Node Library**, click **Regenerate Nodes** and wait
 4. Under **Custom Inspector Properties**, click **Generate** and wait
 
-Do step 3 again whenever you add a new custom node or unit and it does not show up in a graph's finder.
+Do step 3 again whenever a custom Visual Scripting **unit** does not show up in a script graph's finder.
+Behavior tree nodes are different: a C# node appears in the canvas right-click menu as soon as it compiles.
 
 ---
 
@@ -104,7 +105,7 @@ Do step 3 again whenever you add a new custom node or unit and it does not show 
 - Right-click in the Project window. **Create → Visual Scripting → Behavior Tree** should be there.
 - Add a component to any GameObject: **Behavior Tree Machine** should be offered.
 - Open `Assets/ArcaneOnyx/BH3/Sample/FlightRecorder/FlightRecorderDemo.unity`, press Play, and double-click
-  `FR_Demo_Sentry.asset`. The canvas should light up as the tree runs.
+  `FR_Demo_Sentry.asset` in the same folder. The canvas should light up as the tree runs.
 
 If the create menu is missing, Visual Scripting has not been initialised. If the nodes exist but the
 **Set BT Variable** unit cannot be found in a script graph, regenerate the node library.

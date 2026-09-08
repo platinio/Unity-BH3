@@ -126,7 +126,7 @@ rows meaning "at tick 300". For current values, use the **Blackboard** panel, or
 | The **Set Variable** tree node (any node calling `SaveVariable`) | yes | the node; `→` selects it |
 | The **Set BT Variable** unit in a script graph | yes | the node that ran the graph |
 | A sensor using `AgentVariableWriter` | yes | the component that called it, by name |
-| `variables.declarations.Set(...)` called directly | **no** | |
+| `Variables.Object(go).Set(...)` from C# | **no** | |
 | Unity's stock **Set Variable** unit | **no** | |
 
 The last two write the value perfectly well; they are just invisible, and the guard reading that variable

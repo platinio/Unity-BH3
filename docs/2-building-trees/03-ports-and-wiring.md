@@ -77,7 +77,9 @@ Here is the loop on the tree from [Your first tree](../1-start-here/02-your-firs
 ![The Graph Inspector for a selected Script Graph Variable node, with its Open Graph button highlighted, and the node on the canvas showing a single Output port](../images/script-graph-variable-open-graph.png)
 
 **2. Build a graph that returns the value.** Here, finding a GameObject by name and getting its Rigidbody.
-The value leaves the graph through its **Result** output.
+The value leaves the graph through an output named **Result** on the graph's **Output** unit. Creating the
+Function from the node declares that output for you, typed to fit the port; a Function made another way
+needs it added by hand, and is not offered anywhere until it has one.
 
 ![A Visual Scripting flow graph: ScriptGraphInput Enter, into Game Object Find, into Component Get Component, into ScriptGraphOutput with Exit and Result ports](../images/script-graph-variable-flow-graph.png)
 
@@ -103,7 +105,9 @@ onto a `Transform` port. [Functions](08-functions.md) has the details.
 
 ### Reading and writing variables from a graph
 
-BH3 ships two units under **BH3 → Variables** in the fuzzy finder:
+BH3 ships two units, the Visual Scripting word for a node in a script graph, under **BH3 → Variables** in
+the finder that opens when you right-click a script graph. Their full titles are **Set Behavior Tree
+Variable** and **Get Behavior Tree Variable**; the short names below are what the finder shows:
 
 | Unit | Use it because |
 |---|---|

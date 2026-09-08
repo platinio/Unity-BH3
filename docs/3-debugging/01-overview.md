@@ -79,8 +79,9 @@ Two buffers are involved, both per agent and both ring buffers:
 **Tools → BH3 → Open Flight Recorder Window** opens a plain, per-agent event log: every recorded event in
 order, with node guids resolved to names, an event-kind filter, a **Follow** toggle that tails the newest
 tick, and **Copy JSON**. It also lists the agent's boolean facts as toggles you can flip by hand to poke a
-guard. It is the low-level view; the panels above are built on the same data and are usually the better
-first stop.
+guard, and a **Recording** / **Paused** toggle that pauses one agent's recorder while the others carry on.
+It is the low-level view; the panels above are built on the same data and are usually the better first
+stop.
 
 ## In a player build
 

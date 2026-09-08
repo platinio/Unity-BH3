@@ -15,12 +15,17 @@ the Blackboard panel has a tab per kind.
 | **Graph** | Graph | The running tree instance, through the calling chain | A branch's own working values, and parameters passed to it |
 | **Object** | Object | The agent's `Variables` component | Facts about the agent: `hasTarget`, `lastKnownPosition`, an attack cooldown. Shared by every branch on that agent, visible in the inspector, and the only kind a reactive guard can watch |
 | **Scene** | Scene | Everything in the active scene | State bigger than one agent |
-| **Application** | App | Shared across scenes, reset when the application quits | |
-| **Saved** | Saved | Outlives the application | Unity object references are not supported |
+| **Application** | App | Shared across scenes, reset when the application quits | Session-wide state |
+| **Saved** | Saved | Outlives the application | Persistent state. Unity object references are not supported |
 
-A new node starts with **no kind chosen** and shows a problem badge until you pick one. Older assets may
-contain a node whose kind was `Flow`, a Visual Scripting store a behavior tree could never serve; those load
-as unset and light up the same way.
+These are Visual Scripting's own stores; the Blackboard panel and the `Variables` component the machine
+requires are Visual Scripting's too. BH3 adds the scoping rules below and the recording.
+
+A new node starts with **no kind chosen** and shows a problem badge until you pick one.
+
+This page mentions two things explained later: [guards](06-guards.md), which can watch Object variables,
+and [Functions](08-functions.md), the graphs a Script Graph Variable runs. Read on; the references are
+one-liners here.
 
 The **Key** is a port, so it can be typed inline, fed by a `Variable Key` literal, or computed by a graph.
 An empty key is reported on the canvas and throws when the node runs, naming the node.
@@ -47,7 +52,7 @@ sub-tree instance it runs. A sub-tree used at two call sites has two scopes that
 
 Those three rules together are why you never move data between branches by agreeing on a variable name.
 Values *into* a branch are parameters, passed at the call site; facts *about* the agent are Object
-variables. Keeping the two apart is what lets the same Patrol run on a Zombie, a Soldier and a Draugr. See
+variables. Keeping the two apart is what lets the same Patrol run on a Zombie, a Soldier and an Archer. See
 [Sub-trees](07-sub-trees.md).
 
 A read of a variable nothing declares **throws**, naming the variable. If a branch must survive an agent

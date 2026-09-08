@@ -68,7 +68,8 @@ which is why there are two.
 
 ### Where a take-over works
 
-Preemption is a contract on the composite, and each composite answers differently:
+A take-over (`bt_verify` calls it preemption) is a contract on the composite, and each composite answers
+differently:
 
 - **Selector**: a higher-priority child becoming eligible takes over. Built.
 - **Sequence**: its earlier children already succeeded, so a guard there would be a sustained requirement
@@ -120,9 +121,9 @@ bool check instead of a graph run.
 **An empty trigger list means every tick.** That is the most expensive thing a guard can do, so `bt_verify`
 reports it: not because it is wrong, but so the cost is chosen rather than inherited.
 
-### Entry always recomputes
+### Entering a branch always recomputes
 
-Entry ignores the dirty flag. A stale *false* only costs latency, but a stale *true* would enter a branch
+Entering ignores the dirty flag. A stale *false* only costs latency, but a stale *true* would enter a branch
 whose precondition no longer holds: the animation starts, the token is claimed, and the abort has to unwind
 it. Entries are rare next to ticks, so the extra evaluation is cheap insurance.
 
@@ -173,25 +174,18 @@ Function does not hide it.
 
 Two things can still go wrong, and both are reported on the canvas and by `bt_verify`:
 
-**The written list lags the declaration.** `bt_guard_on_function` and the save-time seeder copy the
-Function's declared keys into the trigger so the schedule is visible on the asset. That copy freezes when
-it is written. Add a key to the Function later and the guard still wakes on it, but the asset says
-otherwise. The guard shows an amber badge naming the missing key; **Refresh Watched Keys**, in the guard's
-inspector, its right-click menu, or `bt_refresh_guard_keys`, repairs it. The repair adds and never removes,
-because a hand-typed key naming a fact no walk can see is legitimate and indistinguishable from a seeded
-one.
+| Problem | What you see | Fix |
+|---|---|---|
+| **The guard's key list lags the Function.** When a guard is built or the tree is saved, the Function's declared keys are copied into the trigger so the schedule is visible on the asset. Add a key to the Function later and the guard still wakes on it at runtime, but the asset says otherwise | Amber badge on the guard naming the missing key | **Refresh Watched Keys**, in the guard's inspector, its right-click menu, or `bt_refresh_guard_keys`. It adds and never removes, because a hand-typed key is legitimate and indistinguishable from a copied one |
+| **The Function reads a fact it never declared.** Adding a **Get BT Variable** unit to a Function does not change what it declares, and a guard inherits the *declaration*. The guard never wakes on the new fact and the branch quietly stops firing | The message below, on the Function-backed node and on any guard reading it | **Declare 'stamina' on IsHurt**, in the inspector; it confirms first, because the Function is shared |
 
-**The Function reads a fact it never declared.** Adding a **Get BT Variable** unit to a Function does not
-change what the Function declares, and inheritance hands a guard the *declaration*. So the guard keeps its
-old list, never wakes on the new fact, and the branch quietly stops firing. Both the Function-backed node and
-any guard reading it report it:
+The second one reads:
 
 > This guard's condition reads 'stamina' without declaring it, so the guard never wakes on it and its
 > branch can stop firing with nothing to point at.
 
-The repair is on the Function, and it is offered where the problem is reported: a **Declare 'stamina' on
-IsHurt** button in the inspector, which confirms first because declaring a key changes behaviour in every
-tree that uses the Function. Headless, `fn_set_metadata --watched_keys hp,stamina`.
+The repair is on the Function, which is why the button confirms first: declaring a key changes behaviour in
+every tree that uses that Function. From the command line, `fn_set_metadata --watched_keys hp,stamina`.
 
 **Inheritance never creates a trigger.** A guard with no trigger recomputes every tick and keeps doing so,
 even when its condition declares keys, because a condition can also depend on things no key can express, a
@@ -211,6 +205,9 @@ panel can show exactly what it was looking at.
 ---
 
 ## Writing a guard in C#
+
+For programmers. It assumes [Custom nodes](../4-extending-with-csharp/01-custom-nodes.md); designers can
+stop here.
 
 A Visual Scripting condition costs a graph run per evaluation. For something checked per agent per frame, a
 distance, an angle, a cone of vision, write the guard in C# and pay a method call.

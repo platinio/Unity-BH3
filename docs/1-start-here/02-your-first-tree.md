@@ -35,7 +35,7 @@ Entry → Repeater → Sequence → ( Wait , Add Force )
 ```
 
 - **Sequence** runs its children in order and stops at the first one that fails.
-- **Wait** (under **Flow**) pauses for `Time` seconds. Its `Time` port has no default, so feed it: add a
+- **Wait** (under **Flow**) pauses for `Time` seconds. `Time` defaults to 0, so give it a value: add a
   **Literal → Float**, set it to `1`, and drag from its output pin to the `Time` pin.
 - **Add Force** (under **Physics**) pushes a Rigidbody. Leave `Target` empty and it acts on the agent itself.
 - **Repeater** sends the Sequence around again forever.
@@ -47,12 +47,13 @@ Add a **Behavior Tree Machine** component to a GameObject with a Rigidbody, and 
 
 ![The Behavior Tree Machine component in the Inspector, showing Source set to Graph, a Graph field holding a Behavior Tree Graph Asset, and an Edit Graph button](../images/behavior-tree-machine-component.png)
 
-The machine needs a **Variables** component. Unity adds one automatically.
+The machine needs Visual Scripting's **Variables** component next to it. Unity adds one automatically.
+Leave **Source** on **Graph**; it means the tree comes from an asset.
 
 ## 5. Press Play
 
 The machine loads the tree on `Awake`, enters it on `Start`, and ticks it every frame in `Update`. The
-object gets a push every second. Keep the graph window open and the running branch lights up as it executes.
+object gets a push every second. Keep the Behavior Tree window open and the running branch lights up as it executes.
 
 ---
 
@@ -60,8 +61,8 @@ object gets a push every second. Keep the graph window open and the running bran
 
 ### Put a Repeater under Entry
 
-The machine stops ticking once the root returns `Success` or `Failure`. A tree without a **Repeater** near
-the top runs **exactly once** and then goes silent, which looks identical to "my tree is broken".
+The machine stops ticking once the root returns `Success` or `Failure`. A tree without a **Repeater** directly
+under Entry runs **exactly once** and then goes silent, which looks identical to "my tree is broken".
 
 If your tree does something once and then never again, this is almost always why.
 

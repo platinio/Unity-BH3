@@ -6,18 +6,20 @@ Patterns that keep behavior trees reusable and easy for designers to work with.
 
 ## Fetching information and acting on it are two separate pieces
 
-The traditional node does both: it knows a blackboard key, fetches the value, then acts.
+The traditional node does both: it knows a blackboard key, fetches the value, then acts. In pseudo-code,
+not BH3 API:
 
 ```csharp
-public class SetNavAgentPosition : BehaviorTreeNode
+// The shape most behavior tree libraries use. Not BH3 code.
+public class SetNavAgentPosition : SomeNodeBase
 {
     public string targetPositionKey;
 
-    public override ExecutionStatus OnUpdate(BTContext ctx)
+    public override Status Update()
     {
         Vector3 targetPosition = blackboard.Get<Vector3>(targetPositionKey);   // fetch
         navAgent.SetDestination(targetPosition);                               // act
-        return ExecutionStatus.Success;
+        return Status.Success;
     }
 }
 ```

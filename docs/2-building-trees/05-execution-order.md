@@ -38,7 +38,8 @@ Storing the index fixes all three, and the badge means you never infer the order
 
 **On the canvas.** Drag a child past its sibling and release. The badges update immediately.
 
-**From code.** `Connect` takes the priority directly:
+**From code** (see [Authoring from code](../4-extending-with-csharp/04-authoring-from-code.md)). `Connect`
+takes the priority directly:
 
 ```csharp
 // Attack is tried first, Chase second, Idle last.
@@ -62,7 +63,7 @@ means the tree was generated with indices that do not match its layout, or was e
 `bt_verify` reports the same thing, so it shows up in CI:
 
 ```
-Draugr: layout ≠ priority — 'Selector' runs 'Attack' before 'Chase', but lays them out the other way round.
+Zombie: layout ≠ priority — 'Selector' runs 'Attack' before 'Chase', but lays them out the other way round.
 ```
 
 The fix is cosmetic: drag the children into an order that reads correctly, which rewrites the indices to match
@@ -79,18 +80,17 @@ show the authored order, but the runtime ignores it. That is the point of the no
 
 ## Trees saved before indices existed
 
-Older assets stored index 0 on every connection. A set of all-zero indices is not an ordering, so BH3 treats
-it as "no order recorded" and falls back to canvas position, exactly as those trees always behaved. The same
-fallback applies whenever the indices are not a clean `0, 1, 2, …` run. The first time you drag a child in
-such a tree, the indices are rewritten and the fallback stops being used. Details in
+They keep running exactly as they did: a tree with no recorded order falls back to canvas position until the
+first time you drag a child. See
 [Migrating older trees](../5-reference/02-migrating-older-trees.md#child-order-came-from-canvas-position).
 
 ---
 
 ## Where the rule lives
 
-For contributors. `ChildrenInPriorityOrder` is the single rule; the runtime, the Why panel and the tree dump
-all call it, so a debugging view can never report a different priority than the one that ran.
+For contributors; skip this on a first read. `ChildrenInPriorityOrder` is the single rule; the runtime, the
+Why panel and the tree dump all call it, so a debugging view can never report a different priority than the
+one that ran.
 
 | Piece | File |
 |---|---|

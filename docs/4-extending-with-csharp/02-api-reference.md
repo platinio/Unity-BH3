@@ -22,6 +22,21 @@ sets; you read them, you do not return them.
 
 ---
 
+## Node base classes
+
+| Derive from | For | Members you use |
+|---|---|---|
+| `GameplayNode` | An action, or a value node that only offers outputs | The lifecycle hooks below, `ValueInput<T>` / `ValueOutput<T>` in `Definition()` |
+| `Condition` | A leaf that answers yes or no when reached | `bool Evaluate()` |
+| `ConditionalExecution` | An entry-only guard | `bool Evaluate()`, `Owner` |
+| `ReactiveGuard` | A guard that keeps watching | `bool Evaluate()`, `Ask(bool fresh)`, the switches and triggers below |
+| `Decorator` | A node with exactly one child | `MaxChildrenLimit => 1`, `GetChildren()`, `TickChild(child)`, `child.OnNodeExit()` |
+| `Composite` | A node with several children | The same container members; `SortChildren()` to override the order |
+
+All of them derive from `BehaviorTreeNode`, which owns the ports, the guards attached to the node, and the
+hooks. `Decorator` and `Composite` share `ContainerNode`, which owns the child list. A **container** in
+these pages means any node with children.
+
 ## Node lifecycle
 
 ```csharp
@@ -191,9 +206,11 @@ VariableDeclarations optionalDeclarations;  // parameters with a default
 
 The last two become input ports on any `RunBehaviorTreeGraphNode` that runs this tree.
 
-> **Never touch `BehaviorTreeGraphAssetInstance` or `BehaviorTreeGraphInstance` from editor or tooling
-> code.** Both call `Object.Instantiate` on first access, so merely inspecting one clones the asset. Use
-> `BehaviorTreeGraphAsset`, which is the serialized reference.
+> **Never touch a `RunBehaviorTreeGraphNode`'s `BehaviorTreeGraphAssetInstance` or
+> `BehaviorTreeGraphInstance` from editor or tooling code.** Both call `Object.Instantiate` on first access,
+> so merely inspecting one clones the asset. Use `BehaviorTreeGraphAsset`, which is the serialized
+> reference. The machine's `GraphInstance` is different: it is the copy the machine already made at `Awake`,
+> and reading it at runtime is fine.
 
 ---
 

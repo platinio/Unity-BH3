@@ -2,9 +2,9 @@
 
 Every node that ships with BH3, organised the way the canvas right-click menu organises them.
 
-Each node also shows its description in the Graph Inspector when selected. From the command line,
-`bt_list_nodes` prints this catalogue from the code itself, including which ports must be connected, so it
-can never go stale.
+Each node also shows its description in the Graph Inspector when selected. The **Type** column is the C#
+class, which is what the [command-line tools](../4-extending-with-csharp/05-command-line-tools.md) take;
+`bt_list_nodes` prints this catalogue from the code itself, so it can never go stale.
 
 ---
 
@@ -52,8 +52,9 @@ The canvas and the command-line tools refuse a second child on a decorator. Code
 | Reactive Guard | `BooleanReactiveGuard` | A guard that **keeps watching**: it aborts its owner when `Value` turns false, and can take the slot from a lower-priority sibling when it turns true |
 
 A guard is not a decorator. It has no parent; it attaches to an **owner** node as a precondition, and several
-guards on one owner are ANDed. Use a Condition for a decision made at one point in the flow, and a guard
-when a branch should stop being valid the instant the world changes. See [Guards](06-guards.md).
+guards on one owner are ANDed. The two guards are therefore not in the canvas menu: **right-click the node
+to protect** and pick them from that menu. Use a Condition for a decision made at one point in the flow,
+and a guard when a branch should stop being valid the instant the world changes. See [Guards](06-guards.md).
 
 ## Flow
 
@@ -65,11 +66,11 @@ when a branch should stop being valid the instant the world changes. See [Guards
 
 ## Variables
 
-| Menu | Behaviour |
-|---|---|
-| Get Variable | Reads a variable by `Key` and offers it on an output port |
-| Set Variable | Writes `Value` to the variable named `Key` |
-| Remove Variable | Removes the variable named `Key` |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Get Variable | `GetVariable` | Reads a variable by `Key` and offers it on an output port |
+| Set Variable | `SetVariable` | Writes `Value` to the variable named `Key` |
+| Remove Variable | `RemoveVariable` | Removes the variable named `Key` |
 
 Each takes a **Key** on a port, so it can be typed inline or driven by a graph, and a **Variable Kind** in
 the inspector: `Graph`, `Object`, `Scene`, `Application` or `Saved`. See
@@ -103,71 +104,79 @@ Every input defaults to 0, except `Divide`'s `B`, which defaults to 1.
 
 ## Navigation
 
-| Menu | Behaviour |
-|---|---|
-| Set Nav Agent Position | Sets the NavMeshAgent's destination to `NavPosition` |
-| Generate Random NavMesh Position | A value node. Samples a random point between `MinDistance` and `MaxDistance` from the agent, trying up to `MaxTries` times (default 3), and outputs `Position` and `HasPosition`. `SampleDistance` (default 1) is how far from the random point it looks for NavMesh; 0 can never hit anything |
-| Wait Until Reach Nav Target Position | Runs until the agent is within its stopping distance of its destination |
-| Stop Nav Agent | Stops the NavMeshAgent |
-| Tactical Position Selection | Runs a TPS query and outputs `SelectedPosition` and `HasPosition`. Needs the Tactical Position Selection module |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Set Nav Agent Position | `SetNavAgentPosition` | Sets the NavMeshAgent's destination to `NavPosition` |
+| Generate Random NavMesh Position | `GenerateRandomNavMeshPosition` | A value node. Samples a random NavMesh point between `MinDistance` and `MaxDistance` from the agent and outputs `Position` and `HasPosition` |
+| Wait Until Reach Nav Target Position | `WaitUntilReachNavTargetPosition` | Runs until the agent is within its stopping distance of its destination |
+| Stop Nav Agent | `StopNavAgent` | Stops the NavMeshAgent |
+| Tactical Position Selection | `TacticalPositionSelection` | Runs a TPS query and outputs `SelectedPosition` and `HasPosition`. Needs the Tactical Position Selection module |
 
-On the first, third and fourth, `Target` may be left empty and means the agent itself.
+On **Set Nav Agent Position**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
+be left empty and means the agent itself.
+
+**Generate Random NavMesh Position** tries up to `MaxTries` times (default 3). `SampleDistance` (default 1)
+is how far from each random point it looks for NavMesh; 0 can never hit anything.
 
 ## Transform
 
-| Menu | Behaviour |
-|---|---|
-| Set Position | Sets `Target`'s position to `NewPosition` |
-| Look At | Rotates `Target` to look at `LookTarget` |
-| Face Target | Rotates the agent to face `TransformTarget`, at `RotationSpeed`, succeeding within `AcceptableRotation` degrees |
-| Rotate | Spins the transform around `Axis` at `Speed` degrees per second. Always `Running`; it never finishes on its own |
-| Set Rotation | Turns to `TargetRotation` over `Duration` seconds, then succeeds. A `Duration` of 0 snaps and succeeds on the first tick |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Set Position | `SetPosition` | Sets `Target`'s position to `NewPosition` |
+| Look At | `LookAt` | Rotates `Target` to look at `LookTarget` |
+| Face Target | `FaceTarget` | Rotates the agent to face `TransformTarget`, at `RotationSpeed`, succeeding within `AcceptableRotation` degrees |
+| Rotate | `Rotate` | Spins the transform around `Axis` at `Speed` degrees per second. Always `Running`; it never finishes on its own |
+| Set Rotation | `SetRotation` | Turns to `TargetRotation` over `Duration` seconds, then succeeds. A `Duration` of 0 snaps and succeeds on the first tick |
 
 `Rotate` keeps spinning, so put it under something that will stop it: a guard, or a sibling in a Parallel
 that succeeds.
 
 ## Physics
 
-| Menu | Behaviour |
-|---|---|
-| Add Force | Applies `Force` to the target Rigidbody |
-| Add Torque | Applies torque to the target Rigidbody |
-| Add Explosive Force | Applies a force simulating an explosion to the target Rigidbody |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Add Force | `AddForce` | Applies `Force` to the target Rigidbody |
+| Add Torque | `AddTorque` | Applies torque to the target Rigidbody |
+| Add Explosive Force | `AddExplosiveForce` | Applies a force simulating an explosion to the target Rigidbody |
 
 ## Animation
 
-| Menu | Behaviour |
-|---|---|
-| Set Animator Value | Sets an int, float or bool parameter on `Animator` |
-| Set Animator Trigger | Sets a trigger on `Animator` |
-| Cross Fade Animation | Cross-fades `Animator` to `StateName` |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Set Animator Value | `SetAnimatorValue` | Sets an int, float or bool parameter on `Animator` |
+| Set Animator Trigger | `SetAnimatorTrigger` | Sets a trigger on `Animator` |
+| Cross Fade Animation | `CrossFadeAnimation` | Cross-fades `Animator` to `StateName` |
 
 ## Game Object
 
-| Menu | Behaviour |
-|---|---|
-| Instantiate Object | Clones the original object |
-| Destroy Object | Destroys the input GameObject, component or asset |
-| Find Game Object | Finds a GameObject in the scene by name |
-| Find Game Object With Tag | Finds a GameObject in the scene by tag |
-| Dont Destroy On Load | Keeps the target object alive across scene loads |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Instantiate Object | `InstantiateObject` | Clones the original object |
+| Destroy Object | `DestroyObject` | Destroys the input GameObject, component or asset |
+| Find Game Object | `FindGameObject` | Finds a GameObject in the scene by name |
+| Find Game Object With Tag | `FindGameObjectWithTag` | Finds a GameObject in the scene by tag |
+| Dont Destroy On Load | `DontDestroyOnLoad` | Keeps the target object alive across scene loads |
 
 ## Audio
 
-| Menu | Behaviour |
-|---|---|
-| Play Audio | Plays an audio clip |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Play Audio | `PlayAudio` | Plays an audio clip |
 
 ## Debug
 
-`Debug Log` · `Debug Log Warning` · `Debug Log Error` — write `LogText` to the console.
+| Menu | Type | Behaviour |
+|---|---|---|
+| Debug Log | `DebugLog` | Writes `LogText` to the console |
+| Debug Log Warning | `DebugLogWarning` | As a warning |
+| Debug Log Error | `DebugLogError` | As an error |
 
 ## Visual Scripting
 
-| Menu | Behaviour |
-|---|---|
-| Script Graph | A node whose lifecycle hooks (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`) are each a [Function](08-functions.md). `OnUpdate`'s Function must return an `ExecutionStatus` |
-| Script Graph Variable | Runs a Function and offers its result on an output port. The bridge from Visual Scripting into any port. See [Ports and wiring](03-ports-and-wiring.md) |
+| Menu | Type | Behaviour |
+|---|---|---|
+| Script Graph | `VisualScriptingNode` | A node whose lifecycle hooks (`OnAwake`, `OnEnter`, `OnUpdate`, `OnExit`) are each a [Function](08-functions.md). `OnUpdate`'s Function must return an `ExecutionStatus` |
+| Script Graph Variable | `VisualScriptGraphVariable` | Runs a Function and offers its result on an output port. The bridge from Visual Scripting into any port. See [Ports and wiring](03-ports-and-wiring.md) |
 
 ---
 

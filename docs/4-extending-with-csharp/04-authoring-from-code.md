@@ -12,7 +12,7 @@ many assets at once, or driving BH3 from a script.
 
 Each of these produces a tree that looks correct and fails at runtime.
 
-### 1. Five type names exist in both namespaces
+### 1. Six type names exist in both namespaces
 
 `Literal`, `ValueInput`, `ValueOutput`, `ValueInputDefinition` and `ValueOutputDefinition` are defined by
 **both** `ArcaneOnyx.BehaviorTree` and `Unity.VisualScripting`, and so is `Cooldown`. Inside the
@@ -145,7 +145,7 @@ using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using UnityEngine;
 
-var asset = BehaviorTreeAuthoring.CreateTree("Assets/AI/Trees/Draugr.asset");
+var asset = BehaviorTreeAuthoring.CreateTree("Assets/AI/Trees/Zombie.asset");
 var entry = asset.graph.EntryNode;                       // created with the asset
 
 var repeater = BehaviorTreeAuthoring.AddNode<Repeater>(asset, 0f, 150f);
@@ -164,9 +164,9 @@ BehaviorTreeAuthoring.SetValue(asset, attack.valueInputs.First(p => p.key == "at
 // a reactive guard on the call site, waking when hasTarget changes
 BehaviorTreeAuthoring.GuardOnVariable(asset, attack, "hasTarget", true, false, -200f, 340f);
 
-BehaviorTreeAuthoring.AddSticky(asset, "Draugr", "Attack when a target exists, otherwise idle.", -400f, 0f, 260f, 80f, ArcaneOnyx.GraphCore.StickyNote.ColorEnum.Teal);   // StickyNote also exists in Unity.VisualScripting
+BehaviorTreeAuthoring.AddSticky(asset, "Zombie", "Attack when a target exists, otherwise idle.", -400f, 0f, 260f, 80f, ArcaneOnyx.GraphCore.StickyNote.ColorEnum.Teal);   // StickyNote also exists in Unity.VisualScripting
 BehaviorTreeAuthoring.Save(asset);
-BehaviorTreeVerification.VerifyAndLog(new[] { "Assets/AI/Trees/Draugr.asset" });
+BehaviorTreeVerification.VerifyAndLog(new[] { "Assets/AI/Trees/Zombie.asset" });
 ```
 
 Priority is the third argument to `Connect`, stored on the transition. Lay generated nodes out left to

@@ -28,8 +28,8 @@ depth 4 ██████▌▐███▌▐██████▌▐███
 ## Reading the lanes
 
 One lane per nesting depth, labelled `depth 0`, `depth 1`, and so on. A bar is one node running, from the
-tick it entered to the tick it exited, coloured by how it ended: running, succeeded, failed, aborted, or
-taken over. Aborted and taken over are different colours on purpose, because they are different claims.
+tick it entered to the tick it exited, coloured by how it ended. Aborted and taken over are different
+colours on purpose, because they are different claims.
 
 **A gap on a lane means nothing ran there.** When a Selector falls through past a guarded branch, that
 branch has no bar at all: it never entered, which is a different thing from having run and failed.
@@ -66,13 +66,19 @@ the playhead, and the part still in the future is dimmed. So a Selector that is 
 
 ## Moving through time
 
-| Button | Does |
+The toolbar reads, left to right: the **Rec** switch, the **play** button, then four step buttons.
+
+| Control | Does |
 |---|---|
-| **⏮** / **⏭** | Jump to the previous or next tick where the set of running nodes **changed**. In a quiet tree that can be hundreds of ticks; single-stepping would show the same picture over and over |
-| **◀** / **▶** (small) | Step exactly one tick |
-| **▶** (play) | Play the recording back at roughly real time from its first tick. When it catches up with the newest tick it returns to live on its own |
+| **Play** (the first button after Rec) | Plays the recording back at roughly real time from its first tick. When it catches up with the newest tick it returns to live on its own |
+| **Previous change** / **Next change** (the outer pair, ⏮ ⏭) | Jump to the previous or next tick where the set of running nodes **changed**. In a quiet tree that can be hundreds of ticks; single-stepping would show the same picture over and over |
+| **Step back** / **Step forward** (the inner pair) | Move exactly one tick |
+| **Return to live** (appears in the banner while scrubbing) | Hand the canvas back to the running agent |
 | Scroll wheel | Zoom around the cursor |
 | Middle-drag | Pan |
+
+Bars are colour-coded by outcome, one colour each for running, succeeded, failed, aborted and taken over;
+hover a bar or a pin for the words.
 
 The `⏱` buttons in the Why panel and the Variable Watch scrub the Timeline to the tick they name. That is
 the loop the panels are built around: the explanation says *when*, the Timeline shows *what it looked like*.
