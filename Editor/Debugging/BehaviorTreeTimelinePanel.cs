@@ -205,7 +205,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (recording == null)
             {
                 EditorGUI.LabelField(body, Application.isPlaying
-                    ? "No agent in this scene is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
+                    ? "No agent in this scene is recording."
                     : "Enter play mode to watch an agent, or load a saved recording.", EditorStyles.miniLabel);
 
                 BehaviorTreeDebugLifetime.Reset();
@@ -216,7 +216,9 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (timeline.IsEmpty)
             {
-                EditorGUI.LabelField(body, "Nothing recorded yet.", EditorStyles.miniLabel);
+                EditorGUI.LabelField(body, BehaviorTreeRecordingSwitch.Silences(recording)
+                    ? "Nothing recorded: the live flight recorder is off. Press Rec to turn it on."
+                    : "Nothing recorded yet.", EditorStyles.miniLabel);
                 BehaviorTreeScrubOverride.Clear();
 
                 // Published even while empty: the watch should name the same agent and say it has nothing yet,
@@ -466,6 +468,9 @@ namespace ArcaneOnyx.BehaviorTree
 
             var x = area.x + 2.0f;
 
+            DrawRecordingSwitch(new Rect(x, area.y, 48.0f, area.height));
+            x += 52.0f;
+
             using (new EditorGUI.DisabledScope(recording == null))
             {
                 if (GUI.Button(new Rect(x, area.y, 26.0f, area.height), playing ? "❚❚" : "▶", EditorStyles.miniButton))
@@ -525,11 +530,34 @@ namespace ArcaneOnyx.BehaviorTree
             }
             else
             {
-                GUI.Label(banner, $"  ● LIVE — tick {timeline?.LastTick ?? 0}", EditorStyles.miniLabel);
+                GUI.Label(banner, BehaviorTreeRecordingSwitch.Silences(recording)
+                    ? $"  ○ RECORDING OFF — tick {timeline?.LastTick ?? 0}"
+                    : $"  ● LIVE — tick {timeline?.LastTick ?? 0}", EditorStyles.miniLabel);
+
                 x += bannerWidth + 4.0f;
             }
 
             DrawSourceControls(new Rect(x, area.y, Mathf.Max(0.0f, area.xMax - x - 2.0f), area.height));
+        }
+
+        /// <summary>
+        /// The live flight recorder's switch. It sits on the timeline because this is where turning it off is
+        /// felt — every agent stops recording and the lanes stop growing — and because the frame time it
+        /// gives back is the reason anyone reaches for it.
+        /// </summary>
+        private static void DrawRecordingSwitch(Rect area)
+        {
+            var on = BehaviorTreeRecordingSwitch.Enabled;
+
+            var content = new GUIContent(
+                on ? "● Rec" : "○ Rec",
+                on
+                    ? "Live flight recorder is on. Click to stop every agent recording: cheaper frames, no new history."
+                    : "Live flight recorder is off. Click to start recording again.");
+
+            var wanted = GUI.Toggle(area, on, content, EditorStyles.miniButton);
+
+            if (wanted != on) BehaviorTreeRecordingSwitch.Enabled = wanted;
         }
 
         /// <summary>

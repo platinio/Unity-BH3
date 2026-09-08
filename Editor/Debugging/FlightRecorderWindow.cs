@@ -94,8 +94,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             EditorGUILayout.Space();
 
-            BehaviorTreeFlightRecorders.GloballyEnabled = EditorGUILayout.ToggleLeft(
-                "Recording globally enabled", BehaviorTreeFlightRecorders.GloballyEnabled);
+            BehaviorTreeRecordingSwitch.Enabled = EditorGUILayout.ToggleLeft(
+                "Recording globally enabled", BehaviorTreeRecordingSwitch.Enabled);
         }
 
         private void DrawToolbar(IReadOnlyList<BehaviorTreeFlightRecorder> recorders, BehaviorTreeFlightRecorder recorder)

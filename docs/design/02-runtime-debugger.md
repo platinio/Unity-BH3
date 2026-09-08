@@ -62,7 +62,7 @@ Everything below is what Components 2–7 read from.
 | `BehaviorTreeEvent` | Flat readonly struct. `Kind, Tick, Sequence, Frame, Time, CallSiteId, NodeGuid, RelatedGuid, Status, Flag, Key, OldValue, NewValue, Writer`. **Several fields mean different things per `Kind` — the type's own doc comment carries the table, and `GuardEval` inverts the usual guard/owner roles.** |
 | `BehaviorTreeEventKind` | `NodeEnter, NodeExit, NodeAborted, NodeSkipped, GuardEval, VariableWrite, TreePushed, TreePopped, ServiceTick`. |
 | `BehaviorTreeCallSite` | `Id, ParentId, RunNodeGuid, AssetName`. Root is id 0. |
-| `BehaviorTreeFlightRecorders` | Static registry + `GloballyEnabled` kill switch + `DefaultCapacity`. **This is the multi-agent view's data source (Component 7).** |
+| `BehaviorTreeFlightRecorders` | Static registry + `GloballyEnabled` kill switch + `DefaultCapacity`. **This is the multi-agent view's data source (Component 7).** In the editor, flip the kill switch from the Timeline's **Rec** button rather than the static: see `BehaviorTreeRecordingSwitch` under Component 2. |
 | `BehaviorTreeRecorder` | The `[Conditional]` facade the runtime calls. Do not call a recorder directly from runtime code. |
 | `BehaviorTreeRecordingDump.ToJson(recorder)` | The recording as JSON. Guids match `bt_describe_tree`. |
 | `FlightRecorderWindow` (editor) | **Tools > BH3 > Flight Recorder.** Reads a live recording back in English: agent picker, per-kind filter, fact toggles, Copy JSON. Not the scrubber — see below. |
@@ -129,7 +129,8 @@ as well as a live agent and the model is testable without standing up a scene.
 | `BehaviorTreeTimelineMarker` | A pin: `Abort` (carries the guard), `TreePushed`, `TreePopped`. Things that happen *at* a tick rather than over a span. |
 | `BehaviorTreeTreeState.At(recording, [timeline,] tick)` | Every node's status at one tick. **This is what the canvas is ghosted from.** Also `GuardResult`, `WasAborted`, `RunningCount`. |
 | `BehaviorTreeScrubOverride` (Editor) | The read-only redirect the canvas widgets consult. `StatusOf(node, live)` / `IsRunning(node, live)` return the live value when nothing is scrubbing, so there is one code path. |
-| `BehaviorTreeTimelinePanel` (Editor) | The renderer: lanes, pins, ruler, transport, `Load…` and `Save…`, plus `RequestScrub(tick)` for other panels to move the playhead. Implements `ISidebarPanelContent`, so either dock can host it. **The debugger's only file buttons** — see Component 4's "one source of truth". |
+| `BehaviorTreeTimelinePanel` (Editor) | The renderer: the **Rec** switch, lanes, pins, ruler, transport, `Load…` and `Save…`, plus `RequestScrub(tick)` for other panels to move the playhead. Implements `ISidebarPanelContent`, so either dock can host it. **The debugger's only file buttons** — see Component 4's "one source of truth". |
+| `BehaviorTreeRecordingSwitch` (Editor) | What the **Rec** button flips: `BehaviorTreeFlightRecorders.GloballyEnabled`, kept in `SessionState` and reapplied on every domain reload, so "off" pressed before Play is still off after it. A static alone would reset to on at exactly the moment the user was trying to avoid the cost. Session-scoped rather than a preference so the default stays on. `Silences(recording)` and `OffWarning(consequence)` are what the Why, Watch and Breakpoints panels use to warn when the switch is the reason they have nothing new to say; a loaded file is never silenced by it. |
 | `BehaviorTreeDebugTarget` (Editor) | Which agent the debugging panels are about: canvas reference → hierarchy selection → the only agent recording. Every panel calls it. `Describe(context)` words that answer once, so two panels cannot describe the same agent differently. |
 | `BehaviorTreeDebugSession` (Editor) | What the timeline is showing — recording, tick, whether it is scrubbing, and where it came from — published each time it draws and read by every other panel. |
 | `BottomDock` (GraphCore) | A full-width strip under the canvas with a draggable top edge. Generic — it takes `ISidebarPanelContent` and knows nothing about behavior trees. |
@@ -663,8 +664,8 @@ guard breakpoint inherits transition semantics without asking for them — and t
 every evaluation, would pause the editor on the frame you armed it and on every frame after.
 
 **The consequence is real and is stated on screen, not just here: breakpoints fire only while the agent is
-recording.** Turning a recorder off, or `BehaviorTreeFlightRecorders.GloballyEnabled` off, turns breakpoints
-off with it. That is the right trade rather than an oversight — everything the editor does on a hit reads the
+recording.** Turning a recorder off, or `BehaviorTreeFlightRecorders.GloballyEnabled` off (the Timeline's
+**Rec** button), turns breakpoints off with it. That is the right trade rather than an oversight — everything the editor does on a hit reads the
 recording — but it is exactly the kind of silent nothing-happens that wastes an afternoon, so the panel says
 so in a warning box when it applies, and a test pins it.
 
@@ -892,9 +893,9 @@ is the component that calls it.)*
 shows `"tree": ""`. Harmless for real assets; do not assume the field is populated.
 
 **7. Memory.** ~100 bytes per event, default 2048 events, so roughly 200 KB per recorded agent, allocated
-once. Default is on in the editor for every agent — for a 200-agent scene use
-`BehaviorTreeFlightRecorders.GloballyEnabled` or lower `DefaultCapacity` before agents spawn. Existing rings
-are never resized, which is what keeps recording allocation-free.
+once. Default is on in the editor for every agent — for a 200-agent scene press the Timeline's **Rec** button
+(`BehaviorTreeFlightRecorders.GloballyEnabled` from code) or lower `DefaultCapacity` before agents spawn.
+Existing rings are never resized, which is what keeps recording allocation-free.
 
 ## Where to pick this up
 

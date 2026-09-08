@@ -48,6 +48,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         private const float ClearButtonWidth = 22.0f;
 
+        private static readonly string RecordingOffMessage =
+            BehaviorTreeRecordingSwitch.OffWarning("no variable writes are being captured");
+
         /// <summary>Named so the placeholder can tell focused-and-empty from unfocused-and-empty.</summary>
         private const string FilterControlName = "BehaviorTreeVariableWatchFilter";
 
@@ -114,6 +117,8 @@ namespace ArcaneOnyx.BehaviorTree
 
             var recording = CurrentRecording();
 
+            if (BehaviorTreeRecordingSwitch.Silences(recording)) DrawRecordingOffWarning(x, ref y, width);
+
             if (recording == null)
             {
                 DrawHelp(x, ref y, width, NoRecordingMessage());
@@ -148,9 +153,11 @@ namespace ArcaneOnyx.BehaviorTree
             var recording = CurrentRecording();
             var inner = width - Padding * 2.0f;
 
-            if (recording == null) return Padding * 2.0f + HelpHeight(NoRecordingMessage(), inner);
+            var warning = BehaviorTreeRecordingSwitch.Silences(recording) ? WarningHeight(inner) + RowSpacing : 0.0f;
 
-            var height = Padding * 2.0f + Line() + FilterHeight + RowSpacing * 2.0f;
+            if (recording == null) return Padding * 2.0f + warning + HelpHeight(NoRecordingMessage(), inner);
+
+            var height = Padding * 2.0f + warning + Line() + FilterHeight + RowSpacing * 2.0f;
             var current = WatchFor(recording);
 
             if (current.IsEmpty) return height + HelpHeight(EmptyMessage(recording), inner);
@@ -302,7 +309,7 @@ namespace ArcaneOnyx.BehaviorTree
         private static string NoRecordingMessage()
         {
             return Application.isPlaying
-                ? "No agent is recording. Check BehaviorTreeFlightRecorders.GloballyEnabled."
+                ? "No agent is recording."
                 : "Enter play mode, or open a recording in the Timeline panel.";
         }
 
@@ -545,6 +552,19 @@ namespace ArcaneOnyx.BehaviorTree
 
             EditorGUI.LabelField(new Rect(x, y, width, height), message, helpStyle);
             y += height;
+        }
+
+        private void DrawRecordingOffWarning(float x, ref float y, float width)
+        {
+            var height = WarningHeight(width);
+
+            EditorGUI.HelpBox(new Rect(x, y, width, height), RecordingOffMessage, MessageType.Warning);
+            y += height + RowSpacing;
+        }
+
+        private static float WarningHeight(float width)
+        {
+            return LudiqGUIUtility.GetHelpBoxHeight(RecordingOffMessage, MessageType.Warning, width);
         }
 
         /// <summary>
