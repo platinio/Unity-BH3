@@ -1,0 +1,136 @@
+# Installation
+
+What BH3 needs, how to get it into a project, and how to check it works. Ten minutes.
+
+---
+
+## Requirements
+
+| Requirement | Notes |
+|---|---|
+| **Unity 6** | The reference project is on `6000.4.x`. |
+| **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. The reference project uses `1.9.11`. |
+| **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Needed by the BH3 *editor* assembly. It supplies the attribute behind the `bt_*` and `fn_*` command-line tools. |
+| Four ArcaneOnyx modules | `GraphCore`, `VisualScriptingExtension`, `UnityExtensions`, `BlockVariables`. See the table below. |
+
+BH3 and its modules are plain folders of C# with assembly definitions. There is no UPM package: they live
+under `Assets/ArcaneOnyx/` and are wired together by assembly references.
+
+### The modules BH3 depends on
+
+Every one of these is its own GitHub repository. The reference project pulls them in as git submodules.
+
+| Folder under `Assets/ArcaneOnyx/` | Repository | What BH3 takes from it |
+|---|---|---|
+| `Modules/GraphCore` | [platinio/graph-core-library](https://github.com/platinio/graph-core-library) | The graph window, canvas, port system and Blackboard panel that BH3's editor builds on |
+| `Modules/VisualScriptingExtension` | [platinio/visual-scripting-extension](https://github.com/platinio/visual-scripting-extension) | **Functions**: named, reusable Visual Scripting graphs with a contract |
+| `Modules/UnityExtensions` | [platinio/Unity-EditorExtension](https://github.com/platinio/Unity-EditorExtension) | Editor and runtime helpers |
+| `Modules/BlockVariables` | [platinio/Unity-BlockVariables](https://github.com/platinio/Unity-BlockVariables) | Variable storage used by the Blackboard |
+
+**Optional.** Install [Tactical Position Selection](https://github.com/platinio/Unity-TacticalPositionSelection)
+(plus its own dependencies `AIEntities` and `ScriptableObjectDatabase`) and BH3 adds a
+**Tactical Position Selection** node and a **TPS Query** literal. Those live in a separate assembly that only
+compiles when the `MODULE_TACTICAL_POSITION_SELECTION_EXIST` define is present, so a project without the
+module never sees them.
+
+---
+
+## Option A: clone the reference project
+
+The fastest way to get a working setup, every sample and every demo:
+
+```bash
+git clone --recurse-submodules https://github.com/platinio/bh3-development.git
+```
+
+Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visual-scripting).
+
+## Option B: add BH3 to your own project
+
+1. Put the five repositories under `Assets/ArcaneOnyx/`, keeping the folder names above:
+
+   ```
+   Assets/ArcaneOnyx/
+     BH3/                              ← this repository
+     Modules/GraphCore/
+     Modules/VisualScriptingExtension/
+     Modules/UnityExtensions/
+     Modules/BlockVariables/
+   ```
+
+   As submodules, from your project root:
+
+   ```bash
+   git submodule add https://github.com/platinio/Unity-BH3.git Assets/ArcaneOnyx/BH3
+   git submodule add https://github.com/platinio/graph-core-library.git Assets/ArcaneOnyx/Modules/GraphCore
+   git submodule add https://github.com/platinio/visual-scripting-extension.git Assets/ArcaneOnyx/Modules/VisualScriptingExtension
+   git submodule add https://github.com/platinio/Unity-EditorExtension.git Assets/ArcaneOnyx/Modules/UnityExtensions
+   git submodule add https://github.com/platinio/Unity-BlockVariables.git Assets/ArcaneOnyx/Modules/BlockVariables
+   ```
+
+2. Add the two packages through **Window → Package Manager** or directly in `Packages/manifest.json`:
+
+   ```json
+   "com.unity.visualscripting": "1.9.11",
+   "com.unity.pipeline": "0.4.0-exp.1"
+   ```
+
+3. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
+   detect it; expect one extra recompile.
+
+> **Installing from a `.unitypackage` or zip instead?** The archive ships a `ProjectSettings` folder. Close
+> Unity, copy `ProjectSettings.asset`, `TagManager.asset` and `VisualScriptingSettings.asset` over your
+> project's, then continue below. That flow is also described in `Installation Guide.pdf` at the root of this
+> repository.
+
+---
+
+## Initialise Visual Scripting
+
+BH3's nodes and its **Set BT Variable** / **Get BT Variable** units only appear once Visual Scripting has
+built its node library.
+
+1. **Edit → Project Settings → Visual Scripting**
+2. Click **Initialize Visual Scripting** (only offered on a project that has never used it)
+3. Under **Node Library**, click **Regenerate Nodes** and wait
+4. Under **Custom Inspector Properties**, click **Generate** and wait
+
+Do step 3 again whenever you add a new custom node or unit and it does not show up in a graph's finder.
+
+---
+
+## Check it works
+
+- Right-click in the Project window. **Create → Visual Scripting → Behavior Tree** should be there.
+- Add a component to any GameObject: **Behavior Tree Machine** should be offered.
+- Open `Assets/ArcaneOnyx/BH3/Sample/FlightRecorder/FlightRecorderDemo.unity`, press Play, and double-click
+  `FR_Demo_Sentry.asset`. The canvas should light up as the tree runs.
+
+If the create menu is missing, Visual Scripting has not been initialised. If the nodes exist but the
+**Set BT Variable** unit cannot be found in a script graph, regenerate the node library.
+
+---
+
+## The FPS sample
+
+`Sample/FPS/` is a playable squad demo and needs more than BH3 itself: the `AIEntities`,
+`EntityTargetSelection`, `EntityFactions`, `ScriptableObjectDatabase`, `Services` and `AIPerception` modules,
+the **AI Navigation** package, and the **Universal Render Pipeline**. The reference project has all of them.
+
+If the sample's materials render **pink**, import `Sample/FPS/URP-Patch.unitypackage` (double-click it in the
+Project window, then **Import**).
+
+---
+
+## Player builds
+
+Everything in BH3 runs in a build. The debugging *recorder* is compiled out of ordinary builds and comes back
+in a development build when you add the `BH3_DEV_TOOLS` scripting define. See
+[Debugging: overview](../3-debugging/01-overview.md).
+
+---
+
+## Next
+
+- [Your first tree](02-your-first-tree.md)
+- [Core concepts](03-core-concepts.md)
