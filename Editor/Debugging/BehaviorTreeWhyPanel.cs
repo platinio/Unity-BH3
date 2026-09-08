@@ -37,6 +37,9 @@ namespace ArcaneOnyx.BehaviorTree
         private const float LinkButtonWidth = 26.0f;
         private const float SnapshotButtonWidth = 44.0f;
 
+        private static readonly string RecordingOffMessage =
+            BehaviorTreeRecordingSwitch.OffWarning("no node activity is being recorded to explain");
+
         private int callSiteIndex;
 
         private BehaviorTreeExplanation cached;
@@ -81,6 +84,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             var recording = CurrentRecording();
 
+            if (BehaviorTreeRecordingSwitch.Silences(recording))
+            {
+                DrawHelp(x, ref y, width, RecordingOffMessage, MessageType.Warning);
+            }
+
             if (recording == null)
             {
                 DrawHelp(x, ref y, width,
@@ -120,6 +128,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             var recording = CurrentRecording();
             var node = SelectedNode();
+
+            if (BehaviorTreeRecordingSwitch.Silences(recording))
+            {
+                height += LudiqGUIUtility.GetHelpBoxHeight(RecordingOffMessage, MessageType.Warning, inner) + RowSpacing;
+            }
 
             if (recording == null || node == null) return height + HelpHeight(inner);
 
@@ -405,10 +418,10 @@ namespace ArcaneOnyx.BehaviorTree
             y += height + RowSpacing;
         }
 
-        private void DrawHelp(float x, ref float y, float width, string message)
+        private void DrawHelp(float x, ref float y, float width, string message, MessageType type = MessageType.Info)
         {
-            var height = LudiqGUIUtility.GetHelpBoxHeight(message, MessageType.Info, width);
-            EditorGUI.HelpBox(new Rect(x, y, width, height), message, MessageType.Info);
+            var height = LudiqGUIUtility.GetHelpBoxHeight(message, type, width);
+            EditorGUI.HelpBox(new Rect(x, y, width, height), message, type);
             y += height + RowSpacing;
         }
 

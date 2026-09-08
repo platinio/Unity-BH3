@@ -252,7 +252,8 @@ tree from the machine rather than from the asset. If several agents are recordin
 that's expected: the panel would rather say nothing than guess.
 
 **"Enter play mode to watch an agent"** — nothing is recording. Either you're not in play mode, or
-`BehaviorTreeFlightRecorders.GloballyEnabled` was turned off.
+recording was switched off. The panel puts up a warning when the switch is the reason, and the Timeline's
+**Rec** button turns it back on.
 
 **"This node has no recorded activity in the selected call site."** — the node ran somewhere else. Check the
 call-site dropdown.
@@ -269,8 +270,9 @@ in a shorter buffer (64 per agent) than the events. A guard flipping very fast c
 recording — worth checking if you never see one.
 
 **A big scene is slowing down** — recording costs a little per agent, and guard chains cost more. Turn off
-`TracingGloballyEnabled` first; it keeps the recording and drops only the chains. `GloballyEnabled` turns
-everything off.
+`TracingGloballyEnabled` first; it keeps the recording and drops only the chains. The Timeline's **Rec**
+button (`GloballyEnabled` from code) turns everything off, and stays off across Play for the rest of the
+editor session.
 
 ---
 

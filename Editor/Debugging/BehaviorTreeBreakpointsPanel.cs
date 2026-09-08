@@ -127,7 +127,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// bewildering: every breakpoint still listed, still ticked, and nothing ever stopping.
         /// </para>
         /// </summary>
-        private static bool RecordingIsOff => !BehaviorTreeFlightRecorders.GloballyEnabled;
+        private static bool RecordingIsOff => !BehaviorTreeRecordingSwitch.Enabled;
 
         private float DrawControls(float x, float y, float width)
         {
@@ -162,9 +162,8 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (RecordingIsOff)
             {
-                var message =
-                    "Recording is off, so nothing can fire. Breakpoints are matched inside the flight " +
-                    "recorder — turn BehaviorTreeFlightRecorders.GloballyEnabled back on.";
+                var message = BehaviorTreeRecordingSwitch.OffWarning(
+                    "nothing can fire: breakpoints are matched inside the flight recorder");
 
                 var height = HelpHeight(width);
                 EditorGUI.HelpBox(new Rect(x, y, width, height), message, MessageType.Warning);

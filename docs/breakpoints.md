@@ -185,9 +185,9 @@ on the canvas, or reformatting the asset does not break them.
 ## Troubleshooting
 
 **Nothing fires at all.** Breakpoints are matched inside the flight recorder, so they only work while the
-agent is recording. If `BehaviorTreeFlightRecorders.GloballyEnabled` is off, or that agent's recorder is
-disabled, nothing fires — the panel shows a warning when that applies. Check the **Breakpoints enabled**
-switch too.
+agent is recording. If recording is off (the Timeline's **Rec** button, or
+`BehaviorTreeFlightRecorders.GloballyEnabled` from code), or that agent's recorder is disabled, nothing
+fires — the panel shows a warning when that applies. Check the **Breakpoints enabled** switch too.
 
 **It fires for the wrong agent, or not for the one I want.** Check the line at the top of the panel: it
 names the agent being watched. Select the agent in the hierarchy, or open its tree from the machine rather
