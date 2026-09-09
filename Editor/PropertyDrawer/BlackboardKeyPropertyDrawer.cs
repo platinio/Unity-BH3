@@ -1,4 +1,3 @@
-using ArcaneOnyx.UnityExtensions;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,8 +13,8 @@ namespace ArcaneOnyx.BehaviorTree
             string variableName = property.FindPropertyRelative("blackboardKeyName").stringValue;
             float yPosition = position.position.y;
 
-            var rect = ArcaneOnyxPropertyDrawer.CalculatePropertyRect(position, ref yPosition);
-            ArcaneOnyxPropertyDrawer.CalculateLabelAndValueRect(rect, out Rect labelRect, out Rect valueRect);
+            var rect = BehaviorTreePropertyDrawerUtil.NextLine(position, ref yPosition);
+            BehaviorTreePropertyDrawerUtil.SplitLabelAndValue(rect, out Rect labelRect, out Rect valueRect);
             
             EditorGUI.LabelField(labelRect, label.text);
 

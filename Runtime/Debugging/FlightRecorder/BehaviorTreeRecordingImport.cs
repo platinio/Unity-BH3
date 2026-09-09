@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
-using ArcaneOnyx.UnityExtensions;
+using ArcaneOnyx.VisualScriptingExtension;
+using Unity.VisualScripting.FullSerializer;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
@@ -26,7 +27,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>Parses a dump. Throws <see cref="FormatException"/> if the text is not valid JSON.</summary>
         public static BehaviorTreeRecordingSnapshot FromJson(string json)
         {
-            var root = JsonReader.Parse(json);
+            var root = FsJson.Parse(json);
 
             return FromJson(root);
         }
@@ -46,48 +47,48 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             }
         }
 
-        private static BehaviorTreeRecordingSnapshot FromJson(JsonValue root)
+        private static BehaviorTreeRecordingSnapshot FromJson(fsData root)
         {
-            if (root.IsNull) return null;
+            if (root == null || root.IsNull) return null;
 
-            var agent = root["agent"].AsString("(agent)");
-            var tree = root["tree"].AsString("(tree)");
-            var tick = root["tick"].AsInt();
-            var dropped = root["dropped"].AsInt();
+            var agent = root.Get("agent").AsStringOr("(agent)");
+            var tree = root.Get("tree").AsStringOr("(tree)");
+            var tick = root.Get("tick").AsIntOr();
+            var dropped = root.Get("dropped").AsIntOr();
 
             return new BehaviorTreeRecordingSnapshot(
-                agent, tree, tick, ReadEvents(root["events"]), ReadCallSites(root["callSites"], tree), dropped,
-                ReadTraces(root["traces"]));
+                agent, tree, tick, ReadEvents(root.Get("events")), ReadCallSites(root.Get("callSites"), tree), dropped,
+                ReadTraces(root.Get("traces")));
         }
 
-        private static List<GuardTrace> ReadTraces(JsonValue array)
+        private static List<GuardTrace> ReadTraces(fsData array)
         {
             var traces = new List<GuardTrace>();
 
-            foreach (var item in array.Items)
+            foreach (var item in array.Items())
             {
-                var snapshots = ReadSnapshots(item["snapshots"]);
+                var snapshots = ReadSnapshots(item.Get("snapshots"));
                 var chain = new List<GuardTraceNode>();
 
-                foreach (var node in item["chain"].Items)
+                foreach (var node in item.Get("chain").Items())
                 {
                     chain.Add(new GuardTraceNode(
-                        ReadGuid(node["node"]),
-                        node["name"].AsString("(unnamed)"),
-                        node["type"].AsString("(unknown)"),
-                        node["value"].AsString("null"),
-                        node["depth"].AsInt(),
-                        node.Has("parent") ? node["parent"].AsInt(-1) : -1,
-                        node.Has("snapshot") ? node["snapshot"].AsInt(-1) : -1));
+                        ReadGuid(node.Get("node")),
+                        node.Get("name").AsStringOr("(unnamed)"),
+                        node.Get("type").AsStringOr("(unknown)"),
+                        node.Get("value").AsStringOr("null"),
+                        node.Get("depth").AsIntOr(),
+                        node.Has("parent") ? node.Get("parent").AsIntOr(-1) : -1,
+                        node.Has("snapshot") ? node.Get("snapshot").AsIntOr(-1) : -1));
                 }
 
                 traces.Add(new GuardTrace(
-                    item["tick"].AsInt(),
-                    item["seq"].AsInt(),
-                    item["callSite"].AsInt(),
-                    ReadGuid(item["guard"]),
-                    ReadGuid(item["owner"]),
-                    item["result"].AsBool(),
+                    item.Get("tick").AsIntOr(),
+                    item.Get("seq").AsIntOr(),
+                    item.Get("callSite").AsIntOr(),
+                    ReadGuid(item.Get("guard")),
+                    ReadGuid(item.Get("owner")),
+                    item.Get("result").AsBoolOr(),
                     chain,
                     snapshots));
             }
@@ -95,60 +96,60 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return traces;
         }
 
-        private static List<GuardGraphSnapshot> ReadSnapshots(JsonValue array)
+        private static List<GuardGraphSnapshot> ReadSnapshots(fsData array)
         {
             var snapshots = new List<GuardGraphSnapshot>();
 
-            foreach (var item in array.Items)
+            foreach (var item in array.Items())
             {
                 var wires = new List<GuardWireValue>();
 
-                foreach (var wire in item["wires"].Items)
+                foreach (var wire in item.Get("wires").Items())
                 {
-                    var evaluated = wire["evaluated"].AsBool();
+                    var evaluated = wire.Get("evaluated").AsBoolOr();
 
                     wires.Add(new GuardWireValue(
-                        ReadGuid(wire["connection"]),
-                        ReadGuid(wire["sourceUnit"]),
-                        wire["sourceKey"].AsString(""),
-                        ReadGuid(wire["destUnit"]),
-                        wire["destKey"].AsString(""),
-                        evaluated ? wire["value"].AsString("null") : "(not evaluated)",
+                        ReadGuid(wire.Get("connection")),
+                        ReadGuid(wire.Get("sourceUnit")),
+                        wire.Get("sourceKey").AsStringOr(""),
+                        ReadGuid(wire.Get("destUnit")),
+                        wire.Get("destKey").AsStringOr(""),
+                        evaluated ? wire.Get("value").AsStringOr("null") : "(not evaluated)",
                         evaluated));
                 }
 
                 snapshots.Add(new GuardGraphSnapshot(
-                    ReadGuid(item["owner"]), item["graph"].AsString("(unnamed)"), wires));
+                    ReadGuid(item.Get("owner")), item.Get("graph").AsStringOr("(unnamed)"), wires));
             }
 
             return snapshots;
         }
 
-        private static List<BehaviorTreeCallSite> ReadCallSites(JsonValue array, string treeName)
+        private static List<BehaviorTreeCallSite> ReadCallSites(fsData array, string treeName)
         {
             var callSites = new List<BehaviorTreeCallSite>();
 
-            foreach (var item in array.Items)
+            foreach (var item in array.Items())
             {
-                var id = item["id"].AsInt();
+                var id = item.Get("id").AsIntOr();
 
                 callSites.Add(new BehaviorTreeCallSite(
                     id,
-                    item.Has("parent") ? item["parent"].AsInt() : BehaviorTreeCallSite.RootId,
-                    ReadGuid(item["runNode"]),
-                    item["asset"].AsString(id == BehaviorTreeCallSite.RootId ? treeName : "(unnamed)")));
+                    item.Has("parent") ? item.Get("parent").AsIntOr() : BehaviorTreeCallSite.RootId,
+                    ReadGuid(item.Get("runNode")),
+                    item.Get("asset").AsStringOr(id == BehaviorTreeCallSite.RootId ? treeName : "(unnamed)")));
             }
 
             return callSites;
         }
 
-        private static List<BehaviorTreeEvent> ReadEvents(JsonValue array)
+        private static List<BehaviorTreeEvent> ReadEvents(fsData array)
         {
             var events = new List<BehaviorTreeEvent>();
 
-            foreach (var item in array.Items)
+            foreach (var item in array.Items())
             {
-                if (!Enum.TryParse<BehaviorTreeEventKind>(item["kind"].AsString(), out var kind)) continue;
+                if (!Enum.TryParse<BehaviorTreeEventKind>(item.Get("kind").AsStringOr(), out var kind)) continue;
 
                 events.Add(ReadEvent(item, kind));
             }
@@ -156,7 +157,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return events;
         }
 
-        private static BehaviorTreeEvent ReadEvent(JsonValue item, BehaviorTreeEventKind kind)
+        private static BehaviorTreeEvent ReadEvent(fsData item, BehaviorTreeEventKind kind)
         {
             var related = Guid.Empty;
             var status = ExecutionStatus.None;
@@ -170,25 +171,25 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             switch (kind)
             {
                 case BehaviorTreeEventKind.NodeExit:
-                    Enum.TryParse(item["status"].AsString(), out status);
+                    Enum.TryParse(item.Get("status").AsStringOr(), out status);
                     break;
 
                 case BehaviorTreeEventKind.GuardEval:
                     // The dump names these the other way round from every other kind — the guard is the node
                     // and the thing it protects is the owner — so read them the same way round on the way back.
-                    flag = item["result"].AsBool();
-                    related = ReadGuid(item["owner"]);
+                    flag = item.Get("result").AsBoolOr();
+                    related = ReadGuid(item.Get("owner"));
                     break;
 
                 case BehaviorTreeEventKind.NodeAborted:
                 case BehaviorTreeEventKind.NodeSkipped:
-                    related = ReadGuid(item["guard"]);
+                    related = ReadGuid(item.Get("guard"));
                     break;
 
                 case BehaviorTreeEventKind.VariableWrite:
-                    key = item["key"].AsString();
-                    oldValue = item["from"].AsString("null");
-                    newValue = item["to"].AsString("null");
+                    key = item.Get("key").AsStringOr();
+                    oldValue = item.Get("from").AsStringOr("null");
+                    newValue = item.Get("to").AsStringOr("null");
 
                     // "scope" was this property's name briefly, so it is still read: a recording exported in
                     // that window should not silently regroup. Absent altogether — a recording from before
@@ -196,8 +197,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     // default, because None means "not a variable write" here and would put every old write
                     // in a scope of its own. A recording written before this type existed spells that same
                     // "not applicable" as "Flow", which no longer parses — and lands on the same fallback.
-                    var storedKind = item["variableKind"].AsString();
-                    if (string.IsNullOrEmpty(storedKind)) storedKind = item["scope"].AsString();
+                    var storedKind = item.Get("variableKind").AsStringOr();
+                    if (string.IsNullOrEmpty(storedKind)) storedKind = item.Get("scope").AsStringOr();
 
                     variableKind = Enum.TryParse<BehaviorTreeVariableKind>(storedKind, out var parsedKind)
                         ? parsedKind
@@ -205,25 +206,25 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                     // One field carries two things: a node guid when a node wrote it, a plain name when a
                     // sensor did. Which one it is, is exactly whether it parses as a guid.
-                    var written = item["writer"].AsString();
+                    var written = item.Get("writer").AsStringOr();
                     if (Guid.TryParse(written, out var writerGuid)) related = writerGuid;
                     else writer = written;
                     break;
 
                 case BehaviorTreeEventKind.TreePushed:
                 case BehaviorTreeEventKind.TreePopped:
-                    key = item["asset"].AsString();
+                    key = item.Get("asset").AsStringOr();
                     break;
             }
 
             return BehaviorTreeEvent.Create(
                 kind,
-                item["tick"].AsInt(),
-                item["seq"].AsInt(),
-                item["frame"].AsInt(),
-                item["time"].AsFloat(),
-                item["callSite"].AsInt(),
-                ReadGuid(item["node"]),
+                item.Get("tick").AsIntOr(),
+                item.Get("seq").AsIntOr(),
+                item.Get("frame").AsIntOr(),
+                item.Get("time").AsFloatOr(),
+                item.Get("callSite").AsIntOr(),
+                ReadGuid(item.Get("node")),
                 related,
                 status,
                 flag,
@@ -234,9 +235,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 writer);
         }
 
-        private static Guid ReadGuid(JsonValue value)
+        private static Guid ReadGuid(fsData value)
         {
-            var text = value.AsString();
+            var text = value.AsStringOr();
 
             return !string.IsNullOrEmpty(text) && Guid.TryParse(text, out var guid) ? guid : Guid.Empty;
         }
