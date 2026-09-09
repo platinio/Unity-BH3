@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using ArcaneOnyx.UnityExtensions;
 using ArcaneOnyx.VisualScriptingExtension;
+using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
@@ -36,92 +36,69 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             var path = new List<BehaviorTreeGraphAsset> { asset };
 
-            return WriteDocument(asset.graph, asset.name, path);
+            return DescribeGraph(asset.graph, asset.name, path).Pretty();
         }
 
         public static string ToJson(BehaviorTreeGraph graph, string assetName = null)
         {
-            return WriteDocument(graph, assetName, new List<BehaviorTreeGraphAsset>());
+            return DescribeGraph(graph, assetName, new List<BehaviorTreeGraphAsset>()).Pretty();
         }
 
-        private static string WriteDocument(BehaviorTreeGraph graph, string assetName, List<BehaviorTreeGraphAsset> path)
+        private static fsData DescribeGraph(BehaviorTreeGraph graph, string assetName, List<BehaviorTreeGraphAsset> path)
         {
-            var json = new JsonWriter();
-            WriteGraph(json, graph, assetName, path);
+            var json = FsJson.Object();
 
-            return json.ToString();
-        }
+            if (!string.IsNullOrEmpty(assetName)) json.Set("asset", assetName);
 
-        private static void WriteGraph(JsonWriter json, BehaviorTreeGraph graph, string assetName, List<BehaviorTreeGraphAsset> path)
-        {
-            json.OpenObject();
+            if (graph == null) return json.Set("root", "(graph is null)");
 
-            if (!string.IsNullOrEmpty(assetName)) json.Property("asset", assetName);
-
-            if (graph == null)
-            {
-                json.Property("root", "(graph is null)");
-                json.CloseObject();
-                return;
-            }
-
-            json.Property("nodeCount", graph.Nodes.Count());
+            json.Set("nodeCount", graph.Nodes.Count());
 
             // node identity is per graph, so each nested tree gets its own set
             var visited = new HashSet<BehaviorTreeNode>();
 
-            json.PropertyName("root");
-            WriteNode(json, graph, graph.EntryNode, visited, path);
+            json.Set("root", DescribeNode(graph, graph.EntryNode, visited, path));
 
-            WriteOrphans(json, graph, visited, path);
+            AddOrphans(json, graph, visited, path);
 
-            json.CloseObject();
+            return json;
         }
 
-        private static void WriteNode(JsonWriter json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
+        private static fsData DescribeNode(BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
         {
-            if (node == null)
-            {
-                json.RawValue("null");
-                return;
-            }
+            if (node == null) return fsData.Null;
 
-            json.OpenObject();
-            json.Property("name", node.NodeName);
-            json.Property("type", node.GetType().Name);
-            json.Property("guid", node.guid.ToString());
-            json.Property("pos", string.Format(CultureInfo.InvariantCulture, "{0:0},{1:0}", node.Position.x, node.Position.y));
+            var json = FsJson.Object();
+            json.Set("name", node.NodeName);
+            json.Set("type", node.GetType().Name);
+            json.Set("guid", node.guid.ToString());
+            json.Set("pos", string.Format(CultureInfo.InvariantCulture, "{0:0},{1:0}", node.Position.x, node.Position.y));
 
             // a cycle would otherwise recurse forever; report it instead of hanging
-            if (!visited.Add(node))
-            {
-                json.Property("repeat", "already shown above (cycle)");
-                json.CloseObject();
-                return;
-            }
+            if (!visited.Add(node)) return json.Set("repeat", "already shown above (cycle)");
 
             // One malformed node used to abort the entire asset, which left nothing to diagnose it with —
             // and a malformed node is precisely what a dump is being read to find. Report it in place and
             // keep going, so the rest of the tree still comes out.
             try
             {
-                WriteGuards(json, graph, node, visited);
-                WriteInputs(json, node);
-                WriteScriptGraphs(json, node);
-                WriteSubTree(json, node, path);
+                AddGuards(json, graph, node, visited);
+                AddInputs(json, node);
+                AddScriptGraphs(json, node);
+                AddSubTree(json, node, path);
             }
             catch (System.Exception exception)
             {
-                json.Property("error", exception.GetType().Name + ": " + exception.Message);
+                json.Set("error", exception.GetType().Name + ": " + exception.Message);
             }
 
-            WriteChildren(json, graph, node, visited, path);
+            AddChildren(json, graph, node, visited, path);
 
-            json.CloseObject();
+            return json;
         }
 
         /// <summary>Conditional Executions are attached to an owner rather than parented, so they are listed apart.</summary>
-        private static void WriteGuards(JsonWriter json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited)
+        private static void AddGuards(fsData json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited)
         {
             var guards = graph.Nodes
                 .OfType<ConditionalExecution>()
@@ -130,31 +107,30 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             if (guards.Count == 0) return;
 
-            json.PropertyName("guards");
-            json.OpenArray();
+            var described = FsJson.List();
 
             foreach (var guard in guards)
             {
                 visited.Add(guard);
 
-                json.OpenObject();
-                json.Property("name", guard.NodeName);
-                json.Property("type", guard.GetType().Name);
-                json.Property("guid", guard.guid.ToString());
+                var entry = FsJson.Object();
+                entry.Set("name", guard.NodeName);
+                entry.Set("type", guard.GetType().Name);
+                entry.Set("guid", guard.guid.ToString());
 
                 // What a guard is allowed to do is not readable from its type name alone -- a ReactiveGuard
                 // with StopsItsOwnBranch off is a very different thing from one with it on, and telling them apart
                 // is most of what a reader wants from a dump of a reactive tree.
-                json.Property("stopsItsOwnBranch", guard.StopsItsOwnBranch);
-                json.Property("takesOverLowerPriority", guard.TakesOverLowerPriority);
+                entry.Set("stopsItsOwnBranch", guard.StopsItsOwnBranch);
+                entry.Set("takesOverLowerPriority", guard.TakesOverLowerPriority);
 
-                WriteTriggers(json, guard);
+                AddTriggers(entry, guard);
 
-                WriteInputs(json, guard);
-                json.CloseObject();
+                AddInputs(entry, guard);
+                described.Add(entry);
             }
 
-            json.CloseArray();
+            json.Set("guards", described);
         }
 
         /// <summary>
@@ -165,14 +141,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// guard can do and the thing a reader most needs to see.
         /// </para>
         /// </summary>
-        private static void WriteTriggers(JsonWriter json, ConditionalExecution guard)
+        private static void AddTriggers(fsData json, ConditionalExecution guard)
         {
             // A doorman has no schedule at all, which is different from a watchman that re-checks every
             // tick -- so it gets no "triggers" key rather than an empty one.
             if (!guard.HasRecomputeSchedule) return;
 
-            json.PropertyName("triggers");
-            json.OpenArray();
+            var described = FsJson.List();
 
             var triggers = guard.Triggers;
 
@@ -182,48 +157,46 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 {
                     if (trigger == null) continue;
 
-                    json.OpenObject();
-                    json.Property("type", trigger.Kind.ToString());
-                    json.Property("when", trigger.Describe());
+                    var entry = FsJson.Object();
+                    entry.Set("type", trigger.Kind.ToString());
+                    entry.Set("when", trigger.Describe());
 
                     // The keys are what decides whether this guard ever wakes, so they are worth reading
                     // in a diff even though nothing derives them yet.
                     if (trigger.Kind == GuardTriggerKind.OnKeyChanged)
                     {
-                        json.PropertyName("keys");
-                        json.OpenArray();
+                        var keys = FsJson.List();
 
                         if (trigger.Keys != null)
                         {
                             foreach (var key in trigger.Keys)
                             {
-                                json.Value(key);
+                                keys.Add(key);
                             }
                         }
 
-                        json.CloseArray();
+                        entry.Set("keys", keys);
                     }
 
-                    json.CloseObject();
+                    described.Add(entry);
                 }
             }
 
-            json.CloseArray();
+            json.Set("triggers", described);
         }
 
-        private static void WriteInputs(JsonWriter json, BehaviorTreeNode node)
+        private static void AddInputs(fsData json, BehaviorTreeNode node)
         {
             if (node.valueInputs == null)
             {
-                json.Property("ports", "(node was never defined)");
+                json.Set("ports", "(node was never defined)");
                 return;
             }
 
             var inputs = node.valueInputs.ToList();
             if (inputs.Count == 0) return;
 
-            json.PropertyName("inputs");
-            json.OpenObject();
+            var described = FsJson.Object();
 
             foreach (var input in inputs)
             {
@@ -236,32 +209,31 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     // ports only know their owner as IBehaviorTreeNode, which carries no display name
                     string sourceName = source.behaviorTreeNode is BehaviorTreeNode sourceNode ? sourceNode.NodeName : "?";
 
-                    json.Property(input.key, "<- " + sourceName + "." + source.key);
+                    described.Set(input.key, "<- " + sourceName + "." + source.key);
                     continue;
                 }
 
-                json.Property(input.key,
+                described.Set(input.key,
                     node.defaultValues.TryGetValue(input.key, out var value) ? Describe(value) : "(unset)");
             }
 
-            json.CloseObject();
+            json.Set("inputs", described);
         }
 
-        private static void WriteChildren(JsonWriter json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
+        private static void AddChildren(fsData json, BehaviorTreeGraph graph, BehaviorTreeNode node, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
         {
             var children = graph.ChildrenInPriorityOrder(node);
 
             if (children.Count == 0) return;
 
-            json.PropertyName("children");
-            json.OpenArray();
+            var described = FsJson.List();
 
             foreach (var child in children)
             {
-                WriteNode(json, graph, child, visited, path);
+                described.Add(DescribeNode(graph, child, visited, path));
             }
 
-            json.CloseArray();
+            json.Set("children", described);
         }
 
         /// <summary>
@@ -275,42 +247,36 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// two different branches is normal reuse, not recursion. Only an asset already on the current path
         /// is a cycle, which is the same rule <c>GraphWillCauseRecursion</c> applies at load time.
         /// </summary>
-        private static void WriteSubTree(JsonWriter json, BehaviorTreeNode node, List<BehaviorTreeGraphAsset> path)
+        private static void AddSubTree(fsData json, BehaviorTreeNode node, List<BehaviorTreeGraphAsset> path)
         {
             if (!(node is RunBehaviorTreeGraphNode runNode)) return;
-
-            json.PropertyName("subTree");
 
             var asset = runNode.BehaviorTreeGraphAsset;
 
             if (asset == null)
             {
-                json.OpenObject();
-                json.Property("asset", "(none assigned)");
-                json.CloseObject();
+                json.Set("subTree", FsJson.Object().Set("asset", "(none assigned)"));
                 return;
             }
 
             if (path.Contains(asset))
             {
-                json.OpenObject();
-                json.Property("asset", asset.name);
-                json.Property("recursion", DescribePath(path, asset));
-                json.CloseObject();
+                json.Set("subTree", FsJson.Object()
+                    .Set("asset", asset.name)
+                    .Set("recursion", DescribePath(path, asset)));
                 return;
             }
 
             if (path.Count >= MaxSubTreeDepth)
             {
-                json.OpenObject();
-                json.Property("asset", asset.name);
-                json.Property("truncated", "nesting deeper than " + MaxSubTreeDepth);
-                json.CloseObject();
+                json.Set("subTree", FsJson.Object()
+                    .Set("asset", asset.name)
+                    .Set("truncated", "nesting deeper than " + MaxSubTreeDepth));
                 return;
             }
 
             path.Add(asset);
-            WriteGraph(json, asset.graph, asset.name, path);
+            json.Set("subTree", DescribeGraph(asset.graph, asset.name, path));
             path.RemoveAt(path.Count - 1);
         }
 
@@ -325,7 +291,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// Nodes the Entry can never reach. Value nodes legitimately live here because they are pulled
         /// through ports rather than parented, so each one reports whether anything actually reads it.
         /// </summary>
-        private static void WriteOrphans(JsonWriter json, BehaviorTreeGraph graph, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
+        private static void AddOrphans(fsData json, BehaviorTreeGraph graph, HashSet<BehaviorTreeNode> visited, List<BehaviorTreeGraphAsset> path)
         {
             // Invisible nodes are canvas plumbing, not authored structure: every transition owns a
             // PlaceHolderNode so the transition line can be selected. They have no ports and are never
@@ -334,8 +300,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var orphans = graph.Nodes.Where(n => !visited.Contains(n) && n.IsVisible).ToList();
             if (orphans.Count == 0) return;
 
-            json.PropertyName("unreachable");
-            json.OpenArray();
+            var described = FsJson.List();
 
             foreach (var orphan in orphans)
             {
@@ -344,23 +309,23 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 bool feedsSomething = orphan.valueOutputs != null &&
                                       orphan.valueOutputs.Any(output => output.hasValidConnection);
 
-                json.OpenObject();
-                json.Property("name", orphan.NodeName);
-                json.Property("type", orphan.GetType().Name);
-                json.Property("guid", orphan.guid.ToString());
-                json.Property("note", feedsSomething
+                var entry = FsJson.Object();
+                entry.Set("name", orphan.NodeName);
+                entry.Set("type", orphan.GetType().Name);
+                entry.Set("guid", orphan.guid.ToString());
+                entry.Set("note", feedsSomething
                     ? "value node, read through a port"
                     : "nothing reaches or reads this node");
 
                 // a dangling subgraph is what you are usually hunting here, so show its wiring too
-                WriteInputs(json, orphan);
-                WriteScriptGraphs(json, orphan);
-                WriteSubTree(json, orphan, path);
+                AddInputs(entry, orphan);
+                AddScriptGraphs(entry, orphan);
+                AddSubTree(entry, orphan, path);
 
-                json.CloseObject();
+                described.Add(entry);
             }
 
-            json.CloseArray();
+            json.Set("unreachable", described);
         }
 
         /// <summary>
@@ -368,22 +333,21 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// behaviour is authored in Visual Scripting dumps as an empty box, which is exactly the node type
         /// the package encourages non-programmers to build.
         /// </summary>
-        private static void WriteScriptGraphs(JsonWriter json, BehaviorTreeNode node)
+        private static void AddScriptGraphs(fsData json, BehaviorTreeNode node)
         {
             if (node is not BaseVisualScriptingNode holder) return;
 
             var owned = holder.Functions.ToList();
             if (owned.Count == 0) return;
 
-            json.PropertyName("scriptGraphs");
-            json.OpenArray();
+            var described = FsJson.List();
 
             foreach (var asset in owned)
             {
-                FlowGraphDump.WriteGraph(json, asset.graph, asset.name);
+                described.Add(FlowGraphDump.Describe(asset.graph, asset.name));
             }
 
-            json.CloseArray();
+            json.Set("scriptGraphs", described);
         }
 
         private static string Describe(object value)
@@ -398,6 +362,5 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 default: return value.ToString();
             }
         }
-
     }
 }

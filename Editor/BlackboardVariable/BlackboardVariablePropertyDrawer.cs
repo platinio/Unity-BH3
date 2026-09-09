@@ -1,4 +1,3 @@
-﻿using ArcaneOnyx.UnityExtensions;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,13 +7,13 @@ namespace ArcaneOnyx.BehaviorTree
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return ArcaneOnyxPropertyDrawer.LineHeight;
+            return BehaviorTreePropertyDrawerUtil.LineHeight;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
-            
+
             float yPosition = position.y;
 
             bool inlineValue = property.FindPropertyRelative("inlineValue").boolValue;
@@ -23,9 +22,9 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 float buttonRectPercent = 0.04f;
                 DrawToggleButton(position, property, buttonRectPercent);
-                
+
                 position.width = position.width * (1.0f - buttonRectPercent);
-                ArcaneOnyxPropertyDrawer.PropertyField(position, property.FindPropertyRelative("value"), label.text, ref yPosition);
+                BehaviorTreePropertyDrawerUtil.PropertyField(position, property.FindPropertyRelative("value"), label.text, ref yPosition);
             }
             else
             {
@@ -38,12 +37,12 @@ namespace ArcaneOnyx.BehaviorTree
         private void DrawToggleButton(Rect position, SerializedProperty property, float buttonSizePercent)
         {
             Rect buttonRect = position;
-            buttonRect.height = ArcaneOnyxPropertyDrawer.LineHeight;
+            buttonRect.height = BehaviorTreePropertyDrawerUtil.LineHeight;
             buttonRect.width = position.width * buttonSizePercent;
             Vector2 newPosition = buttonRect.position;
             newPosition.x += position.width * (1.0f - buttonSizePercent);
             buttonRect.position = newPosition;
-            
+
             if (GUI.Button(buttonRect, "•"))
             {
                 property.FindPropertyRelative("inlineValue").boolValue = !property.FindPropertyRelative("inlineValue").boolValue;
@@ -54,13 +53,13 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var variableName = property.FindPropertyRelative("variableName").stringValue;
 
-            var rect = ArcaneOnyxPropertyDrawer.CalculatePropertyRect(position, ref yPosition);
-            ArcaneOnyxPropertyDrawer.CalculateLabelAndValueRect(rect, out Rect label, out Rect value);
-            
+            var rect = BehaviorTreePropertyDrawerUtil.NextLine(position, ref yPosition);
+            BehaviorTreePropertyDrawerUtil.SplitLabelAndValue(rect, out Rect label, out Rect value);
+
             EditorGUI.LabelField(label, propertyName);
 
             float buttonRectPercent = 0.08f;
-            
+
             DrawToggleButton(value, property, buttonRectPercent);
             value.width = value.width * (1.0f - buttonRectPercent);
 
@@ -69,7 +68,7 @@ namespace ArcaneOnyx.BehaviorTree
                 var menu = new GenericMenu();
 
                 foreach (var variableDeclaration in BehaviorTreePropertyDrawerUtil.GetVariableDeclarations(typeof(T)))
-                {                   
+                {
                     menu.AddItem(new GUIContent(variableDeclaration.name), variableName == variableDeclaration.name, () =>
                     {
                         property.FindPropertyRelative("variableName").stringValue = variableDeclaration.name;
@@ -80,13 +79,13 @@ namespace ArcaneOnyx.BehaviorTree
                 menu.DropDown(position);
             }
         }
-        
+
         private string GetLabelVariableName(string variableName)
         {
             if (!IsVariableNameValidOption(variableName)) return $"{variableName} (MISSING!)";
             return variableName;
         }
-        
+
         private bool IsVariableNameValidOption(string variableName)
         {
             foreach (var variableDeclaration in BehaviorTreePropertyDrawerUtil.GetVariableDeclarations(typeof(T)))
