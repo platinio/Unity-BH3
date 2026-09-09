@@ -138,6 +138,39 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
+        /// Destroying an agent takes its graph instance out of <see cref="ArcaneOnyx.GraphCore.GraphInstances"/>. The base
+        /// machine's Awake registers it there and the base OnDestroy removes it; an override that skipped the
+        /// base call left one reference per destroyed agent in the registry for the rest of the session, and
+        /// every spawn-and-despawn in a game grew it. A domain reload was the only thing that ever emptied it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DestroyingAnAgentReleasesItsGraphInstance()
+        {
+            var tree = BuildGuardedTree(out _, out _);
+            var machine = Spawn(tree, (_, variables) => variables.declarations.Set("hasTarget", false));
+
+            yield return null;
+
+            var before = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
+            var registered = before.Count;
+            before.Free();
+
+            Assert.AreEqual(1, registered, "Fixture check: a live agent's instance is registered under it.");
+
+            Object.DestroyImmediate(Agent);
+
+            yield return null;
+
+            var after = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
+            var remaining = after.Count;
+            after.Free();
+
+            Assert.AreEqual(0, remaining,
+                "A destroyed agent's instance is gone. Left behind, it pins the reference, its graph data and "
+                + "the destroyed machine until the next domain reload -- which never comes with reload disabled.");
+        }
+
+        /// <summary>
         /// Entry -> Repeater -> Selector -> [ Attack guarded on hasTarget, Idle unguarded ].
         /// </summary>
         private static BehaviorTreeGraphAsset BuildGuardedTree(out System.Guid attack, out System.Guid idle)
