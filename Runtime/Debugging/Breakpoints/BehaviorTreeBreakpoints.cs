@@ -249,6 +249,24 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
+        /// What a fresh play session starts from: every breakpoint still armed, no agent filter, no tallies.
+        ///
+        /// <para>
+        /// The armed list and <see cref="Hit"/>'s subscribers are the two things that must survive. With
+        /// domain reload on, the editor store reloads the file and the responder re-subscribes; with it off,
+        /// both simply persist, and clearing either here would silently disarm the debugger on every Play.
+        /// The filter and the tallies are the opposite case — both describe a run that is over, and the
+        /// filter holds the previous run's recording, ring and all, until the responder next re-resolves.
+        /// </para>
+        /// </summary>
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetForPlaySession()
+        {
+            AgentFilter = null;
+            ResetHitCounts();
+        }
+
+        /// <summary>
         /// Drops everything counted for one agent. Called when its recorder unregisters: a tally that
         /// outlived its agent describes a run that is over, and holding the recording as a key would keep its
         /// whole event ring alive for the rest of the editor session.
