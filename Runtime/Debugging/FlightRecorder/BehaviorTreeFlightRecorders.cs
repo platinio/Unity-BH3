@@ -74,6 +74,24 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             active.Clear();
         }
 
+        /// <summary>
+        /// The registry at the start of a play session, before any agent's <c>Awake</c> can register.
+        ///
+        /// <para>
+        /// With domain reload disabled the list is not re-created on the way into play mode, so whatever it
+        /// held is what the new session starts with. Today that is empty, because every machine detaches in
+        /// <c>OnDestroy</c> on the way out — but a runtime static that stays clean only because the editor
+        /// destroyed everything is a static waiting for the first exception on that path. The switches are
+        /// deliberately left alone: <c>BehaviorTreeRecordingSwitch</c> restores them on a domain reload and
+        /// relies on them persisting without one.
+        /// </para>
+        /// </summary>
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetForPlaySession()
+        {
+            Reset();
+        }
+
         public static void ClearAll()
         {
             foreach (var recorder in active)
