@@ -354,6 +354,12 @@ namespace ArcaneOnyx.BehaviorTree
             // The same teardown a switch performs -- a dying agent owes its running branch the same OnExit a
             // replaced one does, and keeping a second hand-rolled copy here is how Switch drifted from Awake.
             ReleaseTree();
+
+            // Awake went through the base, so OnDestroy has to as well. The base releases the cached
+            // reference and uninstantiates the nest, which is what takes this machine back out of
+            // GraphInstances and out of the editor's debug-data map. Without it every destroyed agent left
+            // one entry in each for the rest of the session, and only a domain reload ever cleared them.
+            base.OnDestroy();
         }
 
         private void OnApplicationPause(bool pauseStatus)
