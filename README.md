@@ -2,12 +2,6 @@
 
 A visual, node-based behavior tree system for AI and gameplay logic, built on top of Unity Visual Scripting.
 
-```
-Entry ─ Repeater ─ Selector ─┬─ [Reactive Guard: targetInRange]  Attack
-                             ├─ [Reactive Guard: hasTarget]       Chase
-                             └─                                   Idle
-```
-
 ---
 
 ## What BH3 is
