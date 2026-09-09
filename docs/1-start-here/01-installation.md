@@ -11,7 +11,7 @@ What BH3 needs, how to get it into a project, and how to check it works. Ten min
 | **Unity 6** | The reference project is on `6000.4.x`. |
 | **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. The reference project uses `1.9.11`. |
 | **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Needed by the BH3 *editor* assembly. It supplies the attribute behind the `bt_*` and `fn_*` command-line tools. |
-| Four ArcaneOnyx modules | `GraphCore`, `VisualScriptingExtension`, `UnityExtensions`, `BlockVariables`. See the table below. |
+| Three ArcaneOnyx modules | `GraphCore`, `VisualScriptingExtension`, `BlockVariables`. See the table below. |
 
 BH3 and its modules are plain folders of C# with assembly definitions. There is no UPM package: they live
 under `Assets/ArcaneOnyx/` and are wired together by assembly references.
@@ -24,7 +24,6 @@ Every one of these is its own GitHub repository. The reference project pulls the
 |---|---|---|
 | `Modules/GraphCore` | [platinio/graph-core-library](https://github.com/platinio/graph-core-library) | The graph window, canvas, port system and Blackboard panel that BH3's editor builds on |
 | `Modules/VisualScriptingExtension` | [platinio/visual-scripting-extension](https://github.com/platinio/visual-scripting-extension) | **Functions**: named, reusable Visual Scripting graphs with a contract |
-| `Modules/UnityExtensions` | [platinio/Unity-EditorExtension](https://github.com/platinio/Unity-EditorExtension) | Editor and runtime helpers |
 | `Modules/BlockVariables` | [platinio/Unity-BlockVariables](https://github.com/platinio/Unity-BlockVariables) | Variable storage used by the Blackboard |
 
 **Optional.** Install [Tactical Position Selection](https://github.com/platinio/Unity-TacticalPositionSelection)
@@ -47,14 +46,13 @@ Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visua
 
 ## Option B: add BH3 to your own project
 
-1. Put the five repositories under `Assets/ArcaneOnyx/`, keeping the folder names above:
+1. Put the four repositories under `Assets/ArcaneOnyx/`, keeping the folder names above:
 
    ```
    Assets/ArcaneOnyx/
      BH3/                              ← this repository
      Modules/GraphCore/
      Modules/VisualScriptingExtension/
-     Modules/UnityExtensions/
      Modules/BlockVariables/
    ```
 
@@ -64,7 +62,6 @@ Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visua
    git submodule add https://github.com/platinio/Unity-BH3.git Assets/ArcaneOnyx/BH3
    git submodule add https://github.com/platinio/graph-core-library.git Assets/ArcaneOnyx/Modules/GraphCore
    git submodule add https://github.com/platinio/visual-scripting-extension.git Assets/ArcaneOnyx/Modules/VisualScriptingExtension
-   git submodule add https://github.com/platinio/Unity-EditorExtension.git Assets/ArcaneOnyx/Modules/UnityExtensions
    git submodule add https://github.com/platinio/Unity-BlockVariables.git Assets/ArcaneOnyx/Modules/BlockVariables
    ```
 
