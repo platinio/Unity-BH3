@@ -2,6 +2,8 @@
 
 Click a node, read why it did what it did.
 
+![Why Panel](../images/debugging-why-panel.png)
+
 ---
 
 ## What it answers
