@@ -1,7 +1,8 @@
 {
     "name": "BH3",
-    "version": "1.0.0",
-    "installPath": "Assets/BH3",
+    "version": "1.0.1",
+    "installPath": "Assets/ArcaneOnyx/BH3",
+    "dependencyRoot": "Assets/ArcaneOnyx/Modules",
     "unity": "6000.4",
     "packages": {
         "com.unity.visualscripting": "1.9.11"
