@@ -7,8 +7,9 @@ using UnityEditor;
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
     /// <summary>
-    /// Runs <c>bt_verify</c> over the trees BH3 ships in <c>Sample/</c>, and holds their known problems to
-    /// a recorded count.
+    /// Runs <c>bt_verify</c> over the trees that used to ship in <c>Sample/</c>, kept under
+    /// <c>Test/EditMode/SampleTrees/</c> as fixtures now that the sample itself lives outside the repo, and
+    /// holds their known problems to a recorded count.
     ///
     /// <para>
     /// <b>Why this exists.</b> Every other verification test builds its own tree, asserts on it, and deletes
@@ -64,16 +65,18 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             { "guard with no triggers", 1 },
         };
 
+        private const string FixtureFolder = "/BH3/Test/EditMode/SampleTrees/";
+
         /// <summary>
-        /// The shipped sample trees. Located by path rather than by a hard-coded list so that adding a
-        /// sample brings it under verification automatically — which is the whole point, since the failure
-        /// this test exists for is content nobody thought to check.
+        /// The sample trees. Located by path rather than by a hard-coded list so that adding a tree under
+        /// the fixture folder brings it under verification automatically — which is the whole point, since
+        /// the failure this test exists for is content nobody thought to check.
         /// </summary>
         private static List<string> SampleTrees()
         {
             return AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}")
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .Where(path => path.Contains("/BH3/Sample/"))
+                .Where(path => path.Contains(FixtureFolder))
                 .Distinct()
                 .OrderBy(path => path)
                 .ToList();
@@ -105,7 +108,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // saying so is the difference between "verified" and "found nothing to verify".
             if (trees.Count == 0)
             {
-                Assert.Ignore("No trees found under BH3/Sample — nothing was verified.");
+                Assert.Ignore($"No trees found under {FixtureFolder} — nothing was verified.");
             }
 
             var findings = BehaviorTreeVerification.Verify(trees.ToArray());
@@ -147,7 +150,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var trees = SampleTrees();
 
-            if (trees.Count == 0) Assert.Ignore("No trees found under BH3/Sample — nothing was verified.");
+            if (trees.Count == 0) Assert.Ignore($"No trees found under {FixtureFolder} — nothing was verified.");
 
             foreach (var path in trees)
             {
