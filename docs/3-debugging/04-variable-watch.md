@@ -114,12 +114,6 @@ will look like the bug. See [Writing facts from a sensor](../2-building-trees/04
 
 ---
 
-## Try it
-
-The reference project's [VariableWatch demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/VariableWatch)
-has a sensor publishing three facts, one branch running at two call sites with its own scratch in each,
-and a node writing agent state from inside a branch.
-
 ## Next
 
 - [Breakpoints](05-breakpoints.md) — right-click a row here to break on the next write
