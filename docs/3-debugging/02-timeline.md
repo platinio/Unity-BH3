@@ -13,17 +13,7 @@ collapses it.
 
 Press Play with a tree open and it starts filling in within a few seconds:
 
-```
-● Rec  ▶  ⏮ ◀ ▶ ⏭    ● LIVE — tick 4715              Live: TimelineDemoAgent   [Save…] [Load…]
-        0        1000       2000       3000       4000
-depth 0 ████████████████████████████████████████████████  Entry
-depth 1 ████████████████████████████████████████████████  Repeater
-depth 2 ██████▌▐███▌▐██████▌▐████████▌▐████████▌▐███████  Selector
-depth 3 ██Idle█▌▐C█▌▐Combat█▌▐Combat██▌▐Search█▌▐Idle███
-depth 4 ██████▌▐███▌▐██████▌▐████████▌▐████████▌▐███████  Entry
-             ▲            ▲
-             └ red pin: aborted by guard 'not hasTarget'
-```
+![Debugging Timeline](../images/debugging-timeline.png)
 
 ## Reading the lanes
 
@@ -49,9 +39,7 @@ scrubs instead.
 **Drag the playhead**, or click anywhere on the track. The canvas **ghosts**: every node's status and every
 lit connection becomes what it was at that tick, dimmed, and the toolbar shows an amber banner:
 
-```
-⏸ SCRUBBING @ tick 2273 — canvas shows history
-```
+
 
 That is history, not the present. The agent keeps running behind it. **Return to live** hands the canvas
 back, and the banner returns to `● LIVE — tick N`.
