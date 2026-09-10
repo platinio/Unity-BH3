@@ -263,11 +263,6 @@ it. `fn_create` makes one that already runs end to end;
 
 ---
 
-## Related
-
-Tactical Position Selection queries are authored the same way, with their own `tps_` helpers and their own
-traps: [Authoring TPS queries from code](https://github.com/platinio/Unity-TacticalPositionSelection/blob/main/docs/authoring-queries-from-code.md).
-
 ## Next
 
 - [Command-line tools](05-command-line-tools.md)
