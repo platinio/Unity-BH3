@@ -85,6 +85,8 @@ guard, and a **Recording** / **Paused** toggle that pauses one agent's recorder 
 It is the low-level view; the panels above are built on the same data and are usually the better first
 stop.
 
+![Flight Recorder Window](../images/flight-recorder-window.png)
+
 ## In a player build
 
 The recorder compiles out of an ordinary build. Add the `BH3_DEV_TOOLS` scripting define to a development
