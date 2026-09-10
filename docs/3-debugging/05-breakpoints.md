@@ -26,7 +26,7 @@ Nothing to enable. Breakpoints are matched inside the flight recorder, so they w
 
 ### On a node
 
-![Node Breakpoint](../images/debugging-breakpoint-on-node.png)
+![Node Breakpoint](../images/debugging-breakpoints-on-node.png)
 
 Right-click any node on the canvas → **Breakpoint**, and tick the moments you want:
 
