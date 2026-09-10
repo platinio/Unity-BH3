@@ -12,9 +12,6 @@ What BH3 needs, how to get it into a project, and how to check it works. Ten min
 | **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. `1.9.11` is the verified version. |
 | *Optional:* **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Only for the `bt_*` and `fn_*` command-line tools. They live in their own editor assembly that compiles only when the package is present; nothing else in BH3 uses it. |
 
-BH3 is plain folders of C# with assembly definitions. There is no UPM package: everything lives under
-`Assets/ArcaneOnyx/` and is wired together by assembly references.
-
 ---
 
 ## Install
@@ -31,7 +28,7 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
    Add `"com.unity.pipeline": "0.4.0-exp.1"` beside it only if you want the
    [command-line tools](../4-extending-with-csharp/05-command-line-tools.md).
 
-2. Download `BH3.unitypackage` from the latest release. This link always points at the newest one:
+2. Download `BH3.unitypackage` from the latest release.
 
    ```
    https://github.com/platinio/Unity-BH3/releases/latest/download/BH3.unitypackage
@@ -48,10 +45,7 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
      Modules/GraphCore/                ← the graph window, canvas, port system and Blackboard panel
      Modules/VisualScriptingExtension/ ← Functions: named, reusable Visual Scripting graphs with a contract
      Modules/BlockVariables/           ← variable storage used by the Blackboard
-   ```
-
-   If a module is already in the project from another ArcaneOnyx package, Unity matches it by asset GUID and
-   updates it in place rather than importing a second copy.
+   ```  
 
 4. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
    detect it; expect one extra recompile.
@@ -67,6 +61,8 @@ BH3's nodes and its **Set BT Variable** / **Get BT Variable** units only appear 
 built its node library. One menu item does all of it:
 
 **Tools → BH3 → Install**
+
+![Install](../images/bh3-install.png)
 
 It initialises Visual Scripting if the project has never used it, adds BH3's assemblies and types to the
 node library and type options (keeping whatever the project already had), regenerates the nodes, and
