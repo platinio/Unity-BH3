@@ -133,4 +133,4 @@ them on load. Tooling that walks `graph.Nodes` no longer needs to filter them ou
 ## Next
 
 - [Glossary](03-glossary.md)
-- [Samples and demos](01-samples-and-demos.md)
+- [Demos and tests](01-samples-and-demos.md)

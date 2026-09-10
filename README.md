@@ -55,8 +55,7 @@ in **[docs/README.md](docs/README.md)**.
 |---|---|
 | `Runtime/` | Nodes, the machine, variables, the flight recorder |
 | `Editor/` | The graph window, panels, inspectors, authoring and verification tools |
-| `Sample/` | A minimal debugger demo and a playable FPS squad sample. See [Samples and demos](docs/5-reference/01-samples-and-demos.md) |
-| `Test/` | `EditMode/` and `PlayMode/` test assemblies |
+| `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over. Feature demos live in the reference project; see [Demos and tests](docs/5-reference/01-samples-and-demos.md) |
 | `docs/` | This documentation. `docs/design/` holds the pre-implementation specs, which new users can skip |
 
 ## Related
