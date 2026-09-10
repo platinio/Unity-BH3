@@ -98,6 +98,8 @@ inward: `Not → True` because `not hasTarget → False`.
 
 ### The graph snapshot
 
+![Graph Snapshot](../images/debugging-guard-snapshot.png)
+
 Most guards are fed by a Function, so "the guard returned false" often is not enough. The **graph** button
 opens that graph with the values that were on its wires at that tick.
 
