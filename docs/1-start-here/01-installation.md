@@ -62,6 +62,8 @@ built its node library. One menu item does all of it:
 
 **Tools → BH3 → Install**
 
+![Install](../images/bh3-install.png)
+
 It initialises Visual Scripting if the project has never used it, adds BH3's assemblies and types to the
 node library and type options (keeping whatever the project already had), regenerates the nodes, and
 generates the custom inspector properties. A dialog lists what it did. Running it again is harmless.
