@@ -1,39 +1,7 @@
-# Samples and demos
+# Demos and tests
 
-Where to find a working example of each feature. Two samples ship inside this repository; the feature demos
-live in the reference project.
-
----
-
-## In this repository: `Sample/`
-
-### Flight Recorder demo
-
-`Sample/FlightRecorder/FlightRecorderDemo.unity`
-
-The smallest complete BH3 scene: one agent (`Sentry`) running `FR_Demo_Sentry.asset`, which calls
-`FR_Demo_Engage.asset` as a sub-tree and guards its branches with reactive guards on two facts,
-`hasTarget` and `hasNoise`. No NavMesh, no render-pipeline requirements, no scripts of its own.
-
-Use it to try every debugging panel: press Play, double-click `FR_Demo_Sentry.asset`, and follow
-[Debugging: overview](../3-debugging/01-overview.md).
-
-### FPS squads sample
-
-`Sample/FPS/Scenes/Squads.unity`
-
-A playable soldiers-versus-zombies scene showing the full shape of a BH3 project:
-
-- **Two root trees**, `Assets/AI/Soldier.asset` and `Assets/AI/Zombie.asset`.
-- **A shared branch**, `Assets/AI/Modular/Patrol.asset`, run by both as a sub-tree.
-- **Functions** under `Assets/AI/Functions/` for every predicate and value the trees read (`Soldier.IsEnemyOnRange`, `Zombie.MeleePositionQuery`, and so on), plus two Script Graph assets.
-- **Gameplay scripts** under `Scripts/`: `AIEntity`, `EntityNavAgent`, a `Damageable` / `Hitbox` damage model, and a weapon and projectile chain. None of these are behavior tree nodes; the sample uses only the nodes that ship with BH3.
-
-It needs more than BH3 alone. See [Installation: the FPS sample](../1-start-here/01-installation.md#the-fps-sample)
-for the module list, and import `Sample/FPS/URP-Patch.unitypackage` if the materials render pink.
-
-> The sample trees are verified by an EditMode test (`Test/EditMode/SampleTreeVerificationTests.cs`), which
-> runs the same checks as `bt_verify` over every tree under `Sample/` and lists the findings it tolerates.
+Where to find a working example of each feature. The feature demos live in the reference project, one scene
+per feature; this repository holds only the tests, with the trees they verify as fixtures.
 
 ---
 
@@ -77,6 +45,11 @@ Contributors add tests beside the code they change:
 
 Both are gated on `UNITY_INCLUDE_TESTS` and are not auto-referenced, so they never ship in a build. Run them
 from **Window → General → Test Runner**.
+
+`Test/EditMode/SampleTrees/` holds the trees `SampleTreeVerificationTests.cs` runs `bt_verify` over: five
+trees with their Functions and script graphs, kept from the FPS and Flight Recorder samples that once shipped
+here. They are fixtures, not something to open and play; the test holds their findings to a recorded count so
+that a change which breaks real content fails loudly.
 
 ---
 

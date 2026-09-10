@@ -50,7 +50,7 @@ to go next.
 
 | Page | What it covers |
 |---|---|
-| [Samples and demos](5-reference/01-samples-and-demos.md) | What ships in `Sample/`, and the feature demos in the reference project |
+| [Demos and tests](5-reference/01-samples-and-demos.md) | The feature demos in the reference project, one scene per feature, and the test assemblies |
 | [Migrating older trees](5-reference/02-migrating-older-trees.md) | Behaviour that changed, what an old asset looks like, and how to bring it forward |
 | [Glossary](5-reference/03-glossary.md) | The words these pages use, defined once |
 

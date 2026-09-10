@@ -36,7 +36,7 @@ module never sees them.
 
 ## Option A: clone the reference project
 
-The fastest way to get a working setup, every sample and every demo:
+The fastest way to get a working setup, with every demo:
 
 ```bash
 git clone --recurse-submodules https://github.com/platinio/bh3-development.git
@@ -114,22 +114,12 @@ as it compiles.
 
 - Right-click in the Project window. **Create → Visual Scripting → Behavior Tree** should be there.
 - Add a component to any GameObject: **Behavior Tree Machine** should be offered.
-- Open `Assets/ArcaneOnyx/BH3/Sample/FlightRecorder/FlightRecorderDemo.unity`, press Play, and double-click
-  `FR_Demo_Sentry.asset` in the same folder. The canvas should light up as the tree runs.
+- In the reference project, open `Assets/ArcaneOnyx/BH3Demos/TimelineScrubber/TimelineScrubberDemo.unity`,
+  double-click `Trees/TimelineDemo_Agent.asset` in the same folder, and press Play. The canvas should light up
+  as the tree runs.
 
 If the create menu is missing, Visual Scripting has not been initialised. If the nodes exist but the
 **Set BT Variable** unit cannot be found in a script graph, run **Tools → BH3 → Install** again.
-
----
-
-## The FPS sample
-
-`Sample/FPS/` is a playable squad demo and needs more than BH3 itself: the `AIEntities`,
-`EntityTargetSelection`, `EntityFactions`, `ScriptableObjectDatabase`, `Services` and `AIPerception` modules,
-the **AI Navigation** package, and the **Universal Render Pipeline**. The reference project has all of them.
-
-If the sample's materials render **pink**, import `Sample/FPS/URP-Patch.unitypackage` (double-click it in the
-Project window, then **Import**).
 
 ---
 
