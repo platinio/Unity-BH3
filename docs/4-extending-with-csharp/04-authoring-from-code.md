@@ -83,7 +83,8 @@ because they are derived from the code:
 
 `ArcaneOnyx.BehaviorTree.Authoring.BehaviorTreeAuthoring` (editor assembly) is the supported way to do this.
 Each helper has a `bt_` command beside it, so the same recipe runs from C# or step by step from the command
-line. **Prefer C# for anything substantial**: a forty-node tree is one call instead of forty, with typed
+line. The commands need the optional `com.unity.pipeline` package; the helpers do not. **Prefer C# for
+anything substantial**: a forty-node tree is one call instead of forty, with typed
 locals instead of guids. Use the commands to inspect, to verify, and to make small edits to a tree that
 already exists.
 
