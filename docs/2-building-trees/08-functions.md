@@ -16,11 +16,6 @@ A **Script Graph Variable** node runs a Function and offers its result on an out
 way the node gets a graph, and the gain is that the Function is one asset: fix a predicate once and every
 tree referencing it is fixed, with no copies to find.
 
-```
-Assets/AI/Functions/HasTarget.asset
-        ├── referenced by Zombie.asset
-        └── referenced by Soldier.asset
-```
 
 ### Creating one
 
