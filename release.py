@@ -400,6 +400,52 @@ def relocate_package(raw, dep_name, layout):
     return buf.getvalue()
 
 
+def write_package(tar, groups):
+    """Serialise a {guid: {part: member}} selection back into a raw tar."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as out:
+        for guid, parts in groups.items():
+            for part, member in parts.items():
+                data = tar.extractfile(member).read()
+                ti = tarfile.TarInfo(f"{guid}/{part}")
+                ti.size = len(data)
+                ti.mtime = member.mtime
+                ti.mode = 0o644
+                out.addfile(ti, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def prune_nested_duplicates(dep_packages):
+    """Drop, from each package, the modules that are also fetched directly.
+
+    A bundled release carries copies of its own dependencies, frozen at the
+    version it was built against. When this module fetches that dependency
+    itself it gets the LATEST release, and that copy must win: the packer keeps
+    the first GUID it sees and the scaffold keeps the last file written, so a
+    stale nested copy would leak into one or the other. Modules only reachable
+    through nesting are kept.
+    """
+    direct = {dep["name"] for dep in dep_packages}
+    for dep in dep_packages:
+        tar, groups = package_groups(dep["raw"])
+        roots = module_roots(tar, groups)
+        foreign = {root: name for root, name in roots.items()
+                   if name != dep["name"] and name in direct}
+        if not foreign:
+            continue
+        ordered = sorted(foreign, key=len, reverse=True)
+        kept = {}
+        for guid, parts in groups.items():
+            pathname = read_pathname(tar, parts["pathname"]) if "pathname" in parts else None
+            if pathname and any(pathname == r or pathname.startswith(r + "/") for r in ordered):
+                continue
+            kept[guid] = parts
+        dropped = len(groups) - len(kept)
+        dep["raw"] = write_package(tar, kept)
+        info(f"  {dep['name']}: dropped its nested copy of "
+             f"{', '.join(sorted(set(foreign.values())))} ({dropped} assets; fetched directly)")
+
+
 def resolve_dependency_closure(manifest, tok, layout=None):
     """BFS the dependency graph, downloading each REQUIRED dependency's latest release.
 
@@ -903,6 +949,7 @@ def main():
 
     # 2. resolve + download the dependency closure ---------------------------
     dep_packages = resolve_dependency_closure(manifest, tok, layout)
+    prune_nested_duplicates(dep_packages)
 
     # 3. pack the separate sample package early (so the verify can import it) -
     sample_out, sample_raw = None, None
