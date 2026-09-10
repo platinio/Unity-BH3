@@ -40,23 +40,7 @@ makes the panel explain that tick instead of the newest one.
 
 ## Reading the answer
 
-```
-WhyDemo_Idle
-WhyDemo_Agent
-
-Aborted at tick 2274: guard 'not hasTarget' turned false while it was running.
-
-  BECAUSE   Guard 'not hasTarget' aborted it, so everything under it stopped on the same tick.
-  CONTEXT   It entered at tick 1773 and ran for 502 ticks.
-  CONTEXT   It returned Failure to its parent on the same tick.
-  EVIDENCE  The guard was last recorded turning false at tick 2274 (step 0).
-  BECAUSE   It read Not -> True <- not hasTarget -> False
-  BECAUSE   'hasTarget' changed False -> True at tick 2273 (step 0), written by WhyInspectorDemoSensor.
-
-  GUARD CHAIN
-    Not              →  True                       →
-    └ not hasTarget  →  False              graph   →
-```
+![Why panel](../images/why-panel.png)
 
 Four parts, top to bottom.
 
