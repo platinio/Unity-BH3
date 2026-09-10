@@ -112,9 +112,9 @@ Variable** and **Get Behavior Tree Variable**; the short names below are what th
 | Unit | Use it because |
 |---|---|
 | **Set BT Variable** | It reports the write. Unity's built-in **Set Variable** cannot be observed, so a value written with it never wakes a reactive guard and has no recorded writer in the debugger. **Always prefer this one** |
-| **Get BT Variable** | Same as Unity's **Get Variable**, kept beside the other so both live in one menu. Enable **Fallback** for anything a reusable branch reads: without it, reading a name the agent does not declare throws |
+| **Get BT Variable** | Reads the way Unity's **Get Variable** does, but with the tree's own kinds: no **Flow**, see [Variables and scope](04-variables-and-scope.md). Kept beside the other so both live in one menu. Enable **Fallback** for anything a reusable branch reads: without it, reading a name the agent does not declare throws |
 
-If they do not show up in the finder, run **Edit → Project Settings → Visual Scripting → Regenerate Nodes**
+If they do not show up in the finder, run **Tools → BH3 → Install**
 once.
 
 ---

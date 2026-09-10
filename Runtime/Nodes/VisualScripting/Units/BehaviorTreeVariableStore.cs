@@ -3,7 +3,8 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
-    /// Resolves which variable store a <see cref="Unity.VisualScripting.VariableKind"/> refers to.
+    /// Resolves which variable store a <see cref="BehaviorTreeVariableKind"/> refers to, from inside a
+    /// running flow.
     ///
     /// <para>
     /// Shared by the Set and Get units so the two can never disagree about where a name lives — a get that
@@ -24,30 +25,30 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public static Unity.VisualScripting.VariableDeclarations Of(
             Unity.VisualScripting.Flow flow,
-            Unity.VisualScripting.VariableKind kind,
+            BehaviorTreeVariableKind kind,
             Unity.VisualScripting.ValueInput objectPort)
         {
             switch (kind)
             {
-                case Unity.VisualScripting.VariableKind.Flow:
-                    return flow.variables;
-
-                case Unity.VisualScripting.VariableKind.Graph:
+                // The script graph's own variables. A script graph has no tree branch scope to offer.
+                case BehaviorTreeVariableKind.Graph:
                     return Unity.VisualScripting.Variables.Graph(flow.stack);
 
-                case Unity.VisualScripting.VariableKind.Object:
+                case BehaviorTreeVariableKind.Object:
                     var target = objectPort != null ? flow.GetValue<GameObject>(objectPort) : null;
                     return target != null ? Unity.VisualScripting.Variables.Object(target) : null;
 
-                case Unity.VisualScripting.VariableKind.Scene:
+                case BehaviorTreeVariableKind.Scene:
                     return IsSceneUsable(flow) ? Unity.VisualScripting.Variables.Scene(flow.stack.scene) : null;
 
-                case Unity.VisualScripting.VariableKind.Application:
+                case BehaviorTreeVariableKind.Application:
                     return Unity.VisualScripting.Variables.Application;
 
-                case Unity.VisualScripting.VariableKind.Saved:
+                case BehaviorTreeVariableKind.Saved:
                     return Unity.VisualScripting.Variables.Saved;
 
+                // None never reaches here from a unit; both resolve the kind first and throw naming
+                // themselves. Nowhere to look is still the honest answer for anything else that asks.
                 default:
                     return null;
             }
