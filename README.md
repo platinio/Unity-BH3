@@ -68,18 +68,6 @@ When an agent does the wrong thing, BH3 has already recorded what every node, gu
 | [Renaming and deleting node types](docs/4-extending-with-csharp/03-renaming-and-deleting-node-types.md) | What happens to trees when a node class goes away, and how to repair them |
 | [Authoring from code](docs/4-extending-with-csharp/04-authoring-from-code.md) | Generating trees from C#, and the traps in it |
 | [Command-line tools](docs/4-extending-with-csharp/05-command-line-tools.md) | The `bt_*` and `fn_*` commands, and every message `bt_verify` can emit |
-
-### 5. Reference
-
-| Page | What it covers |
-|---|---|
-| [Demos and tests](docs/5-reference/01-samples-and-demos.md) | The feature demos in the reference project, one scene per feature, and the test assemblies |
-| [Migrating older trees](docs/5-reference/02-migrating-older-trees.md) | Behaviour that changed, what an old asset looks like, and how to bring it forward |
-| [Glossary](docs/5-reference/03-glossary.md) | The words these pages use, defined once |
-
-`docs/design/` holds the numbered specifications written before each feature was built. They record
-decisions and alternatives, are not kept in step with the guides, and can be skipped.
-
 ---
 
 ## Where things are
