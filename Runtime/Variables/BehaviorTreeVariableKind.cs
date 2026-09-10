@@ -31,9 +31,13 @@ namespace ArcaneOnyx.BehaviorTree
     /// misconfiguration they always were rather than failing to load.
     /// </para>
     /// <para>
-    /// The three Visual Scripting units — <c>GetBehaviorTreeVariable</c>, <c>SetBehaviorTreeVariable</c> and
-    /// the <c>BehaviorTreeVariableStore</c> they share — keep Unity's enum. They run inside a real flow
-    /// graph, where <c>Flow</c> is a store like any other.
+    /// The Visual Scripting units <c>GetBehaviorTreeVariable</c> and <c>SetBehaviorTreeVariable</c> use it
+    /// too. They run inside a real flow graph, where <c>Flow</c> exists, but flow scratch is not tree state:
+    /// nothing in a tree can read it and the recorder had to drop every such write, so a unit named after
+    /// the tree was offering a store that only existed to be thrown away. Unity's own Get and Set Variable
+    /// keep serving per-flow scratch. On those units <see cref="Graph"/> is the <em>script graph's</em>
+    /// own variables rather than a branch scope, because a script graph has no branch; the tree nodes are
+    /// the ones that reach the scope chain.
     /// </para>
     /// </remarks>
     public enum BehaviorTreeVariableKind

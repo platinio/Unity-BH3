@@ -6,10 +6,18 @@ namespace ArcaneOnyx.BehaviorTree
     /// Reads a variable. The counterpart to <see cref="SetBehaviorTreeVariable"/>.
     ///
     /// <para>
-    /// <b>This does nothing Unity's own Get Variable does not.</b> Reads are not recorded and there is
-    /// nothing here to record — a read changes nothing, and a tree reads constantly, so an event per read
-    /// would bury the writes that actually explain a branch change. Do not expect it to appear in a
-    /// recording.
+    /// <b>This does nothing Unity's own Get Variable does not</b>, except offer the tree's kinds. Reads are
+    /// not recorded and there is nothing here to record — a read changes nothing, and a tree reads
+    /// constantly, so an event per read would bury the writes that actually explain a branch change. Do not
+    /// expect it to appear in a recording.
+    /// </para>
+    ///
+    /// <para>
+    /// The kinds are <see cref="BehaviorTreeVariableKind"/>, the same the tree's own variable nodes offer,
+    /// so there is no <c>Flow</c>: flow scratch is not tree state, nothing in a tree can read it, and a unit
+    /// named after the tree offering it was offering a store the recorder already had to throw away. Per-flow
+    /// scratch is what Unity's own Get and Set Variable are for. Kind <see cref="BehaviorTreeVariableKind.Graph"/>
+    /// is the script graph's own variables here, not the tree branch's scope: a script graph has no branch.
     /// </para>
     ///
     /// <para>
@@ -28,9 +36,13 @@ namespace ArcaneOnyx.BehaviorTree
     [Unity.VisualScripting.UnitShortTitle("Get BT Variable")]
     public sealed class GetBehaviorTreeVariable : Unity.VisualScripting.Unit
     {
-        /// <summary>Which variable store this reads from. Mirrors Visual Scripting's own kind selector.</summary>
+        /// <summary>
+        /// Which variable store this reads from. Starts on the agent's facts, the read a Function most often
+        /// makes; a unit that arrives on <see cref="BehaviorTreeVariableKind.None"/> (one saved on the old
+        /// <c>Flow</c> kind) is flagged on the canvas and refuses to guess if it runs anyway.
+        /// </summary>
         [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable, Unity.VisualScripting.UnitHeaderInspectable]
-        public Unity.VisualScripting.VariableKind kind { get; set; } = Unity.VisualScripting.VariableKind.Object;
+        public BehaviorTreeVariableKind kind { get; set; } = BehaviorTreeVariableKind.Object;
 
         /// <summary>
         /// Whether to return <see cref="fallback"/> when the variable is not declared.
@@ -60,7 +72,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             name = ValueInput(nameof(name), string.Empty);
 
-            if (kind == Unity.VisualScripting.VariableKind.Object)
+            if (kind == BehaviorTreeVariableKind.Object)
             {
                 @object = ValueInput<GameObject>(nameof(@object), null).NullMeansSelf();
             }
@@ -69,7 +81,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             Requirement(name, value);
 
-            if (kind == Unity.VisualScripting.VariableKind.Object)
+            if (kind == BehaviorTreeVariableKind.Object)
             {
                 Requirement(@object, value);
             }
@@ -84,7 +96,7 @@ namespace ArcaneOnyx.BehaviorTree
         private object Get(Unity.VisualScripting.Flow flow)
         {
             var key = flow.GetValue<string>(name);
-            var declarations = BehaviorTreeVariableStore.Of(flow, kind, @object);
+            var declarations = BehaviorTreeVariableStore.Of(flow, VariableKindField.Resolve(kind, UnitName), @object);
 
             // Nowhere to read from is the same outcome as not declared: the fallback answers if there is one,
             // and otherwise the read fails the way Visual Scripting's own would.
@@ -99,7 +111,7 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     throw new System.InvalidOperationException(
                         $"Get BT Variable: no {kind} variables to read '{key}' from. " +
-                        (kind == Unity.VisualScripting.VariableKind.Object
+                        (kind == BehaviorTreeVariableKind.Object
                             ? "The Object port resolved to nothing."
                             : "The scene is not loaded."));
                 }
@@ -116,9 +128,9 @@ namespace ArcaneOnyx.BehaviorTree
         private bool IsDefined(Unity.VisualScripting.Flow flow)
         {
             var key = flow.GetValue<string>(name);
-            if (string.IsNullOrEmpty(key)) return false;
+            if (string.IsNullOrEmpty(key) || kind == BehaviorTreeVariableKind.None) return false;
 
-            if (kind == Unity.VisualScripting.VariableKind.Scene)
+            if (kind == BehaviorTreeVariableKind.Scene)
             {
                 if (!BehaviorTreeVariableStore.IsSceneUsable(flow)) return false;
                 if (!Unity.VisualScripting.Variables.ExistInScene(flow.stack.scene)) return false;
@@ -128,5 +140,8 @@ namespace ArcaneOnyx.BehaviorTree
 
             return declarations != null && declarations.IsDefined(key);
         }
+
+        /// <summary>What a throw calls this unit; the same words the canvas shows.</summary>
+        internal const string UnitName = "Get BT Variable";
     }
 }

@@ -123,9 +123,14 @@ the write is inside the tree's own graphs.
 
 ### Reading facts from a graph
 
-Inside a Function, read with **Get BT Variable** rather than Unity's unit. It behaves identically, and a
+Inside a Function, read with **Get BT Variable** rather than Unity's unit. It behaves the same way, and a
 Function that reads agent facts should also **declare** them as watched keys, so a guard fed by that
 Function knows what to wake on. See [Guards](06-guards.md#watched-keys-and-functions).
+
+Both BT units offer the same kinds as the tree's variable nodes: Graph, Object, Scene, Application and
+Saved. There is no **Flow** kind, because flow scratch is not tree state and nothing in a tree can read it.
+For per-flow scratch inside a graph, use Unity's own **Get Variable** and **Set Variable**. A unit that has
+no kind chosen shows an error on the canvas and throws, naming itself, if the graph runs anyway.
 
 > **Set BT Variable with kind Graph** writes the *script graph's* own variables, not the behavior tree
 > branch's scope, despite the name. To write a branch variable, use the **Set Variable** tree node.

@@ -14,11 +14,14 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// <b>It behaves identically to the built-in unit.</b> Same ports, same kinds, same assignment semantics,
-    /// including <see cref="VariableKind.Graph"/> meaning <em>this script graph's</em> variables rather than
-    /// the behavior tree branch's scope — a branch scope belongs to a behavior tree node, and a script graph
-    /// does not have one. Any divergence in behaviour would be a trap, so the only difference is that this one
-    /// is visible in a recording.
+    /// <b>It behaves like the built-in unit</b>: same ports, same assignment semantics, including
+    /// <see cref="BehaviorTreeVariableKind.Graph"/> meaning <em>this script graph's</em> variables rather
+    /// than the behavior tree branch's scope — a branch scope belongs to a behavior tree node, and a script
+    /// graph does not have one. The two differences are deliberate: this one is visible in a recording, and
+    /// its kinds are the tree's, <see cref="BehaviorTreeVariableKind"/>, so there is no <c>Flow</c>. Flow
+    /// scratch is not tree state and the recorder already dropped such writes as not being variable writes
+    /// at all; a store that exists only to be thrown away is not worth offering. Per-flow scratch is what
+    /// Unity's own Set Variable is for.
     /// </para>
     ///
     /// <para>
@@ -42,9 +45,13 @@ namespace ArcaneOnyx.BehaviorTree
     [Unity.VisualScripting.UnitSurtitle("Recorded")]
     public sealed class SetBehaviorTreeVariable : Unity.VisualScripting.Unit
     {
-        /// <summary>Which variable store this writes to. Mirrors Visual Scripting's own kind selector.</summary>
+        /// <summary>
+        /// Which variable store this writes to. Starts on the agent's facts, the write that makes guards wake;
+        /// a unit that arrives on <see cref="BehaviorTreeVariableKind.None"/> (one saved on the old
+        /// <c>Flow</c> kind) is flagged on the canvas and refuses to guess if it runs anyway.
+        /// </summary>
         [Unity.VisualScripting.Serialize, Unity.VisualScripting.Inspectable, Unity.VisualScripting.UnitHeaderInspectable]
-        public Unity.VisualScripting.VariableKind kind { get; set; } = Unity.VisualScripting.VariableKind.Object;
+        public BehaviorTreeVariableKind kind { get; set; } = BehaviorTreeVariableKind.Object;
 
         [Unity.VisualScripting.DoNotSerialize, Unity.VisualScripting.PortLabelHidden]
         public Unity.VisualScripting.ValueInput name { get; private set; }
@@ -80,7 +87,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             name = ValueInput(nameof(name), string.Empty);
 
-            if (kind == Unity.VisualScripting.VariableKind.Object)
+            if (kind == BehaviorTreeVariableKind.Object)
             {
                 @object = ValueInput<GameObject>(nameof(@object), null).NullMeansSelf();
             }
@@ -95,7 +102,7 @@ namespace ArcaneOnyx.BehaviorTree
             Assignment(assign, output);
             Succession(assign, assigned);
 
-            if (kind == Unity.VisualScripting.VariableKind.Object)
+            if (kind == BehaviorTreeVariableKind.Object)
             {
                 Requirement(@object, assign);
             }
@@ -103,6 +110,10 @@ namespace ArcaneOnyx.BehaviorTree
 
         private Unity.VisualScripting.ControlOutput Assign(Unity.VisualScripting.Flow flow)
         {
+            // Rejected before anything is recorded, the same order SaveVariable keeps: a write event for a
+            // value nothing ever held would be a row in the variable watch about a write that threw.
+            VariableKindField.Resolve(kind, UnitName);
+
             var key = flow.GetValue<string>(name);
             var value = flow.GetValue(input);
 
@@ -116,7 +127,7 @@ namespace ArcaneOnyx.BehaviorTree
             // GameObject by default but need not be -- so the version bump has to land on *that* agent, not
             // on the one running this graph. Resolved once rather than through Declarations, because the port
             // may be fed by a graph and reading it twice would run that graph twice.
-            if (kind == Unity.VisualScripting.VariableKind.Object)
+            if (kind == BehaviorTreeVariableKind.Object)
             {
                 var target = @object != null ? flow.GetValue<GameObject>(@object) : null;
 
@@ -162,6 +173,9 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         private string WriterName => string.IsNullOrEmpty(writerName) ? DefaultWriterName : writerName;
+
+        /// <summary>What a throw calls this unit; the same words the canvas shows.</summary>
+        internal const string UnitName = "Set BT Variable";
 
         /// <summary>
         /// The agent whose recording this belongs to: the object the graph is running on, not the object being

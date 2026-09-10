@@ -214,16 +214,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             BehaviorTreeMachine machine,
             string writerName,
             string key,
-            Unity.VisualScripting.VariableKind variableKind,
+            BehaviorTreeVariableKind kind,
             object oldValue,
             object newValue)
         {
-            var kind = StoreOf(variableKind);
-
-            // A flow variable is not tree state and never becomes any: no node can read it, no guard can
-            // watch it, and the flow holding it is gone before anyone could look. Recording one puts a row
-            // in the variable watch under a store that does not exist -- the same phantom the guard above
-            // SaveVariable exists to prevent, arrived by a different route.
+            // None means "not a variable write" on every event, and no store answers to it. The units
+            // reject it before calling here; this keeps the meaning intact for any caller that does not.
             if (kind == BehaviorTreeVariableKind.None) return;
 
             var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
@@ -235,37 +231,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             }
 
             machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, kind);
-        }
-
-        /// <summary>
-        /// The one place a Visual Scripting kind becomes a behavior tree one.
-        /// </summary>
-        /// <remarks>
-        /// The caller above is a script graph unit, so its kind is Unity's — it runs in a flow, where
-        /// <c>Flow</c> is a real store. The recording is BH3's, where it is not. Rather than push that
-        /// mismatch onto the unit, the facade absorbs it here, for the same reason it already decides
-        /// writer attribution here: everything in this class compiles out of a shipped build, and a
-        /// translation the call site never performs is a translation that costs nothing to ship.
-        /// <para>
-        /// Flow scratch maps to <see cref="BehaviorTreeVariableKind.None"/>, and the caller drops it. The
-        /// write happened, but there is no store to group it under and nothing in a tree can ever read it,
-        /// so a recorded one is a row about a value no reader can reach. Keeping
-        /// <see cref="BehaviorTreeVariableKind.None"/> meaning exactly "not a variable write" is worth more
-        /// than an event only the flow that already ended could have used.
-        /// </para>
-        /// </remarks>
-        private static BehaviorTreeVariableKind StoreOf(Unity.VisualScripting.VariableKind kind)
-        {
-            switch (kind)
-            {
-                case Unity.VisualScripting.VariableKind.Graph: return BehaviorTreeVariableKind.Graph;
-                case Unity.VisualScripting.VariableKind.Object: return BehaviorTreeVariableKind.Object;
-                case Unity.VisualScripting.VariableKind.Scene: return BehaviorTreeVariableKind.Scene;
-                case Unity.VisualScripting.VariableKind.Application:
-                    return BehaviorTreeVariableKind.Application;
-                case Unity.VisualScripting.VariableKind.Saved: return BehaviorTreeVariableKind.Saved;
-                default: return BehaviorTreeVariableKind.None;
-            }
         }
 
         /// <summary>
