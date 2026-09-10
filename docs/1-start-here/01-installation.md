@@ -45,10 +45,7 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
      Modules/GraphCore/                ← the graph window, canvas, port system and Blackboard panel
      Modules/VisualScriptingExtension/ ← Functions: named, reusable Visual Scripting graphs with a contract
      Modules/BlockVariables/           ← variable storage used by the Blackboard
-   ```
-
-   If a module is already in the project from another ArcaneOnyx package, Unity matches it by asset GUID and
-   updates it in place rather than importing a second copy.
+   ```  
 
 4. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
    detect it; expect one extra recompile.
