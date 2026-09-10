@@ -22,6 +22,8 @@ Nothing to enable. Breakpoints are matched inside the flight recorder, so they w
 
 ## Arming one
 
+
+
 ### On a node
 
 Right-click any node on the canvas → **Breakpoint**, and tick the moments you want:
@@ -61,6 +63,8 @@ a variable that is not currently on screen.
 ---
 
 ## The Breakpoints panel
+
+![Debugging Breakpoints](../images/debugging-breakpoints.png)
 
 It lives in the left sidebar, next to **Blackboard** and **Why**.
 
