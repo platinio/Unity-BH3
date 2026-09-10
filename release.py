@@ -86,12 +86,17 @@ release.py itself would get packed). Only "name" + "version" are required.
             }                                   // deps the SAMPLE needs. Shorthand: "sample":
         },                                      // "Samples~" (no extra packages).
 
+        "dependencyRoot": "Assets/ArcaneOnyx/Modules", // optional; every BUNDLED module is
+                                                // relocated to <root>/<Name>, whatever its
+                                                // own installPath says (see "layout" below).
+
         "dependencies": {                       // other MODULES this one needs
             "OtherModule": {
                 "repo": "platinio/Unity-OtherModule", // fetched from its LATEST release and
-                "version": "1.0.0"                    // BUNDLED (deduped). "version" = the
-            },                                        // minimum needed (ModuleManager warnings).
-            "Zenject": {
+                "version": "1.0.0",                   // BUNDLED (deduped). "version" = the
+                "installPath": "Assets/Vendor/Other"  // minimum needed (ModuleManager warnings).
+            },                                        // "installPath" = optional per-dependency
+            "Zenject": {                              // override of dependencyRoot.
                 "repo": "platinio/Unity-Zenject",
                 "version": "9.2.0",
                 "optional": true                // NOT fetched/bundled; the module compiles and
@@ -100,6 +105,16 @@ release.py itself would get packed). Only "name" + "version" are required.
     }
 
 A leaf module just omits "dependencies".
+
+LAYOUT (where bundled dependencies land):
+  A module's own "installPath" is where it lands when imported on its own. A module
+  that BUNDLES it may put it somewhere else: "dependencyRoot" relocates every bundled
+  module (transitive ones included) to <root>/<Name>, and a dependency entry's own
+  "installPath" overrides that for one module. The relocation rewrites the pathnames
+  inside the downloaded package and the "installPath" in its embedded module.json,
+  and the verify scaffold uses the same layout, so what is tested is what ships. Two
+  routes to the same module (listed directly and nested inside another dependency)
+  collapse to one copy because the paths agree and the packer dedupes by GUID.
 
 OPTIONAL DEPENDENCIES (make an integration optional):
   1. Gate the integration code behind `#if MODULE_<DEP>_EXIST`.
@@ -295,7 +310,97 @@ def package_manifest(raw):
     return json.loads(tar.extractfile(best[1]).read().decode("utf-8-sig"))
 
 
-def resolve_dependency_closure(manifest, tok):
+def read_pathname(tar, member):
+    return tar.extractfile(member).read().decode().splitlines()[0]
+
+
+def module_roots(tar, groups):
+    """{install root: module name} for every module.json inside a package."""
+    roots = {}
+    for parts in groups.values():
+        if "pathname" not in parts or "asset" not in parts:
+            continue
+        pathname = read_pathname(tar, parts["pathname"])
+        if os.path.basename(pathname) != "module.json":
+            continue
+        root = os.path.dirname(pathname)
+        sub = json.loads(tar.extractfile(parts["asset"]).read().decode("utf-8-sig"))
+        roots[root] = sub.get("name") or os.path.basename(root)
+    return roots
+
+
+def dependency_layout(manifest):
+    """The bundler's layout rules: a root for every bundled module plus per-name overrides."""
+    manifest = manifest or {}
+    overrides = {}
+    for name, spec in manifest.get("dependencies", {}).items():
+        if isinstance(spec, dict) and spec.get("installPath"):
+            overrides[name] = spec["installPath"].rstrip("/")
+    root = (manifest.get("dependencyRoot") or "").rstrip("/") or None
+    if root is None and not overrides:
+        return None
+    return {"root": root, "overrides": overrides}
+
+
+def relocate_package(raw, dep_name, layout):
+    """Rewrite a dependency package so each module in it lands where the bundler wants.
+
+    Every module.json inside the package names a module and its current install
+    root (a bundled package carries its own dependencies' manifests too). Each root
+    moves to the override for that name, else <dependencyRoot>/<name>; the embedded
+    module.json is rewritten to say so. A package without a manifest is relocated
+    as one module rooted at the common folder of its assets.
+    """
+    tar, groups = package_groups(raw)
+    roots = module_roots(tar, groups)
+    if not roots:
+        pathnames = [read_pathname(tar, p["pathname"]) for p in groups.values() if "pathname" in p]
+        common = os.path.commonpath(pathnames).replace("\\", "/") if pathnames else ""
+        if common.count("/") < 1:
+            info(f"  ({dep_name} has no module.json and no single root folder; not relocated)")
+            return raw
+        roots[common] = dep_name
+    moves = {}
+    for old_root, name in roots.items():
+        new_root = layout["overrides"].get(name) or (f"{layout['root']}/{name}" if layout["root"] else None)
+        if new_root and new_root != old_root:
+            moves[old_root] = new_root
+    if not moves:
+        return raw
+    ordered = sorted(moves.items(), key=lambda kv: -len(kv[0]))  # nested roots first
+
+    def moved(pathname):
+        for old, new in ordered:
+            if pathname == old or pathname.startswith(old + "/"):
+                return new + pathname[len(old):]
+        return pathname
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as out:
+        for guid, parts in groups.items():
+            pathname = read_pathname(tar, parts["pathname"]) if "pathname" in parts else None
+            for part, member in parts.items():
+                data = tar.extractfile(member).read()
+                if part == "pathname" and pathname is not None:
+                    lines = data.decode().splitlines()
+                    lines[0] = moved(pathname)
+                    data = "\n".join(lines).encode()
+                elif part == "asset" and pathname is not None and os.path.dirname(pathname) in moves \
+                        and os.path.basename(pathname) == "module.json":
+                    sub = json.loads(data.decode("utf-8-sig"))
+                    sub["installPath"] = moves[os.path.dirname(pathname)]
+                    data = (json.dumps(sub, indent=4) + "\n").encode()
+                ti = tarfile.TarInfo(f"{guid}/{part}")
+                ti.size = len(data)
+                ti.mtime = member.mtime
+                ti.mode = 0o644
+                out.addfile(ti, io.BytesIO(data))
+    for old, new in ordered:
+        info(f"  {roots[old]}: {old} -> {new}")
+    return buf.getvalue()
+
+
+def resolve_dependency_closure(manifest, tok, layout=None):
     """BFS the dependency graph, downloading each REQUIRED dependency's latest release.
 
     Returns a list of {name, repo, tag, raw} dicts, deduplicated by repo. Each
@@ -308,6 +413,9 @@ def resolve_dependency_closure(manifest, tok):
 
     Each entry also carries the "packages" its manifest declares, so the verify
     scaffold can install the UPM packages a bundled dependency compiles against.
+
+    With a layout (see dependency_layout) every downloaded package is relocated
+    right here, so the verify scaffold and the bundled release agree.
     """
     packages, visited = [], set()
     queue = list((manifest or {}).get("dependencies", {}).items())
@@ -323,6 +431,8 @@ def resolve_dependency_closure(manifest, tok):
         info(f"fetching dependency {name} ({slug}) ...")
         tag, raw = download_release_package(slug, tok)
         info(f"  got {name} {tag}")
+        if layout:
+            raw = relocate_package(raw, name, layout)
         sub = package_manifest(raw)
         if sub:
             queue.extend(sub.get("dependencies", {}).items())
@@ -499,8 +609,8 @@ public static class CIBuild
 """
 
 
-def scaffold_project(repo, name, unity_version, deps, exclude_prefixes=()):
-    """Create a temp Unity project containing the tracked tool content."""
+def scaffold_project(repo, name, unity_version, deps, exclude_prefixes=(), install_path=None):
+    """Create a temp Unity project containing the tracked tool content at its install path."""
     proj = tempfile.mkdtemp(prefix=f"ci_{name}_")
     os.makedirs(os.path.join(proj, "ProjectSettings"))
     os.makedirs(os.path.join(proj, "Packages"))
@@ -509,8 +619,8 @@ def scaffold_project(repo, name, unity_version, deps, exclude_prefixes=()):
     with open(os.path.join(proj, "Packages", "manifest.json"), "w") as fh:
         json.dump({"dependencies": deps}, fh, indent=2)
 
-    # copy every tracked file into Assets/<name>/, preserving structure
-    dest_root = os.path.join(proj, "Assets", name)
+    # copy every tracked file to the module's install path, preserving structure
+    dest_root = os.path.join(proj, *(install_path or f"Assets/{name}").split("/"))
     for rel in git(repo, "ls-files").splitlines():
         if any(rel == p or rel.startswith(p + "/") for p in exclude_prefixes):
             continue
@@ -559,9 +669,10 @@ def parse_test_results(xml_path):
 
 def verify_locally(repo, name, unity_version, deps, unity_exe, platforms, keep,
                    dep_packages=(), build_scene=None, exclude_prefixes=(),
-                   sample_raw=None):
+                   sample_raw=None, install_path=None):
+    install_path = install_path or f"Assets/{name}"
     info(f"scaffolding throwaway Unity {unity_version} project ({len(deps)} deps) ...")
-    proj = scaffold_project(repo, name, unity_version, deps, exclude_prefixes)
+    proj = scaffold_project(repo, name, unity_version, deps, exclude_prefixes, install_path)
     for dep in dep_packages:
         n = extract_package_into_project(dep["raw"], proj)
         info(f"  added dependency {dep['name']} {dep['tag']} ({n} assets)")
@@ -597,7 +708,7 @@ def verify_locally(repo, name, unity_version, deps, unity_exe, platforms, keep,
         # --- Windows player build ---
         build_args = ["-quit", "-executeMethod", "CIBuild.BuildWindows"]
         if build_scene:
-            scene_path = f"Assets/{name}/{build_scene}"
+            scene_path = f"{install_path}/{build_scene}"
             info(f"building StandaloneWindows64 player with scene {scene_path} ...")
             build_args += ["-ciScene", scene_path]
         else:
@@ -765,7 +876,9 @@ def main():
     # the token up front, so we never push a tag and then fail on the release call.
     gh = api("GET", f"{API}/repos/{owner}/{gh_name}", tok=tok)
     owner, gh_name = gh["full_name"].split("/", 1)
-    info(f"repo={owner}/{gh_name}  name={name}  tag={tag}  install={install_path}")
+    layout = dependency_layout(manifest)
+    info(f"repo={owner}/{gh_name}  name={name}  tag={tag}  install={install_path}"
+         + (f"  dependencies={layout['root']}/<Name>" if layout and layout["root"] else ""))
 
     # 1. guards -------------------------------------------------------------
     if not args.allow_dirty and git(repo, "status", "--porcelain"):
@@ -789,7 +902,7 @@ def main():
     core_exclude = list(args.exclude) + ([sample_path] if sample_path else [])
 
     # 2. resolve + download the dependency closure ---------------------------
-    dep_packages = resolve_dependency_closure(manifest, tok)
+    dep_packages = resolve_dependency_closure(manifest, tok, layout)
 
     # 3. pack the separate sample package early (so the verify can import it) -
     sample_out, sample_raw = None, None
@@ -821,7 +934,7 @@ def main():
                        dep_packages=dep_packages,
                        build_scene=(manifest or {}).get("buildScene"),
                        exclude_prefixes=[sample_path] if sample_path else [],
-                       sample_raw=sample_raw)
+                       sample_raw=sample_raw, install_path=install_path)
 
     # 5. pack the core package (+ bundled dependency closure) ----------------
     build_unitypackage(repo, install_path, out_file, core_exclude,
