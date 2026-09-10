@@ -151,15 +151,15 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{"Value":{"$content":false,"$type":"System.Boolean"}},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-708.0,"yMin":903.0,"xMax":-558.0,"yMax":943.0},"guid":"1fe601b1-e6ea-4e27-8970-9a6ab22dba1b","$type":"ArcaneOnyx.BehaviorTree.BooleanReactiveGuard","$id":"196"},{"sourceUnit":{"$ref":"166"},"sourceKey":"Output","destinationUnit":{"$ref":"196"},"destinationKey":"Value","guid":"e58f8734-f325-44c4-80b0-09c5d82c7711","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"154"},"sourceKey":"Output","destinationUnit":{"$ref":"69"},"destinationKey":"Value","guid":"de879dc6-f048-4d22-84d2-b3f3639134d4","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"184"},"sourceKey":"Output","destinationUnit":{"$ref":"136"},"destinationKey":"Value","guid":"5ef5d4a0-cd90-4ee2-a59c-ddcf63e99cd8","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"190"},"sourceKey":"Output","destinationUnit":{"$ref":"65"},"destinationKey":"Value","guid":"9d63d1b5-520f-49f8-aee0-4de0f05c87fa","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"172"},"sourceKey":"Value","destinationUnit":{"$ref":"69"},"destinationKey":"Key","guid":"3ac47ccb-33aa-4211-83c2-b57bb187b608","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"160"},"sourceKey":"Value","destinationUnit":{"$ref":"50"},"destinationKey":"Time","guid":"a6e0b8a5-f700-4401-b485-0bb6cfa0a0bd","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"142"},"sourceKey":"Value","destinationUnit":{"$ref":"86"},"destinationKey":"Time","guid":"8dcf6f9a-c28b-4869-a6bd-d089ebf2f1e0","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"145"},"sourceKey":"Value","destinationUnit":{"$ref":"126"},"destinationKey":"Time","guid":"c2df05c1-c87d-479c-91c4-bc5ea0bffed4","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"133"},"sourceKey":"Value","destinationUnit":{"$ref":"65"},"destinationKey":"Key","guid":"0e78ef0b-0c18-4354-945c-a870f79eeb52","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"175"},"sourceKey":"","destinationUnit":{"$ref":"46"},"destinationKey":"Target","guid":"daddcabf-4678-4d33-9619-26048a95e2fd","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"163"},"sourceKey":"SelectedPosition","destinationUnit":{"$ref":"46"},"destinationKey":"NavPosition","guid":"d7c5b2f8-44f0-406d-a24f-d20b91e1d9a5","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"},{"sourceUnit":{"$ref":"178"},"sourceKey":"Output","destinationUnit":{"$ref":"163"},"destinationKey":"Query","guid":"a87fce50-dff7-4437-875a-0e3a4f030150","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"},{"sourceUnit":{"$ref":"148"},"sourceKey":"Output","destinationUnit":{"$ref":"163"},"destinationKey":"Position","guid":"d61d6d09-acd0-4e18-a5d4-f2cd29a630ae","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"}],"$version":"A"}}'
     _objectReferences:
-    - {fileID: 11400000, guid: c0601abb4b94d4247a34d1a814a3ddf4, type: 2}
-    - {fileID: 11400000, guid: 52ad0f2840c694e4aab10fde489f3180, type: 2}
-    - {fileID: 11400000, guid: 427be378a1a5a1744951f9c8691ecec0, type: 2}
-    - {fileID: 11400000, guid: b6db1f5898824d04db0bdbbc51d512bf, type: 2}
-    - {fileID: 11400000, guid: 7b886dfecaa695c488f670bb8ccd1c93, type: 2}
-    - {fileID: 11400000, guid: 469ea98ba238fb24bbad85cb8748e3c4, type: 2}
-    - {fileID: 11400000, guid: 74f56f93ba13b0a40bfdee386cb076c6, type: 2}
-    - {fileID: 11400000, guid: f168b50d8155fe14fa82d053d1ac7a12, type: 2}
-    - {fileID: 11400000, guid: f58e32a7fee030c4bb71f643d2cc93ff, type: 2}
-    - {fileID: 11400000, guid: 3b286a6a9d654194a98aed373cd56058, type: 2}
-    - {fileID: 11400000, guid: ecb31bb3e118c344684f0c9715fe3a79, type: 2}
-    - {fileID: 11400000, guid: c2fbc3b3fc3af0f4abb413551c94e16b, type: 2}
+    - {fileID: 11400000, guid: eee5ac82b2e756540b12e3d1316cecee, type: 2}
+    - {fileID: 11400000, guid: 7244059c9b7425d4cb8bb2a28f4416e7, type: 2}
+    - {fileID: 11400000, guid: 289d1892211466e4bb1c31bcac681c1e, type: 2}
+    - {fileID: 11400000, guid: b9e7a00f21497bb4f89c2618dac02cab, type: 2}
+    - {fileID: 11400000, guid: 927c6dca341829646a0fab8a02999454, type: 2}
+    - {fileID: 11400000, guid: 588439971071a56448cfb05c599b1081, type: 2}
+    - {fileID: 11400000, guid: 9263494849822e140a131e497e62c282, type: 2}
+    - {fileID: 11400000, guid: fbfc323fd0483f742bc0b6ff559b628f, type: 2}
+    - {fileID: 11400000, guid: 980cad37852bde2419edffec024a65cf, type: 2}
+    - {fileID: 11400000, guid: 1a8569c9fc6c8314283e64ac392fc375, type: 2}
+    - {fileID: 11400000, guid: f39ef68bb6e0e3044a0ad41f637fba8d, type: 2}
+    - {fileID: 11400000, guid: 760235fa82d8e7a40a73fd6d0a42a401, type: 2}

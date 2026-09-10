@@ -78,9 +78,9 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-900.0,"yMin":430.0,"xMax":-750.0,"yMax":530.0},"guid":"d2202ce3-dc82-41da-93b6-f7c5023c5677","$type":"ArcaneOnyx.BehaviorTree.VisualScriptGraphVariable","$id":"89"},{"$ref":"26"},{"$ref":"22"},{"$ref":"18"},{"$ref":"12"},{"sourceUnit":{"$ref":"43"},"sourceKey":"Result","destinationUnit":{"$ref":"64"},"destinationKey":"Value","guid":"8f5b4b66-c8d6-4038-a099-1822ea77ad23","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"76"},"sourceKey":"Value","destinationUnit":{"$ref":"31"},"destinationKey":"Time","guid":"e86cdf8a-d136-4be4-8150-5efb1aae549b","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"40"},"sourceKey":"Result","destinationUnit":{"$ref":"52"},"destinationKey":"Value","guid":"cf5eef8c-23d3-49eb-a631-0a6d9609ba7e","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"46"},"sourceKey":"Output","destinationUnit":{"$ref":"40"},"destinationKey":"Value","guid":"b4038c8e-6b15-4ed3-ad81-f2f4f6569af6","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"58"},"sourceKey":"Output","destinationUnit":{"$ref":"43"},"destinationKey":"Value","guid":"8d15845a-d15b-4932-853f-a022701fe410","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"70"},"sourceKey":"Output","destinationUnit":{"$ref":"79"},"destinationKey":"Value","guid":"645929bb-4094-460b-8f15-879a1a17a016","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"89"},"sourceKey":"Output","destinationUnit":{"$ref":"85"},"destinationKey":"Value","guid":"2b18e3f3-58e5-4a4b-afea-ce50e9789239","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"}],"$version":"A"}}'
     _objectReferences:
-    - {fileID: 11400000, guid: 6a6d67fa4ee2fd54097a3da4fef0798a, type: 2}
-    - {fileID: 11400000, guid: 6a6d67fa4ee2fd54097a3da4fef0798a, type: 2}
-    - {fileID: 11400000, guid: 2d6e2c6c4de59de40b7de28dc454c1bd, type: 2}
-    - {fileID: 11400000, guid: 844670a1462043a439b48c3f5032edad, type: 2}
-    - {fileID: 11400000, guid: c1402ee159e06d541999b02fb3f93c86, type: 2}
-    - {fileID: 11400000, guid: 32b7c05fc856a4f479ff7b426f18fcb8, type: 2}
+    - {fileID: 11400000, guid: e9f7368658ff04a4bb674487253277f3, type: 2}
+    - {fileID: 11400000, guid: e9f7368658ff04a4bb674487253277f3, type: 2}
+    - {fileID: 11400000, guid: 0bc23a9ecb670cd4fa3cb8631d5ee411, type: 2}
+    - {fileID: 11400000, guid: ecdbb167049d2f94e88ed033b02b819f, type: 2}
+    - {fileID: 11400000, guid: 824996e0e595d3f479f9f10a1938024b, type: 2}
+    - {fileID: 11400000, guid: d9c06a7dfe79df14798ea3bd1fce4fbe, type: 2}

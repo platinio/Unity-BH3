@@ -529,9 +529,13 @@ def scaffold_project(repo, name, unity_version, deps, exclude_prefixes=()):
     return proj
 
 
-def run_unity(unity_exe, project, extra_args, log_path, timeout):
-    args = [unity_exe, "-batchmode", "-nographics", "-projectPath", project,
-            "-logFile", log_path, *extra_args]
+def run_unity(unity_exe, project, extra_args, log_path, timeout, nographics=True):
+    """nographics=False keeps the graphics device: EditMode tests that touch editor
+    GUI resources (EditorStyles, plugin icon sets) find them null without it."""
+    args = [unity_exe, "-batchmode", "-projectPath", project, "-logFile", log_path]
+    if nographics:
+        args.insert(2, "-nographics")
+    args += extra_args
     proc = subprocess.run(args, timeout=timeout)
     log = ""
     if os.path.isfile(log_path):
@@ -573,7 +577,7 @@ def verify_locally(repo, name, unity_version, deps, unity_exe, platforms, keep,
             rc, logtxt, cs = run_unity(
                 unity_exe, proj,
                 ["-runTests", "-testPlatform", platform, "-testResults", res_xml],
-                log, timeout=2400,
+                log, timeout=2400, nographics=False,
             )
             if cs:
                 fail("compilation failed:\n  " + "\n  ".join(cs[:25]))
