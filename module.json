@@ -1,0 +1,16 @@
+{
+    "name": "BH3",
+    "version": "1.0.0",
+    "installPath": "Assets/BH3",
+    "unity": "6000.4",
+    "packages": {
+        "com.unity.visualscripting": "1.9.11"
+    },
+    "defines": ["MODULE_BH3_EXIST"],
+    "dependencies": {
+        "GraphCore": { "repo": "platinio/graph-core-library", "version": "1.0.0" },
+        "VisualScriptingExtension": { "repo": "platinio/visual-scripting-extension", "version": "1.0.0" },
+        "BlockVariables": { "repo": "platinio/Unity-BlockVariables", "version": "1.0.0" },
+        "TacticalPositionSelection": { "repo": "platinio/Unity-TacticalPositionSelection", "version": "1.0.0", "optional": true }
+    }
+}

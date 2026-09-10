@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
@@ -131,8 +132,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// it stops being legacy data and a test pointed at it would quietly stop testing anything.
         /// </para>
         /// </summary>
-        private const string LegacyFixture =
-            "Assets/ArcaneOnyx/BH3/Test/EditMode/Fixtures/LegacyPlaceholders.asset";
+        private static string LegacyFixture => TestFolder() + "/Fixtures/LegacyPlaceholders.asset";
+
+        /// <summary>
+        /// The folder this test file lives in, wherever the module was installed: the reference project keeps
+        /// BH3 under <c>Assets/ArcaneOnyx/BH3</c>, but a release verify or a buyer's import lands it elsewhere.
+        /// </summary>
+        private static string TestFolder()
+        {
+            var script = AssetDatabase.FindAssets($"t:MonoScript {nameof(EphemeralPlaceholderTests)}")
+                                      .Select(AssetDatabase.GUIDToAssetPath)
+                                      .FirstOrDefault(p => Path.GetFileName(p) == nameof(EphemeralPlaceholderTests) + ".cs");
+
+            Assert.That(script, Is.Not.Null, "could not locate this test script in the asset database");
+
+            return Path.GetDirectoryName(script).Replace(Path.DirectorySeparatorChar, '/');
+        }
 
         [Test]
         public void TheLegacyFixtureIsStillLegacy()

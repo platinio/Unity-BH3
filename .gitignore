@@ -1,2 +1,10 @@
 ThirdParty/
 /docs/_design
+
+# release.py tooling (see release.py docstring)
+dist/
+__pycache__/
+.release_token
+release.py.meta
+dist.meta
+__pycache__.meta
