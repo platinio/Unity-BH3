@@ -117,12 +117,6 @@ the moment you start watching.
 
 ---
 
-## Try it
-
-The reference project's [TimelineScrubber demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/TimelineScrubber)
-runs three guarded branches on deliberately non-harmonic timers, so the lanes show aborts, sub-tree pins
-and selector fall-through within a few seconds.
-
 ## Next
 
 - [Why panel](03-why-panel.md) — click a node, read why
