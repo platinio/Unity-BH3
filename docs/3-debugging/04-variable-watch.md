@@ -19,34 +19,9 @@ Timeline to the moment, read the value here, click through to whoever wrote it.
 
 ---
 
-## Opening it
-
-1. **Press Play.**
-2. **Open the tree.**
-3. **Open the Variable Watch.** It is in the window's **right** sidebar, so you can read the watch, the
-   canvas and the Timeline at the same time. Drag the anchor button in its header to move it left; the
-   choice is remembered.
-4. **Check which agent it is watching.** The top line names it. The watch follows whatever the
-   [Timeline](02-timeline.md) is showing, so the table and the ghosted canvas can never describe two
-   different agents. To switch agents, select the other one in the hierarchy.
-
----
-
 ## Reading the table
 
-```
-● live — tick 1030 — VariableWatchAgent
-[ Filter variables by name…                        ]
-
-agent  (Object)
-  ▸ alertLevel = 2            VariableWatchDemoSensor   @1004  ⏱
-  ▸ hasTarget = True          VariableWatchDemoSensor   @1022  ⏱
-  ▸ lastEngageAlert = 2       Set Variable               @880  ⏱
-VW_Demo_Engage #1  (Graph)
-  ▸ alertAtEntry = 2          Set Variable              @1008  ⏱
-VW_Demo_Engage #2  (Graph)
-  ▸ alertAtEntry = 2          Set Variable               @881  ⏱
-```
+![Variable Watch](../images/debugging-variable-wacth.png)
 
 | Part | What it means |
 |---|---|
