@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: Soldier.GetTargetTransform
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":["TargetEntity"],"description":null,"graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[],"valueOutputDefinitions":[{"_type":"System.Object","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":-329.3878,"y":81.13326},"zoom":0.4999999,"elements":[{"specifyFallback":false,"kind":"Object","defaultValues":{"name":{"$content":"TargetEntity","$type":"System.String"},"object":null},"position":{"x":-952.0,"y":18.0},"guid":"9b8311e7-e30d-4ce6-ba5a-653f4ba7ceb4","$version":"A","$type":"Unity.VisualScripting.GetVariable"},{"member":{"name":"transform","parameterTypes":null,"targetType":"ArcaneOnyx.Share.AIEntity","targetTypeName":"ArcaneOnyx.Share.AIEntity","$version":"A"},"defaultValues":{"target":null},"position":{"x":-158.0,"y":-30.0},"guid":"73c4eb71-edd7-4389-8235-f70336c13ec7","$version":"A","$type":"Unity.VisualScripting.GetMember"},{"defaultValues":{},"position":{"x":-147.0,"y":-178.0},"guid":"307973e0-6d3e-4abf-bd9e-0d059e235321","$version":"A","$type":"Unity.VisualScripting.NullCheck"},{"defaultValues":{},"position":{"x":59.0,"y":155.0},"guid":"e79b0074-84f4-4d8f-8d4e-6a26692a1d31","$version":"A","$type":"Unity.VisualScripting.Null"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys:
+  - TargetEntity
+  description: 
