@@ -35,20 +35,6 @@ in **[docs/README.md](docs/README.md)**.
 
 ---
 
-## Quick setup
-
-1. Right-click in the Project window → **Create → Visual Scripting → Behavior Tree**.
-2. Double-click the asset. An **Entry** node is created for you; it is the root and cannot be deleted.
-3. Right-click the canvas to add nodes. Hold `Ctrl` and drag from a parent to a child to connect them.
-4. Put a **Behavior Tree Machine** component on a GameObject and drag the asset into its **Graph** field.
-5. Press Play. The machine loads the tree on `Awake`, enters it on `Start` and ticks it every `Update`.
-   Keep the Behavior Tree window open and the running branch lights up.
-
-> **Put a Repeater under Entry.** The machine stops ticking once the root returns Success or Failure, so a
-> tree without one runs exactly once and goes quiet. This catches nearly everyone the first time.
-
----
-
 ## Where things are
 
 | Folder | Contents |
@@ -56,13 +42,7 @@ in **[docs/README.md](docs/README.md)**.
 | `Runtime/` | Nodes, the machine, variables, the flight recorder |
 | `Editor/` | The graph window, panels, inspectors, authoring and verification tools |
 | `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over. Feature demos live in the reference project; see [Demos and tests](docs/5-reference/01-samples-and-demos.md) |
-| `docs/` | This documentation. `docs/design/` holds the pre-implementation specs, which new users can skip |
-
-## Related
-
-- **[Tactical Position Selection](https://github.com/platinio/Unity-TacticalPositionSelection)** — how an agent decides *where* to stand. Adds a **Tactical Position Selection** node to BH3 when installed.
-- **[Visual Scripting Extension](https://github.com/platinio/visual-scripting-extension)** — home of **Functions**, the shared graphs BH3 nodes read.
-- **[bh3-development](https://github.com/platinio/bh3-development)** — the reference project: every module wired up, plus one demo scene per feature.
+| `docs/` | This documentation. |
 
 ## New to behavior trees?
 
