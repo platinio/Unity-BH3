@@ -53,7 +53,7 @@ not where the value lives. The history still says which node did it.
 
 ### The write history
 
-Expand a row for the last several writes, most recent first:
+Expand a row for the last several writes, most recent first.
 
 | Button | What it does |
 |---|---|
