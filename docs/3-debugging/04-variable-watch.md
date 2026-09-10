@@ -21,7 +21,7 @@ Timeline to the moment, read the value here, click through to whoever wrote it.
 
 ## Reading the table
 
-![Variable Watch](../images/debugging-variable-wacth.png)
+![Variable Watch](../images/debugging-variable-watch.png)
 
 | Part | What it means |
 |---|---|
