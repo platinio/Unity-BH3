@@ -36,6 +36,8 @@ scrubs instead.
 
 ## Scrubbing
 
+![Timeline Scrubbing](../images/debugging-timeline-scrubbing.png)
+
 **Drag the playhead**, or click anywhere on the track. The canvas **ghosts**: every node's status and every
 lit connection becomes what it was at that tick, dimmed, and the toolbar shows an amber banner:
 
@@ -114,12 +116,6 @@ the moment you start watching.
   machine stops.
 
 ---
-
-## Try it
-
-The reference project's [TimelineScrubber demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/TimelineScrubber)
-runs three guarded branches on deliberately non-harmonic timers, so the lanes show aborts, sub-tree pins
-and selector fall-through within a few seconds.
 
 ## Next
 
