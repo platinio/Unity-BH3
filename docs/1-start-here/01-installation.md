@@ -28,7 +28,7 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
    Add `"com.unity.pipeline": "0.4.0-exp.1"` beside it only if you want the
    [command-line tools](../4-extending-with-csharp/05-command-line-tools.md).
 
-2. Download `BH3.unitypackage` from the latest release. This link always points at the newest one:
+2. Download `BH3.unitypackage` from the latest release.
 
    ```
    https://github.com/platinio/Unity-BH3/releases/latest/download/BH3.unitypackage
