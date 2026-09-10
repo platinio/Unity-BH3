@@ -151,12 +151,6 @@ leave them in a shipping tree.
 
 ---
 
-## Try it
-
-The reference project's [MissingTypeRecovery demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/MissingTypeRecovery)
-ships a tree that is genuinely broken on disk. Do not add a `DemoWanderNode` class to fix it, or the tree
-heals on load and there is nothing to practise on.
-
 ## Next
 
 - [Custom nodes](01-custom-nodes.md)
