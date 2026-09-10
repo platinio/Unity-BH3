@@ -36,6 +36,8 @@ scrubs instead.
 
 ## Scrubbing
 
+![Timeline Scrubbing](../images/debugging-timeline-scrubbing.png)
+
 **Drag the playhead**, or click anywhere on the track. The canvas **ghosts**: every node's status and every
 lit connection becomes what it was at that tick, dimmed, and the toolbar shows an amber banner:
 
