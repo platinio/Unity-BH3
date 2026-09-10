@@ -300,14 +300,6 @@ whose `Result` is not `bool`, by name, rather than letting the cast fail on the 
 
 ---
 
-## Try it
-
-The reference project's [ReactiveGuards demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/ReactiveGuards)
-runs three agents on the same facts: one with reactive guards, one with **Stops Its Own Branch** off, and
-one with plain Conditional Executions that never leaves Idle. The
-[WatchedKeyInheritance demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/WatchedKeyInheritance)
-shows a guard waking on keys it inherited from a Function.
-
 ## Next
 
 - [Sub-trees](07-sub-trees.md) — where guards usually go
