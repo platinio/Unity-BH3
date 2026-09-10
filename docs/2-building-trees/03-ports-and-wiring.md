@@ -11,11 +11,6 @@ whether the value arrived from the Blackboard, from a component, from another no
 typed in. You connect a source on the canvas and the node just reads it, with no glue script keeping a
 blackboard in sync.
 
-```
-Traditional:   [ node ] ── knows the blackboard key, fetches, then acts
-BH3:           [ source ] ──▶ port ──▶ [ node ]   the node only ever reads the port
-```
-
 That is the whole trick, and most of the rest of these guides follows from it.
 
 ---
