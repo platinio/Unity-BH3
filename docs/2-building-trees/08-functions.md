@@ -152,13 +152,6 @@ A reactive guard's condition is a natural Function: small, pure, and asked repea
 
 ---
 
-## Try it
-
-The reference project has three small scenes for this page: [FunctionPicker](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/FunctionPicker)
-(what the dropdown offers at five different ports), [FunctionPorts](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/FunctionPorts)
-(three agents, one Function, three arguments) and [FunctionGraphs](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/FunctionGraphs)
-(a stale contract beside a fresh one).
-
 ## Next
 
 - [Checking your tree](09-checking-your-tree.md)
