@@ -2,6 +2,8 @@
 
 What BH3 records while an agent runs, which panel answers which question, and what it costs.
 
+![debugging overview](../images/tree-debugging-overview.png)
+
 ---
 
 ## Everything is recorded
