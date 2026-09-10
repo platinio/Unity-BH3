@@ -36,12 +36,6 @@ A Selector's children are its **priorities**: the first child is what the agent 
 is the fallback. That order is stored on the connections and shown as a numbered badge on each child. See
 [Execution order](../2-building-trees/05-execution-order.md).
 
-```
-Entry ─ Repeater ─ Selector ─┬─ ①  Attack      ← tried first
-                             ├─ ②  Chase
-                             └─ ③  Idle        ← what happens when nothing else can
-```
-
 ## 3. Ports separate what a node does from where its data comes from
 
 This is the idea BH3 is built around. A node declares **ports**, typed inputs and outputs. **Set Nav Agent
