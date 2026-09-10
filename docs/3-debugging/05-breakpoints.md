@@ -185,12 +185,6 @@ the canvas, or reformatting the asset does not break them.
 
 ---
 
-## Try it
-
-The reference project's [Breakpoints demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/Breakpoints)
-arms six breakpoints: four that fire, one per kind of matching, and two that are deliberately wrong, so you
-can see what a breakpoint does when you ask it something that cannot be answered.
-
 ## Next
 
 - [Why panel](03-why-panel.md) — once it stops, this tells you why
