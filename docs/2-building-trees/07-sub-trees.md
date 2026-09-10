@@ -59,15 +59,7 @@ A tree declares variables in three lists, in the Blackboard panel's **Graph** ta
 Every Required and Optional declaration becomes one input port on the **Run Behavior Tree Graph** node that
 runs the tree. Feed those ports like any other: a literal, a variable read, or a Function.
 
-```
-[Float Literal 3] ──▶ idleTime port on the Run Behavior Tree Graph node
-                              │
-                              ▼  on enter, written into the branch's own scope
-                     the branch's declarations
-                              │
-                              ▼
-                 Get Variable "idleTime" inside Idle
-```
+![Sub-tree with ports](../images/sub-tree-with-ports.png)
 
 The branch never learns a variable name from its caller, so the same Idle works on a Zombie, a Soldier or a
 Draugr.
