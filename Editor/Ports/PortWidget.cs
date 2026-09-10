@@ -891,25 +891,25 @@ namespace ArcaneOnyx.BehaviorTree
 
         public static class Styles
         {
-            private static byte[] t;
-            private static Texture2D tx;
-            static Styles()
+            private static GUIStyle labelStyle;
+            private static GUIStyle surroundStyle;
+
+            // Built on first use, not in a static constructor: ContractPortLayout reads the numbers below
+            // from a headless editor, where EditorStyles does not exist.
+            public static GUIStyle label => labelStyle ??= new GUIStyle(EditorStyles.label)
             {
-                label = new GUIStyle(EditorStyles.label);
-                label.wordWrap = false;
-                label.imagePosition = ImagePosition.TextOnly;
-                label.padding = new RectOffset(0, 0, 0, 0);
+                wordWrap = false,
+                imagePosition = ImagePosition.TextOnly,
+                padding = new RectOffset(0, 0, 0, 0)
+            };
 
-                TextureResolution[] textureResolution = { 2 };
-
-                surround = new GUIStyle
+            public static GUIStyle surround => surroundStyle ??= new GUIStyle
+            {
+                normal =
                 {
-                    normal =
-                    {
-                        background = BoltCore.Resources.LoadTexture($"Surround.png", textureResolution, CreateTextureOptions.Scalable).Single()
-                    }
-                };
-            }
+                    background = BoltCore.Resources.LoadTexture("Surround.png", new TextureResolution[] { 2 }, CreateTextureOptions.Scalable).Single()
+                }
+            };
 
             public const float highlightScaling = 1f;
 
@@ -932,10 +932,6 @@ namespace ArcaneOnyx.BehaviorTree
             public static readonly float maxLabelWidth = 150;
 
             public static readonly int iconSize = IconSize.Small;
-
-            public static readonly GUIStyle label;
-
-            public static readonly GUIStyle surround;
 
             public static readonly RectOffset easierGrabOffset = new RectOffset(5, 5, 4, 4);
 

@@ -175,18 +175,18 @@ MonoBehaviour:
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[ArcaneOnyx.BehaviorTree.IPort,
       ArcaneOnyx.BehaviorTree, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"},"position":{"x":0.0,"y":0.0},"defaultValues":{},"LastExecutionStatus":"None","runtimeException":null,"positionRect":{"xMin":-4368.0,"yMin":1992.0,"xMax":-4218.0,"yMax":2080.0},"guid":"5cefbd70-a972-449f-b691-beaa32d371d7","$type":"ArcaneOnyx.BehaviorTree.StringLiteral","$id":"231"},{"sourceUnit":{"$ref":"192"},"sourceKey":"Output","destinationUnit":{"$ref":"69"},"destinationKey":"TransformTarget","guid":"b84b208b-831d-46a9-b707-4d8a34a71311","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"198"},"sourceKey":"Output","destinationUnit":{"$ref":"177"},"destinationKey":"Value","guid":"756374f9-f470-4332-86a4-7125f0662d0d","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"183"},"sourceKey":"Output","destinationUnit":{"$ref":"58"},"destinationKey":"Value","guid":"3c41c54b-74f3-412c-b395-6049d379a1a1","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"213"},"sourceKey":"Output","destinationUnit":{"$ref":"207"},"destinationKey":"Value","guid":"0d01de21-b9f5-4162-8af8-4bdec6390a77","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"219"},"sourceKey":"Output","destinationUnit":{"$ref":"69"},"destinationKey":"Target","guid":"f21bd9a0-817f-4521-a249-91f3f9b52423","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"225"},"sourceKey":"Output","destinationUnit":{"$ref":"127"},"destinationKey":"Value","guid":"278e648d-ad06-4a24-b20b-9f7b88b1e8f3","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"165"},"sourceKey":"Value","destinationUnit":{"$ref":"131"},"destinationKey":"Time","guid":"24bc51d1-6e09-49fa-8379-d0ff7bf7a5bf","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"162"},"sourceKey":"Value","destinationUnit":{"$ref":"69"},"destinationKey":"AcceptableRotation","guid":"3041e2ab-763e-42e5-b67d-95f2c0c0ab58","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"159"},"sourceKey":"Value","destinationUnit":{"$ref":"69"},"destinationKey":"RotationOffset","guid":"18f0b1f8-7f83-486b-aca2-113f8c6872aa","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"231"},"sourceKey":"Value","destinationUnit":{"$ref":"127"},"destinationKey":"Key","guid":"48532d61-b82b-48a4-ba55-22b625448310","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"204"},"sourceKey":"","destinationUnit":{"$ref":"140"},"destinationKey":"Target","guid":"0963d727-098e-45a0-83e5-10e7be3b01f1","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"189"},"sourceKey":"Value","destinationUnit":{"$ref":"58"},"destinationKey":"Key","guid":"a44983a5-042d-446e-aa80-169116abfcba","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"174"},"sourceKey":"Value","destinationUnit":{"$ref":"69"},"destinationKey":"RotationSpeed","guid":"96f3cd3c-a0e3-4118-8244-921f0db0eb10","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"156"},"sourceKey":"Value","destinationUnit":{"$ref":"21"},"destinationKey":"Time","guid":"5d78d935-4893-4f4b-b77d-bf38d577de9e","$type":"ArcaneOnyx.BehaviorTree.PortValueConnection"},{"sourceUnit":{"$ref":"153"},"sourceKey":"SelectedPosition","destinationUnit":{"$ref":"140"},"destinationKey":"NavPosition","guid":"51ce04d5-eedb-4679-a13b-3ca331a2cf90","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"},{"sourceUnit":{"$ref":"168"},"sourceKey":"Output","destinationUnit":{"$ref":"153"},"destinationKey":"Position","guid":"d15c5f01-ae4b-46ad-828a-1d795ae307f9","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"},{"sourceUnit":{"$ref":"147"},"sourceKey":"Output","destinationUnit":{"$ref":"153"},"destinationKey":"Query","guid":"009dd538-427a-4c60-9b9b-dee1f1821ad9","$type":"ArcaneOnyx.BehaviorTree.PortInvalidConnection"}],"$version":"A"}}'
     _objectReferences:
-    - {fileID: 11400000, guid: 4801ddd888a09bc49b1f9d86241fe580, type: 2}
-    - {fileID: 11400000, guid: abb2030a370a5494995dfb4fe9fe304e, type: 2}
-    - {fileID: 11400000, guid: cb30ef8170c8b114c9d5371e186d6aa2, type: 2}
-    - {fileID: 11400000, guid: 90fa6c6bec3ee644ca7b54eb25debbca, type: 2}
-    - {fileID: 11400000, guid: d84da348f0934094ca70bd0d42ae3ea3, type: 2}
-    - {fileID: 11400000, guid: 427be378a1a5a1744951f9c8691ecec0, type: 2}
-    - {fileID: 11400000, guid: 57262faf19a1002468b540ed55d20399, type: 2}
-    - {fileID: 11400000, guid: 8092655bbd404b74b8d7fe95c0ef73f6, type: 2}
-    - {fileID: 11400000, guid: e63731abdee18f44a8d2e92b957853c7, type: 2}
-    - {fileID: 11400000, guid: a6d2f202a3f960d4f9a87adedfea00b6, type: 2}
-    - {fileID: 11400000, guid: afa247c3cf6af6e4ba834ffd9ab39222, type: 2}
-    - {fileID: 11400000, guid: 2969e112d11a0c348ae5ace622bbf180, type: 2}
-    - {fileID: 11400000, guid: dee2c78a83d269e488578a437a1b1ce7, type: 2}
-    - {fileID: 11400000, guid: da52d24c5cb770a42845fcfa9eab0b08, type: 2}
-    - {fileID: 11400000, guid: 6dcd414bde07e1c4f98195ffd4a4464c, type: 2}
+    - {fileID: 11400000, guid: 335cb930f3443cc49b394753d66fa15f, type: 2}
+    - {fileID: 11400000, guid: 143a120ba32e3de4181046beadf40af2, type: 2}
+    - {fileID: 11400000, guid: cd277d045fe011f4e9f117b6d36e9c56, type: 2}
+    - {fileID: 11400000, guid: f494c76f8c75504448965ee579b8c7bc, type: 2}
+    - {fileID: 11400000, guid: 1603d8ef57970b046a82f79b79576514, type: 2}
+    - {fileID: 11400000, guid: 289d1892211466e4bb1c31bcac681c1e, type: 2}
+    - {fileID: 11400000, guid: bf8e2608f0a2cd84da7cd6c56197d0b6, type: 2}
+    - {fileID: 11400000, guid: cf9c2aaf8e32fe84490da871eb0978f3, type: 2}
+    - {fileID: 11400000, guid: e4d16e997a7a5554581090a011b8f20d, type: 2}
+    - {fileID: 11400000, guid: 748f3b025eccdb1488d53c7a7901d5fd, type: 2}
+    - {fileID: 11400000, guid: aff945bd10c36124db0af165ccd53d70, type: 2}
+    - {fileID: 11400000, guid: 1186ed54d11ac11408e5fa77bf070d88, type: 2}
+    - {fileID: 11400000, guid: 8d01bc51d4f316249825cfd63c10dfdc, type: 2}
+    - {fileID: 11400000, guid: 6695c7d2ad5d6bf459458f7322f32018, type: 2}
+    - {fileID: 11400000, guid: cd0d801f9d2315e4c8cc065cdb6a1089, type: 2}

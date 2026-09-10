@@ -128,7 +128,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             this.context = context;
 
-            titleContent = new GUIContent("Timeline", BoltCore.Icons.variablesWindow?[IconSize.Small]);
+            titleContent = new GUIContent("Timeline", BoltCore.Icons?.variablesWindow?[IconSize.Small]);
         }
 
         public GraphCore.IGraphContext context { get; }

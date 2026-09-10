@@ -1012,8 +1012,6 @@ namespace ArcaneOnyx.BehaviorTree
 
             public static readonly float maxSettingsWidth = 150;
 
-            public static readonly GUIStyle portsBackground;
-
             public static readonly float iconSize = IconSize.Medium;
 
             public static readonly float iconsSize = IconSize.Small;
@@ -1039,41 +1037,40 @@ namespace ArcaneOnyx.BehaviorTree
                 normal = { textColor = new Color(1.0f, 0.85f, 0.85f) }
             };
             
-            static Styles()
+            private static GUIStyle backgroundStyle;
+            private static GUIStyle titleStyle;
+            private static GUIStyle portsBackgroundStyle;
+
+            // Built on first use, not in a static constructor: a static constructor runs on any member
+            // access, so ContractPortLayout reading spaceBetweenPorts from a headless editor (pipeline
+            // commands, the release verify) would drag in EditorStyles and Visual Scripting's styles,
+            // and neither exists there.
+            public static GUIStyle background => backgroundStyle ??= new GUIStyle();
+
+            public static GUIStyle title => titleStyle ??= new GUIStyle(BoltCore.Styles.nodeLabel)
             {
-                background = new GUIStyle();
+                normal = { textColor = new Color(1, 1, 1, 0.75f) },
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 12,
+                wordWrap = true
+            };
 
-                title = new GUIStyle(BoltCore.Styles.nodeLabel);
-                title.normal.textColor = new Color(1, 1, 1, 0.75f);
-                title.alignment = TextAnchor.MiddleCenter;
-                title.fontSize = 12;
-                title.wordWrap = true;
-                
-                
+            public static GUIStyle portsBackground => portsBackgroundStyle ??= CreatePortsBackground();
+
+            private static GUIStyle CreatePortsBackground()
+            {
                 if (EditorGUIUtility.isProSkin)
-                {
-                    portsBackground = new GUIStyle("In BigTitle")
-                    {
-                        padding = new RectOffset(0, 0, 6, 5)
-                    };
-                }
-                else
-                {
-                    TextureResolution[] textureResolution = { 2 };
-                    var createTextureOptions = CreateTextureOptions.Scalable;
-                    EditorTexture normalTexture = BoltCore.Resources.LoadTexture($"NodePortsBackground.png", textureResolution, createTextureOptions);
+                    return new GUIStyle("In BigTitle") { padding = new RectOffset(0, 0, 6, 5) };
 
-                    portsBackground = new GUIStyle
-                    {
-                        normal = { background = normalTexture.Single() },
-                        padding = new RectOffset(0, 0, 6, 5)
-                    };
-                }
-                
+                TextureResolution[] textureResolution = { 2 };
+                var texture = BoltCore.Resources.LoadTexture("NodePortsBackground.png", textureResolution, CreateTextureOptions.Scalable);
+
+                return new GUIStyle
+                {
+                    normal = { background = texture.Single() },
+                    padding = new RectOffset(0, 0, 6, 5)
+                };
             }
-
-            public static readonly GUIStyle background;
-            public static readonly GUIStyle title;
         }
        
         public Inspector GetPortInspector(IPort port, Metadata metadata)

@@ -58,7 +58,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             this.context = context;
 
-            titleContent = new GUIContent("Breakpoints", BoltCore.Icons.errorState?[IconSize.Small]);
+            titleContent = new GUIContent("Breakpoints", BoltCore.Icons?.errorState?[IconSize.Small]);
         }
 
         public GraphCore.IGraphContext context { get; }
