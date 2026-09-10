@@ -26,9 +26,6 @@ When an agent does the wrong thing, BH3 has already recorded what every node, gu
 
 ## Documentation
 
-Read the parts in order the first time. Each page says what it is for in its first line, and ends with
-where to go next.
-
 ### 1. Start here
 
 | Page | Read it when |
