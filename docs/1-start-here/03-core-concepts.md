@@ -46,7 +46,7 @@ Position** has a `NavPosition` input; it reads it and moves. It has no idea whet
 - another node's output, such as **Generate Random NavMesh Position**,
 - or a whole Visual Scripting graph, through a **Script Graph Variable** node.
 
-![description](../images/ports-separation.png)
+![Ports separation](../images/ports-separation.png)
 
 Swap the left side for anything else and the right side neither knows nor cares. That is what lets
 designers rewire behaviour without touching code, and what lets one node serve every agent.
