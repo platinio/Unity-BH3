@@ -55,14 +55,6 @@ not where the value lives. The history still says which node did it.
 
 Expand a row for the last several writes, most recent first:
 
-```
-▸ hasTarget = False          VisionSensor   @1022  ⏱
-    @1022  True → False   by VisionSensor          →  ⏱
-    @988   False → True   by VisionSensor          →  ⏱
-    @902   True → False   by VisionSensor          →  ⏱
-    …14 older write(s) not shown
-```
-
 | Button | What it does |
 |---|---|
 | `⏱` | Scrub the Timeline to that write. The canvas ghosts to the same tick |
