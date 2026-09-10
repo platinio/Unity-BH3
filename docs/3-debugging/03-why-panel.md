@@ -149,13 +149,6 @@ variable written with it has no recorded writer. Use **Set BT Variable** inside 
 
 ---
 
-## Try it
-
-The reference project's [WhyInspector demo](https://github.com/platinio/bh3-development/tree/main/Assets/ArcaneOnyx/BH3Demos/WhyInspector)
-reproduces the classic bug, a guard reading a variable a sensor flickers, so you can see every part of the
-panel answer a question you already know the answer to. Lower **Interval Seconds** on the agent below about
-0.4 to see the *Oscillating* clause.
-
 ## Next
 
 - [Variable watch](04-variable-watch.md) — the value behind the explanation
