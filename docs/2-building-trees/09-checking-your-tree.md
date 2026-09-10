@@ -48,9 +48,9 @@ badges would plus the checks that need the whole tree:
 unity command bt_verify --trees Assets/AI/Zombie.asset,Assets/AI/Soldier.asset
 ```
 
-The `unity` command-line tool comes with the `com.unity.pipeline` package BH3 depends on; it talks to the
+The `unity` command-line tool comes with the optional `com.unity.pipeline` package; it talks to the
 running Editor, and the same commands are available to agents as tools. You never need it to *use* BH3:
-everything it reports is also a badge in the window. It exists so a check can run in CI and so tools can
+everything it reports is also a badge in the window, and BH3 compiles without the package. It exists so a check can run in CI and so tools can
 build trees. See [Command-line tools](../4-extending-with-csharp/05-command-line-tools.md).
 
 From C#, `BehaviorTreeVerification.VerifyAndLog(paths)` is the same check. Because it reloads first, it is

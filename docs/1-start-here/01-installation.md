@@ -10,8 +10,8 @@ What BH3 needs, how to get it into a project, and how to check it works. Ten min
 |---|---|
 | **Unity 6** | The reference project is on `6000.4.x`. |
 | **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. The reference project uses `1.9.11`. |
-| **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Needed by the BH3 *editor* assembly. It supplies the attribute behind the `bt_*` and `fn_*` command-line tools. |
 | Three ArcaneOnyx modules | `GraphCore`, `VisualScriptingExtension`, `BlockVariables`. See the table below. |
+| *Optional:* **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Only for the `bt_*` and `fn_*` command-line tools. They live in their own editor assembly that compiles only when the package is present; nothing else in BH3 uses it. |
 
 BH3 and its modules are plain folders of C# with assembly definitions. There is no UPM package: they live
 under `Assets/ArcaneOnyx/` and are wired together by assembly references.
@@ -65,12 +65,14 @@ Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visua
    git submodule add https://github.com/platinio/Unity-BlockVariables.git Assets/ArcaneOnyx/Modules/BlockVariables
    ```
 
-2. Add the two packages through **Window → Package Manager** or directly in `Packages/manifest.json`:
+2. Add Visual Scripting through **Window → Package Manager** or directly in `Packages/manifest.json`:
 
    ```json
-   "com.unity.visualscripting": "1.9.11",
-   "com.unity.pipeline": "0.4.0-exp.1"
+   "com.unity.visualscripting": "1.9.11"
    ```
+
+   Add `"com.unity.pipeline": "0.4.0-exp.1"` beside it only if you want the
+   [command-line tools](../4-extending-with-csharp/05-command-line-tools.md).
 
 3. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
    detect it; expect one extra recompile.
@@ -85,15 +87,26 @@ Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visua
 ## Initialise Visual Scripting
 
 BH3's nodes and its **Set BT Variable** / **Get BT Variable** units only appear once Visual Scripting has
-built its node library.
+built its node library. One menu item does all of it:
+
+**Tools → BH3 → Install**
+
+It initialises Visual Scripting if the project has never used it, adds BH3's assemblies and types to the
+node library and type options (keeping whatever the project already had), regenerates the nodes, and
+generates the custom inspector properties. A dialog lists what it did. Running it again is harmless.
+
+The same thing by hand, if you prefer to see each step:
 
 1. **Edit → Project Settings → Visual Scripting**
 2. Click **Initialize Visual Scripting** (only offered on a project that has never used it)
-3. Under **Node Library**, click **Regenerate Nodes** and wait
-4. Under **Custom Inspector Properties**, click **Generate** and wait
+3. Under **Node Library**, add `ArcaneOnyx.BehaviorTree` and `ArcaneOnyx.GraphCore`; under **Type
+   Options**, add `GuardTrigger`
+4. Under **Node Library**, click **Regenerate Nodes** and wait
+5. Under **Custom Inspector Properties**, click **Generate** and wait
 
-Do step 3 again whenever a custom Visual Scripting **unit** does not show up in a script graph's finder.
-Behavior tree nodes are different: a C# node appears in the canvas right-click menu as soon as it compiles.
+Run **Install** (or step 4) again whenever a custom Visual Scripting **unit** does not show up in a script
+graph's finder. Behavior tree nodes are different: a C# node appears in the canvas right-click menu as soon
+as it compiles.
 
 ---
 
@@ -105,7 +118,7 @@ Behavior tree nodes are different: a C# node appears in the canvas right-click m
   `FR_Demo_Sentry.asset` in the same folder. The canvas should light up as the tree runs.
 
 If the create menu is missing, Visual Scripting has not been initialised. If the nodes exist but the
-**Set BT Variable** unit cannot be found in a script graph, regenerate the node library.
+**Set BT Variable** unit cannot be found in a script graph, run **Tools → BH3 → Install** again.
 
 ---
 

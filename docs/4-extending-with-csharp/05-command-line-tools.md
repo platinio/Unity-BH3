@@ -2,9 +2,11 @@
 
 The `bt_*` and `fn_*` commands: what each does, its arguments, and every message `bt_verify` can emit.
 
-These commands run inside the Editor through the `com.unity.pipeline` package. From a shell they are
-invoked as `unity command <name> --arg value`; from an agent or an MCP client they are the tools of the same
-names. Every command that edits a tree has a C# helper beside it in `BehaviorTreeAuthoring`; see
+These commands run inside the Editor through the `com.unity.pipeline` package, which is optional: they
+live in `ArcaneOnyx.BehaviorTree.Editor.Commands`, an assembly that compiles only when the package is
+installed, and nothing else in BH3 needs it. From a shell they are invoked as `unity command <name> --arg
+value`; from an agent or an MCP client they are the tools of the same names. Every command that edits a
+tree has a C# helper beside it in `BehaviorTreeAuthoring`, which works with or without the package; see
 [Authoring from code](04-authoring-from-code.md).
 
 Asset paths may omit the `Assets/` prefix and the `.asset` extension. Node guids come from
