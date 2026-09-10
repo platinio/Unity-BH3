@@ -4,6 +4,8 @@ A guard is a precondition attached to a node. It decides whether the node may st
 guard, whether it must stop. This page covers both kinds, when to use each, and the rules that keep them
 cheap.
 
+![description](../images/reactive-guard.png)
+
 ---
 
 ## Two kinds
