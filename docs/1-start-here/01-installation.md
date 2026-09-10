@@ -26,12 +26,6 @@ Every one of these is its own GitHub repository. The reference project pulls the
 | `Modules/VisualScriptingExtension` | [platinio/visual-scripting-extension](https://github.com/platinio/visual-scripting-extension) | **Functions**: named, reusable Visual Scripting graphs with a contract |
 | `Modules/BlockVariables` | [platinio/Unity-BlockVariables](https://github.com/platinio/Unity-BlockVariables) | Variable storage used by the Blackboard |
 
-**Optional.** Install [Tactical Position Selection](https://github.com/platinio/Unity-TacticalPositionSelection)
-(plus its own dependencies `AIEntities` and `ScriptableObjectDatabase`) and BH3 adds a
-**Tactical Position Selection** node and a **TPS Query** literal. Those live in a separate assembly that only
-compiles when the `MODULE_TACTICAL_POSITION_SELECTION_EXIST` define is present, so a project without the
-module never sees them.
-
 ---
 
 ## Option A: clone the reference project
