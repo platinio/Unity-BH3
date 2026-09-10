@@ -44,6 +44,8 @@ A node can have several moments armed at once; they are one breakpoint with a ma
 
 ### On a guard
 
+![Breakpoint On Guard](../images/debugging-breakpoint-on-guard.png)
+
 Right-click the guard itself. Guards are asked by their owner rather than entered, so they have no lifecycle,
 only a change of mind:
 
