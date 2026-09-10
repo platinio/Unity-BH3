@@ -61,8 +61,7 @@ runs the tree. Feed those ports like any other: a literal, a variable read, or a
 
 ![Sub-tree with ports](../images/sub-tree-with-ports.png)
 
-The branch never learns a variable name from its caller, so the same Idle works on a Zombie, a Soldier or a
-Draugr.
+The branch never learns a variable name from its caller, so the same Idle works on a Zombie or a Soldier.
 
 ### Required or Optional?
 
