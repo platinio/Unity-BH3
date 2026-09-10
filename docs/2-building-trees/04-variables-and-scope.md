@@ -43,13 +43,6 @@ sub-tree instance it runs. A sub-tree used at two call sites has two scopes that
 | **Writes stay local** | A `Set Variable` of kind Graph writes only the branch that ran it. A branch cannot reach its caller's variables, and cannot leak scratch state sideways into a sibling |
 | **Agent state is Object** | Anything belonging to the whole agent is an Object variable. Shared on purpose |
 
-```
-[ Float Literal 3 ]──▶ idleTime port on [ Run Behavior Tree Graph ]      the caller passes it
-                                  │
-                                  ▼   written into the branch's own scope on enter
-                    [ Get Variable "idleTime" ]  (Graph kind)            the branch reads it
-```
-
 Those three rules together are why you never move data between branches by agreeing on a variable name.
 Values *into* a branch are parameters, passed at the call site; facts *about* the agent are Object
 variables. Keeping the two apart is what lets the same Patrol run on a Zombie, a Soldier and an Archer. See
