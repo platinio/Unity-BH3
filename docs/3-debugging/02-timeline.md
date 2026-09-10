@@ -39,9 +39,7 @@ scrubs instead.
 **Drag the playhead**, or click anywhere on the track. The canvas **ghosts**: every node's status and every
 lit connection becomes what it was at that tick, dimmed, and the toolbar shows an amber banner:
 
-```
-⏸ SCRUBBING @ tick 2273 — canvas shows history
-```
+
 
 That is history, not the present. The agent keeps running behind it. **Return to live** hands the canvas
 back, and the banner returns to `● LIVE — tick N`.
