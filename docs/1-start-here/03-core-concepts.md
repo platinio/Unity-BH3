@@ -91,6 +91,8 @@ A **Run Behavior Tree Graph** node runs another tree asset as a **sub-tree**. Th
 **parameters**, which appear as input ports on the node that calls it, so the same Patrol asset runs on a
 Zombie with `idleTime = 3` and on a Soldier with `idleTime = 1` without either knowing the other exists.
 
+![subtree with ports](../images/sub-tree-with-ports.png)
+
 Each call site gets its own instance and its own Graph scope. Values *into* a branch are parameters; facts
 *about* the agent are Object variables. Keeping those apart is what makes a branch reusable. See
 [Sub-trees](../2-building-trees/07-sub-trees.md).
