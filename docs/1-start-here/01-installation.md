@@ -8,58 +8,21 @@ What BH3 needs, how to get it into a project, and how to check it works. Ten min
 
 | Requirement | Notes |
 |---|---|
-| **Unity 6** | The reference project is on `6000.4.x`. |
-| **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. The reference project uses `1.9.11`. |
-| Three ArcaneOnyx modules | `GraphCore`, `VisualScriptingExtension`, `BlockVariables`. See the table below. |
+| **Unity 6** | BH3 is built and verified on `6000.4.x`. |
+| **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. `1.9.11` is the verified version. |
 | *Optional:* **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Only for the `bt_*` and `fn_*` command-line tools. They live in their own editor assembly that compiles only when the package is present; nothing else in BH3 uses it. |
 
-BH3 and its modules are plain folders of C# with assembly definitions. There is no UPM package: they live
-under `Assets/ArcaneOnyx/` and are wired together by assembly references.
-
-### The modules BH3 depends on
-
-Every one of these is its own GitHub repository. The reference project pulls them in as git submodules.
-
-| Folder under `Assets/ArcaneOnyx/` | Repository | What BH3 takes from it |
-|---|---|---|
-| `Modules/GraphCore` | [platinio/graph-core-library](https://github.com/platinio/graph-core-library) | The graph window, canvas, port system and Blackboard panel that BH3's editor builds on |
-| `Modules/VisualScriptingExtension` | [platinio/visual-scripting-extension](https://github.com/platinio/visual-scripting-extension) | **Functions**: named, reusable Visual Scripting graphs with a contract |
-| `Modules/BlockVariables` | [platinio/Unity-BlockVariables](https://github.com/platinio/Unity-BlockVariables) | Variable storage used by the Blackboard |
+BH3 is plain folders of C# with assembly definitions. There is no UPM package: everything lives under
+`Assets/ArcaneOnyx/` and is wired together by assembly references.
 
 ---
 
-## Option A: clone the reference project
+## Install
 
-The fastest way to get a working setup, with every demo:
+BH3 ships as a single `.unitypackage` on its GitHub release page. The package is self-contained: the three
+ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing else to fetch.
 
-```bash
-git clone --recurse-submodules https://github.com/platinio/bh3-development.git
-```
-
-Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visual-scripting).
-
-## Option B: add BH3 to your own project
-
-1. Put the four repositories under `Assets/ArcaneOnyx/`, keeping the folder names above:
-
-   ```
-   Assets/ArcaneOnyx/
-     BH3/                              ← this repository
-     Modules/GraphCore/
-     Modules/VisualScriptingExtension/
-     Modules/BlockVariables/
-   ```
-
-   As submodules, from your project root:
-
-   ```bash
-   git submodule add https://github.com/platinio/Unity-BH3.git Assets/ArcaneOnyx/BH3
-   git submodule add https://github.com/platinio/graph-core-library.git Assets/ArcaneOnyx/Modules/GraphCore
-   git submodule add https://github.com/platinio/visual-scripting-extension.git Assets/ArcaneOnyx/Modules/VisualScriptingExtension
-   git submodule add https://github.com/platinio/Unity-BlockVariables.git Assets/ArcaneOnyx/Modules/BlockVariables
-   ```
-
-2. Add Visual Scripting through **Window → Package Manager** or directly in `Packages/manifest.json`:
+1. Add Visual Scripting through **Window → Package Manager** or directly in `Packages/manifest.json`:
 
    ```json
    "com.unity.visualscripting": "1.9.11"
@@ -68,13 +31,33 @@ Open it with Unity 6 and skip to [Initialise Visual Scripting](#initialise-visua
    Add `"com.unity.pipeline": "0.4.0-exp.1"` beside it only if you want the
    [command-line tools](../4-extending-with-csharp/05-command-line-tools.md).
 
-3. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
+2. Download `BH3.unitypackage` from the latest release. This link always points at the newest one:
+
+   ```
+   https://github.com/platinio/Unity-BH3/releases/latest/download/BH3.unitypackage
+   ```
+
+   A specific version is on its release page under
+   [platinio/Unity-BH3/releases](https://github.com/platinio/Unity-BH3/releases).
+
+3. Import it with **Assets → Import Package → Custom Package…**, keeping everything selected. It lands as:
+
+   ```
+   Assets/ArcaneOnyx/
+     BH3/                              ← the tool
+     Modules/GraphCore/                ← the graph window, canvas, port system and Blackboard panel
+     Modules/VisualScriptingExtension/ ← Functions: named, reusable Visual Scripting graphs with a contract
+     Modules/BlockVariables/           ← variable storage used by the Blackboard
+   ```
+
+   If a module is already in the project from another ArcaneOnyx package, Unity matches it by asset GUID and
+   updates it in place rather than importing a second copy.
+
+4. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
    detect it; expect one extra recompile.
 
-> **Installing from a `.unitypackage` or zip instead?** The archive ships a `ProjectSettings` folder. Close
-> Unity, copy `ProjectSettings.asset`, `TagManager.asset` and `VisualScriptingSettings.asset` over your
-> project's, then continue below. That flow is also described in `Installation Guide.pdf` at the root of this
-> repository.
+Upgrading is the same import over the existing folders. Each release is verified before it is published: the
+package is imported into an empty Unity project, compiled, its tests run, and a player built from it.
 
 ---
 
@@ -108,9 +91,7 @@ as it compiles.
 
 - Right-click in the Project window. **Create → Visual Scripting → Behavior Tree** should be there.
 - Add a component to any GameObject: **Behavior Tree Machine** should be offered.
-- In the reference project, open `Assets/ArcaneOnyx/BH3Demos/TimelineScrubber/TimelineScrubberDemo.unity`,
-  double-click `Trees/TimelineDemo_Agent.asset` in the same folder, and press Play. The canvas should light up
-  as the tree runs.
+- Create a tree, open it, and add a node from the canvas right-click menu. The canvas should draw it.
 
 If the create menu is missing, Visual Scripting has not been initialised. If the nodes exist but the
 **Set BT Variable** unit cannot be found in a script graph, run **Tools → BH3 → Install** again.
