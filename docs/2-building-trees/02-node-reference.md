@@ -124,7 +124,7 @@ is how far from each random point it looks for NavMesh; 0 can never hit anything
 |---|---|---|
 | Set Position | `SetPosition` | Sets `Target`'s position to `NewPosition` |
 | Look At | `LookAt` | Rotates `Target` to look at `LookTarget` |
-| Face Target | `FaceTarget` | Rotates the agent to face `TransformTarget`, at `RotationSpeed`, succeeding within `AcceptableRotation` degrees |
+| Face Target | `FaceTarget` | Rotates the agent to face `TransformTarget`, at `RotationSpeed` degrees per second. `AcceptableRotation` is not an angle: it is the dot product between the agent's forward and the direction to the target that counts as facing, from `-1` to `1`. `0.98` is about 11 degrees; `1` can never be reached |
 | Rotate | `Rotate` | Spins the transform around `Axis` at `Speed` degrees per second. Always `Running`; it never finishes on its own |
 | Set Rotation | `SetRotation` | Turns to `TargetRotation` over `Duration` seconds, then succeeds. A `Duration` of 0 snaps and succeeds on the first tick |
 
