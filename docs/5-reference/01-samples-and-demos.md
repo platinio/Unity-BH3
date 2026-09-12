@@ -46,10 +46,12 @@ Contributors add tests beside the code they change:
 Both are gated on `UNITY_INCLUDE_TESTS` and are not auto-referenced, so they never ship in a build. Run them
 from **Window → General → Test Runner**.
 
-`Test/EditMode/SampleTrees/` holds the trees `SampleTreeVerificationTests.cs` runs `bt_verify` over: five
+`Test/EditMode/SampleTrees~/` holds the trees `SampleTreeVerificationTests.cs` runs `bt_verify` over: five
 trees with their Functions and script graphs, kept from the FPS and Flight Recorder samples that once shipped
 here. They are fixtures, not something to open and play; the test holds their findings to a recorded count so
-that a change which breaks real content fails loudly.
+that a change which breaks real content fails loudly. The `~` keeps Unity from importing the folder, so its
+thirty Functions stay out of the Function picker and every other project-wide scan; the test copies it under
+`Assets/` for the duration of a run and removes it afterwards.
 
 ---
 

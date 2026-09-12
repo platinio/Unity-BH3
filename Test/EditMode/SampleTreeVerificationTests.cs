@@ -1,15 +1,27 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
     /// <summary>
     /// Runs <c>bt_verify</c> over the trees that used to ship in <c>Sample/</c>, kept under
-    /// <c>Test/EditMode/SampleTrees/</c> as fixtures now that the sample itself lives outside the repo, and
+    /// <c>Test/EditMode/SampleTrees~/</c> as fixtures now that the sample itself lives outside the repo, and
     /// holds their known problems to a recorded count.
+    ///
+    /// <para>
+    /// <b>Why the fixtures live in a <c>~</c> folder.</b> Unity does not import one, so the thirty Functions
+    /// and five trees in there are invisible to the Function picker, the broken-tree finder and every other
+    /// project-wide asset scan — in this project and in every project BH3 is installed into. The price is
+    /// that they are invisible to this test too, so the fixture setup copies the folder, <c>.meta</c> files
+    /// included, under <c>Assets/</c> for the duration of the run and deletes it afterwards. The metas are
+    /// what keep the copied trees pointing at the copied Functions: Unity honours them on import, so every
+    /// asset keeps the GUID it was authored with.
+    /// </para>
     ///
     /// <para>
     /// <b>Why this exists.</b> Every other verification test builds its own tree, asserts on it, and deletes
@@ -65,7 +77,68 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             { "guard with no triggers", 1 },
         };
 
-        private const string FixtureFolder = "/BH3/Test/EditMode/SampleTrees/";
+        /// <summary>The un-imported folder beside this script that holds the fixtures.</summary>
+        private const string SourceFolderName = "SampleTrees~";
+
+        /// <summary>Where the fixtures are imported for the duration of the run.</summary>
+        private const string FixtureFolder = "Assets/__SampleTrees";
+
+        /// <summary>
+        /// The source folder, found relative to this script rather than by a hard-coded project path, because
+        /// BH3 is installed at a different path in every consumer project and in the release verifier. Null
+        /// when the script itself cannot be located, which the tests report as nothing verified rather than
+        /// as a pass.
+        /// </summary>
+        private static string SourceFolder()
+        {
+            var scriptFile = nameof(SampleTreeVerificationTests) + ".cs";
+
+            foreach (var guid in AssetDatabase.FindAssets($"t:MonoScript {nameof(SampleTreeVerificationTests)}"))
+            {
+                var scriptPath = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileName(scriptPath) != scriptFile) continue;
+
+                var projectRoot = Directory.GetParent(Application.dataPath).FullName;
+                return Path.Combine(projectRoot, Path.GetDirectoryName(scriptPath), SourceFolderName);
+            }
+
+            return null;
+        }
+
+        [OneTimeSetUp]
+        public void ImportFixtures()
+        {
+            var source = SourceFolder();
+            if (source == null || !Directory.Exists(source)) return;
+
+            if (AssetDatabase.IsValidFolder(FixtureFolder)) AssetDatabase.DeleteAsset(FixtureFolder);
+
+            var destination = Path.Combine(Directory.GetParent(Application.dataPath).FullName, FixtureFolder);
+            CopyDirectory(source, destination);
+
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        [OneTimeTearDown]
+        public void RemoveFixtures()
+        {
+            if (AssetDatabase.IsValidFolder(FixtureFolder)) AssetDatabase.DeleteAsset(FixtureFolder);
+        }
+
+        private static void CopyDirectory(string source, string destination)
+        {
+            Directory.CreateDirectory(destination);
+
+            foreach (var file in Directory.GetFiles(source))
+            {
+                File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
+            }
+
+            foreach (var folder in Directory.GetDirectories(source))
+            {
+                CopyDirectory(folder, Path.Combine(destination, Path.GetFileName(folder)));
+            }
+        }
 
         /// <summary>
         /// The sample trees. Located by path rather than by a hard-coded list so that adding a tree under
@@ -74,9 +147,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// </summary>
         private static List<string> SampleTrees()
         {
-            return AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}")
+            if (!AssetDatabase.IsValidFolder(FixtureFolder)) return new List<string>();
+
+            return AssetDatabase.FindAssets($"t:{nameof(BehaviorTreeGraphAsset)}", new[] { FixtureFolder })
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .Where(path => path.Contains(FixtureFolder))
                 .Distinct()
                 .OrderBy(path => path)
                 .ToList();

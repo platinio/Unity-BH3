@@ -75,7 +75,7 @@ What it checks:
 The full message catalogue is in [Command-line tools](../4-extending-with-csharp/05-command-line-tools.md#what-bt_verify-reports).
 
 Run it in CI over every tree you ship. An example lives in `Test/EditMode/SampleTreeVerificationTests.cs`,
-which runs it over the fixture trees under `Test/EditMode/SampleTrees/` and holds their findings to a
+which runs it over the fixture trees under `Test/EditMode/SampleTrees~/` and holds their findings to a
 recorded count.
 
 ---
