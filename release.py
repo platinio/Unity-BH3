@@ -801,6 +801,11 @@ def build_unitypackage(repo, install_path, out_file, exclude_prefixes, dep_packa
             if only_prefix and not (asset_rel == only_prefix
                                     or asset_rel.startswith(only_prefix + "/")):
                 continue
+            # Unity never imports a `~` folder, so packing one ships dead files (test
+            # fixtures, for instance) into the buyer's project. Only a sample package,
+            # which strips the `~` on the way out, has any use for them.
+            if not strip_tilde and any(seg.endswith("~") for seg in asset_rel.split("/")[:-1]):
+                continue
             abs_meta = os.path.join(repo, meta_rel)
             abs_asset = os.path.join(repo, asset_rel)
             meta_bytes = open(abs_meta, "rb").read()
