@@ -1,6 +1,6 @@
 {
     "name": "BH3",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "installPath": "Assets/ArcaneOnyx/BH3",
     "dependencyRoot": "Assets/ArcaneOnyx/Modules",
     "unity": "6000.4",
