@@ -95,7 +95,7 @@ namespace ArcaneOnyx.BehaviorTree
             Ensure.That(nameof(outputType)).IsNotNull(outputType);
 
             return unit.valueInputs
-                .Where(valueInput => valueInput.acceptsAnySource || ConversionUtility.CanConvert(outputType, valueInput.Type, false))
+                .Where(valueInput => ConversionUtility.CanConvert(outputType, valueInput.Type, false))
                 .OrderBy((valueInput) =>
                 {
                     var exactType = outputType == valueInput.Type;

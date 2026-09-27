@@ -95,18 +95,6 @@ namespace ArcaneOnyx.BehaviorTree
 
         public bool allowsNull { get; private set; }
 
-        public bool acceptsAnySource { get; private set; }
-
-        /// <summary>
-        /// Lets any output feed this port regardless of <see cref="Type"/>, for a node that reads the raw
-        /// <see cref="GetValue()"/> and wants a typed inline field without narrowing what may be wired in.
-        /// </summary>
-        public ValueInput AcceptsAnySource()
-        {
-            acceptsAnySource = true;
-            return this;
-        }
-
         public PortValueConnection connection => behaviorTreeNode.graph?.valueConnections.SingleOrDefaultWithDestination(this);
 
         public override bool hasValidConnection => connection != null;
@@ -135,7 +123,7 @@ namespace ArcaneOnyx.BehaviorTree
             var source = port;
             var destination = this;
 
-            return acceptsAnySource || source.Type.IsConvertibleTo(destination.Type, false);
+            return source.Type.IsConvertibleTo(destination.Type, false);
         }
 
         public override void ConnectToValid(ValueOutput port)
@@ -217,7 +205,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             if (unit == this.behaviorTreeNode) return null;
 
-            return unit.CompatibleValueOutput(acceptsAnySource ? typeof(object) : Type);
+            return unit.CompatibleValueOutput(Type);
         }
         
         public object GetValue()

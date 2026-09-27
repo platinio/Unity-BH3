@@ -160,7 +160,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #endregion
 
-        #region Ports that accept any source
+        #region Logging
 
         [Test]
         public void TheLogNodesOfferAnInlineMessage()
@@ -182,27 +182,33 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void ALogNodeStillAcceptsAnOutputThatIsNotAString()
+        public void AFloatReachesALogNodeThroughToString()
         {
             var source = AddNode<ValueSource<float>>();
+            var convert = AddNode<ObjectToString>();
             var log = AddNode<DebugLog>();
             source.Published = 2.5f;
 
-            Assert.IsTrue(log.LogText.CanConnectToValid(source.Value));
-            Assert.AreSame(log.LogText, log.CompatibleValueInput(typeof(float)));
+            Assert.IsFalse(log.LogText.CanConnectToValid(source.Value));
+            Assert.IsTrue(convert.Value.CanConnectToValid(source.Value));
+            Assert.IsTrue(log.LogText.CanConnectToValid(convert.Result));
 
-            source.Value.ValidlyConnectTo(log.LogText);
+            source.Value.ValidlyConnectTo(convert.Value);
+            convert.Result.ValidlyConnectTo(log.LogText);
 
-            Assert.AreEqual(2.5f, log.LogText.GetValue());
+            Assert.AreEqual(2.5f.ToString(), log.LogText.GetValue());
         }
 
         [Test]
-        public void AnOrdinaryStringPortStillRejectsAnOutputThatIsNotAString()
+        public void ToStringAnswersEmptyForNull()
         {
-            var source = AddNode<ValueSource<float>>();
-            var sink = AddNode<ValueSink<string>>();
+            var source = AddNode<ValueSource<object>>();
+            var convert = AddNode<ObjectToString>();
+            source.Published = null;
 
-            Assert.IsFalse(sink.Value.CanConnectToValid(source.Value));
+            source.Value.ValidlyConnectTo(convert.Value);
+
+            Assert.AreEqual(string.Empty, convert.Result.GetPortValue());
         }
 
         #endregion

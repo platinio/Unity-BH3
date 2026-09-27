@@ -16,7 +16,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
 
-            LogText = ValueInput<string>(nameof(LogText), string.Empty).AcceptsAnySource();
+            LogText = ValueInput<string>(nameof(LogText), string.Empty);
         }
 
         public override ExecutionStatus OnUpdate()
