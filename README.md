@@ -1,6 +1,16 @@
-# BH3 — Behavior Trees for Unity
+# BH3 - Behavior Trees for Unity
 
 A visual, node-based behavior tree system for AI and gameplay logic, built on top of Unity Visual Scripting.
+
+---
+
+## AI usage
+
+I started BH3 in 2023 and built it by hand for its first three years. It began as a tool for another project, which is still unreleased.
+
+Since 2026 I have used Claude Code as part of my development workflow. It helps me draft and shape features, and sometimes brings them to completion. It also writes tests, fixes bugs and drafts documentation.
+
+I'm stating this up front so you can make your own decision before using BH3.
 
 ---
 
