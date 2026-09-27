@@ -40,17 +40,18 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
 3. Import it with **Assets → Import Package → Custom Package…**, keeping everything selected. It lands as:
 
    ```
-   Assets/ArcaneOnyx/
-     BH3/                              ← the tool
-     Modules/GraphCore/                ← the graph window, canvas, port system and Blackboard panel
-     Modules/VisualScriptingExtension/ ← Functions: named, reusable Visual Scripting graphs with a contract
-     Modules/BlockVariables/           ← variable storage used by the Blackboard
+   Assets/ArcaneOnyx/BH3/                   ← the tool
+     Dependencies/GraphCore/                ← the graph window, canvas, port system and Blackboard panel
+     Dependencies/VisualScriptingExtension/ ← Functions: named, reusable Visual Scripting graphs with a contract
+     Dependencies/BlockVariables/           ← variable storage used by the Blackboard
    ```  
 
 4. Let Unity compile. BH3 registers a `MODULE_BH3_EXIST` scripting define on first load so other modules can
    detect it; expect one extra recompile.
 
-Upgrading is the same import over the existing folders. Each release is verified before it is published: the
+Upgrading is the same import over the existing folders. Unity matches assets by GUID, so a project that
+installed `1.0.3` or earlier keeps the three modules in `Assets/ArcaneOnyx/Modules/`, where those releases
+put them; only a fresh install uses `BH3/Dependencies/`. Each release is verified before it is published: the
 package is imported into an empty Unity project, compiled, its tests run, and a player built from it.
 
 ---
