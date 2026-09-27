@@ -102,6 +102,12 @@ Every input defaults to 0, except `Divide`'s `B`, which defaults to 1.
 | Not | `Not` | Outputs the inverse of `Value` |
 | Is Not Null | `IsNotNull` | Outputs true when `Value` references a live object |
 
+## Convert
+
+| Menu | Type | Behaviour |
+|---|---|---|
+| To String | `ObjectToString` | Outputs `Value` as text, so any output can feed a string port. Null becomes an empty string |
+
 ## Navigation
 
 | Menu | Type | Behaviour |
@@ -167,7 +173,7 @@ that succeeds.
 
 | Menu | Type | Behaviour |
 |---|---|---|
-| Debug Log | `DebugLog` | Writes `LogText` to the console |
+| Debug Log | `DebugLog` | Writes `LogText` to the console. Type the message on the node, or connect a string. To log anything else, put a **To String** node in between |
 | Debug Log Warning | `DebugLogWarning` | As a warning |
 | Debug Log Error | `DebugLogError` | As an error |
 
@@ -193,7 +199,7 @@ problem badge until you connect something.
 | Set Animator Value | `Animator`, `Value` |
 | Set Animator Trigger | `Animator` |
 | Cross Fade Animation | `Animator` |
-| Debug Log, Debug Log Warning, Debug Log Error | `LogText` |
+| To String | `Value` |
 
 Two related cases look similar but are checked differently:
 

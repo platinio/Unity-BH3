@@ -160,6 +160,59 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #endregion
 
+        #region Logging
+
+        [Test]
+        public void TheLogNodesOfferAnInlineMessage()
+        {
+            foreach (var port in new[]
+                     {
+                         AddNode<DebugLog>().LogText,
+                         AddNode<DebugLogWarning>().LogText,
+                         AddNode<DebugLogError>().LogText
+                     })
+            {
+                Assert.IsTrue(port.hasDefaultValue,
+                    $"{port.behaviorTreeNode.GetType().Name} needs a declared default for the canvas to draw a field.");
+                Assert.IsFalse(port.IsUnfedRequired);
+
+                port.SetDefaultValue("typed on the node");
+                Assert.AreEqual("typed on the node", port.GetValue());
+            }
+        }
+
+        [Test]
+        public void AFloatReachesALogNodeThroughToString()
+        {
+            var source = AddNode<ValueSource<float>>();
+            var convert = AddNode<ObjectToString>();
+            var log = AddNode<DebugLog>();
+            source.Published = 2.5f;
+
+            Assert.IsFalse(log.LogText.CanConnectToValid(source.Value));
+            Assert.IsTrue(convert.Value.CanConnectToValid(source.Value));
+            Assert.IsTrue(log.LogText.CanConnectToValid(convert.Result));
+
+            source.Value.ValidlyConnectTo(convert.Value);
+            convert.Result.ValidlyConnectTo(log.LogText);
+
+            Assert.AreEqual(2.5f.ToString(), log.LogText.GetValue());
+        }
+
+        [Test]
+        public void ToStringAnswersEmptyForNull()
+        {
+            var source = AddNode<ValueSource<object>>();
+            var convert = AddNode<ObjectToString>();
+            source.Published = null;
+
+            source.Value.ValidlyConnectTo(convert.Value);
+
+            Assert.AreEqual(string.Empty, convert.Result.GetPortValue());
+        }
+
+        #endregion
+
         #region What did not change
 
         /// <summary>
