@@ -167,7 +167,7 @@ that succeeds.
 
 | Menu | Type | Behaviour |
 |---|---|---|
-| Debug Log | `DebugLog` | Writes `LogText` to the console |
+| Debug Log | `DebugLog` | Writes `LogText` to the console. Type the message on the node, or connect any output to log its value |
 | Debug Log Warning | `DebugLogWarning` | As a warning |
 | Debug Log Error | `DebugLogError` | As an error |
 
@@ -193,7 +193,6 @@ problem badge until you connect something.
 | Set Animator Value | `Animator`, `Value` |
 | Set Animator Trigger | `Animator` |
 | Cross Fade Animation | `Animator` |
-| Debug Log, Debug Log Warning, Debug Log Error | `LogText` |
 
 Two related cases look similar but are checked differently:
 

@@ -160,6 +160,53 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #endregion
 
+        #region Ports that accept any source
+
+        [Test]
+        public void TheLogNodesOfferAnInlineMessage()
+        {
+            foreach (var port in new[]
+                     {
+                         AddNode<DebugLog>().LogText,
+                         AddNode<DebugLogWarning>().LogText,
+                         AddNode<DebugLogError>().LogText
+                     })
+            {
+                Assert.IsTrue(port.hasDefaultValue,
+                    $"{port.behaviorTreeNode.GetType().Name} needs a declared default for the canvas to draw a field.");
+                Assert.IsFalse(port.IsUnfedRequired);
+
+                port.SetDefaultValue("typed on the node");
+                Assert.AreEqual("typed on the node", port.GetValue());
+            }
+        }
+
+        [Test]
+        public void ALogNodeStillAcceptsAnOutputThatIsNotAString()
+        {
+            var source = AddNode<ValueSource<float>>();
+            var log = AddNode<DebugLog>();
+            source.Published = 2.5f;
+
+            Assert.IsTrue(log.LogText.CanConnectToValid(source.Value));
+            Assert.AreSame(log.LogText, log.CompatibleValueInput(typeof(float)));
+
+            source.Value.ValidlyConnectTo(log.LogText);
+
+            Assert.AreEqual(2.5f, log.LogText.GetValue());
+        }
+
+        [Test]
+        public void AnOrdinaryStringPortStillRejectsAnOutputThatIsNotAString()
+        {
+            var source = AddNode<ValueSource<float>>();
+            var sink = AddNode<ValueSink<string>>();
+
+            Assert.IsFalse(sink.Value.CanConnectToValid(source.Value));
+        }
+
+        #endregion
+
         #region What did not change
 
         /// <summary>
