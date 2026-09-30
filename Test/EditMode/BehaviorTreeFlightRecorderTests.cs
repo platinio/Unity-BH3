@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -44,21 +45,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #region Fixtures
 
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
-        }
-
         /// <summary>Hands every node in the graph the recorder, the way the machine does at Awake.</summary>
         private void Bind(BehaviorTreeGraph graph)
         {
@@ -75,15 +61,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             out BooleanReactiveGuard guard,
             out ScriptedNode child)
         {
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
 
             child = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
-            guard = AddNode<BooleanReactiveGuard>(graph);
+            guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(guardStartsTrue);
 
@@ -232,12 +218,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var graph = new BehaviorTreeGraph();
 
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var child = new ScriptedNode(ExecutionStatus.Failure) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
             graph.OnAwake();
             Bind(graph);

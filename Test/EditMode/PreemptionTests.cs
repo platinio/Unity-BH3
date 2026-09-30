@@ -1,4 +1,5 @@
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -20,21 +21,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class PreemptionTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, index);
-            graph.Transitions.Add(transition);
-        }
-
         /// <summary>
         /// Entry -> Selector -> [high, low], both long-running, with a reactive guard on <c>high</c> that
         /// starts false. So the selector falls past <c>high</c> and settles on <c>low</c>, which is the state
@@ -44,18 +30,18 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             out ScriptedNode high, out ScriptedNode low, out CountingReactiveGuard bid, out BehaviorTreeGraph graph)
         {
             graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             high = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(-200.0f, 300.0f, 150.0f, 100.0f) };
             low = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(high);
             graph.Nodes.Add(low);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, high, 0);
-            Connect(graph, selector, low, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, high, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, low, 1);
 
-            bid = AddNode<CountingReactiveGuard>(graph, -400.0f);
+            bid = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, -400.0f, 100.0f);
             bid.UpdateOwner(high);
             bid.Result = false;
 
@@ -104,7 +90,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var selector = TwoBranches(out var high, out var low, out var bid, out var graph);
 
-            var veto = AddNode<BooleanConditionalExecution>(graph, -600.0f);
+            var veto = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, -600.0f, 100.0f);
             veto.UpdateOwner(high);
             veto.Value.SetDefaultValue(false);
             graph.OnAwake();
@@ -157,7 +143,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ThePreemptorWithTheHighestPriorityWins()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var first = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(-300.0f, 300.0f, 150.0f, 100.0f) };
             var second = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
@@ -166,16 +152,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             graph.Nodes.Add(second);
             graph.Nodes.Add(running);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, first, 0);
-            Connect(graph, selector, second, 1);
-            Connect(graph, selector, running, 2);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, first, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, second, 1);
+            BehaviorTreeAuthoring.Connect(graph, selector, running, 2);
 
-            var firstBid = AddNode<CountingReactiveGuard>(graph, -500.0f);
+            var firstBid = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, -500.0f, 100.0f);
             firstBid.UpdateOwner(first);
             firstBid.Result = false;
 
-            var secondBid = AddNode<CountingReactiveGuard>(graph, -450.0f);
+            var secondBid = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, -450.0f, 100.0f);
             secondBid.UpdateOwner(second);
             secondBid.Result = false;
 
@@ -200,18 +186,18 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ABranchWithNoPreemptingGuardIsNeverPolled()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var high = new ScriptedNode(ExecutionStatus.Failure) { Position = new Rect(-200.0f, 300.0f, 150.0f, 100.0f) };
             var low = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(high);
             graph.Nodes.Add(low);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, high, 0);
-            Connect(graph, selector, low, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, high, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, low, 1);
 
-            var doorman = AddNode<CountingGuard>(graph, -400.0f);
+            var doorman = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, -400.0f, 100.0f);
             doorman.UpdateOwner(high);
 
             graph.OnAwake();

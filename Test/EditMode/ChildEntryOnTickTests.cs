@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -30,21 +31,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class ChildEntryOnTickTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
-        }
-
         /// <summary>
         /// <c>Entry -&gt; Repeater -&gt; leaf</c>, with a plain doorman guard on the leaf that starts true.
         /// The guard has to be wired through a graph rather than attached by hand: arming a guard onto its
@@ -54,15 +40,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             out ScriptedNode leaf, out CountingGuard guard, out BehaviorTreeGraph graph)
         {
             graph = new BehaviorTreeGraph();
-            var repeater = AddNode<Repeater>(graph);
+            var repeater = BehaviorTreeAuthoring.AddNode<Repeater>(graph, 0.0f, 100.0f);
 
             leaf = new ScriptedNode(ExecutionStatus.Success) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(leaf);
 
-            Connect(graph, graph.EntryNode, repeater);
-            Connect(graph, repeater, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, repeater);
+            BehaviorTreeAuthoring.Connect(graph, repeater, leaf);
 
-            guard = AddNode<CountingGuard>(graph, -300.0f);
+            guard = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, -300.0f, 100.0f);
             guard.UpdateOwner(leaf);
 
             graph.OnAwake();

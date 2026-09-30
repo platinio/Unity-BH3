@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -673,8 +674,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var child = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
             var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
@@ -717,8 +718,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var child = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
             var guard = new BooleanReactiveGuard { Position = new Rect(-150.0f, 100.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(guard);
@@ -738,13 +739,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var explanation = BehaviorTreeExplainer.Explain(recorder, 0, sequence.guid, BehaviorTreeGraphTopology.From(graph));
 
             Assert.AreEqual(BehaviorTreeOutcome.Skipped, explanation.Outcome, TextOf(explanation));
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
         }
 
         #endregion

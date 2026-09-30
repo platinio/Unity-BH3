@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -32,21 +33,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class EntryVerdictTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float y = 100.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(0.0f, y, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, graph.CountTransitionsFromNode(parent));
-            graph.Transitions.Add(transition);
-        }
-
         #region 2.2 -- the entry verdict is taken once per frame
 
         /// <summary>
@@ -57,10 +43,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardThatFlipsWithinTheFrameCannotUndoARefusedEntry()
         {
             var graph = new BehaviorTreeGraph();
-            var node = AddNode<ScriptedNode>(graph);
-            var guard = AddNode<UnstableGuard>(graph, 300.0f);
+            var node = BehaviorTreeAuthoring.AddNode<ScriptedNode>(graph, 0.0f, 100.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<UnstableGuard>(graph, 0.0f, 300.0f);
 
-            Connect(graph, graph.EntryNode, node);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, node);
             guard.UpdateOwner(node);
 
             graph.OnAwake();
@@ -87,10 +73,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ARefusedEntryEvaluatesItsGuardsOnce()
         {
             var graph = new BehaviorTreeGraph();
-            var node = AddNode<ScriptedNode>(graph);
-            var guard = AddNode<CountingGuard>(graph, 300.0f);
+            var node = BehaviorTreeAuthoring.AddNode<ScriptedNode>(graph, 0.0f, 100.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 300.0f);
 
-            Connect(graph, graph.EntryNode, node);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, node);
             guard.UpdateOwner(node);
             guard.Result = false;
 
@@ -120,10 +106,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ARefusalDoesNotOutliveItsFrame()
         {
             var graph = new BehaviorTreeGraph();
-            var node = AddNode<ScriptedNode>(graph);
-            var guard = AddNode<CountingGuard>(graph, 300.0f);
+            var node = BehaviorTreeAuthoring.AddNode<ScriptedNode>(graph, 0.0f, 100.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 300.0f);
 
-            Connect(graph, graph.EntryNode, node);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, node);
             guard.UpdateOwner(node);
             guard.Result = false;
 
@@ -151,12 +137,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AnAllowedEntryStillTicksNormally()
         {
             var graph = new BehaviorTreeGraph();
-            var node = AddNode<ScriptedNode>(graph);
-            var guard = AddNode<CountingGuard>(graph, 300.0f);
+            var node = BehaviorTreeAuthoring.AddNode<ScriptedNode>(graph, 0.0f, 100.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 300.0f);
 
             node.DefaultResult = ExecutionStatus.Running;
 
-            Connect(graph, graph.EntryNode, node);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, node);
             guard.UpdateOwner(node);
 
             graph.OnAwake();
@@ -273,12 +259,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ASelectorRetriesAChildWhoseEntryThrewInsteadOfTickingIt()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
             var child = new ThrowsOnEnterNode { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, child);
 
             graph.OnAwake();
 
@@ -301,12 +287,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ASequenceRetriesAChildWhoseEntryThrewInsteadOfTickingIt()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var child = new ThrowsOnEnterNode { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
             graph.OnAwake();
 
@@ -335,16 +321,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AContainerUnwindsTheChildrenItAlreadyEnteredWhenALaterOneThrows()
         {
             var graph = new BehaviorTreeGraph();
-            var parallel = AddNode<ParallelSequence>(graph);
+            var parallel = BehaviorTreeAuthoring.AddNode<ParallelSequence>(graph, 0.0f, 100.0f);
 
             var first = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             var second = new ThrowsOnEnterNode { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(first);
             graph.Nodes.Add(second);
 
-            Connect(graph, graph.EntryNode, parallel);
-            Connect(graph, parallel, first);
-            Connect(graph, parallel, second);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, parallel);
+            BehaviorTreeAuthoring.Connect(graph, parallel, first);
+            BehaviorTreeAuthoring.Connect(graph, parallel, second);
 
             graph.OnAwake();
 
@@ -371,7 +357,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AnUnwindKeepsGoingWhenAnExitThrowsToo()
         {
             var graph = new BehaviorTreeGraph();
-            var parallel = AddNode<ParallelSequence>(graph);
+            var parallel = BehaviorTreeAuthoring.AddNode<ParallelSequence>(graph, 0.0f, 100.0f);
 
             var faultsOnTheWayOut = new ThrowsOnExitNode { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             var wouldBeStranded = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
@@ -380,10 +366,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             graph.Nodes.Add(wouldBeStranded);
             graph.Nodes.Add(failsToEnter);
 
-            Connect(graph, graph.EntryNode, parallel);
-            Connect(graph, parallel, faultsOnTheWayOut);
-            Connect(graph, parallel, wouldBeStranded);
-            Connect(graph, parallel, failsToEnter);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, parallel);
+            BehaviorTreeAuthoring.Connect(graph, parallel, faultsOnTheWayOut);
+            BehaviorTreeAuthoring.Connect(graph, parallel, wouldBeStranded);
+            BehaviorTreeAuthoring.Connect(graph, parallel, failsToEnter);
 
             graph.OnAwake();
 
