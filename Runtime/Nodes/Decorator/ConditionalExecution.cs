@@ -37,9 +37,9 @@ namespace ArcaneOnyx.BehaviorTree
         /// was meant to gate sat orphaned beside it while the tree did nothing and reported nothing.
         /// </para>
         /// </summary>
-        public override bool CanBeUsedAsTransitionDestination => false;
+        public sealed override bool CanBeUsedAsTransitionDestination => false;
 
-        public override bool CanBeUsedAsTransitionSource => false;
+        public sealed override bool CanBeUsedAsTransitionSource => false;
 
         /// <summary>
         /// Whether this guard kills its owner when it turns false mid-run. False here, so a plain
