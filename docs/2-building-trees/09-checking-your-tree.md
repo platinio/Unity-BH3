@@ -64,6 +64,7 @@ What it checks:
 - **Sub-tree contract drift** and **Function contract drift**
 - **Invalid connections**: a wire whose types no longer fit after a Function's result changed
 - **Layout ≠ priority**
+- **Transitions that end on a guard**, which the runtime ignores and the canvas re-points at the owner on open
 - **Guards**: one that writes a variable; one with no trigger, so it re-checks every tick; one watching keys
   that nothing can mark dirty; one whose key list lags its Function; one set to take over whose owner is not
   a direct child of a Selector; an entry-only guard on a Selector branch

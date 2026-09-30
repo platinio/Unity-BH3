@@ -142,6 +142,20 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
+            // Reported here, once per awake, rather than inside the orderings below: those run per repaint in
+            // the editor panels, and an error per frame is noise nobody reads.
+            foreach (var transition in Transitions)
+            {
+                if (!EndsOnANodeThatCannotBeAChild(transition)) continue;
+
+                Debug.LogError(
+                    $"{DescribeMisroutedTransition(transition)} The transition is ignored; open the tree in " +
+                    "the editor to have it re-pointed at the owner, or rewire it.",
+                    // The machine, not gameObject: gameObject dereferences the machine, and a tree awakened
+                    // without an agent (a test, a dump) has none.
+                    transition.source?.Machine as Object);
+            }
+
             var childrenByParent = ChildrenByParentInPriorityOrder();
 
             foreach (var node in Nodes)
@@ -176,6 +190,7 @@ namespace ArcaneOnyx.BehaviorTree
             foreach (var transition in Transitions)
             {
                 if (transition?.source == null || transition.destination == null) continue;
+                if (EndsOnANodeThatCannotBeAChild(transition)) continue;
 
                 if (!transitionsByParent.TryGetValue(transition.source, out var siblings))
                 {
@@ -241,10 +256,43 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var transition in Transitions)
             {
-                if (transition?.source == parent && transition.destination != null) into.Add(transition);
+                if (transition?.source != parent || transition.destination == null) continue;
+                if (EndsOnANodeThatCannotBeAChild(transition)) continue;
+
+                into.Add(transition);
             }
 
             SortIntoPriorityOrder(into);
+        }
+
+        /// <summary>
+        /// Whether a transition ends on a node that refuses to be a child: a guard, a literal, the Entry.
+        /// Such a wire means nothing at runtime, so every ordering here skips it and <see cref="OnAwake"/>
+        /// reports it. Asked of the node's capability rather than its type, so a node kind opts out of
+        /// being a child in one place and every reader agrees.
+        /// </summary>
+        public static bool EndsOnANodeThatCannotBeAChild(BehaviorTreeTransition transition)
+        {
+            return transition?.destination != null && !transition.destination.CanBeUsedAsTransitionDestination;
+        }
+
+        /// <summary>
+        /// The sentence that names a misrouted transition. Shared by the awake-time error and by
+        /// <c>bt_verify</c>, so the two never describe the same wire in different words.
+        /// </summary>
+        public static string DescribeMisroutedTransition(BehaviorTreeTransition transition)
+        {
+            var parent = transition.source != null ? transition.source.NodeName : "?";
+
+            if (transition.destination is ConditionalExecution guard)
+            {
+                var owner = guard.Owner != null ? guard.Owner.NodeName : "(no owner)";
+
+                return $"transition from '{parent}' ends on guard '{guard.NodeName}' (owner '{owner}'). " +
+                       "Guards attach to their owner and are never children.";
+            }
+
+            return $"transition from '{parent}' ends on '{transition.destination.NodeName}', which cannot be a child.";
         }
 
         /// <summary>

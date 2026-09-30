@@ -168,6 +168,24 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// <summary>The same, on a graph with no asset behind it. See <see cref="AddNode{T}(BehaviorTreeGraph, float, float)"/>.</summary>
         public static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index = -1)
         {
+            // The same two flags the canvas consults before it draws a connector, checked here so a tree
+            // built from code cannot contain a wire the canvas would have refused. A guard as the child is
+            // the case that happened: the tree loaded, ran the guard as child 0, and did nothing.
+            if (!parent.CanBeUsedAsTransitionSource)
+            {
+                throw new InvalidOperationException(parent is ConditionalExecution
+                    ? $"'{parent.NodeName}' is a guard. Guards attach to their owner and have no children."
+                    : $"'{parent.NodeName}' cannot start a transition.");
+            }
+
+            if (!child.CanBeUsedAsTransitionDestination)
+            {
+                throw new InvalidOperationException(child is ConditionalExecution guard
+                    ? $"'{guard.NodeName}' is a guard of '{(guard.Owner != null ? guard.Owner.NodeName : "(no owner)")}'. " +
+                      $"Guards attach to their owner and are never children -- connect '{parent.NodeName}' to the owner instead."
+                    : $"'{child.NodeName}' cannot be a child.");
+            }
+
             if (index < 0) index = graph.ChildTransitionsInPriorityOrder(parent).Count;
 
             var transition = new BehaviorTreeTransition();

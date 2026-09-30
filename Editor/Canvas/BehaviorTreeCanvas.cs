@@ -174,10 +174,92 @@ namespace ArcaneOnyx.BehaviorTree
 
             bookkeepingIsStale = false;
 
+            if (HasTransitionsIntoGuards())
+            {
+                UndoUtility.RecordEditedObject("Reconnect Transition To Owner");
+                RepointTransitionsIntoGuards(graph);
+            }
+
             if (HasDanglingElements())
             {
                 RemoveDanglingElements();
             }
+        }
+
+        private bool HasTransitionsIntoGuards()
+        {
+            foreach (var transition in graph.Transitions)
+            {
+                if (transition?.destination is ConditionalExecution) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Where a transition released over <paramref name="hovered"/> should end.
+        ///
+        /// <para>
+        /// A guard is drawn stacked on top of its owner, where an incoming line lands, so a release over the
+        /// guard box is a release aimed at the owner and resolves to it. Null for a guard with no live owner,
+        /// which has nowhere to redirect to and is about to be removed as dangling anyway. Any other node is
+        /// its own target; whether it accepts the wire is still its
+        /// <see cref="BehaviorTreeNode.CanBeUsedAsTransitionDestination"/> to say.
+        /// </para>
+        /// </summary>
+        public static BehaviorTreeNode TransitionDestinationFor(BehaviorTreeGraph graph, BehaviorTreeNode hovered)
+        {
+            if (hovered is not ConditionalExecution guard) return hovered;
+
+            var owner = guard.Owner;
+
+            return owner != null && graph.elements.Contains(owner) ? owner : null;
+        }
+
+        /// <summary>
+        /// Moves every transition that ends on a guard to the guard's owner, which is where such a wire was
+        /// aimed. Runs from <see cref="SyncBookkeeping"/>, so a tree saved with one (before guards refused
+        /// incoming transitions) is mended the moment it is opened rather than left to fail at awake.
+        ///
+        /// <para>
+        /// A wire whose owner is already connected from the same parent, or whose owner <em>is</em> the
+        /// parent, is removed instead: a second wire to the same child is dead weight the priority ordering
+        /// would then have to explain. A guard with no live owner is left alone; the dangling repair removes
+        /// the guard, and the wire follows on the next pass.
+        /// </para>
+        /// </summary>
+        /// <returns>How many transitions were re-pointed or removed.</returns>
+        public static int RepointTransitionsIntoGuards(BehaviorTreeGraph graph)
+        {
+            var misrouted = new List<BehaviorTreeTransition>();
+
+            foreach (var transition in graph.Transitions)
+            {
+                if (transition?.destination is ConditionalExecution && transition.source != null) misrouted.Add(transition);
+            }
+
+            var repaired = 0;
+
+            foreach (var transition in misrouted)
+            {
+                var owner = TransitionDestinationFor(graph, transition.destination);
+                if (owner == null) continue;
+
+                graph.elements.Remove(transition);
+
+                if (owner != transition.source && !graph.TransitionExist(transition.source, owner))
+                {
+                    // Removed and added back rather than re-pointed in place. The transition collection
+                    // indexes each wire by its endpoints, so an endpoint changed underneath it leaves the
+                    // index keyed on the guard, and the next removal of that wire throws KeyNotFound.
+                    transition.SetupTransition(transition.source, owner, transition.TransitionIndex);
+                    graph.Transitions.Add(transition);
+                }
+
+                repaired++;
+            }
+
+            return repaired;
         }
 
         /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>

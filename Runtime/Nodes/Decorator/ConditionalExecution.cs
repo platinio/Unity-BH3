@@ -27,6 +27,21 @@ namespace ArcaneOnyx.BehaviorTree
         public BehaviorTreeNode Owner => owner;
 
         /// <summary>
+        /// A guard is attached to its owner and is never a child, so it neither takes an incoming transition
+        /// nor starts one.
+        ///
+        /// <para>
+        /// Stated rather than left to the default. The canvas draws a guard exactly where a transition aimed
+        /// at its owner lands, and with the inherited <c>true</c> a release over the guard box wired the
+        /// parent into the guard: it then ran as child 0, returned Success on every tick, and the owner it
+        /// was meant to gate sat orphaned beside it while the tree did nothing and reported nothing.
+        /// </para>
+        /// </summary>
+        public override bool CanBeUsedAsTransitionDestination => false;
+
+        public override bool CanBeUsedAsTransitionSource => false;
+
+        /// <summary>
         /// Whether this guard kills its owner when it turns false mid-run. False here, so a plain
         /// <see cref="ConditionalExecution"/> is a doorman: it decides entry and never interrupts.
         ///

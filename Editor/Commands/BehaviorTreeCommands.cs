@@ -290,7 +290,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         [CliCommand("bt_connect",
             "Parent one node under another. Execution order comes from canvas X, not from this call order or " +
             "the index. Refuses to exceed a container's child limit — Entry and every Decorator take exactly " +
-            "one child, and extra transitions would be silent dead weight.")]
+            "one child, and extra transitions would be silent dead weight. Refuses a guard as the child: " +
+            "guards attach to their owner and are never children, so connect to the owner instead.")]
         public static object ConnectCommand(
             [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
             [CliArg("parent", "Guid of the parent node.", Required = true)] string parent,
