@@ -42,19 +42,6 @@ Storing the index fixes all three, and the badge means you never infer the order
 
 **On the canvas.** Drag a child past its sibling and release. The badges update immediately.
 
-## Connecting and deleting
-
-**Connecting a child** puts it where it sits. Count the siblings to its left: connect a node to the left of
-all of them and it becomes 1, between the second and third and it becomes 3, to the right of all of them and
-it goes last. The siblings keep the order they already ran in and shift along to make room.
-
-**Deleting a child**, or just its connection, closes the gap: the children after it move up one, and the
-order of everything that is left does not change.
-
-Neither gesture reorders the other children. That matters for a composite whose badges are amber on purpose:
-connecting a new child there slots it in by where it sits and leaves the deliberate order of the rest alone.
-Only a drag rewrites a whole composite from its layout.
-
 **From code** (see [Authoring from code](../4-extending-with-csharp/04-authoring-from-code.md)). `Connect`
 takes the priority directly:
 
@@ -68,6 +55,23 @@ BehaviorTreeAuthoring.Connect(asset, selector, idle,   2);
 Leave the index off and each child takes the next free slot, so calling `Connect` in the order you want the
 branches tried gives the right tree. Lay generated nodes out left to right anyway: it no longer affects
 execution, but a tree whose picture disagrees with its priorities is hard for a person to review.
+
+---
+
+## Connecting and deleting
+
+**Connecting a child** puts it where it sits. Count the siblings to its left: connect a node to the left of
+all of them and it becomes 1, between the second and third and it becomes 3, to the right of all of them and
+it goes last. The siblings keep the order they already ran in and shift along to make room.
+
+**Deleting a child**, or just its connection, closes the gap: the children after it move up one, and the
+order of everything that is left does not change.
+
+Neither gesture reorders the other children. That matters for a composite whose badges are amber on purpose:
+connecting a new child there slots it in by where it sits and leaves the deliberate order of the rest alone.
+
+A drag is different. Releasing a drag, of any node, renumbers every composite in the tree from its layout, so
+it is the one gesture that turns an amber composite grey.
 
 ---
 
@@ -108,8 +112,9 @@ down the order the composite was already running in. See
 
 For contributors; skip this on a first read. `ChildrenInPriorityOrder` is the single rule; the runtime, the
 Why panel and the tree dump all call it, so a debugging view can never report a different priority than the
-one that ran. The sort inside it is GraphCore's `SortIntoChildOrder`, which is also what the canvas reads
-before it renumbers, so a gesture can never see the children in a different order than the runtime does.
+one that ran. The sort inside it is GraphCore's `SortIntoChildOrder`, the same rule the canvas sorts with
+before it renumbers. The canvas counts every connection a composite has; the runtime leaves out one that ends
+on a node that cannot be a child, so the two can still differ on an old asset that holds such a connection.
 
 | Piece | File |
 |---|---|

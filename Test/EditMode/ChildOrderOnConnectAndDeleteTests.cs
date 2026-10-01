@@ -68,10 +68,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         /// <summary>Delete, then the GUI event that follows it, which is where a deleted node's wire is removed.</summary>
-        private void DeleteOnCanvas(GraphCore.IGraphElement element)
+        private void DeleteOnCanvas(params GraphCore.IGraphElement[] elements)
         {
             canvas.selection.Clear();
-            canvas.selection.Select(element);
+            foreach (var element in elements) canvas.selection.Add(element);
             canvas.DeleteSelection();
             canvas.SyncBookkeeping();
         }
@@ -88,8 +88,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             tree.graph.ChildTransitionsInPriorityOrder(node).Select(t => t.destination).ToArray();
 
         /// <summary>The stored indices, read in the order the children run.</summary>
-        private int[] Indices() =>
-            tree.graph.ChildTransitionsInPriorityOrder(parent).Select(t => t.TransitionIndex).ToArray();
+        private int[] Indices() => IndicesUnder(parent);
+
+        private int[] IndicesUnder(BehaviorTreeNode node) =>
+            tree.graph.ChildTransitionsInPriorityOrder(node).Select(t => t.TransitionIndex).ToArray();
+
+        /// <summary>A fourth child on the right, with all four running right to left: the reverse of the layout.</summary>
+        private WaitTime AddAFourthChildAndReverseTheOrder()
+        {
+            var far = ChildAt(400.0f);
+            BehaviorTreeAuthoring.Connect(tree, parent, far);
+
+            Index(left, 3);
+            Index(middle, 2);
+            Index(right, 1);
+            Index(far, 0);
+
+            return far;
+        }
 
         [Test]
         public void TheReportedBug_AChildDeletedAndReplacedInTheSameSpot_TakesTheSamePriority()
@@ -169,6 +185,32 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void Connecting_WhereTheOrderDisagreesWithTheLayout_CountsTheSiblingsToTheLeft()
+        {
+            Index(left, 2);
+            Index(middle, 1);
+            Index(right, 0);
+
+            var added = ChildAt(250.0f);
+            ConnectOnCanvas(parent, added);
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { right, middle, added, left }),
+                "two siblings sit to its left, so it is third; going in front of the first sibling to its " +
+                "right would have made it first");
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1, 2, 3 }));
+        }
+
+        [Test]
+        public void AChildConnectedAtASiblingsPosition_GoesAfterThatSibling()
+        {
+            var added = ChildAt(200.0f);
+            ConnectOnCanvas(parent, added);
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { left, middle, added, right }));
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1, 2, 3 }));
+        }
+
+        [Test]
         public void Connecting_WhereNoOrderWasRecorded_RecordsTheOneThatWasRunning()
         {
             // Every asset saved before indices were maintained: all zero, so position decides.
@@ -237,6 +279,75 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(tree.graph.elements.Contains(middle), Is.True, "only the wire was deleted");
             Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { right, left }));
             Assert.That(Indices(), Is.EqualTo(new[] { 0, 1 }));
+        }
+
+        [Test]
+        public void DeletingSeveralChildrenAtOnce_LeavesTheOthersInTheOrderTheyRanIn()
+        {
+            var far = AddAFourthChildAndReverseTheOrder();
+
+            DeleteOnCanvas(middle, right);
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { far, left }),
+                "every wire that went has to be counted to recover the order, and the parent renumbered once");
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1 }));
+        }
+
+        [Test]
+        public void DeletingSeveralConnectionsAtOnce_LeavesTheOthersInTheOrderTheyRanIn()
+        {
+            var far = AddAFourthChildAndReverseTheOrder();
+
+            DeleteOnCanvas(TransitionTo(middle), TransitionTo(right));
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { far, left }));
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1 }));
+        }
+
+        [Test]
+        public void DeletingAChildThatHasChildrenOfItsOwn_OnlyRenumbersItsSiblings()
+        {
+            var branch = BehaviorTreeAuthoring.AddNode<Selector>(tree, 250.0f, 200.0f);
+            var first = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 200.0f, 400.0f);
+            var second = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 300.0f, 400.0f);
+            BehaviorTreeAuthoring.Connect(tree, parent, branch);
+            BehaviorTreeAuthoring.Connect(tree, branch, first);
+            BehaviorTreeAuthoring.Connect(tree, branch, second);
+
+            Index(left, 3);
+            Index(middle, 2);
+            Index(branch, 1);
+            Index(right, 0);
+
+            DeleteOnCanvas(branch);
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { right, middle, left }),
+                "the deleted branch's own wires go in the same pass and are not this parent's children");
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1, 2 }));
+            Assert.That(tree.graph.Transitions.Any(transition => transition.source == branch), Is.False);
+        }
+
+        [Test]
+        public void DeletingConnectionsUnderTwoParentsAtOnce_RenumbersEachParent()
+        {
+            var other = BehaviorTreeAuthoring.AddNode<Selector>(tree, 700.0f, 0.0f);
+            var otherLeft = ChildAt(600.0f);
+            var otherMiddle = ChildAt(700.0f);
+            var otherRight = ChildAt(800.0f);
+            BehaviorTreeAuthoring.Connect(tree, other, otherRight);
+            BehaviorTreeAuthoring.Connect(tree, other, otherMiddle);
+            BehaviorTreeAuthoring.Connect(tree, other, otherLeft);
+
+            Index(left, 2);
+            Index(middle, 1);
+            Index(right, 0);
+
+            DeleteOnCanvas(TransitionTo(middle), TransitionTo(otherMiddle));
+
+            Assert.That(Order(), Is.EqualTo(new BehaviorTreeNode[] { right, left }));
+            Assert.That(Indices(), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(OrderUnder(other), Is.EqualTo(new BehaviorTreeNode[] { otherRight, otherLeft }));
+            Assert.That(IndicesUnder(other), Is.EqualTo(new[] { 0, 1 }));
         }
 
         [Test]

@@ -26,7 +26,8 @@ tree stops relying on the fallback. Trees built from code should pass the priori
 
 Connecting or deleting a child on the canvas also records the order, for that one composite: the editor
 writes down the order it was already running in, with the new child slotted in or the deleted one taken out.
-The canvas itself no longer leaves gaps behind, so a gap now only comes from an older asset or from code.
+Connecting and deleting no longer leave gaps behind. Pasting part of a composite's children still can; drag
+one of them to renumber.
 
 ---
 

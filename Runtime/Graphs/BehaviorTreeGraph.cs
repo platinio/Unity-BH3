@@ -259,7 +259,7 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(transition);
             }
 
-            // GraphCore's rule: the canvas renumbers with it, so the two can never read an order differently.
+            // GraphCore's rule, the same one the canvas sorts with before it renumbers.
             SortIntoChildOrder(into);
         }
 
