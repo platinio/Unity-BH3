@@ -306,6 +306,9 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var graphElement in dangling) graph.elements.Remove(graphElement);
 
+            // A deleted node's wire is removed here rather than by the delete itself.
+            CloseIndexGapsLeftBy(dangling);
+
             dangling.Clear();
         }
 

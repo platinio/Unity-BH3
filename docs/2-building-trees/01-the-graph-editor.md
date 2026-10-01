@@ -99,7 +99,8 @@ and sit unparented on the canvas.
 ### The priority badge
 
 Every child of a Sequence or Selector shows a small number in its corner, counting from **1**. That is the
-order the composite tries its children. Drag a child past a sibling and the badges renumber. An **amber**
+order the composite tries its children. Drag a child past a sibling and the badges renumber; a child you
+connect takes the number of the place it sits in, and deleting one closes the gap. An **amber**
 badge means the canvas layout and the stored order disagree; the tree still runs in badge order. See
 [Execution order](05-execution-order.md).
 
