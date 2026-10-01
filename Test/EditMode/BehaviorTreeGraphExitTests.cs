@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -26,27 +27,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class BehaviorTreeGraphExitTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
         private static AlwaysRunningNode AddRunningLeaf(BehaviorTreeGraph graph, float x)
         {
             var leaf = new AlwaysRunningNode { Position = new Rect(x, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(leaf);
 
             return leaf;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, graph.CountTransitionsFromNode(parent));
-            graph.Transitions.Add(transition);
         }
 
         /// <summary>
@@ -56,12 +42,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private static BehaviorTreeGraph RunningTree(out AlwaysRunningNode leaf)
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
 
             leaf = AddRunningLeaf(graph, 0.0f);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, leaf);
 
             graph.OnAwake();
             graph.OnEnter();
@@ -114,14 +100,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ExitingAGraphSkipsABranchThatNeverRan()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var taken = AddRunningLeaf(graph, -200.0f);
             var neverReached = AddRunningLeaf(graph, 200.0f);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, taken);
-            Connect(graph, selector, neverReached);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, taken);
+            BehaviorTreeAuthoring.Connect(graph, selector, neverReached);
 
             graph.OnAwake();
             graph.OnEnter();
@@ -160,11 +146,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ExitingATreeThatNeverStartedIsHarmless()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var leaf = AddRunningLeaf(graph, 0.0f);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, leaf);
 
             graph.OnAwake();
 

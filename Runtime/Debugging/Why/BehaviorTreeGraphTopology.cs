@@ -76,6 +76,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             foreach (var transition in graph.Transitions)
             {
                 if (transition?.source == null || transition.destination == null) continue;
+                if (BehaviorTreeGraph.EndsOnANodeThatCannotBeAChild(transition)) continue;
 
                 parents[transition.destination.guid] = transition.source.guid;
             }

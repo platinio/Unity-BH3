@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -20,27 +21,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class ExplicitPriorityTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
         private static ScriptedNode AddLeaf(BehaviorTreeGraph graph, ExecutionStatus result, float x)
         {
             var leaf = new ScriptedNode(result) { Position = new Rect(x, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(leaf);
 
             return leaf;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, index);
-            graph.Transitions.Add(transition);
         }
 
         /// <summary>
@@ -50,15 +36,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ChildrenRunByIndexEvenWhenLayoutContradictsIt()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             // 'first' sits to the RIGHT of 'second' on the canvas, but claims priority 0.
             var first = AddLeaf(graph, ExecutionStatus.Success, 500.0f);
             var second = AddLeaf(graph, ExecutionStatus.Success, -500.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, first, 0);
-            Connect(graph, selector, second, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, first, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, second, 1);
 
             graph.OnAwake();
 
@@ -77,16 +63,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void APreChangeTreeStillRunsInCanvasOrder()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var leftmost = AddLeaf(graph, ExecutionStatus.Success, -500.0f);
             var rightmost = AddLeaf(graph, ExecutionStatus.Success, 500.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
 
             // Both zero — what the old canvas wrote for every edge it ever created.
-            Connect(graph, selector, rightmost, 0);
-            Connect(graph, selector, leftmost, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, rightmost, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, leftmost, 0);
 
             graph.OnAwake();
 
@@ -104,14 +90,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void NonContiguousIndicesFallBackToCanvasOrder()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var leftmost = AddLeaf(graph, ExecutionStatus.Success, -500.0f);
             var rightmost = AddLeaf(graph, ExecutionStatus.Success, 500.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, rightmost, 0);
-            Connect(graph, selector, leftmost, 7);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, rightmost, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, leftmost, 7);
 
             graph.OnAwake();
 
@@ -127,14 +113,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ASelectorTriesTheIndexZeroBranchFirst()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var winner = AddLeaf(graph, ExecutionStatus.Success, 500.0f);
             var loser = AddLeaf(graph, ExecutionStatus.Success, -500.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, winner, 0);
-            Connect(graph, selector, loser, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, winner, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, loser, 1);
 
             graph.OnAwake();
             selector.OnNodeEnter();
@@ -153,15 +139,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void TheDumpReportsChildrenInIndexOrder()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             // Distinct types so each child is identifiable in the JSON by its own name.
-            var first = AddNode<Sequence>(graph, 500.0f);
-            var second = AddNode<Repeater>(graph, -500.0f);
+            var first = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 500.0f, 100.0f);
+            var second = BehaviorTreeAuthoring.AddNode<Repeater>(graph, -500.0f, 100.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, first, 0);
-            Connect(graph, selector, second, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, first, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, second, 1);
 
             string json = BehaviorTreeDump.ToJson(graph, "Fixture");
 
@@ -177,14 +163,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void TheTopologyReportsChildrenInIndexOrder()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var first = AddLeaf(graph, ExecutionStatus.Success, 500.0f);
             var second = AddLeaf(graph, ExecutionStatus.Success, -500.0f);
 
-            Connect(graph, graph.EntryNode, selector, 0);
-            Connect(graph, selector, first, 0);
-            Connect(graph, selector, second, 1);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, first, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, second, 1);
 
             var topology = BehaviorTreeGraphTopology.From(graph);
 
@@ -210,15 +196,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             for (int attempt = 0; attempt < 20 && !everDifferedFromAuthoredOrder; attempt++)
             {
                 var graph = new BehaviorTreeGraph();
-                var random = AddNode<RandomSelector>(graph);
+                var random = BehaviorTreeAuthoring.AddNode<RandomSelector>(graph, 0.0f, 100.0f);
                 var authored = new BehaviorTreeNode[children];
 
-                Connect(graph, graph.EntryNode, random, 0);
+                BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, random, 0);
 
                 for (int index = 0; index < children; index++)
                 {
                     authored[index] = AddLeaf(graph, ExecutionStatus.Failure, index * 100.0f);
-                    Connect(graph, random, authored[index], index);
+                    BehaviorTreeAuthoring.Connect(graph, random, authored[index], index);
                 }
 
                 graph.OnAwake();

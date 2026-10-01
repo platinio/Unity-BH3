@@ -132,11 +132,21 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// </summary>
         public static T AddNode<T>(BehaviorTreeGraphAsset asset, float x, float y) where T : BehaviorTreeNode, new()
         {
+            return AddNode<T>(asset.graph, x, y);
+        }
+
+        /// <summary>
+        /// The same, on a graph with no asset behind it: a tree assembled in memory for a test, or a branch
+        /// built before it is embedded anywhere. How a node is created and sized is decided here once; the
+        /// asset overload only says which graph.
+        /// </summary>
+        public static T AddNode<T>(BehaviorTreeGraph graph, float x, float y) where T : BehaviorTreeNode, new()
+        {
             var node = new T();
             node.Position = new Rect(new Vector2(x, y), node.StartingSize);
 
             // Nodes.Add fires AfterAdd -> Define(), so ports exist as soon as this returns
-            asset.graph.Nodes.Add(node);
+            graph.Nodes.Add(node);
 
             return node;
         }
@@ -152,11 +162,39 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// </summary>
         public static void Connect(BehaviorTreeGraphAsset asset, BehaviorTreeNode parent, BehaviorTreeNode child, int index = -1)
         {
-            if (index < 0) index = asset.graph.ChildTransitionsInPriorityOrder(parent).Count;
+            Connect(asset.graph, parent, child, index);
+        }
+
+        /// <summary>
+        /// The same, on a graph with no asset behind it. See <see cref="AddNode{T}(BehaviorTreeGraph, float, float)"/>.
+        /// <para>
+        /// Refuses a parent that cannot start a transition and a child that cannot take one: the two flags
+        /// the canvas consults before it draws a connector, so a tree built from code cannot hold a wire the
+        /// canvas would have refused.
+        /// </para>
+        /// </summary>
+        public static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index = -1)
+        {
+            if (!parent.CanBeUsedAsTransitionSource)
+            {
+                throw new InvalidOperationException(parent is ConditionalExecution
+                    ? $"'{parent.NodeName}' is a guard. Guards attach to their owner and have no children."
+                    : $"'{parent.NodeName}' cannot start a transition.");
+            }
+
+            if (!child.CanBeUsedAsTransitionDestination)
+            {
+                throw new InvalidOperationException(child is ConditionalExecution guard
+                    ? $"'{guard.NodeName}' is a guard of '{(guard.Owner != null ? guard.Owner.NodeName : "(no owner)")}'. " +
+                      $"Guards attach to their owner and are never children -- connect '{parent.NodeName}' to the owner instead."
+                    : $"'{child.NodeName}' cannot be a child.");
+            }
+
+            if (index < 0) index = graph.ChildTransitionsInPriorityOrder(parent).Count;
 
             var transition = new BehaviorTreeTransition();
             transition.SetupTransition(parent, child, index);
-            asset.graph.Transitions.Add(transition);
+            graph.Transitions.Add(transition);
         }
 
         /// <summary>

@@ -130,6 +130,23 @@ them on load. Tooling that walks `graph.Nodes` no longer needs to filter them ou
 
 ---
 
+## Transitions could end on a guard
+
+**Symptom:** `bt_verify` reports `transition from 'X' ends on guard 'Y' (owner 'Z')`, or the same sentence
+appears as an error when an agent awakes. Before the fix the tree ran and did nothing: the guard was child 0
+of its parent and returned Success on every tick, and the node it was meant to gate was an orphan.
+
+A guard is drawn stacked on top of its owner, exactly where an incoming line lands, and the canvas used to
+accept a transition released there as a transition *into the guard*. Guards now refuse incoming transitions,
+a release over the guard box lands on the owner, and `bt_connect` refuses a guard as either end.
+
+**To migrate:** open the tree. The canvas re-points every such wire at the guard's owner on open, keeping
+its priority; a wire whose owner was already connected from the same parent is removed instead. Save. Until
+a tree is opened, the runtime ignores the wire and logs the error above at awake, so an agent running an
+unrepaired asset fails where you can see it rather than succeeding silently.
+
+---
+
 ## Next
 
 - [Glossary](03-glossary.md)

@@ -325,6 +325,21 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
     internal static class TreeTestExtensions
     {
+        /// <summary>
+        /// Wires a transition with none of the checks <c>BehaviorTreeAuthoring.Connect</c> makes -- the way a
+        /// saved asset arrives from disk, where no API ran. For fixtures about what the runtime and the editor
+        /// do with a wire the API refuses. Anything else goes through the API; this is not a shortcut.
+        /// </summary>
+        public static BehaviorTreeTransition WireUnchecked(
+            this BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index)
+        {
+            var transition = new BehaviorTreeTransition();
+            transition.SetupTransition(parent, child, index);
+            graph.Transitions.Add(transition);
+
+            return transition;
+        }
+
         /// <summary>Attaches children to a container and returns the container for fluent setup.</summary>
         public static T WithChildren<T>(this T container, params BehaviorTreeNode[] children)
             where T : ContainerNode

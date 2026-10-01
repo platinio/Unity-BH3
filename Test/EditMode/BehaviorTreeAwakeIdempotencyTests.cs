@@ -1,4 +1,5 @@
 using System.Reflection;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEngine;
@@ -26,21 +27,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class BehaviorTreeAwakeIdempotencyTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
-        }
-
         private static ScriptedNode AddLeaf(BehaviorTreeGraph graph, ExecutionStatus result, float x)
         {
             var leaf = new ScriptedNode(result) { Position = new Rect(x, 300.0f, 150.0f, 100.0f) };
@@ -53,13 +39,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AwakingTwiceArmsEachGuardOnce()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var leaf = AddLeaf(graph, ExecutionStatus.Running, 0.0f);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -78,13 +64,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ADoublyAwokenGuardStillEvaluatesOncePerTick()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var leaf = AddLeaf(graph, ExecutionStatus.Running, 0.0f);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -108,13 +94,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardRemovedBetweenAwakesIsNoLongerArmed()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var leaf = AddLeaf(graph, ExecutionStatus.Running, 0.0f);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, leaf);
 
-            var guard = AddNode<CountingReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             graph.OnAwake();
@@ -137,14 +123,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AwakingTwiceDoesNotDuplicateAContainersChildren()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var first = AddLeaf(graph, ExecutionStatus.Failure, -200.0f);
             var second = AddLeaf(graph, ExecutionStatus.Success, 200.0f);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, first);
-            Connect(graph, selector, second);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, first);
+            BehaviorTreeAuthoring.Connect(graph, selector, second);
 
             graph.OnAwake();
             graph.OnAwake();
@@ -162,14 +148,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ADoublyAwokenSelectorDoesNotRetryAFailedBranch()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var failing = AddLeaf(graph, ExecutionStatus.Failure, -200.0f);
             var succeeding = AddLeaf(graph, ExecutionStatus.Success, 200.0f);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, failing);
-            Connect(graph, selector, succeeding);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, failing);
+            BehaviorTreeAuthoring.Connect(graph, selector, succeeding);
 
             graph.OnAwake();
             graph.OnAwake();
@@ -196,11 +182,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AwakingSurvivesANodeWhoseGuardListWasNeverInitialised()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
             var leaf = AddLeaf(graph, ExecutionStatus.Success, 0.0f);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, leaf);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, leaf);
 
             foreach (var node in new BehaviorTreeNode[] { selector, leaf, graph.EntryNode })
             {
@@ -224,16 +210,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AwakingOnceStillArmsGuardsAndChildren()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var first = AddLeaf(graph, ExecutionStatus.Failure, -200.0f);
             var second = AddLeaf(graph, ExecutionStatus.Success, 200.0f);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, first);
-            Connect(graph, selector, second);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, first);
+            BehaviorTreeAuthoring.Connect(graph, selector, second);
 
-            var guard = AddNode<CountingReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(selector);
 
             graph.OnAwake();

@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -22,21 +23,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class ConditionalExecutionTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
-        }
-
         /// <summary>
         /// Builds Entry -> Sequence -> a child that never finishes, and returns the guarded Sequence.
         /// Guards only reach their owner through <see cref="BehaviorTreeGraph.OnAwake"/>, so callers must
@@ -44,13 +30,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// </summary>
         private static Sequence GuardedSequence(BehaviorTreeGraph graph, out ScriptedNode child)
         {
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
 
             child = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
             return sequence;
         }
@@ -61,7 +47,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out _);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             Assert.IsEmpty(sequence.ConditionalExecutions,
@@ -84,7 +70,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out var child);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 
@@ -111,7 +97,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out var child);
 
-            var guard = AddNode<CountingReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.SetCapabilities(abortsOwner: false, preempts: true);
 
@@ -134,7 +120,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out var child);
 
-            var guard = AddNode<BooleanReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 
@@ -158,8 +144,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out _);
 
-            var first = AddNode<BooleanReactiveGuard>(graph, -200.0f);
-            var second = AddNode<BooleanReactiveGuard>(graph, 200.0f);
+            var first = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, -200.0f, 100.0f);
+            var second = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 200.0f, 100.0f);
             first.UpdateOwner(sequence);
             second.UpdateOwner(sequence);
             first.Value.SetDefaultValue(true);
@@ -184,7 +170,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out var child);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(false);
 
@@ -205,18 +191,18 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ASelectorSkipsGuardedOffBranchesWithoutSpendingAFrame()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
 
             var gatedOff = new ScriptedNode(ExecutionStatus.Success) { Position = new Rect(-200.0f, 300.0f, 150.0f, 100.0f) };
             var fallback = new ScriptedNode(ExecutionStatus.Success) { Position = new Rect(200.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(gatedOff);
             graph.Nodes.Add(fallback);
 
-            Connect(graph, graph.EntryNode, selector);
-            Connect(graph, selector, gatedOff);
-            Connect(graph, selector, fallback);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(graph, selector, gatedOff);
+            BehaviorTreeAuthoring.Connect(graph, selector, fallback);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(gatedOff);
             guard.Value.SetDefaultValue(false);
 
@@ -236,7 +222,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, out _);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             string json = BehaviorTreeDump.ToJson(graph, "Fixture");
@@ -259,15 +245,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // Documented as a hazard rather than a feature: generated trees have to respect the limit
             // themselves.
             var graph = new BehaviorTreeGraph();
-            var repeater = AddNode<Repeater>(graph);
+            var repeater = BehaviorTreeAuthoring.AddNode<Repeater>(graph, 0.0f, 100.0f);
 
             var first = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(-100.0f, 300.0f, 150.0f, 100.0f) };
             var second = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(100.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(first);
             graph.Nodes.Add(second);
 
-            Connect(graph, repeater, first);
-            Connect(graph, repeater, second);
+            BehaviorTreeAuthoring.Connect(graph, repeater, first);
+            BehaviorTreeAuthoring.Connect(graph, repeater, second);
             graph.OnAwake();
 
             Assert.AreEqual(1, repeater.MaxChildrenLimit, "A decorator declares room for exactly one child.");
@@ -291,7 +277,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardThatNeverGotAnOwnerCanStillBeDeleted()
         {
             var graph = new BehaviorTreeGraph();
-            var guard = AddNode<CountingGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 100.0f);
 
             Assert.IsNull(guard.Owner, "the whole case: nothing ever gave it one");
 
@@ -315,10 +301,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void RemovingAGuardRenumbersTheOnesAfterIt()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
 
-            var first = AddNode<CountingGuard>(graph);
-            var second = AddNode<CountingGuard>(graph);
+            var first = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 100.0f);
+            var second = BehaviorTreeAuthoring.AddNode<CountingGuard>(graph, 0.0f, 100.0f);
             first.UpdateOwner(sequence);
             second.UpdateOwner(sequence);
 

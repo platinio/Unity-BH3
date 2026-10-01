@@ -174,10 +174,105 @@ namespace ArcaneOnyx.BehaviorTree
 
             bookkeepingIsStale = false;
 
+            if (HasTransitionsIntoGuards())
+            {
+                UndoUtility.RecordEditedObject("Reconnect Transition To Owner");
+                RepointTransitionsIntoGuards(graph);
+            }
+
             if (HasDanglingElements())
             {
                 RemoveDanglingElements();
             }
+        }
+
+        private bool HasTransitionsIntoGuards()
+        {
+            foreach (var transition in graph.Transitions)
+            {
+                if (IsRepairable(graph, transition)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Whether the repair would change this transition: it has a parent, ends on a guard, and the guard's
+        /// owner is still in the graph. Asked by the check that decides whether to record an undo step and
+        /// by the repair itself, so a step is never recorded for a pass that changes nothing.
+        /// </summary>
+        private static bool IsRepairable(BehaviorTreeGraph graph, BehaviorTreeTransition transition)
+        {
+            return transition?.source != null
+                   && transition.destination is ConditionalExecution
+                   && TransitionDestinationFor(graph, transition.destination) != null;
+        }
+
+        /// <summary>
+        /// Where a transition released over <paramref name="hovered"/> should end.
+        ///
+        /// <para>
+        /// A guard is drawn stacked on top of its owner, where an incoming line lands, so a release over the
+        /// guard box is a release aimed at the owner and resolves to it. Null for a guard with no live owner,
+        /// which has nowhere to redirect to and is about to be removed as dangling anyway. Any other node is
+        /// its own target; whether it accepts the wire is still its
+        /// <see cref="BehaviorTreeNode.CanBeUsedAsTransitionDestination"/> to say.
+        /// </para>
+        /// </summary>
+        public static BehaviorTreeNode TransitionDestinationFor(BehaviorTreeGraph graph, BehaviorTreeNode hovered)
+        {
+            if (hovered is not ConditionalExecution guard) return hovered;
+
+            var owner = guard.Owner;
+
+            return owner != null && graph.elements.Contains(owner) ? owner : null;
+        }
+
+        /// <summary>
+        /// Moves every transition that ends on a guard to the guard's owner, which is where such a wire was
+        /// aimed. Runs from <see cref="SyncBookkeeping"/>, so a tree saved with one (before guards refused
+        /// incoming transitions) is mended the moment it is opened rather than left to fail at awake.
+        ///
+        /// <para>
+        /// A wire is removed instead when re-pointing it would make another bad one: its owner is already
+        /// connected from the same parent, its owner <em>is</em> the parent, or its owner refuses incoming
+        /// transitions itself. A guard with no live owner is left alone; the dangling repair removes the
+        /// guard, and the wire follows on the next pass.
+        /// </para>
+        ///
+        /// <para>
+        /// A re-pointed wire is removed and added back, never changed in place. The transition collection
+        /// indexes each wire by its endpoints, so an endpoint changed underneath it leaves the index keyed on
+        /// the guard and the next removal of that wire throws. Removal runs the element's <c>Dispose</c>;
+        /// a transition holds nothing disposable today, and this is the path to revisit if one ever does.
+        /// </para>
+        /// </summary>
+        /// <returns>How many transitions were re-pointed or removed.</returns>
+        public static int RepointTransitionsIntoGuards(BehaviorTreeGraph graph)
+        {
+            var misrouted = new List<BehaviorTreeTransition>();
+
+            foreach (var transition in graph.Transitions)
+            {
+                if (IsRepairable(graph, transition)) misrouted.Add(transition);
+            }
+
+            foreach (var transition in misrouted)
+            {
+                var owner = TransitionDestinationFor(graph, transition.destination);
+
+                graph.elements.Remove(transition);
+
+                if (owner != transition.source
+                    && owner.CanBeUsedAsTransitionDestination
+                    && !graph.TransitionExist(transition.source, owner))
+                {
+                    transition.SetupTransition(transition.source, owner, transition.TransitionIndex);
+                    graph.Transitions.Add(transition);
+                }
+            }
+
+            return misrouted.Count;
         }
 
         /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>

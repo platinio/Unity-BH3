@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -71,21 +72,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private void Record(BehaviorTreeBreakpointHit hit) => hits.Add(hit);
 
         #region Fixtures
-
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x = 0.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, 100.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, 0);
-            graph.Transitions.Add(transition);
-        }
 
         private ScriptedNode BoundNode(ExecutionStatus result = ExecutionStatus.Success)
         {
@@ -191,14 +177,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // NodeAborted event someone constructed. Finding 8 — the abort is followed by its own exit in the
             // same tick — means a component reading these events can very easily attribute the wrong one.
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
             var child = new ScriptedNode(ExecutionStatus.Running) { Position = new Rect(0.0f, 300.0f, 150.0f, 100.0f) };
             graph.Nodes.Add(child);
 
-            Connect(graph, graph.EntryNode, sequence);
-            Connect(graph, sequence, child);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
+            BehaviorTreeAuthoring.Connect(graph, sequence, child);
 
-            var guard = AddNode<BooleanReactiveGuard>(graph);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 100.0f);
             guard.UpdateOwner(sequence);
             guard.Value.SetDefaultValue(true);
 

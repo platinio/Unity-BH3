@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,20 +13,11 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class LogicNodeTests
     {
-        private static T AddNode<T>(BehaviorTreeGraph graph) where T : BehaviorTreeNode, new()
-        {
-            // ports only exist once the node is in a graph: Nodes.Add fires AfterAdd -> Define()
-            var node = new T { Position = new Rect(0.0f, 0.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
         [Test]
         public void Not_InvertsItsInput()
         {
             var graph = new BehaviorTreeGraph();
-            var not = AddNode<Not>(graph);
+            var not = BehaviorTreeAuthoring.AddNode<Not>(graph, 0.0f, 0.0f);
 
             not.Value.SetDefaultValue(true);
             Assert.IsFalse((bool) not.Result.GetPortValue());
@@ -40,7 +32,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // an unwired Value reads false, so the inverse is true — a guard fed by an unfinished Not lets
             // its branch run, which is visible on the canvas rather than silently disabling a branch
             var graph = new BehaviorTreeGraph();
-            var not = AddNode<Not>(graph);
+            var not = BehaviorTreeAuthoring.AddNode<Not>(graph, 0.0f, 0.0f);
 
             Assert.IsTrue((bool) not.Result.GetPortValue());
         }
@@ -49,9 +41,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void Not_FeedsAGuard()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph);
-            var not = AddNode<Not>(graph);
-            var guard = AddNode<BooleanConditionalExecution>(graph);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 0.0f);
+            var not = BehaviorTreeAuthoring.AddNode<Not>(graph, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, 0.0f, 0.0f);
 
             guard.UpdateOwner(sequence);
             not.Result.ValidlyConnectTo(guard.Value);
@@ -67,7 +59,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void IsNotNull_ReportsWhetherTheReferenceIsLive()
         {
             var graph = new BehaviorTreeGraph();
-            var isNotNull = AddNode<IsNotNull>(graph);
+            var isNotNull = BehaviorTreeAuthoring.AddNode<IsNotNull>(graph, 0.0f, 0.0f);
 
             Assert.IsFalse((bool) isNotNull.Result.GetPortValue(), "An unwired reference is not a target.");
 

@@ -34,6 +34,13 @@ which is the usual place: branch in its own asset, guard at the call site.
 Several guards on one owner are **ANDed**: the node runs only while all of them hold. There is no `And`
 node and none is needed.
 
+A guard is not a node you connect *to*. It has no top connector, and a transition released over the guard
+box lands on the owner underneath it, which is where a line aimed at a guarded node is drawn anyway.
+`bt_connect` and `BehaviorTreeAuthoring.Connect` refuse a guard as either end. A tree saved before this rule
+existed, with a wire that ends on a guard, is re-pointed at the owner the moment it is opened; until then the
+runtime ignores that wire and says so at awake. See
+[Migrating older trees](../5-reference/02-migrating-older-trees.md#transitions-could-end-on-a-guard).
+
 ---
 
 ## Why reactive guards exist

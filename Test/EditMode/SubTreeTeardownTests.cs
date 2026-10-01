@@ -1,4 +1,5 @@
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -59,27 +60,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return asset;
         }
 
-        private static void Connect(BehaviorTreeGraphAsset host, BehaviorTreeNode parent, BehaviorTreeNode child, int index = 0)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, index);
-            host.graph.Transitions.Add(transition);
-        }
-
-        private static T Add<T>(BehaviorTreeGraphAsset host, float x = 0.0f, float y = 100.0f) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, y, 150.0f, 100.0f) };
-            host.graph.Nodes.Add(node);
-
-            return node;
-        }
-
         /// <summary>A branch whose only leaf never finishes, so it is still running whenever it is aborted.</summary>
         private BehaviorTreeGraphAsset LongRunningBranch()
         {
             var branch = NewTree("Branch");
-            var leaf = Add<AlwaysRunningNode>(branch);
-            Connect(branch, branch.graph.EntryNode, leaf);
+            var leaf = BehaviorTreeAuthoring.AddNode<AlwaysRunningNode>(branch, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(branch, branch.graph.EntryNode, leaf);
 
             return branch;
         }
@@ -91,19 +77,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private BehaviorTreeGraphAsset RunningHost(out RunBehaviorTreeGraphNode runNode, out CountingReactiveGuard guard, bool guarded)
         {
             var host = NewTree("Host");
-            var selector = Add<Selector>(host);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(host, 0.0f, 100.0f);
 
-            runNode = Add<RunBehaviorTreeGraphNode>(host, 0.0f, 300.0f);
+            runNode = BehaviorTreeAuthoring.AddNode<RunBehaviorTreeGraphNode>(host, 0.0f, 300.0f);
             runNode.SetBehaviorTreeGraphAsset(LongRunningBranch());
 
-            Connect(host, host.graph.EntryNode, selector);
-            Connect(host, selector, runNode);
+            BehaviorTreeAuthoring.Connect(host, host.graph.EntryNode, selector);
+            BehaviorTreeAuthoring.Connect(host, selector, runNode);
 
             guard = null;
 
             if (guarded)
             {
-                guard = Add<CountingReactiveGuard>(host, 200.0f, 300.0f);
+                guard = BehaviorTreeAuthoring.AddNode<CountingReactiveGuard>(host, 200.0f, 300.0f);
                 guard.UpdateOwner(runNode);
             }
 
@@ -192,7 +178,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ExitingASubTreeThatNeverRanDoesNotInstantiateIt()
         {
             var host = NewTree("Host");
-            var runNode = Add<RunBehaviorTreeGraphNode>(host);
+            var runNode = BehaviorTreeAuthoring.AddNode<RunBehaviorTreeGraphNode>(host, 0.0f, 100.0f);
             runNode.SetBehaviorTreeGraphAsset(LongRunningBranch());
 
             runNode.OnNodeExit();
@@ -248,7 +234,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void DestroyingASubTreeThatNeverRanDoesNotInstantiateIt()
         {
             var host = NewTree("Host");
-            var runNode = Add<RunBehaviorTreeGraphNode>(host);
+            var runNode = BehaviorTreeAuthoring.AddNode<RunBehaviorTreeGraphNode>(host, 0.0f, 100.0f);
             runNode.SetBehaviorTreeGraphAsset(LongRunningBranch());
 
             runNode.OnDestroy();
@@ -274,14 +260,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var innermost = LongRunningBranch();
 
             var middle = NewTree("Middle");
-            var authoredInnerCall = Add<RunBehaviorTreeGraphNode>(middle);
+            var authoredInnerCall = BehaviorTreeAuthoring.AddNode<RunBehaviorTreeGraphNode>(middle, 0.0f, 100.0f);
             authoredInnerCall.SetBehaviorTreeGraphAsset(innermost);
-            Connect(middle, middle.graph.EntryNode, authoredInnerCall);
+            BehaviorTreeAuthoring.Connect(middle, middle.graph.EntryNode, authoredInnerCall);
 
             var host = NewTree("Host");
-            var outerCall = Add<RunBehaviorTreeGraphNode>(host);
+            var outerCall = BehaviorTreeAuthoring.AddNode<RunBehaviorTreeGraphNode>(host, 0.0f, 100.0f);
             outerCall.SetBehaviorTreeGraphAsset(middle);
-            Connect(host, host.graph.EntryNode, outerCall);
+            BehaviorTreeAuthoring.Connect(host, host.graph.EntryNode, outerCall);
 
             host.graph.OnAwake();
 

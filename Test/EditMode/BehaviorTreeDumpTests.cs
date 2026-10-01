@@ -1,4 +1,5 @@
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using NUnit.Framework;
 using UnityEngine;
@@ -13,21 +14,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     [TestFixture]
     public class BehaviorTreeDumpTests
     {
-        private static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index = 0)
-        {
-            var transition = new BehaviorTreeTransition();
-            transition.SetupTransition(parent, child, index);
-            graph.Transitions.Add(transition);
-        }
-
-        private static T AddNode<T>(BehaviorTreeGraph graph, float x, float y) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(x, y, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
-        }
-
         [Test]
         public void TransitionPlaceholdersDoNotBreakTheDump()
         {
@@ -35,8 +21,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // line can be selected. It has no ports and is never defined, and reading them used to throw
             // and abort the whole asset — so any hand-edited tree dumped nothing at all.
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, sequence);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
 
             var transition = graph.Transitions.First();
             var placeholder = new PlaceHolderNode(transition);
@@ -57,8 +43,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // the guid is how a later edit addresses a node it did not create — name and type are not
             // unique, and position moves the moment someone tidies the canvas
             var graph = new BehaviorTreeGraph();
-            var cooldown = AddNode<Cooldown>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, cooldown);
+            var cooldown = BehaviorTreeAuthoring.AddNode<Cooldown>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, cooldown);
 
             StringAssert.Contains("\"guid\": \"" + cooldown.guid + "\"", BehaviorTreeDump.ToJson(graph, "Fixture"));
         }
@@ -67,10 +53,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void GuardsReportTheirGuid()
         {
             var graph = new BehaviorTreeGraph();
-            var sequence = AddNode<Sequence>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, sequence);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, sequence);
 
-            var guard = AddNode<BooleanConditionalExecution>(graph, -150.0f, 100.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanConditionalExecution>(graph, -150.0f, 100.0f);
             guard.UpdateOwner(sequence);
 
             StringAssert.Contains("\"guid\": \"" + guard.guid + "\"", BehaviorTreeDump.ToJson(graph, "Fixture"));
@@ -98,8 +84,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void NodesAddedInCodeAreDefinedAndReachable()
         {
             var graph = new BehaviorTreeGraph();
-            var cooldown = AddNode<Cooldown>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, cooldown);
+            var cooldown = BehaviorTreeAuthoring.AddNode<Cooldown>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, cooldown);
 
             Assert.IsTrue(cooldown.isDefined, "Adding a node to a graph must define its ports, as AfterAdd does in the editor.");
             Assert.IsNotNull(cooldown.Duration, "A defined Cooldown exposes its Duration port.");
@@ -111,14 +97,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void ChildrenAreReportedInCanvasOrderNotInsertionOrder()
         {
             var graph = new BehaviorTreeGraph();
-            var selector = AddNode<Selector>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, selector);
+            var selector = BehaviorTreeAuthoring.AddNode<Selector>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, selector);
 
-            // added right first, so insertion order and canvas order disagree
-            var right = AddNode<Repeater>(graph, 200.0f, 200.0f);
-            var left = AddNode<WaitTime>(graph, -200.0f, 200.0f);
-            Connect(graph, selector, right);
-            Connect(graph, selector, left);
+            // added right first, so insertion order and canvas order disagree. Both indices are left at 0,
+            // the shape every tree authored before explicit priorities has, so canvas X decides.
+            var right = BehaviorTreeAuthoring.AddNode<Repeater>(graph, 200.0f, 200.0f);
+            var left = BehaviorTreeAuthoring.AddNode<WaitTime>(graph, -200.0f, 200.0f);
+            BehaviorTreeAuthoring.Connect(graph, selector, right, 0);
+            BehaviorTreeAuthoring.Connect(graph, selector, left, 0);
 
             string json = BehaviorTreeDump.ToJson(graph, "Fixture");
 
@@ -130,8 +117,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void InlinePortValuesAreShown()
         {
             var graph = new BehaviorTreeGraph();
-            var cooldown = AddNode<Cooldown>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, cooldown);
+            var cooldown = BehaviorTreeAuthoring.AddNode<Cooldown>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, cooldown);
 
             cooldown.Duration.SetDefaultValue(7.5f);
 
@@ -142,10 +129,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void WiredPortsShowWhereTheValueComesFrom()
         {
             var graph = new BehaviorTreeGraph();
-            var cooldown = AddNode<Cooldown>(graph, 0.0f, 100.0f);
-            Connect(graph, graph.EntryNode, cooldown);
+            var cooldown = BehaviorTreeAuthoring.AddNode<Cooldown>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, cooldown);
 
-            var literal = AddNode<FloatLiteral>(graph, -200.0f, 100.0f);
+            var literal = BehaviorTreeAuthoring.AddNode<FloatLiteral>(graph, -200.0f, 100.0f);
             literal.Value.ValidlyConnectTo(cooldown.Duration);
 
             StringAssert.Contains("\"Duration\": \"<- Float Literal.Value\"", BehaviorTreeDump.ToJson(graph, "Fixture"),
@@ -156,7 +143,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void NodesNothingReachesAreCalledOut()
         {
             var graph = new BehaviorTreeGraph();
-            AddNode<Sequence>(graph, 300.0f, 300.0f);
+            BehaviorTreeAuthoring.AddNode<Sequence>(graph, 300.0f, 300.0f);
 
             StringAssert.Contains("unreachable", BehaviorTreeDump.ToJson(graph, "Fixture"),
                 "A node left unconnected is the most common authoring mistake, so it must be visible.");

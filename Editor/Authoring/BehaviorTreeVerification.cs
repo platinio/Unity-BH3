@@ -69,6 +69,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(WatchedKeysWrittenUnobservably(asset, name));
                 findings.AddRange(FunctionProblems(asset, name));
                 findings.AddRange(InvalidConnections(asset, name));
+                findings.AddRange(MisroutedTransitions(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
@@ -597,6 +598,24 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 yield return
                     $"{treeName}: node at ({missing.Position.x:F0}, {missing.Position.y:F0}) has a type that " +
                     $"no longer exists (formerly '{former}'). {fix}";
+            }
+        }
+
+        /// <summary>
+        /// A transition whose destination refuses to be a child -- in practice a guard, dropped on because the
+        /// canvas draws it exactly where a wire aimed at its owner lands. The runtime skips such a wire and
+        /// says so at awake; this is the same fact at author time, before anything is played, and it names
+        /// the wire rather than only the orphan it leaves behind.
+        /// </summary>
+        private static IEnumerable<string> MisroutedTransitions(BehaviorTreeGraphAsset asset, string treeName)
+        {
+            foreach (var transition in asset.graph.Transitions)
+            {
+                if (!BehaviorTreeGraph.EndsOnANodeThatCannotBeAChild(transition)) continue;
+
+                yield return
+                    $"{treeName}: {BehaviorTreeGraph.DescribeMisroutedTransition(transition)} Until then the " +
+                    "runtime ignores it.";
             }
         }
 

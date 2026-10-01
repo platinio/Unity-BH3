@@ -772,17 +772,22 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var source = canvas.TransitionSource;
                 var hoveredWidget = canvas.hoveredWidget as BehaviorTreeNodeElementWidget;
-                var destination = hoveredWidget == null? null : hoveredWidget.element;
+                var destination = hoveredWidget == null
+                    ? null
+                    : BehaviorTreeCanvas.TransitionDestinationFor(canvas.graph, hoveredWidget.element);
 
-                if (destination == null)
+                if (hoveredWidget == null)
                 {
                     canvas.CompleteTransitionToNewState();
                 }
-                else if (destination == source || canvas.graph.TransitionExist(source, destination))
+                else if (destination == null
+                         || destination == source
+                         || canvas.graph.TransitionExist(source, destination)
+                         || !destination.CanBeUsedAsTransitionDestination)
                 {
                     canvas.CancelTransition();
                 }
-                else if (destination.CanBeUsedAsTransitionDestination)
+                else
                 {
                     canvas.EndTransition(destination);
                 }

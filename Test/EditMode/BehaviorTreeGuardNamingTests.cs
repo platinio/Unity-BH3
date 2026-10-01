@@ -1,4 +1,5 @@
 using System.Reflection;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
@@ -25,8 +26,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void AGuardIsNamedAfterTheVariableItReads()
         {
             var graph = new BehaviorTreeGraph();
-            var owner = AddNode<WaitTime>(graph);
-            var guard = AddNode<BooleanReactiveGuard>(graph);
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(graph, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 0.0f);
 
             guard.UpdateOwner(owner);
             ReadVariable(graph, "hasTarget").Value.ValidlyConnectTo(guard.Value);
@@ -42,9 +43,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // "not hasTarget" is one operator away from the read. The Not is plumbing — the guard is still
             // about hasTarget — but the walk must not carry on through the read into its key literal.
             var graph = new BehaviorTreeGraph();
-            var owner = AddNode<WaitTime>(graph);
-            var guard = AddNode<BooleanReactiveGuard>(graph);
-            var not = AddNode<Not>(graph);
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(graph, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 0.0f);
+            var not = BehaviorTreeAuthoring.AddNode<Not>(graph, 0.0f, 0.0f);
 
             guard.UpdateOwner(owner);
             ReadVariable(graph, "hasTarget").Value.ValidlyConnectTo(not.Value);
@@ -58,8 +59,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             // There is no better answer available, and inventing one would be worse than the dull truth.
             var graph = new BehaviorTreeGraph();
-            var owner = AddNode<WaitTime>(graph);
-            var guard = AddNode<BooleanReactiveGuard>(graph);
+            var owner = BehaviorTreeAuthoring.AddNode<WaitTime>(graph, 0.0f, 0.0f);
+            var guard = BehaviorTreeAuthoring.AddNode<BooleanReactiveGuard>(graph, 0.0f, 0.0f);
 
             guard.UpdateOwner(owner);
 
@@ -79,22 +80,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// <summary>A variable read whose key comes from a literal, which is how the authoring helpers build one.</summary>
         private static GetVariable ReadVariable(BehaviorTreeGraph graph, string key)
         {
-            var keyLiteral = AddNode<StringLiteral>(graph);
+            var keyLiteral = BehaviorTreeAuthoring.AddNode<StringLiteral>(graph, 0.0f, 0.0f);
             SetPrivateField(keyLiteral, "value", key);
 
-            var read = AddNode<GetVariable>(graph);
+            var read = BehaviorTreeAuthoring.AddNode<GetVariable>(graph, 0.0f, 0.0f);
             SetPrivateField(read, "VariableKind", BehaviorTreeVariableKind.Object);
             keyLiteral.Value.ValidlyConnectTo(read.Key);
 
             return read;
-        }
-
-        private static T AddNode<T>(BehaviorTreeGraph graph) where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(0.0f, 0.0f, 150.0f, 100.0f) };
-            graph.Nodes.Add(node);
-
-            return node;
         }
 
         private static void SetPrivateField(object target, string field, object value)
