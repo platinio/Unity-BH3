@@ -772,9 +772,6 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 var source = canvas.TransitionSource;
                 var hoveredWidget = canvas.hoveredWidget as BehaviorTreeNodeElementWidget;
-
-                // A release over a guard is aimed at the node it stacks on. Resolved before any other check,
-                // so the owner is what gets tested for self-loops, duplicates and acceptance.
                 var destination = hoveredWidget == null
                     ? null
                     : BehaviorTreeCanvas.TransitionDestinationFor(canvas.graph, hoveredWidget.element);
@@ -788,8 +785,6 @@ namespace ArcaneOnyx.BehaviorTree
                          || canvas.graph.TransitionExist(source, destination)
                          || !destination.CanBeUsedAsTransitionDestination)
                 {
-                    // A refused drop used to fall through with no else, leaving the half-made transition
-                    // hanging off the cursor until the next click.
                     canvas.CancelTransition();
                 }
                 else

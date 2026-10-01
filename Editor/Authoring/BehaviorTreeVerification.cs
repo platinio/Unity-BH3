@@ -614,8 +614,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 if (!BehaviorTreeGraph.EndsOnANodeThatCannotBeAChild(transition)) continue;
 
                 yield return
-                    $"{treeName}: {BehaviorTreeGraph.DescribeMisroutedTransition(transition)} The runtime " +
-                    "ignores it. Opening the tree in the editor re-points it at the owner; or rewire it by hand.";
+                    $"{treeName}: {BehaviorTreeGraph.DescribeMisroutedTransition(transition)} Until then the " +
+                    "runtime ignores it.";
             }
         }
 

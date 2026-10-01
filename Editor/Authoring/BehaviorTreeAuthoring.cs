@@ -165,12 +165,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             Connect(asset.graph, parent, child, index);
         }
 
-        /// <summary>The same, on a graph with no asset behind it. See <see cref="AddNode{T}(BehaviorTreeGraph, float, float)"/>.</summary>
+        /// <summary>
+        /// The same, on a graph with no asset behind it. See <see cref="AddNode{T}(BehaviorTreeGraph, float, float)"/>.
+        /// <para>
+        /// Refuses a parent that cannot start a transition and a child that cannot take one: the two flags
+        /// the canvas consults before it draws a connector, so a tree built from code cannot hold a wire the
+        /// canvas would have refused.
+        /// </para>
+        /// </summary>
         public static void Connect(BehaviorTreeGraph graph, BehaviorTreeNode parent, BehaviorTreeNode child, int index = -1)
         {
-            // The same two flags the canvas consults before it draws a connector, checked here so a tree
-            // built from code cannot contain a wire the canvas would have refused. A guard as the child is
-            // the case that happened: the tree loaded, ran the guard as child 0, and did nothing.
             if (!parent.CanBeUsedAsTransitionSource)
             {
                 throw new InvalidOperationException(parent is ConditionalExecution

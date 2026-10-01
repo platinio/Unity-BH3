@@ -142,17 +142,14 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public void ConvertTransitionNodesIntoTaskNodeChild()
         {
-            // Reported here, once per awake, rather than inside the orderings below: those run per repaint in
-            // the editor panels, and an error per frame is noise nobody reads.
+            // Once per awake, not inside the orderings: those run per repaint in the editor panels.
             foreach (var transition in Transitions)
             {
                 if (!EndsOnANodeThatCannotBeAChild(transition)) continue;
 
                 Debug.LogError(
-                    $"{DescribeMisroutedTransition(transition)} The transition is ignored; open the tree in " +
-                    "the editor to have it re-pointed at the owner, or rewire it.",
-                    // The machine, not gameObject: gameObject dereferences the machine, and a tree awakened
-                    // without an agent (a test, a dump) has none.
+                    $"{DescribeMisroutedTransition(transition)} Until then the runtime ignores it, and if that " +
+                    "leaves a gap in its parent's priorities the siblings run in canvas order.",
                     transition.source?.Machine as Object);
             }
 
@@ -277,8 +274,14 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// The sentence that names a misrouted transition. Shared by the awake-time error and by
-        /// <c>bt_verify</c>, so the two never describe the same wire in different words.
+        /// The sentence that names a misrouted transition and says what mends it. Shared by the awake-time
+        /// error and by <c>bt_verify</c>, so the two never describe the same wire in different words.
+        ///
+        /// <para>
+        /// The remedy is part of the sentence because it depends on what the wire ends on, which only this
+        /// method looks at: the canvas re-points a wire into a guard at the guard's owner, and nothing else
+        /// has an owner to re-point at.
+        /// </para>
         /// </summary>
         public static string DescribeMisroutedTransition(BehaviorTreeTransition transition)
         {
@@ -286,13 +289,18 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (transition.destination is ConditionalExecution guard)
             {
-                var owner = guard.Owner != null ? guard.Owner.NodeName : "(no owner)";
+                var hasOwner = guard.Owner != null;
+                var owner = hasOwner ? guard.Owner.NodeName : "(no owner)";
+                var remedy = hasOwner
+                    ? "Opening the tree in the editor re-points it at the owner."
+                    : "Opening the tree in the editor removes the ownerless guard, and the transition with it.";
 
                 return $"transition from '{parent}' ends on guard '{guard.NodeName}' (owner '{owner}'). " +
-                       "Guards attach to their owner and are never children.";
+                       $"Guards attach to their owner and are never children. {remedy}";
             }
 
-            return $"transition from '{parent}' ends on '{transition.destination.NodeName}', which cannot be a child.";
+            return $"transition from '{parent}' ends on '{transition.destination.NodeName}', which cannot be " +
+                   "a child. Delete the transition.";
         }
 
         /// <summary>

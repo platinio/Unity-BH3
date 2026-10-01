@@ -307,7 +307,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             // decorator quietly given two children is a bug nothing reports. Composites report int.MaxValue,
             // leaves report 0.
             int limit = parentNode.MaxChildrenLimit;
-            int existing = asset.graph.Transitions.Count(t => t.source == parentNode);
+            int existing = asset.graph.ChildTransitionsInPriorityOrder(parentNode).Count;
 
             if (limit == 0)
             {

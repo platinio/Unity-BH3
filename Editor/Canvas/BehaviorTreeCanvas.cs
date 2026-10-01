@@ -190,10 +190,22 @@ namespace ArcaneOnyx.BehaviorTree
         {
             foreach (var transition in graph.Transitions)
             {
-                if (transition?.destination is ConditionalExecution) return true;
+                if (IsRepairable(graph, transition)) return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Whether the repair would change this transition: it has a parent, ends on a guard, and the guard's
+        /// owner is still in the graph. Asked by the check that decides whether to record an undo step and
+        /// by the repair itself, so a step is never recorded for a pass that changes nothing.
+        /// </summary>
+        private static bool IsRepairable(BehaviorTreeGraph graph, BehaviorTreeTransition transition)
+        {
+            return transition?.source != null
+                   && transition.destination is ConditionalExecution
+                   && TransitionDestinationFor(graph, transition.destination) != null;
         }
 
         /// <summary>
@@ -222,10 +234,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// incoming transitions) is mended the moment it is opened rather than left to fail at awake.
         ///
         /// <para>
-        /// A wire whose owner is already connected from the same parent, or whose owner <em>is</em> the
-        /// parent, is removed instead: a second wire to the same child is dead weight the priority ordering
-        /// would then have to explain. A guard with no live owner is left alone; the dangling repair removes
-        /// the guard, and the wire follows on the next pass.
+        /// A wire is removed instead when re-pointing it would make another bad one: its owner is already
+        /// connected from the same parent, its owner <em>is</em> the parent, or its owner refuses incoming
+        /// transitions itself. A guard with no live owner is left alone; the dangling repair removes the
+        /// guard, and the wire follows on the next pass.
+        /// </para>
+        ///
+        /// <para>
+        /// A re-pointed wire is removed and added back, never changed in place. The transition collection
+        /// indexes each wire by its endpoints, so an endpoint changed underneath it leaves the index keyed on
+        /// the guard and the next removal of that wire throws. Removal runs the element's <c>Dispose</c>;
+        /// a transition holds nothing disposable today, and this is the path to revisit if one ever does.
         /// </para>
         /// </summary>
         /// <returns>How many transitions were re-pointed or removed.</returns>
@@ -235,31 +254,25 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var transition in graph.Transitions)
             {
-                if (transition?.destination is ConditionalExecution && transition.source != null) misrouted.Add(transition);
+                if (IsRepairable(graph, transition)) misrouted.Add(transition);
             }
-
-            var repaired = 0;
 
             foreach (var transition in misrouted)
             {
                 var owner = TransitionDestinationFor(graph, transition.destination);
-                if (owner == null) continue;
 
                 graph.elements.Remove(transition);
 
-                if (owner != transition.source && !graph.TransitionExist(transition.source, owner))
+                if (owner != transition.source
+                    && owner.CanBeUsedAsTransitionDestination
+                    && !graph.TransitionExist(transition.source, owner))
                 {
-                    // Removed and added back rather than re-pointed in place. The transition collection
-                    // indexes each wire by its endpoints, so an endpoint changed underneath it leaves the
-                    // index keyed on the guard, and the next removal of that wire throws KeyNotFound.
                     transition.SetupTransition(transition.source, owner, transition.TransitionIndex);
                     graph.Transitions.Add(transition);
                 }
-
-                repaired++;
             }
 
-            return repaired;
+            return misrouted.Count;
         }
 
         /// <summary>Scratch list for <see cref="RemoveDanglingElements"/>, reused rather than reallocated.</summary>

@@ -83,6 +83,7 @@ Each line is prefixed with the tree's name. Grouped by what it checks:
 - `layout ≠ priority — 'Selector' runs priority 1 ('Attack' at x=…) before priority 2 ('Chase' at x=…), but lays them out the other way round`
 - `invalid connection -- 'from'.Output (Boolean) no longer fits 'to'.Target (Transform)` — a wire demoted after a Function's result changed
 - `transition from 'Selector' ends on guard 'G' (owner 'Sequence'). Guards attach to their owner and are never children` — the runtime ignores the wire and logs the same sentence at awake; opening the tree re-points it at the owner
+- `transition from 'X' ends on 'Y', which cannot be a child. Delete the transition` — a wire into a literal, a value node or Entry, which only code could build before `bt_connect` refused it. Nothing re-points it; delete it
 
 **Missing types**
 

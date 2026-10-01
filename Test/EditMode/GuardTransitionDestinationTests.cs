@@ -113,6 +113,20 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, asset.graph.Transitions.Count);
         }
 
+        /// <summary>
+        /// The refusal is the node's capability, not its being a guard: a literal sets the same flag, and
+        /// a check written as a type test would let this through.
+        /// </summary>
+        [Test]
+        public void ConnectRefusesANodeThatCannotBeAChild()
+        {
+            var asset = TreeWithAGuardedOrphan(out var selector, out _, out _);
+            var literal = BehaviorTreeAuthoring.AddNode<FloatLiteral>(asset, 200.0f, 300.0f);
+
+            Assert.Throws<InvalidOperationException>(() => BehaviorTreeAuthoring.Connect(asset, selector, literal));
+            Assert.AreEqual(1, asset.graph.Transitions.Count);
+        }
+
         // ------------------------------------------------------------------ verification
 
         [Test]
@@ -124,7 +138,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var findings = BehaviorTreeVerification.Verify(TreePath);
 
-            Assert.IsTrue(findings.Any(f => f.Contains("ends on guard")),
+            Assert.IsTrue(findings.Any(f => f.Contains("ends on guard") && f.Contains("re-points it at the owner")),
                 "bt_verify only reported the orphaned owner, which sends the reader looking for a missing wire " +
                 "rather than at the wire that landed on the wrong node. Findings:\n" + string.Join("\n", findings));
         }
@@ -148,8 +162,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeAuthoring.Connect(asset, selector, sibling, 1);
             BehaviorTreeAuthoring.Connect(asset, sibling, work);
 
-            // Skipped loudly, not silently: an asset saved in this state fails where someone can see it.
-            LogAssert.Expect(LogType.Error, new Regex("ends on guard"));
+            Assert.IsFalse(asset.graph.ChildrenInPriorityOrder(selector).Contains(guard),
+                "the per-parent ordering feeds the dump, the priority badge and Connect's default index; it has " +
+                "to skip the wire too, or those disagree with the runtime");
+
+            // Skipped loudly, not silently, and naming all three nodes so nobody has to hunt for the wire.
+            LogAssert.Expect(LogType.Error, new Regex(
+                @"transition from 'Selector' ends on guard 'Boolean Conditional Execution' \(owner 'Sequence'\)"));
 
             asset.graph.OnAwake();
 
@@ -161,6 +180,24 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(ExecutionStatus.Success, selector.RunToCompletion());
             Assert.AreEqual(1, work.UpdateCalls, "the sibling branch is the only one that can do anything, and it must run");
+        }
+
+        [Test]
+        public void AWireIntoANodeThatIsNotAGuardIsSkippedAndToldToBeDeleted()
+        {
+            var asset = TreeWithAGuardedOrphan(out var selector, out _, out _);
+            var literal = BehaviorTreeAuthoring.AddNode<FloatLiteral>(asset, 200.0f, 300.0f);
+            var wire = asset.graph.WireUnchecked(selector, literal, 0);
+
+            StringAssert.Contains("Delete the transition", BehaviorTreeGraph.DescribeMisroutedTransition(wire),
+                "a literal has no owner to re-point at; promising the canvas repair here sends the reader to " +
+                "reopen the tree and find the same error at the next awake");
+
+            LogAssert.Expect(LogType.Error, new Regex("which cannot be a child"));
+
+            asset.graph.OnAwake();
+
+            Assert.IsFalse(selector.GetChildren().Contains(literal));
         }
 
         // ------------------------------------------------------------------ the canvas drop
@@ -211,6 +248,56 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.DoesNotThrow(() => asset.graph.elements.Remove(wire),
                 "the transition collection indexes wires by endpoint; a wire re-pointed in place leaves that " +
                 "index keyed on the guard, and the next removal throws KeyNotFound");
+        }
+
+        /// <summary>
+        /// The static repair being right is not enough: the promise is that opening the tree mends it, and
+        /// that is the canvas calling the repair from its bookkeeping pass.
+        /// </summary>
+        [Test]
+        public void OpeningTheTreeInACanvasRunsTheRepair()
+        {
+            var asset = TreeWithAGuardedOrphan(out var selector, out var owner, out var guard);
+            var wire = asset.graph.WireUnchecked(selector, guard, 0);
+
+            var canvas = new BehaviorTreeCanvas(asset.graph);
+
+            try
+            {
+                canvas.SyncBookkeeping();
+            }
+            finally
+            {
+                canvas.Close();
+            }
+
+            Assert.AreSame(owner, wire.destination);
+        }
+
+        [Test]
+        public void TheRepairRemovesAWireFromAnOwnerIntoItsOwnGuard()
+        {
+            var asset = TreeWithAGuardedOrphan(out _, out var owner, out var guard);
+            var wire = asset.graph.WireUnchecked(owner, guard, 0);
+
+            Assert.AreEqual(1, BehaviorTreeCanvas.RepointTransitionsIntoGuards(asset.graph));
+
+            Assert.IsFalse(asset.graph.Transitions.Contains(wire));
+            Assert.IsFalse(asset.graph.TransitionExist(owner, owner), "re-pointing it would wire the node into itself");
+        }
+
+        [Test]
+        public void TheRepairRemovesAWireWhoseOwnerCannotBeAChild()
+        {
+            var asset = TreeWithAGuardedOrphan(out var selector, out _, out var guard);
+            guard.UpdateOwner(asset.graph.EntryNode);
+            var wire = asset.graph.WireUnchecked(selector, guard, 1);
+
+            Assert.AreEqual(1, BehaviorTreeCanvas.RepointTransitionsIntoGuards(asset.graph));
+
+            Assert.IsFalse(asset.graph.Transitions.Contains(wire),
+                "Entry refuses incoming transitions, so re-pointing at it would trade one refused wire for another");
+            Assert.IsFalse(asset.graph.TransitionExist(selector, asset.graph.EntryNode));
         }
 
         [Test]
