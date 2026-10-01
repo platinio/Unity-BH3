@@ -203,7 +203,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var pair in transitionsByParent)
             {
-                SortIntoPriorityOrder(pair.Value);
+                SortIntoChildOrder(pair.Value);
 
                 var children = new List<BehaviorTreeNode>(pair.Value.Count);
 
@@ -259,7 +259,8 @@ namespace ArcaneOnyx.BehaviorTree
                 into.Add(transition);
             }
 
-            SortIntoPriorityOrder(into);
+            // GraphCore's rule: the canvas renumbers with it, so the two can never read an order differently.
+            SortIntoChildOrder(into);
         }
 
         /// <summary>
@@ -304,23 +305,6 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// Puts one parent's transitions into the order its children will be tried. The single place the
-        /// priority rule is written; everything that needs an ordering goes through here.
-        /// </summary>
-        private static void SortIntoPriorityOrder(List<BehaviorTreeTransition> siblings)
-        {
-            if (RecordsAPriorityOrder(siblings))
-            {
-                siblings.Sort((left, right) => left.TransitionIndex.CompareTo(right.TransitionIndex));
-            }
-            else
-            {
-                siblings.Sort((left, right) =>
-                    left.destination.Position.x.CompareTo(right.destination.Position.x));
-            }
-        }
-
-        /// <summary>
         /// A node's children in the order they will be tried.
         /// <para>
         /// Reads the transitions rather than <see cref="ContainerNode.GetChildren"/>, so it answers on a tree
@@ -340,41 +324,6 @@ namespace ArcaneOnyx.BehaviorTree
             }
 
             return children;
-        }
-
-        /// <summary>
-        /// Whether these transitions carry a genuine ordering — indices forming exactly 0..n-1, each once.
-        /// <para>
-        /// Contiguity is the test rather than "are they all distinct" because a gap means something was
-        /// removed without renumbering, and duplicates mean two children claim one priority. In both cases
-        /// the recorded order is not trustworthy and position is the better answer.
-        /// </para>
-        ///
-        /// <para>
-        /// Duplicates are found by comparing the indices against each other rather than by marking them off
-        /// in a scratch array. The array was one heap allocation per call, and the canvas priority badge
-        /// calls this for every node on every repaint. The pairwise scan is quadratic in the number of
-        /// children <em>one composite</em> has — a handful in any authored tree, and cheaper than the
-        /// allocation well past any realistic count — and it needs no buffer to own, share, or reset.
-        /// </para>
-        /// </summary>
-        private static bool RecordsAPriorityOrder(List<BehaviorTreeTransition> siblings)
-        {
-            if (siblings.Count == 0) return false;
-
-            for (int position = 0; position < siblings.Count; position++)
-            {
-                int index = siblings[position].TransitionIndex;
-
-                if (index < 0 || index >= siblings.Count) return false;
-
-                for (int earlier = 0; earlier < position; earlier++)
-                {
-                    if (siblings[earlier].TransitionIndex == index) return false;
-                }
-            }
-
-            return true;
         }
 
         public int CountTransitionsFromNode(BehaviorTreeNode node)
