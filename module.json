@@ -1,6 +1,6 @@
 {
     "name": "BH3",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "installPath": "Assets/ArcaneOnyx/BH3",
     "dependencyRoot": "Assets/ArcaneOnyx/BH3/Dependencies",
     "unity": "6000.4",
@@ -13,7 +13,7 @@
     "dependencies": {
         "GraphCore": {
             "repo": "platinio/graph-core-library",
-            "version": "1.0.0"
+            "version": "1.0.1"
         },
         "VisualScriptingExtension": {
             "repo": "platinio/visual-scripting-extension",
