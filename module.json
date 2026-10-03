@@ -1,6 +1,6 @@
 {
     "name": "BH3",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "installPath": "Assets/ArcaneOnyx/BH3",
     "dependencyRoot": "Assets/ArcaneOnyx/BH3/Dependencies",
     "unity": "6000.4",
@@ -13,15 +13,15 @@
     "dependencies": {
         "GraphCore": {
             "repo": "platinio/graph-core-library",
-            "version": "1.0.1"
+            "version": "1.0.2"
         },
         "VisualScriptingExtension": {
             "repo": "platinio/visual-scripting-extension",
-            "version": "1.0.0"
+            "version": "1.0.1"
         },
         "BlockVariables": {
             "repo": "platinio/Unity-BlockVariables",
-            "version": "1.0.1"
+            "version": "1.0.2"
         },
         "TacticalPositionSelection": {
             "repo": "platinio/Unity-TacticalPositionSelection",
