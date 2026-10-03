@@ -31,7 +31,7 @@ Asset paths may omit the `Assets/` prefix and the `.asset` extension. Node guids
 |---|---|---|
 | `bt_create_tree` | `--path`, `--overwrite` | An empty tree with only its Entry node. Without `--overwrite` an existing asset is left alone |
 | `bt_add_node` | `--tree`, `--type`, `--x`, `--y` | Add a node, sized the way the editor sizes it. Returns its guid |
-| `bt_connect` | `--tree`, `--parent`, `--child`, `--index` | Parent one node under another. `--index` is the priority. Refuses a second child on Entry or a decorator, and refuses a guard as either end: guards attach to their owner, so connect to the owner |
+| `bt_connect` | `--tree`, `--parent`, `--child`, `--index` | Parent one node under another. `--index` is the priority; leave it off and the child takes the next free slot. Refuses a second child on Entry or a decorator, and refuses a guard as either end: guards attach to their owner, so connect to the owner |
 | `bt_set_value` | `--tree`, `--node`, `--port`, `--value`, `--x`, `--y` | Fill a port by whichever mechanism survives a reload: inline where the port declares a default, a connected literal where it does not. Prefer this over every other way of filling a port |
 | `bt_feed_float` / `bt_feed_vector3` | `--tree`, `--node`, `--port`, `--value`, `--x`, `--y` | Force a literal node even where an inline value would do. Vector3 as `x,y,z` |
 | `bt_declare` | `--tree`, `--name`, `--value`, `--type` (string, float, int, bool, vector2, vector3), `--scope` (instance, required, optional) | Declare a variable on the tree. On a sub-tree, use `required` or `optional` |

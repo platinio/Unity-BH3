@@ -56,7 +56,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         /// <summary>
         /// Adds a sticky note. Notes live in their own collection rather than among the nodes, so they never
-        /// affect execution — including the child ordering that canvas X decides.
+        /// affect execution, child order included.
         /// <para>
         /// Replaces any existing note with the same title, so annotating a tree twice does not stack
         /// duplicates on top of each other.

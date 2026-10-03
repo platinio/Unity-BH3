@@ -288,15 +288,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         [CliCommand("bt_connect",
-            "Parent one node under another. Execution order comes from canvas X, not from this call order or " +
-            "the index. Refuses to exceed a container's child limit — Entry and every Decorator take exactly " +
+            "Parent one node under another. The index is the child's priority: 0 is tried first. Leave it off " +
+            "and the child takes the next free slot, so connecting children in the order they should be tried " +
+            "gives the right tree. Refuses to exceed a container's child limit — Entry and every Decorator take exactly " +
             "one child, and extra transitions would be silent dead weight. Refuses a guard as the child: " +
             "guards attach to their owner and are never children, so connect to the owner instead.")]
         public static object ConnectCommand(
             [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
             [CliArg("parent", "Guid of the parent node.", Required = true)] string parent,
             [CliArg("child", "Guid of the child node.", Required = true)] string child,
-            [CliArg("index", "Transition index on the parent.")] int index = 0)
+            [CliArg("index", "The child's priority among its siblings, 0 first. Omit it for the next free slot.")] int index = -1)
         {
             var asset = ResolveTree(tree, out _);
 
