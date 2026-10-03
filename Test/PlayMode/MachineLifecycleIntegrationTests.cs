@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.TestTools;
+using GraphInstances = ArcaneOnyx.GraphCore.GraphInstances;
 
 namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 {
@@ -183,19 +184,44 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             yield return null;
 
-            var before = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
-            var registered = before.Count;
-            before.Free();
+            var graph = machine.graph;
 
-            Assert.AreEqual(1, registered, "Fixture check: nothing to reset otherwise.");
+            Assert.AreEqual(1, Count(GraphInstances.ChildrenOfPooled(machine)), "Fixture check: registered by parent.");
+            Assert.AreEqual(1, Count(GraphInstances.OfPooled(graph)), "Fixture check: registered by graph.");
 
-            ArcaneOnyx.GraphCore.GraphInstances.ResetForPlaySession();
+            GraphInstances.ResetForPlaySession();
 
-            var after = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
-            var remaining = after.Count;
-            after.Free();
+            Assert.AreEqual(0, Count(GraphInstances.ChildrenOfPooled(machine)));
+            Assert.AreEqual(0, Count(GraphInstances.OfPooled(graph)),
+                "The by-graph half is the one that pins the graph and that element add and remove walk.");
 
-            Assert.AreEqual(0, remaining);
+            Assert.DoesNotThrow(() => Object.DestroyImmediate(Agent),
+                "A machine that outlives a reset is forgotten rather than torn down, and must say nothing about it.");
+        }
+
+        /// <summary>
+        /// The reset only means anything if Unity calls it before the first <c>Awake</c> of a session, and the
+        /// attribute is the whole of that. Calling the method by hand, as the test above does, cannot see it
+        /// go missing.
+        /// </summary>
+        [Test]
+        public void TheGraphInstanceResetRunsAtSubsystemRegistration()
+        {
+            var attribute = typeof(GraphInstances)
+                .GetMethod(nameof(GraphInstances.ResetForPlaySession))
+                .GetCustomAttributes(typeof(RuntimeInitializeOnLoadMethodAttribute), false)
+                .Cast<RuntimeInitializeOnLoadMethodAttribute>()
+                .SingleOrDefault();
+
+            Assert.IsNotNull(attribute);
+            Assert.AreEqual(RuntimeInitializeLoadType.SubsystemRegistration, attribute.loadType);
+        }
+
+        private static int Count(System.Collections.Generic.HashSet<ArcaneOnyx.GraphCore.GraphReference> pooled)
+        {
+            var count = pooled.Count;
+            pooled.Free();
+            return count;
         }
 
         /// <summary>

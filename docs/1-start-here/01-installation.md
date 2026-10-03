@@ -97,8 +97,8 @@ If the create menu is missing, Visual Scripting has not been initialised. If the
 
 ## Enter Play Mode Options
 
-BH3 works with **Project Settings → Editor → Enter Play Mode Settings** set to skip the domain reload (the
-default for new projects from Unity 6.6). Nothing needs configuring. What that means for the state BH3 keeps
+BH3 works with **Project Settings → Editor → Enter Play Mode Settings** set to skip the domain reload,
+which Unity is making the default for new projects. Nothing needs configuring. What that means for the state BH3 keeps
 between play sessions:
 
 - **Reset every time you press Play:** the registry of running graph instances, the flight recorders, and

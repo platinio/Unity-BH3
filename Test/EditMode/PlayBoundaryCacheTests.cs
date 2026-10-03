@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
@@ -5,6 +6,7 @@ using ArcaneOnyx.GraphCore;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
@@ -59,7 +61,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             index.Read(tree.graph);
             Assert.AreEqual(1, index.Builds, "Fixture check: the second read is a hit.");
 
-            GraphIndex.OnPlayModeStateChanged(arrival);
+            GraphCachePlayBoundary.OnPlayModeStateChanged(arrival);
             index.Read(tree.graph);
 
             Assert.AreEqual(2, index.Builds,
@@ -73,7 +75,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var index = new CountingIndex();
 
             index.Read(tree.graph);
-            GraphIndex.OnPlayModeStateChanged(departure);
+            GraphCachePlayBoundary.OnPlayModeStateChanged(departure);
             index.Read(tree.graph);
 
             Assert.AreEqual(1, index.Builds,
@@ -87,7 +89,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var node = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
             var asked = 0;
 
-            System.Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = _ =>
+            Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = _ =>
             {
                 asked++;
                 return Enumerable.Empty<NodeProblem>();
@@ -101,10 +103,39 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 NodeProblemCache.For(node);
                 Assert.AreEqual(1, asked, "Fixture check: the second read is a hit.");
 
-                NodeProblemCache.OnPlayModeStateChanged(arrival);
+                GraphCachePlayBoundary.OnPlayModeStateChanged(arrival);
                 NodeProblemCache.For(node);
 
                 Assert.AreEqual(2, asked);
+            }
+            finally
+            {
+                NodeProblemCache.RemoveProvider(provider);
+            }
+        }
+
+        [TestCase(PlayModeStateChange.ExitingEditMode)]
+        [TestCase(PlayModeStateChange.ExitingPlayMode)]
+        public void NodeProblems_AreKeptOnDeparture(PlayModeStateChange departure)
+        {
+            var node = BehaviorTreeAuthoring.AddNode<WaitTime>(tree, 0.0f, 0.0f);
+            var asked = 0;
+
+            Func<BehaviorTreeNode, IEnumerable<NodeProblem>> provider = _ =>
+            {
+                asked++;
+                return Enumerable.Empty<NodeProblem>();
+            };
+
+            NodeProblemCache.AddProvider(provider);
+
+            try
+            {
+                NodeProblemCache.For(node);
+                GraphCachePlayBoundary.OnPlayModeStateChanged(departure);
+                NodeProblemCache.For(node);
+
+                Assert.AreEqual(1, asked);
             }
             finally
             {
@@ -130,7 +161,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void TheConnectionTexture_IsNotUnloadedWithTheScene()
+        public void TheConnectionTexture_IsHiddenAndNotSaved()
         {
             Assert.AreEqual(HideFlags.HideAndDontSave, GraphGUI.AliasedBezierTexture(9.5f).hideFlags);
         }

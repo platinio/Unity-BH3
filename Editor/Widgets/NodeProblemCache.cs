@@ -35,7 +35,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// </para>
     ///
     /// <para>
-    /// <see cref="Invalidate"/> covers the rest — sub-tree contracts, undo, and the refresh verbs — and is
+    /// <see cref="Invalidate"/> covers the rest — sub-tree contracts, undo, the refresh verbs, and a
+    /// play-mode boundary (<see cref="GraphCachePlayBoundary"/>) — and is
     /// bumped by whole events, never by a timer.
     /// </para>
     ///
@@ -82,21 +83,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             // Undo can restore a contract, a connection or a whole node, and none of that goes through an
             // import. Cheapest correct answer is to drop everything and let it be asked again.
             Undo.undoRedoPerformed += Invalidate;
-
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-        }
-
-        /// <summary>
-        /// A play-mode boundary replaces every scene graph, so entries keyed on the old ones can only be
-        /// stale. A domain reload used to drop them; with reload disabled this is the only thing that does.
-        /// </summary>
-        public static void OnPlayModeStateChanged(PlayModeStateChange change)
-        {
-            if (change == PlayModeStateChange.EnteredPlayMode || change == PlayModeStateChange.EnteredEditMode)
-            {
-                Invalidate();
-            }
         }
 
         /// <summary>
