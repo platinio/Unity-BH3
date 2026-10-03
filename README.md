@@ -34,6 +34,12 @@ When an agent does the wrong thing, BH3 has already recorded what every node, gu
 
 ---
 
+## Video tutorials
+
+New to BH3? Start with the [BH3 introduction and tutorial playlist](https://www.youtube.com/watch?v=X9R9pDiR2F4&list=PLfuw8S0vupks) on YouTube.
+
+---
+
 ## Documentation
 
 ### 1. Start here
