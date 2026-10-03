@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
     ///
     /// <para>
     /// <b>The priority rule is the subject of most of these.</b> It has two halves and the tooling documents
-    /// only one: <c>BehaviorTreeGraph.SortIntoPriorityOrder</c> uses transition indices when they form exactly
+    /// only one: GraphCore's <c>BaseGraph.SortIntoChildOrder</c> uses transition indices when they form exactly
     /// <c>0..n-1</c> with each used once, and falls back to canvas X otherwise. Contiguity is the test because
     /// a gap means something was removed without renumbering and a duplicate means two children claim one
     /// priority — in both cases the recorded order is not trustworthy. A reader who knows only the "canvas X"

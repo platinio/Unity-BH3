@@ -24,6 +24,11 @@ without renumbering, and a duplicate means two branches claim the same priority.
 **To migrate:** drag any child of each composite once. The indices are rewritten from the layout and the
 tree stops relying on the fallback. Trees built from code should pass the priority to `Connect`.
 
+Connecting or deleting a child on the canvas also records the order, for that one composite: the editor
+writes down the order it was already running in, with the new child slotted in or the deleted one taken out.
+Connecting and deleting no longer leave gaps behind. Pasting part of a composite's children still can; drag
+one of them to renumber.
+
 ---
 
 ## Script Graph Variable nodes held an embedded graph
