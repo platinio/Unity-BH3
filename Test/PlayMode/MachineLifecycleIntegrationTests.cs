@@ -171,6 +171,34 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
+        /// A new play session starts with an empty registry even when the last one left something behind.
+        /// With domain reload disabled the registry is never re-created, so an instance whose machine threw
+        /// on the way out would be listed -- and pinned -- for the rest of the editor session.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANewPlaySessionStartsWithNoGraphInstances()
+        {
+            var tree = BuildGuardedTree(out _, out _);
+            var machine = Spawn(tree, (_, variables) => variables.declarations.Set("hasTarget", false));
+
+            yield return null;
+
+            var before = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
+            var registered = before.Count;
+            before.Free();
+
+            Assert.AreEqual(1, registered, "Fixture check: nothing to reset otherwise.");
+
+            ArcaneOnyx.GraphCore.GraphInstances.ResetForPlaySession();
+
+            var after = ArcaneOnyx.GraphCore.GraphInstances.ChildrenOfPooled(machine);
+            var remaining = after.Count;
+            after.Free();
+
+            Assert.AreEqual(0, remaining);
+        }
+
+        /// <summary>
         /// Entry -> Repeater -> Selector -> [ Attack guarded on hasTarget, Idle unguarded ].
         /// </summary>
         private static BehaviorTreeGraphAsset BuildGuardedTree(out System.Guid attack, out System.Guid idle)

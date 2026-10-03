@@ -95,6 +95,25 @@ If the create menu is missing, Visual Scripting has not been initialised. If the
 
 ---
 
+## Enter Play Mode Options
+
+BH3 works with **Project Settings → Editor → Enter Play Mode Settings** set to skip the domain reload (the
+default for new projects from Unity 6.6). Nothing needs configuring. What that means for the state BH3 keeps
+between play sessions:
+
+- **Reset every time you press Play:** the registry of running graph instances, the flight recorders, and
+  breakpoint hit counts and the agent filter.
+- **Reset on entering and leaving play mode:** what the debugger is looking at (scrub position, selected
+  recording, debug target) and the canvas's cached guard, sibling and node-problem lookups.
+- **Kept on purpose:** armed breakpoints, the **Rec** and tracing switches, the graph clipboard and open graph
+  windows. These are editor choices, not play-session state.
+
+If you write your own nodes, the same rule applies to them as to any script: a `static` field keeps its value
+across play sessions, so reset it from a `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]`
+method. Per-agent state belongs in node fields, which are created fresh for every machine.
+
+---
+
 ## Player builds
 
 Everything in BH3 runs in a build. The debugging *recorder* is compiled out of ordinary builds and comes back

@@ -59,6 +59,21 @@ namespace ArcaneOnyx.BehaviorTree
         private static void Hook()
         {
             Undo.undoRedoPerformed += InvalidateAll;
+
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        /// <summary>
+        /// A play-mode boundary replaces every scene graph, so entries keyed on the old ones can only be
+        /// stale. A domain reload used to drop them; with reload disabled this is the only thing that does.
+        /// </summary>
+        public static void OnPlayModeStateChanged(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.EnteredPlayMode || change == PlayModeStateChange.EnteredEditMode)
+            {
+                InvalidateAll();
+            }
         }
 
         /// <summary>
