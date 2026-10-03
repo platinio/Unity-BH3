@@ -10,7 +10,7 @@ What BH3 needs, how to get it into a project, and how to check it works. Ten min
 |---|---|
 | **Unity 6** | BH3 is built and verified on `6000.4.x`. |
 | **Visual Scripting** package (`com.unity.visualscripting`) | BH3 is built on it: ports, the graph canvas and Functions all come from it. `1.9.11` is the verified version. |
-| *Optional:* **Pipeline** package (`com.unity.pipeline`, `0.4.0-exp.1`) | Only for the `bt_*` and `fn_*` command-line tools. They live in their own editor assembly that compiles only when the package is present; nothing else in BH3 uses it. |
+| *Optional:* **Pipeline** package (`com.unity.pipeline`, `0.8.0-exp.1`) | Only for the `bt_*` and `fn_*` command-line tools. They live in their own editor assembly that compiles only when the package is present; nothing else in BH3 uses it. |
 
 ---
 
