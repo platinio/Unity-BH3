@@ -2,11 +2,11 @@
     "name": "ArcaneOnyx.BehaviorTree",
     "rootNamespace": "",
     "references": [
-        "GUID:e1e642558a69faa46863f16cc0d1cd2f",
-        "GUID:2866d813a6f8ec14aa6fefceb4fac761",
-        "GUID:122a5aac0d537ae4b9e532129db9f427",
-        "GUID:21b0c8d1703a94250bfac916590cea4f",
-        "GUID:ea715009a4efd4c6cbc85be3ae097dd3"
+        "ArcaneOnyx.BlockVariables.Runtime",
+        "ArcaneOnyx.GraphCore",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
+        "Unity.VisualScripting.Core",
+        "Unity.VisualScripting.Flow"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
