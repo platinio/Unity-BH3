@@ -13,7 +13,8 @@
         "Unity.VisualScripting.Core.Editor",
         "Unity.VisualScripting.Flow.Editor",
         "Unity.Pipeline",
-        "Unity.Pipeline.Editor"
+        "Unity.Pipeline.Editor",
+        "Unity.Pipeline.Attributes"
     ],
     "includePlatforms": [
         "Editor"
