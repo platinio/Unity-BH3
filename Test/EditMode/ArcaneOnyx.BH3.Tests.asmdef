@@ -4,6 +4,7 @@
     "references": [
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.BehaviorTree.Editor",
+        "ArcaneOnyx.BehaviorTree.Editor.Commands",
         "ArcaneOnyx.VisualScriptingExtension.Runtime",
         "ArcaneOnyx.GraphCore",
         "ArcaneOnyx.GraphCore.Editor",
@@ -26,6 +27,12 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.pipeline",
+            "expression": "",
+            "define": "UNITY_PIPELINE_EXIST"
+        }
+    ],
     "noEngineReferences": false
 }
