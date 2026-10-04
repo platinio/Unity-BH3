@@ -35,7 +35,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// </para>
     ///
     /// <para>
-    /// <see cref="Invalidate"/> covers the rest — sub-tree contracts, undo, and the refresh verbs — and is
+    /// <see cref="Invalidate"/> covers the rest — sub-tree contracts, undo, the refresh verbs, and a
+    /// play-mode boundary (<see cref="GraphCachePlayBoundary"/>) — and is
     /// bumped by whole events, never by a timer.
     /// </para>
     ///

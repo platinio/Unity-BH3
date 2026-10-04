@@ -19,8 +19,8 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// <b>The rule, in one place.</b> An index is dropped when the graph's element collection changes, and
-    /// when undo runs. Element changes cover connect, disconnect, and every add or delete, because
+    /// <b>The rule, in one place.</b> An index is dropped when the graph's element collection changes, when
+    /// undo runs, and when play mode starts or stops (<see cref="GraphCachePlayBoundary"/>). Element changes cover connect, disconnect, and every add or delete, because
     /// connections and transitions are merged into <c>graph.elements</c> alongside nodes. Undo is separate
     /// because it restores elements by re-instantiating them rather than by adding to the collection, so the
     /// collection event alone would leave a map keyed on objects nothing points at any more.

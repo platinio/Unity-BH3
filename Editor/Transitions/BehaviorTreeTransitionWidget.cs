@@ -436,26 +436,6 @@ namespace ArcaneOnyx.BehaviorTree
             static Styles()
             {
                 
-                normalBackground = new GUIStyle();
-                normalBackground.normal.background = Texture2D.whiteTexture;
-                normalBackground.onNormal.background = normalBackground.normal.background;
-
-                runningBackground = new GUIStyle();
-                var text = new Texture2D(100, 100);
-
-                for (int y = 0; y < text.height; y++)
-                {
-                    for (int x = 0; x < text.width; x++)
-                    {
-                        text.SetPixel(x, y, Color.green);
-                    }
-                }
-
-                text.Apply();
-                
-                runningBackground.normal.background = text;
-                runningBackground.onNormal.background = runningBackground.normal.background;
-                
                 label = new GUIStyle(BoltCore.Styles.nodeLabel);
                 label.alignment = TextAnchor.MiddleCenter;
                 label.imagePosition = ImagePosition.TextOnly;
@@ -469,8 +449,6 @@ namespace ArcaneOnyx.BehaviorTree
                 eventIcon.fixedWidth = 16;
             }
 
-            public static readonly GUIStyle normalBackground;
-            public static readonly GUIStyle runningBackground;
             public static readonly GUIStyle label;
 
             public static readonly GUIStyle labelInverted;
