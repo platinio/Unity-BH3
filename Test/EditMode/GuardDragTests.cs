@@ -57,6 +57,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             canvas.selection.Add(guard);
             canvas.selection.Add(neighbour);
 
+            Assert.That(canvas.selection.Contains(guard), Is.True,
+                "the guard has to be in the selection for the drag to have had the chance to move it");
+
             canvas.BeginDrag();
             canvas.Drag(Delta, false);
             canvas.EndDrag();
@@ -69,12 +72,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void AGuardSelectedWithItsOwner_IsStillLeftToItsOwnLayout()
+        public void AGuardSelectedWithItsOwner_IsNotWrittenToByTheDrag()
         {
             var guardStart = guard.Position;
             var ownerStart = owner.Position;
             canvas.selection.Add(guard);
             canvas.selection.Add(owner);
+
+            Assert.That(canvas.selection.Contains(guard), Is.True,
+                "the guard has to be in the selection for the drag to have had the chance to move it");
 
             canvas.BeginDrag();
             canvas.Drag(Delta, false);
@@ -82,7 +88,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.That(owner.Position.position, Is.Not.EqualTo(ownerStart.position));
             Assert.That(guard.Position, Is.EqualTo(guardStart),
-                "the guard follows its owner through its own layout pass, not by being dragged beside it");
+                "no layout pass runs here, so the guard is still where it was authored: dragging its owner " +
+                "does not write to it either, and following the owner is left to the guard's own layout");
         }
     }
 }
