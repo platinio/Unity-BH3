@@ -24,12 +24,16 @@ more important in ahead of you.
 ### Attaching one
 
 Right-click the node to protect and choose **Condition → Conditional Execution** or
-**Condition → Reactive Guard**. The guard appears beside that node as its **owner**. Feed its `Value` port
+**Condition → Reactive Guard**. The guard appears above that node, its **owner**. Feed its `Value` port
 with any boolean source: a `Get Variable`, a `Not`, an `Is Not Null`, or a [Function](08-functions.md)
 through a Script Graph Variable.
 
 Guards do not go on **Entry**. Any other node takes them, including a **Run Behavior Tree Graph** node,
 which is the usual place: branch in its own asset, guard at the call site.
+
+A guard has no position of its own. It is drawn above its owner and goes wherever the owner goes, so it
+cannot be dragged: pressing on one and dragging does not move it, and a guard caught in a lasso with other
+nodes stays above its owner while those nodes move. To move a guard, move its owner.
 
 Several guards on one owner are **ANDed**: the node runs only while all of them hold. There is no `And`
 node and none is needed.
