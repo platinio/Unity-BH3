@@ -31,6 +31,10 @@ through a Script Graph Variable.
 Guards do not go on **Entry**. Any other node takes them, including a **Run Behavior Tree Graph** node,
 which is the usual place: branch in its own asset, guard at the call site.
 
+A guard has no position of its own. It is drawn above its owner and goes wherever the owner goes, so it
+cannot be dragged: pressing on one and dragging does nothing, and a guard caught in a lasso with other nodes
+stays above its owner while those nodes move. To move a guard, move its owner.
+
 Several guards on one owner are **ANDed**: the node runs only while all of them hold. There is no `And`
 node and none is needed.
 
