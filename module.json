@@ -4,6 +4,13 @@
     "installPath": "Assets/ArcaneOnyx/BH3",
     "dependencyRoot": "Assets/ArcaneOnyx/BH3/Dependencies",
     "unity": "6000.4",
+    "assetStore": {
+        "package": "311150"
+    },
+    "exclude": [
+        "docs",
+        "README.md"
+    ],
     "packages": {
         "com.unity.visualscripting": "1.9.11"
     },

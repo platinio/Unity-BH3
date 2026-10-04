@@ -25,6 +25,10 @@ release by itself:
        auto-generated notes), and uploads the core package (+ the sample package).
     7. Prints the permanent "releases/latest/download/..." URLs for your docs.
 
+With --asset-store, steps 1-5 are the same and 6-7 are replaced: nothing is pushed or
+tagged, and the core package is uploaded to the module's DRAFT on the Unity Asset
+Store instead (see "ASSET STORE" below).
+
 --------------------------------------------------------------------------------
 USAGE
 --------------------------------------------------------------------------------
@@ -39,8 +43,11 @@ Point at another repo / override the derived name:
 Handy flags:
     --skip-tests          skip the local Unity verify (faster; when already confirmed)
     --exclude A B         extra path prefixes to keep OUT of the core package
-                          (default: ReadmeResources; the "sample" path is auto-excluded)
+                          (default: ReadmeResources; the "sample" path is auto-excluded,
+                          and so is everything in module.json's "exclude")
     --draft/--prerelease  make the GitHub release a draft / prerelease
+    --asset-store         upload to the Asset Store draft instead of releasing on GitHub
+    --asset-store-list    print the publisher's Asset Store packages and exit
     --unity <path>        explicit Unity.exe (else auto-detected from the Unity Hub for
                           the project's version, or set UNITY_PATH)
     --test-platforms EditMode PlayMode
@@ -86,6 +93,15 @@ release.py itself would get packed). Only "name" + "version" are required.
             }                                   // deps the SAMPLE needs. Shorthand: "sample":
         },                                      // "Samples~" (no extra packages).
 
+        "exclude": ["docs"],                    // optional; path prefixes (repo-relative)
+                                                // kept OUT of the package and of the verify
+                                                // scaffold, e.g. a docs folder that is only
+                                                // read on GitHub. Added to --exclude.
+
+        "assetStore": {                         // optional; the Asset Store listing that
+            "package": "My Module"              // --asset-store uploads to: its name or its
+        },                                      // package id. Shorthand: "assetStore": "My Module".
+
         "dependencyRoot": "Assets/ArcaneOnyx/Modules", // optional; every BUNDLED module is
                                                 // relocated to <root>/<Name>, whatever its
                                                 // own installPath says (see "layout" below).
@@ -125,12 +141,32 @@ OPTIONAL DEPENDENCIES (make an integration optional):
      define is set exactly when the module is there).
   4. Mark it "optional": true here so it is not fetched/bundled.
 
+ASSET STORE (--asset-store):
+  Packs and verifies exactly as a GitHub release does, then uploads the core package
+  to the listing named by module.json's "assetStore" (or --asset-store-package). It
+  does NOT create the listing, edit its metadata, or submit it for review: the
+  listing must already have a DRAFT version in the Publisher Portal, and Submit is
+  still pressed there. A "sample" package is not uploaded -- a listing holds one package.
+
+  The upload goes through Unity's own Asset Store Tools package, driven in a throwaway
+  batch-mode project. That needs:
+    * the com.unity.asset-store-tools package on disk -- found in the parent project's
+      Packages/ or Library/PackageCache, or pass --asset-store-tools <folder>;
+    * a publisher login on this machine. Nothing is typed or stored by this script:
+      it reuses the session Asset Store Tools cached the last time you logged in
+      through its Uploader window (any project), falling back to the Editor's own
+      signed-in account. If both fail, open Tools > Asset Store > Uploader and log in.
+
+  `python release.py --asset-store-list` prints every package the publisher has (name,
+  package id, status) -- use it to find what to put in "assetStore".
+
 The .unitypackage format is a gzip-compressed tar: one folder per asset, named by the
 asset's GUID (from its .meta), holding `asset`, `asset.meta`, `pathname`. That is why
 packing needs no Unity install.
 """
 
 import argparse
+import atexit
 import gzip
 import io
 import json
@@ -655,6 +691,266 @@ public static class CIBuild
 """
 
 
+# --------------------------------------------------------------------------- #
+# Asset Store upload (through Unity's Asset Store Tools, in a throwaway project)
+# --------------------------------------------------------------------------- #
+ASSET_STORE_TOOLS_PACKAGE = "com.unity.asset-store-tools"
+
+# Asset Store Tools keeps its API internal and grants access to an assembly with this
+# name (its own tests). Compiling against it means an API change in a newer Asset
+# Store Tools shows up as a compile error naming the member, not as a failed upload.
+ASSET_STORE_UPLOAD_ASMDEF = {
+    "name": "AssetStoreTools.Tests",
+    "references": ["asset-store-tools-editor"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": False,
+}
+
+ASSET_STORE_UPLOAD_CS = r"""
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using AssetStoreTools;
+using AssetStoreTools.Api;
+using AssetStoreTools.Api.Models;
+using AssetStoreTools.Api.Responses;
+using UnityEditor;
+using UnityEngine;
+
+// Injected by release.py. "-asMode list" prints the publisher's packages;
+// "-asMode check -asPackage <name or id>" finds that package's draft;
+// "-asMode upload -asPackage <name or id> -asFile <.unitypackage>" uploads to it.
+public static class ReleaseAssetStoreUpload
+{
+    private const string Tag = "[AssetStore] ";
+
+    private static string Arg(string name)
+    {
+        var args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == name) return args[i + 1];
+        return null;
+    }
+
+    private static void Say(string message) => Debug.Log(Tag + message);
+
+    public static async void Run()
+    {
+        Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+        int code = 1;
+        try
+        {
+            code = await RunAsync();
+        }
+        catch (Exception e)
+        {
+            Say("error: " + e);
+        }
+        EditorApplication.Exit(code);
+    }
+
+    private static async Task<int> RunAsync()
+    {
+        string mode = Arg("-asMode");
+        var api = new AssetStoreApi(new AssetStoreClient());
+
+        AuthenticationResponse auth = null;
+        string session = EditorPrefs.GetString(Constants.Cache.SessionTokenKey, string.Empty);
+        if (!string.IsNullOrEmpty(session))
+            auth = await api.Authenticate(new SessionAuthentication(session));
+        if (auth == null || !auth.Success)
+        {
+            string cloudToken = CloudProjectSettings.accessToken;
+            if (!string.IsNullOrEmpty(cloudToken))
+                auth = await api.Authenticate(new CloudTokenAuthentication(cloudToken));
+        }
+        if (auth == null || !auth.Success)
+        {
+            Say("error: not logged in" + (auth?.Exception != null ? " (" + auth.Exception.Message + ")" : ""));
+            return 3;
+        }
+        if (!auth.User.IsPublisher)
+        {
+            Say("error: account '" + auth.User.Username + "' is not an Asset Store publisher");
+            return 3;
+        }
+        Say("user=" + auth.User.Username);
+
+        var data = await api.GetPackages();
+        if (!data.Success)
+        {
+            Say("error: could not read the publisher's packages: " + data.Exception?.Message);
+            return 1;
+        }
+        List<Package> packages = data.Packages ?? new List<Package>();
+        foreach (var p in packages)
+            Say("package id=" + p.PackageId + " status=" + p.Status + " name=" + p.Name);
+        if (mode == "list")
+            return 0;
+
+        string key = Arg("-asPackage");
+        var matches = packages.Where(p => p.PackageId == key
+            || string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matches.Count == 0)
+        {
+            Say("error: no package named or numbered '" + key + "'");
+            return 4;
+        }
+        var drafts = matches.Where(p => string.Equals(p.Status, "draft", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (drafts.Count != 1)
+        {
+            Say("error: '" + key + "' has " + drafts.Count + " draft versions (status: "
+                + string.Join(", ", matches.Select(p => p.Status)) + "); exactly one is needed");
+            return 4;
+        }
+        var draft = drafts[0];
+        Say("draft id=" + draft.PackageId + " version=" + draft.VersionId + " name=" + draft.Name);
+        if (mode == "check")
+            return 0;
+
+        string file = Arg("-asFile");
+        var uploader = new UnityPackageUploader(new UnityPackageUploadSettings
+        {
+            VersionId = draft.VersionId,
+            UnityPackagePath = file,
+            RootGuid = string.Empty,
+            RootPath = string.Empty,
+            ProjectPath = file,
+        });
+        var result = await api.UploadPackage(uploader, new ProgressLog());
+        Say("upload status=" + result.Status + (result.Exception != null ? " (" + result.Exception.Message + ")" : ""));
+        if (result.Status == UploadStatus.Success) return 0;
+        return result.Status == UploadStatus.ResponseTimeout ? 5 : 1;
+    }
+
+    private class ProgressLog : IProgress<float>
+    {
+        private int lastStep = -1;
+
+        public void Report(float percent)
+        {
+            int step = (int)(percent / 10f);
+            if (step <= lastStep) return;
+            lastStep = step;
+            Debug.Log(Tag + "uploaded " + step * 10 + "%");
+        }
+    }
+}
+"""
+
+
+def asset_store_package_key(manifest, override):
+    """The listing --asset-store targets: a package name or id, or None."""
+    if override:
+        return override
+    spec = (manifest or {}).get("assetStore")
+    if isinstance(spec, dict):
+        spec = spec.get("package")
+    if spec is None:
+        return None
+    if not isinstance(spec, (str, int)) or not str(spec).strip():
+        fail('module.json "assetStore" must be the listing\'s name or package id, '
+             'or {"package": <name or id>}.')
+    return str(spec).strip()
+
+
+def find_asset_store_tools(parent, override):
+    """Folder of the com.unity.asset-store-tools package, or None."""
+    candidates = [override] if override else []
+    if parent and not override:
+        candidates.append(os.path.join(parent, "Packages", ASSET_STORE_TOOLS_PACKAGE))
+        cache = os.path.join(parent, "Library", "PackageCache")
+        if os.path.isdir(cache):
+            candidates += [os.path.join(cache, d) for d in sorted(os.listdir(cache))
+                           if d.startswith(ASSET_STORE_TOOLS_PACKAGE)]
+    for c in candidates:
+        if os.path.isfile(os.path.join(c, "package.json")):
+            return os.path.abspath(c)
+    return None
+
+
+class AssetStoreSession:
+    """A throwaway project holding Asset Store Tools and the injected uploader.
+
+    One project serves every call, so only the first pays for the import. Deleted
+    when the script exits, however it exits.
+    """
+
+    def __init__(self, repo, args):
+        parent = find_parent_project(repo)
+        tools = find_asset_store_tools(parent, args.asset_store_tools)
+        if not tools:
+            fail(f"could not find the {ASSET_STORE_TOOLS_PACKAGE} package. Install Asset "
+                 "Store Tools in the parent project, or pass --asset-store-tools <folder>.")
+        unity_version = detect_unity_version(parent, args.unity_version)
+        self.unity_exe = find_unity(unity_version, args.unity)
+        if not self.unity_exe:
+            fail(f"could not find Unity {unity_version}. Pass --unity <path> or set UNITY_PATH.")
+        self.keep = args.keep_test_project
+
+        deps = scaffold_deps(parent, DEFAULT_TF_VERSION)
+        del deps["com.unity.test-framework"]
+        deps.update(json.load(open(os.path.join(tools, "package.json"))).get("dependencies", {}))
+        deps[ASSET_STORE_TOOLS_PACKAGE] = "file:" + tools.replace("\\", "/")
+
+        self.proj = tempfile.mkdtemp(prefix="asset_store_upload_")
+        os.makedirs(os.path.join(self.proj, "ProjectSettings"))
+        os.makedirs(os.path.join(self.proj, "Packages"))
+        with open(os.path.join(self.proj, "ProjectSettings", "ProjectVersion.txt"), "w") as fh:
+            fh.write(f"m_EditorVersion: {unity_version}\n")
+        with open(os.path.join(self.proj, "Packages", "manifest.json"), "w") as fh:
+            json.dump({"dependencies": deps}, fh, indent=2)
+        code_dir = os.path.join(self.proj, "Assets", "AssetStoreUpload", "Editor")
+        os.makedirs(code_dir)
+        with open(os.path.join(code_dir, "AssetStoreTools.Tests.asmdef"), "w") as fh:
+            json.dump(ASSET_STORE_UPLOAD_ASMDEF, fh, indent=2)
+        with open(os.path.join(code_dir, "ReleaseAssetStoreUpload.cs"), "w") as fh:
+            fh.write(ASSET_STORE_UPLOAD_CS)
+        self.runs = 0
+        atexit.register(self.close)
+
+    def run(self, mode, package=None, file=None, timeout=1800):
+        """Returns the uploader's own log lines, tag stripped. Fails on any error."""
+        extra = ["-executeMethod", "ReleaseAssetStoreUpload.Run", "-asMode", mode]
+        if package:
+            extra += ["-asPackage", package]
+        if file:
+            extra += ["-asFile", os.path.abspath(file)]
+        self.runs += 1
+        log = os.path.join(self.proj, f"asset-store-{self.runs}-{mode}.log")
+        rc, logtxt, cs = run_unity(self.unity_exe, self.proj, extra, log, timeout=timeout)
+        if cs:
+            fail("the Asset Store uploader did not compile against this Asset Store Tools "
+                 "version:\n  " + "\n  ".join(cs[:25]))
+        tag = "[AssetStore] "
+        lines = [ln.split(tag, 1)[1].strip() for ln in logtxt.splitlines() if tag in ln]
+        errors = [ln for ln in lines if ln.startswith("error:")]
+        if rc == 3:
+            fail("Asset Store login failed (" + "; ".join(errors) + "). Open Tools > Asset "
+                 "Store > Uploader in any Unity project, log in as the publisher, and retry.")
+        if rc == 5:
+            fail("the package was sent but the Asset Store did not answer in time. Check the "
+                 "draft in the Publisher Portal before uploading again.")
+        if rc != 0:
+            if mode != "list" and any(ln.startswith("package ") for ln in lines):
+                errors += ["the publisher's packages:"] + \
+                          ["  " + ln[len("package "):] for ln in lines if ln.startswith("package ")]
+            fail(f"Asset Store {mode} failed (exit {rc}).\n  "
+                 + ("\n  ".join(errors) if errors
+                    else "Log tail:\n" + "\n".join(logtxt.splitlines()[-25:])))
+        return lines
+
+    def close(self):
+        if not os.path.isdir(self.proj):
+            return
+        if self.keep:
+            info(f"keeping Asset Store upload project at: {self.proj}")
+        else:
+            shutil.rmtree(self.proj, ignore_errors=True)
+
+
 def scaffold_project(repo, name, unity_version, deps, exclude_prefixes=(), install_path=None):
     """Create a temp Unity project containing the tracked tool content at its install path."""
     proj = tempfile.mkdtemp(prefix=f"ci_{name}_")
@@ -890,7 +1186,7 @@ def extract_package_into_project(raw, proj):
 # --------------------------------------------------------------------------- #
 def main():
     ap = argparse.ArgumentParser(description="Release a standalone Unity tool repo.")
-    ap.add_argument("version", help="version / tag to release, e.g. 1.1")
+    ap.add_argument("version", nargs="?", help="version / tag to release, e.g. 1.1")
     ap.add_argument("--repo", default=".", help="path to the tool repo (default: cwd)")
     ap.add_argument("--name", help="package + install-folder name (default: repo folder name)")
     ap.add_argument("--install-path", help="import path inside a project (default: Assets/<name>)")
@@ -907,11 +1203,27 @@ def main():
     ap.add_argument("--allow-dirty", action="store_true", help="pack despite uncommitted changes")
     ap.add_argument("--draft", action="store_true", help="create the release as a draft")
     ap.add_argument("--prerelease", action="store_true", help="mark the release as a prerelease")
+    ap.add_argument("--asset-store", action="store_true",
+                    help="upload to the module's Asset Store draft instead of releasing on GitHub")
+    ap.add_argument("--asset-store-list", action="store_true",
+                    help="print the publisher's Asset Store packages and exit")
+    ap.add_argument("--asset-store-package",
+                    help="listing name or package id (default: module.json's \"assetStore\")")
+    ap.add_argument("--asset-store-tools",
+                    help="path to the com.unity.asset-store-tools package folder "
+                         "(default: found in the parent project)")
     args = ap.parse_args()
 
     repo = os.path.abspath(args.repo)
     if not os.path.exists(os.path.join(repo, ".git")):
         fail(f"{repo} is not a git repo.")
+    if args.asset_store_list:
+        info("reading the publisher's Asset Store packages ...")
+        for line in AssetStoreSession(repo, args).run("list"):
+            print("  " + line)
+        return
+    if not args.version:
+        ap.error("the version to release is required")
     manifest = load_manifest(repo)
     if manifest and manifest.get("version") != args.version:
         fail(f"module.json says version {manifest.get('version')!r} but you are "
@@ -934,9 +1246,23 @@ def main():
     # 1. guards -------------------------------------------------------------
     if not args.allow_dirty and git(repo, "status", "--porcelain"):
         fail("working tree is dirty. Commit/stash first, or pass --allow-dirty.")
-    if tag in git(repo, "tag").splitlines():
+    if not args.asset_store and tag in git(repo, "tag").splitlines():
         fail(f"tag '{tag}' already exists.")
     branch = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+
+    # Find the Asset Store draft now, so a wrong listing name or a missing login
+    # fails here and not after the verify.
+    store, store_package = None, None
+    if args.asset_store:
+        store_package = asset_store_package_key(manifest, args.asset_store_package)
+        if not store_package:
+            fail('--asset-store needs the listing to upload to: add "assetStore": '
+                 '{"package": <name or id>} to module.json, or pass --asset-store-package. '
+                 '`release.py --asset-store-list` prints the candidates.')
+        store = AssetStoreSession(repo, args)
+        info(f"looking up the Asset Store draft of '{store_package}' ...")
+        found = store.run("check", package=store_package)
+        info("  " + next(ln for ln in found if ln.startswith("draft ")))
 
     # A "sample" in module.json ships as a SEPARATE <name>.Samples.unitypackage:
     # excluded from the CORE package, packed with the ~ stripped so Samples~/ installs
@@ -950,7 +1276,12 @@ def main():
     else:
         sample = sample or {}
         sample_path, sample_packages = sample.get("path"), sample.get("packages", {})
-    core_exclude = list(args.exclude) + ([sample_path] if sample_path else [])
+    manifest_exclude = (manifest or {}).get("exclude", [])
+    if not isinstance(manifest_exclude, list) or not all(isinstance(p, str) for p in manifest_exclude):
+        fail('module.json "exclude" must be a list of path prefixes, e.g. ["docs"].')
+    manifest_exclude = [p.replace("\\", "/").strip("/") for p in manifest_exclude]
+    exclude = list(args.exclude) + manifest_exclude
+    core_exclude = exclude + ([sample_path] if sample_path else [])
 
     # 2. resolve + download the dependency closure ---------------------------
     dep_packages = resolve_dependency_closure(manifest, tok, layout)
@@ -961,7 +1292,7 @@ def main():
     if sample_path:
         sample_out = os.path.join(repo, "dist", f"{name}.Samples.unitypackage")
         info(f"packing separate sample package from '{sample_path}' ...")
-        if not build_unitypackage(repo, install_path, sample_out, list(args.exclude),
+        if not build_unitypackage(repo, install_path, sample_out, exclude,
                                   only_prefix=sample_path, strip_tilde=True):
             fail(f"sample path '{sample_path}' contains no packable assets.")
         sample_raw = gzip.decompress(open(sample_out, "rb").read())
@@ -985,12 +1316,25 @@ def main():
                        args.test_platforms, args.keep_test_project,
                        dep_packages=dep_packages,
                        build_scene=(manifest or {}).get("buildScene"),
-                       exclude_prefixes=[sample_path] if sample_path else [],
+                       exclude_prefixes=manifest_exclude + ([sample_path] if sample_path else []),
                        sample_raw=sample_raw, install_path=install_path)
 
     # 5. pack the core package (+ bundled dependency closure) ----------------
     build_unitypackage(repo, install_path, out_file, core_exclude,
                        dep_packages=dep_packages)
+
+    if store:
+        if sample_out:
+            info("note: the sample package is not uploaded; an Asset Store listing holds one package.")
+        info(f"uploading {os.path.basename(out_file)} to the Asset Store draft of '{store_package}' ...")
+        for line in store.run("upload", package=store_package, file=out_file, timeout=7200):
+            if line.startswith("upload "):
+                info("  " + line)
+        info("done. Nothing was pushed or tagged.")
+        print(f"\n  Package : {out_file}")
+        print("  Uploaded to the draft. Review it and press Submit in the Publisher Portal:")
+        print("    https://publisher.unity.com/packages\n")
+        return
 
     # 5. push branch + tag --------------------------------------------------
     info(f"pushing branch '{branch}' ...")
