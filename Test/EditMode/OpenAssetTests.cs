@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
@@ -10,7 +11,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private const string Folder = "Assets/__OpenAssetTests";
 
         private BehaviorTreeGraphAsset tree;
-        private bool wasTreeWindowOpen;
+        private Dictionary<BehaviorTreeGraphWindow, GraphCore.GraphReference> treeWindowsOpenBefore;
 
         [SetUp]
         public void SetUp()
@@ -19,14 +20,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 AssetDatabase.CreateFolder("Assets", "__OpenAssetTests");
 
             tree = BehaviorTreeAuthoring.CreateTree($"{Folder}/Tree.asset");
-            wasTreeWindowOpen = EditorWindow.HasOpenInstances<BehaviorTreeGraphWindow>();
+            treeWindowsOpenBefore = RememberOpenTreeWindows();
         }
 
         [TearDown]
         public void TearDown()
         {
-            if (!wasTreeWindowOpen)
-                CloseTreeWindows();
+            RestoreTreeWindows();
 
             AssetDatabase.DeleteAsset(Folder);
         }
@@ -34,25 +34,40 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void OpeningATree_OpensItInTheTreeWindow()
         {
-            bool handled = BehaviorTreeCanvas.OnOpenAsset(IdOf(tree), 0);
+            Assert.That(BehaviorTreeCanvas.OnOpenAsset(IdOf(tree), line: 0), Is.True);
 
-            Assert.That(handled, Is.True);
-            Assert.That(EditorWindow.HasOpenInstances<BehaviorTreeGraphWindow>(), Is.True);
+            AssertTheActiveTreeWindowShows(tree);
         }
 
         [Test]
-        public void OpeningAnotherAsset_IsLeftToUnity()
+        public void OpeningATreeThroughUnity_ReachesTheTreeWindow()
         {
-            var notATree = new Texture2D(1, 1);
+            AssetDatabase.OpenAsset(tree);
+
+            AssertTheActiveTreeWindowShows(tree);
+        }
+
+        [Test]
+        public void OpeningAGraphAssetThatIsNotATree_IsLeftToUnity()
+        {
+            var notATree = ScriptableObject.CreateInstance<NotATreeGraphAsset>();
 
             try
             {
-                Assert.That(BehaviorTreeCanvas.OnOpenAsset(IdOf(notATree), 0), Is.False);
+                Assert.That(BehaviorTreeCanvas.OnOpenAsset(IdOf(notATree), line: 0), Is.False);
             }
             finally
             {
                 Object.DestroyImmediate(notATree);
             }
+        }
+
+        private static void AssertTheActiveTreeWindowShows(BehaviorTreeGraphAsset expectedTree)
+        {
+            var window = GraphCore.GraphWindow.active;
+
+            Assert.That(window != null, Is.True, "no graph window is active");
+            Assert.That(window.reference.rootObject, Is.SameAs(expectedTree));
         }
 
 #if UNITY_6000_4_OR_NEWER
@@ -61,10 +76,31 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         private static int IdOf(Object asset) => asset.GetInstanceID();
 #endif
 
-        private static void CloseTreeWindows()
+        private static Dictionary<BehaviorTreeGraphWindow, GraphCore.GraphReference> RememberOpenTreeWindows()
         {
+            var openWindows = new Dictionary<BehaviorTreeGraphWindow, GraphCore.GraphReference>();
+
             foreach (var window in Resources.FindObjectsOfTypeAll<BehaviorTreeGraphWindow>())
-                window.Close();
+                openWindows[window] = window.reference;
+
+            return openWindows;
+        }
+
+        private void RestoreTreeWindows()
+        {
+            if (treeWindowsOpenBefore.Count == 0)
+            {
+                foreach (var window in Resources.FindObjectsOfTypeAll<BehaviorTreeGraphWindow>())
+                    window.Close();
+
+                return;
+            }
+
+            foreach (var windowAndReference in treeWindowsOpenBefore)
+            {
+                if (windowAndReference.Key != null)
+                    windowAndReference.Key.reference = windowAndReference.Value;
+            }
         }
     }
 }
