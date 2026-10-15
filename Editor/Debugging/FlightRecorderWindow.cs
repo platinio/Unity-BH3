@@ -440,7 +440,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static BehaviorTreeMachine FindMachine(BehaviorTreeFlightRecorder recorder)
         {
+#if UNITY_6000_4_OR_NEWER
+            foreach (var machine in FindObjectsByType<BehaviorTreeMachine>())
+#else
             foreach (var machine in FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
+#endif
             {
                 if (ReferenceEquals(machine.FlightRecorder, recorder)) return machine;
             }
