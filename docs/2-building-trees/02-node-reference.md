@@ -115,10 +115,11 @@ Every input defaults to 0, except `Divide`'s `B`, which defaults to 1.
 | Set Nav Agent Position | `SetNavAgentPosition` | Sets the NavMeshAgent's destination to `NavPosition` |
 | Generate Random NavMesh Position | `GenerateRandomNavMeshPosition` | A value node. Samples a random NavMesh point between `MinDistance` and `MaxDistance` from the agent and outputs `Position` and `HasPosition` |
 | Wait Until Reach Nav Target Position | `WaitUntilReachNavTargetPosition` | Runs until the agent is within its stopping distance of its destination |
+| Set Nav Agent Speed | `SetNavAgentSpeed` | Makes the NavMeshAgent walk at `Speed` metres per second until something sets another speed. `Speed` must be fed |
 | Stop Nav Agent | `StopNavAgent` | Stops the NavMeshAgent |
 | Tactical Position Selection | `TacticalPositionSelection` | Runs a TPS query and outputs `SelectedPosition` and `HasPosition`. Needs the Tactical Position Selection module |
 
-On **Set Nav Agent Position**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
+On **Set Nav Agent Position**, **Set Nav Agent Speed**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
 be left empty and means the agent itself.
 
 **Generate Random NavMesh Position** tries up to `MaxTries` times (default 3). `SampleDistance` (default 1)
