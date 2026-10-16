@@ -12,6 +12,11 @@ using IGraphRoot = ArcaneOnyx.GraphCore.IGraphRoot;
 using IMacro = ArcaneOnyx.GraphCore.IMacro;
 using LudiqGraphsEditorUtility = ArcaneOnyx.GraphCore.LudiqGraphsEditorUtility;
 using UnityObject = UnityEngine.Object;
+#if UNITY_6000_4_OR_NEWER
+using OpenedAssetId = UnityEngine.EntityId;
+#else
+using OpenedAssetId = System.Int32;
+#endif
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -62,9 +67,9 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         [OnOpenAsset(int.MinValue)]
-        public static bool OnOpenAsset(int instanceID, int line)
+        public static bool OnOpenAsset(OpenedAssetId openedAssetId, int line)
         {
-            UnityObject obj = EditorUtility.InstanceIDToObject(instanceID);
+            UnityObject obj = FindOpenedAsset(openedAssetId);
             if (!(obj is BehaviorTreeGraphAsset)) return false;
             
             GraphReference reference = null;
@@ -78,6 +83,15 @@ namespace ArcaneOnyx.BehaviorTree
                 return false;
             GraphCore.GraphWindow.OpenActive<BehaviorTreeGraphWindow>(reference);
             return true;
+        }
+
+        private static UnityObject FindOpenedAsset(OpenedAssetId openedAssetId)
+        {
+#if UNITY_6000_4_OR_NEWER
+            return EditorUtility.EntityIdToObject(openedAssetId);
+#else
+            return EditorUtility.InstanceIDToObject(openedAssetId);
+#endif
         }
         
         protected override IEnumerable<Type> GetValidNodes() => new List<Type>()
