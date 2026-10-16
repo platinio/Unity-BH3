@@ -153,7 +153,7 @@ namespace ArcaneOnyx.BehaviorTree
         
         public override void ExpandDragGroup(HashSet<GraphCore.IGraphElement> dragGroup)
         {
-            if (BoltCore.Configuration.carryChildren)
+            if (BoltCore.Configuration?.carryChildren == true)
             {
                 foreach (var output in node.outputs)
                 {
