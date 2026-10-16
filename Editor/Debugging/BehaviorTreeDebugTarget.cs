@@ -231,7 +231,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             BehaviorTreeMachine found = null;
 
+#if UNITY_6000_4_OR_NEWER
+            foreach (var machine in Object.FindObjectsByType<BehaviorTreeMachine>())
+#else
             foreach (var machine in Object.FindObjectsByType<BehaviorTreeMachine>(FindObjectsSortMode.None))
+#endif
             {
                 if (!IsRecording(machine)) continue;
 
