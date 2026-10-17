@@ -23,16 +23,16 @@ namespace ArcaneOnyx.BH3.Samples
         public Projectile Projectile => projectile;
         public GameObject Visual => visual;
 
-        public void Land(GameObject target, Vector3 from)
+        public void Land(GameObject target, GameObject attacker)
         {
-            if (target.TryGetComponent(out Health health)) health.Damage(damage);
-            if (knockback > 0f && target.TryGetComponent(out Knockback shove)) shove.Push(AwayFrom(from, target) * knockback);
+            if (target.TryGetComponent(out Health health)) health.Damage(damage, attacker);
+            if (knockback > 0f && target.TryGetComponent(out Knockback shove)) shove.Push(AwayFrom(attacker, target) * knockback);
             if (slowSeconds > 0f && target.TryGetComponent(out Slowed slowed)) slowed.Apply(slowSeconds, SlowedSpeedFactor);
         }
 
-        private static Vector3 AwayFrom(Vector3 from, GameObject target)
+        private static Vector3 AwayFrom(GameObject attacker, GameObject target)
         {
-            Vector3 away = target.transform.position - from;
+            Vector3 away = target.transform.position - attacker.transform.position;
             away.y = 0f;
             return away.normalized;
         }

@@ -30,14 +30,14 @@ namespace ArcaneOnyx.BH3.Samples
         public void Attack(GameObject target)
         {
             if (definition.IsRanged) Shoot(target);
-            else definition.Land(target, transform.position);
+            else definition.Land(target, gameObject);
         }
 
         private void Shoot(GameObject target)
         {
             Vector3 muzzle = transform.position + Vector3.up;
             Projectile bolt = Instantiate(definition.Projectile, muzzle, Quaternion.identity);
-            bolt.Launch(target, definition);
+            bolt.Launch(target, definition, gameObject);
         }
 
         private void ShowInHand()

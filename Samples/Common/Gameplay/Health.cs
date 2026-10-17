@@ -16,6 +16,7 @@ namespace ArcaneOnyx.BH3.Samples
         private Unit unit;
 
         public event Action Changed;
+        public event Action<GameObject> Damaged;
 
         public bool IsDead => current <= 0;
         public float Fraction => (float)current / maxHealth;
@@ -35,12 +36,21 @@ namespace ArcaneOnyx.BH3.Samples
             current = value;
         }
 
-        public void Damage(int amount)
+        public void Damage(int amount, GameObject attacker)
         {
             if (IsDead) return;
 
             current = Mathf.Max(0, current - amount);
             FlashHurt();
+            Publish();
+            Damaged?.Invoke(attacker);
+        }
+
+        public void Heal(int amount)
+        {
+            if (IsDead) return;
+
+            current = Mathf.Min(maxHealth, current + amount);
             Publish();
         }
 

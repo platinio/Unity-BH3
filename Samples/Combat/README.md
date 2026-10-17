@@ -4,7 +4,7 @@ A small arena. Your character starts at the bottom between two chests. Left-clic
 left-click an enemy to attack it: your unit chases until in range, stops, and strikes on a cooldown until
 the target dies. Three kinds of enemy roam the far side. **Grunts** swing swords, the
 **archer** throws from a distance and keeps it, the big **brute** holds its ground and swings a hammer that
-knocks you back. Walk into a chest to take its weapon: sword, bow, or the brute's hammer. Whoever dies
+knocks you back. Walk into a chest to take its weapon, sword or hammer, and over a potion to heal. Whoever dies
 flashes, shrinks away and respawns a couple of seconds later, so the fight never ends. Kenney blocky
 characters, primitives and tweens; every animation is a tween on a body part.
 
@@ -34,10 +34,10 @@ Chase / Kite / ReturnHome:            Parallel Selector [ Set Nav Agent Position
 Wander:                               random NavMesh point, hop there, linger 1–3 s
 Die:                                  Flash Color → Scale To 0 → Wait 2 → Respawn
 
-Chest
+Pickup (chests and health packs)
 └─ Repeater → Selector
    ├─ HandOut   RG: playerNearby, Stops Its Own Branch OFF
-   │   └─ Punch Scale → Give Weapon → Scale To 0.5 → Wait 20 → Scale To 1
+   │   └─ Punch Scale → Apply Pickup → Scale To 0.5 → Wait 20 → Scale To 1
    └─ Wait 0.2
 ```
 
@@ -57,7 +57,8 @@ Chest
 | **Time-triggered guards** | The three `IsTargetInRange` guards, `IsFarFrom` | Distance changes without any variable write, so these poll. Every other guard in the samples wakes on a key. |
 | **A leash** | `ReturnHome` above `Engage` | Stray more than twelve metres from home, mid-fight or not, and the enemy walks back. It is why the grunts that killed you do not camp your spawn. |
 | **Top-priority takeover** | `Die` on every root | `isDead` flips and whatever was running is abandoned the same frame. |
-| **A tree on a box** | `Chest` | A chest has a machine too: wait for the player, pop, hand over the weapon, shrink while empty, refill. The hand-out keeps Stops Its Own Branch off so it finishes even if you walk away. |
+| **A tree on a prop, an effect in a Function** | `Pickup`, `GiveWeapon`, `Heal` | Chests and health packs run the same tree: wait for the player, pop, apply, shrink while spent, refill. What apply does is a Function picked on the Pickup component and run from code with the player as its `taker` input: `GiveWeapon(taker, weapon)` on a chest, `Heal(taker, amount)` on a potion. The hand-out keeps Stops Its Own Branch off so it finishes even if you walk away. |
+| **Hit back** | `PlayerOrders`, `Health.Damaged` | Damage carries the attacker. When the player is hit with no target, the attacker becomes the target and Engage takes over; a pending move order resumes once the fight is done. |
 | **Functions reading objects** | `PositionOf`, `IsTargetInRange`, `IsFarFrom`, `RetreatPointFrom` | Pure graphs with GameObject and Vector3 inputs, reading transforms through member units. |
 
 ## The cast
@@ -71,10 +72,10 @@ Chest
 | `Knockback` | Shoves a NavMeshAgent along the mesh; the hammer uses it. |
 | `Projectile` | The bow's bolt. |
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
-| `Chest` | Publishes `playerNearby`; `GiveWeapon()` is what the chest tree calls. |
-| `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets both. |
+| `Pickup`, `Pickups` | Publishes `playerNearby`; `Apply()` runs the effect Function on the player in reach. `Pickups` holds the two static helpers those Functions call. |
+| `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; a hit with no target makes the attacker the target; death forgets everything. |
 | `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, the hand socket the weapon visual hangs from, and the resting pose that Recover and Respawn return to. |
-| `Strike`, `Respawn`, `Give Weapon`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
+| `Strike`, `Respawn`, `Apply Pickup`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
 
 ## Notes
 

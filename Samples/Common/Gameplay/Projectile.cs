@@ -11,13 +11,13 @@ namespace ArcaneOnyx.BH3.Samples
 
         private Transform target;
         private WeaponDefinition weapon;
-        private Vector3 launchedFrom;
+        private GameObject shooter;
 
-        public void Launch(GameObject newTarget, WeaponDefinition firedBy)
+        public void Launch(GameObject newTarget, WeaponDefinition firedBy, GameObject firedFrom)
         {
             target = newTarget.transform;
             weapon = firedBy;
-            launchedFrom = transform.position;
+            shooter = firedFrom;
             Destroy(gameObject, LifetimeSeconds);
         }
 
@@ -33,7 +33,7 @@ namespace ArcaneOnyx.BH3.Samples
             transform.position = Vector3.MoveTowards(transform.position, aimPoint, speed * Time.deltaTime);
             if (Vector3.Distance(transform.position, aimPoint) > HitDistance) return;
 
-            weapon.Land(target.gameObject, launchedFrom);
+            weapon.Land(target.gameObject, shooter);
             Destroy(gameObject);
         }
     }

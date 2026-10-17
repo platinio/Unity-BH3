@@ -1029,6 +1029,30 @@ PrefabInstance:
       propertyPath: weapon
       value: 
       objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.function
+      value: 
+      objectReference: {fileID: 11400000, guid: 7e470c1a65e300144921f3d7999e3bf0, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].key
+      value: weapon
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].kind
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].typeName
+      value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].objectValue
+      value: 
+      objectReference: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
     - target: {fileID: 8588134923476037938, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: m_Name
       value: ChestHammer
@@ -1046,6 +1070,127 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7846216719433599148, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
   m_PrefabInstance: {fileID: 515447688}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &520154643
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 520154649}
+  - component: {fileID: 520154648}
+  - component: {fileID: 520154647}
+  - component: {fileID: 520154646}
+  - component: {fileID: 520154645}
+  - component: {fileID: 520154644}
+  m_Layer: 0
+  m_Name: HealthPack B
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &520154644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 816526384}
+  renderers:
+  - {fileID: 816526383}
+  parts: []
+  weaponSocket: {fileID: 0}
+--- !u!114 &520154645
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a2f03ded9f840b0af9087ff44896d38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BehaviorTree::ArcaneOnyx.BehaviorTree.BehaviorTreeMachine
+  _data:
+    _json: '{"OriginalMacro":null,"FlightRecorder":null,"Variables":null,"nest":{"source":"Macro","macro":0,"embed":null}}'
+    _objectReferences:
+    - {fileID: 11400000, guid: 43b07fdd914cb8c49b0b646e42b2a78a, type: 2}
+--- !u!114 &520154646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 193b096a40c8cc54891dd9af58b9176f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Pickup
+  effect:
+    function: {fileID: 11400000, guid: dadfb20da8facb747ab5981858394a65, type: 2}
+    arguments:
+    - key: amount
+      kind: 2
+      typeName: 
+      boolValue: 0
+      intValue: 100
+      floatValue: 0
+      stringValue: 
+      vectorValue: {x: 0, y: 0, z: 0, w: 0}
+      objectValue: {fileID: 0}
+--- !u!114 &520154647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c75989d94f4674b40af9a880a4541bab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BehaviorTree::ArcaneOnyx.BehaviorTree.AgentVariableWriter
+--- !u!114 &520154648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e741851cba3ad425c91ecf922cc6b379, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.VisualScripting.Core::Unity.VisualScripting.Variables
+  _data:
+    _json: '{"declarations":{"Kind":"Object","collection":{"$content":[],"$version":"A"},"$version":"A"}}'
+    _objectReferences: []
+--- !u!4 &520154649
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 520154643}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11, y: 0, z: -8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 816526384}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &564557125
 GameObject:
   m_ObjectHideFlags: 0
@@ -1164,6 +1309,30 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: weapon
+      value: 
+      objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.function
+      value: 
+      objectReference: {fileID: 11400000, guid: 7e470c1a65e300144921f3d7999e3bf0, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].key
+      value: weapon
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].kind
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].typeName
+      value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: effect.arguments.Array.data[0].objectValue
       value: 
       objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
     - target: {fileID: 8588134923476037938, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
@@ -1339,6 +1508,85 @@ CapsuleCollider:
   m_Height: 2.7
   m_Direction: 1
   m_Center: {x: 0, y: 1.35, z: 0}
+--- !u!1001 &773212179
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1205276423}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_Name
+      value: potion
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+--- !u!23 &773212180 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+  m_PrefabInstance: {fileID: 773212179}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &773212181 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+  m_PrefabInstance: {fileID: 773212179}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &776903133
 GameObject:
   m_ObjectHideFlags: 0
@@ -1554,6 +1802,85 @@ MonoBehaviour:
   - {fileID: 307804447}
   - {fileID: 307804445}
   weaponSocket: {fileID: 1222368473}
+--- !u!1001 &816526382
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 520154649}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+      propertyPath: m_Name
+      value: potion
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+--- !u!23 &816526383 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+  m_PrefabInstance: {fileID: 816526382}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &816526384 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 73d46e0f2e4f87444951dbe41158f21f, type: 3}
+  m_PrefabInstance: {fileID: 816526382}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &882292397
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2055,6 +2382,127 @@ Transform:
   m_LocalScale: {x: 0.6, y: 0.03, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1205276417
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1205276423}
+  - component: {fileID: 1205276422}
+  - component: {fileID: 1205276421}
+  - component: {fileID: 1205276420}
+  - component: {fileID: 1205276419}
+  - component: {fileID: 1205276418}
+  m_Layer: 0
+  m_Name: HealthPack A
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1205276418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 773212181}
+  renderers:
+  - {fileID: 773212180}
+  parts: []
+  weaponSocket: {fileID: 0}
+--- !u!114 &1205276419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a2f03ded9f840b0af9087ff44896d38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BehaviorTree::ArcaneOnyx.BehaviorTree.BehaviorTreeMachine
+  _data:
+    _json: '{"OriginalMacro":null,"FlightRecorder":null,"Variables":null,"nest":{"source":"Macro","macro":0,"embed":null}}'
+    _objectReferences:
+    - {fileID: 11400000, guid: 43b07fdd914cb8c49b0b646e42b2a78a, type: 2}
+--- !u!114 &1205276420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 193b096a40c8cc54891dd9af58b9176f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Pickup
+  effect:
+    function: {fileID: 11400000, guid: dadfb20da8facb747ab5981858394a65, type: 2}
+    arguments:
+    - key: amount
+      kind: 2
+      typeName: 
+      boolValue: 0
+      intValue: 100
+      floatValue: 0
+      stringValue: 
+      vectorValue: {x: 0, y: 0, z: 0, w: 0}
+      objectValue: {fileID: 0}
+--- !u!114 &1205276421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c75989d94f4674b40af9a880a4541bab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BehaviorTree::ArcaneOnyx.BehaviorTree.AgentVariableWriter
+--- !u!114 &1205276422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e741851cba3ad425c91ecf922cc6b379, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.VisualScripting.Core::Unity.VisualScripting.Variables
+  _data:
+    _json: '{"declarations":{"Kind":"Object","collection":{"$content":[],"$version":"A"},"$version":"A"}}'
+    _objectReferences: []
+--- !u!4 &1205276423
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205276417}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -11, y: 0, z: -3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 773212181}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1222368472
@@ -3836,3 +4284,5 @@ SceneRoots:
   - {fileID: 2109924555}
   - {fileID: 564557128}
   - {fileID: 1365967733}
+  - {fileID: 1205276423}
+  - {fileID: 520154649}

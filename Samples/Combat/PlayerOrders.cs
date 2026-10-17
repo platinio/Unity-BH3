@@ -14,6 +14,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private Camera viewCamera;
         private AgentVariableWriter playerFacts;
+        private Health playerHealth;
         private Combatant currentTarget;
         private int ordersIssued;
         private bool playerWasAlive = true;
@@ -22,7 +23,12 @@ namespace ArcaneOnyx.BH3.Samples
         {
             viewCamera = Camera.main;
             playerFacts = AgentVariableWriter.On(player.gameObject);
+            playerHealth = player.GetComponent<Health>();
         }
+
+        private void OnEnable() => playerHealth.Damaged += RetaliateAgainst;
+
+        private void OnDisable() => playerHealth.Damaged -= RetaliateAgainst;
 
         private void Update()
         {
@@ -52,8 +58,21 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void OrderAttack(Combatant enemy)
         {
-            currentTarget = enemy;
             CancelPendingMove();
+            Target(enemy);
+        }
+
+        private void RetaliateAgainst(GameObject attacker)
+        {
+            if (currentTarget != null || !player.IsAlive) return;
+            if (!attacker.TryGetComponent(out Combatant enemy) || !player.IsEnemyOf(enemy) || !enemy.IsAlive) return;
+
+            Target(enemy);
+        }
+
+        private void Target(Combatant enemy)
+        {
+            currentTarget = enemy;
             playerFacts.Write(this, CombatFacts.Target, enemy.gameObject);
             playerFacts.Write(this, CombatFacts.HasTarget, true);
         }

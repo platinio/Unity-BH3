@@ -5,6 +5,7 @@
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.GraphCore",
         "Unity.VisualScripting.Core",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
         "Unity.InputSystem",
         "UnityEngine.UI"
     ],

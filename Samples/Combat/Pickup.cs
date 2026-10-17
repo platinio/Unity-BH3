@@ -1,23 +1,31 @@
 using ArcaneOnyx.BehaviorTree;
+using ArcaneOnyx.VisualScriptingExtension;
 using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
 {
     [RequireComponent(typeof(AgentVariableWriter))]
-    public sealed class Chest : MonoBehaviour
+    public sealed class Pickup : MonoBehaviour
     {
         private const float ReachDistance = 1.6f;
         private const float CheckInterval = 0.2f;
+        private const string TakerInput = "taker";
 
-        [SerializeField] private WeaponDefinition weapon;
+        [SerializeField, PerCallInput(TakerInput, typeof(GameObject))]
+        private FunctionCall<bool> effect;
 
         private AgentVariableWriter facts;
+        private FunctionCall<bool>.Bound boundEffect;
+        private InputSlot<GameObject> taker;
         private Combatant playerInReach;
         private float nextCheckTime;
 
-        public WeaponDefinition Weapon => weapon;
-
-        private void Awake() => facts = AgentVariableWriter.On(gameObject);
+        private void Awake()
+        {
+            facts = AgentVariableWriter.On(gameObject);
+            boundEffect = effect.Bind(gameObject, name);
+            taker = boundEffect.Input<GameObject>(TakerInput);
+        }
 
         private void Update()
         {
@@ -28,12 +36,12 @@ namespace ArcaneOnyx.BH3.Samples
             facts.Write(this, CombatFacts.PlayerNearby, playerInReach != null);
         }
 
-        public bool GiveWeapon()
+        public bool Apply()
         {
             if (playerInReach == null) return false;
 
-            playerInReach.GetComponent<Weapon>().Equip(weapon);
-            return true;
+            boundEffect.Set(taker, playerInReach.gameObject);
+            return boundEffect.Invoke();
         }
 
         private Combatant PlayerInReach()
