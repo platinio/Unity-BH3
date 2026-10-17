@@ -29,6 +29,13 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Command(RaycastHit hit)
         {
+            Building building = hit.collider.GetComponentInParent<Building>();
+            if (building != null)
+            {
+                if (!building.IsBuilt) OrderBuild(building.gameObject);
+                return;
+            }
+
             ResourceNode resource = hit.collider.GetComponentInParent<ResourceNode>();
             if (resource != null)
             {
@@ -40,6 +47,19 @@ namespace ArcaneOnyx.BH3.Samples
             }
         }
 
+        public void OrderBuild(GameObject site)
+        {
+            ordersIssued++;
+            foreach (Selectable unit in selection.Selected)
+            {
+                if (!unit.TryGetComponent(out Carrier _)) continue;
+
+                AgentVariableWriter facts = CancelAllOrders(unit.gameObject);
+                facts.Write(this, RtsFacts.Site, site);
+                facts.Write(this, RtsFacts.BuildOrder, ordersIssued);
+            }
+        }
+
         private void OrderGather(GameObject resource)
         {
             ordersIssued++;
@@ -47,8 +67,7 @@ namespace ArcaneOnyx.BH3.Samples
             {
                 if (!unit.TryGetComponent(out Carrier _)) continue;
 
-                AgentVariableWriter facts = AgentVariableWriter.On(unit.gameObject);
-                CancelOrder(facts, ClickToMoveFacts.OrderNumber, ClickToMoveFacts.CompletedOrder);
+                AgentVariableWriter facts = CancelAllOrders(unit.gameObject);
                 facts.Write(this, RtsFacts.Resource, resource);
                 facts.Write(this, RtsFacts.GatherOrder, ordersIssued);
             }
@@ -59,11 +78,19 @@ namespace ArcaneOnyx.BH3.Samples
             ordersIssued++;
             foreach (Selectable unit in selection.Selected)
             {
-                AgentVariableWriter facts = AgentVariableWriter.On(unit.gameObject);
-                CancelOrder(facts, RtsFacts.GatherOrder, RtsFacts.CompletedGatherOrder);
+                AgentVariableWriter facts = CancelAllOrders(unit.gameObject);
                 facts.Write(this, ClickToMoveFacts.Destination, point);
                 facts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
             }
+        }
+
+        private AgentVariableWriter CancelAllOrders(GameObject unit)
+        {
+            AgentVariableWriter facts = AgentVariableWriter.On(unit);
+            CancelOrder(facts, ClickToMoveFacts.OrderNumber, ClickToMoveFacts.CompletedOrder);
+            CancelOrder(facts, RtsFacts.GatherOrder, RtsFacts.CompletedGatherOrder);
+            CancelOrder(facts, RtsFacts.BuildOrder, RtsFacts.CompletedBuildOrder);
+            return facts;
         }
 
         private void CancelOrder(AgentVariableWriter facts, string orderKey, string completedKey)

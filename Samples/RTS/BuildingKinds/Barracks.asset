@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08a47275aaba93648b2cfc1824595dc9, type: 3}
+  m_Name: Barracks
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BuildingKind
+  model: {fileID: 919132149155446097, guid: 997be18e7233b424bb4a3bf9dd6a6bdd, type: 3}
+  modelScale: 4
+  tree: {fileID: 11400000, guid: cd2c123bdf21b2a4788f830f53eecbee, type: 2}
+  woodCost: 100
+  goldCost: 0
+  buildSeconds: 20
+  footprintRadius: 2.2
+  trains: []
+  rallyOffset: {x: 0, y: 0, z: -4.2}
