@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 360810252}
   - component: {fileID: 360810254}
   - component: {fileID: 360810253}
+  - component: {fileID: 360810255}
   m_Layer: 0
   m_Name: DestinationMarker
   m_TagString: Untagged
@@ -209,6 +210,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 360810251}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &360810255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360810251}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6071ee64790a9d14cb64e411438a95da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.DestinationMarker
+  popDuration: 0.25
 --- !u!1 &547333610
 GameObject:
   m_ObjectHideFlags: 0
@@ -1249,8 +1263,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.ClickToMoveInput
   agent: {fileID: 732668432}
-  destinationMarker: {fileID: 360810252}
-  markerPopDuration: 0.25
+  destinationMarker: {fileID: 360810255}
 --- !u!4 &1895657266
 Transform:
   m_ObjectHideFlags: 0

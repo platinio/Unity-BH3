@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: HoldsWeapon
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":[],"description":"True while the weapon the agent holds is the one wanted.","graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[{"hasDefaultValue":false,"defaultValue":null,"_type":"System.String","key":"held","label":"held","summary":null,"hideLabel":false},{"hasDefaultValue":false,"defaultValue":null,"_type":"System.String","key":"wanted","label":"wanted","summary":null,"hideLabel":false}],"valueOutputDefinitions":[{"_type":"System.Boolean","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":0.0,"y":0.0},"zoom":1.0,"elements":[{"defaultValues":{},"position":{"x":-320.0,"y":0.0},"guid":"0377cd20-dffc-43e0-bae6-037a6744c561","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphInput","$id":"15"},{"defaultValues":{},"position":{"x":320.0,"y":0.0},"guid":"0dbac0a3-779a-4864-9b0f-44136b9b731f","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphOutput","$id":"17"},{"numeric":false,"defaultValues":{},"position":{"x":0.0,"y":150.0},"guid":"2887d2d8-176b-4170-b7d8-27009e4ca225","$version":"A","$type":"Unity.VisualScripting.Equal","$id":"19"},{"sourceUnit":{"$ref":"15"},"sourceKey":"Enter","destinationUnit":{"$ref":"17"},"destinationKey":"Exit","guid":"22c330d3-09fa-4e72-98cf-6a8dc3c6d361","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"15"},"sourceKey":"held","destinationUnit":{"$ref":"19"},"destinationKey":"a","guid":"3cf84751-12ae-4932-aba4-0d7224c56af7","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"15"},"sourceKey":"wanted","destinationUnit":{"$ref":"19"},"destinationKey":"b","guid":"7588d5db-0af4-41da-bd58-aaf7752ac64f","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"19"},"sourceKey":"equal","destinationUnit":{"$ref":"17"},"destinationKey":"Result","guid":"ede7382a-6f2e-43a4-a701-1ba3dea59810","$type":"Unity.VisualScripting.ValueConnection"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys: []
+  description: True while the weapon the agent holds is the one wanted.
