@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: Engage.keepDistanceRead
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":["keepDistance"],"description":null,"graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[],"valueOutputDefinitions":[{"_type":"System.Object","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":0.0,"y":0.0},"zoom":1.0,"elements":[{"defaultValues":{},"position":{"x":-320.0,"y":0.0},"guid":"61470d34-eae2-4355-9260-1c7c3b1f0e79","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphInput","$id":"13"},{"defaultValues":{},"position":{"x":320.0,"y":0.0},"guid":"545d91fe-5221-4f5b-8bb2-644c4d812f79","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphOutput","$id":"15"},{"specifyFallback":true,"kind":"Object","defaultValues":{"name":{"$content":"keepDistance","$type":"System.String"},"object":null},"position":{"x":-120.0,"y":0.0},"guid":"655f6e1e-4c68-4a28-bd45-9eff558a301b","$version":"A","$type":"Unity.VisualScripting.GetVariable","$id":"17"},{"type":"System.Single","value":{"$content":0.0,"$type":"System.Single"},"defaultValues":{},"position":{"x":-320.0,"y":140.0},"guid":"8a3a0bad-5253-4405-aeef-8ab4af33efb0","$version":"A","$type":"Unity.VisualScripting.Literal","$id":"19"},{"sourceUnit":{"$ref":"13"},"sourceKey":"Enter","destinationUnit":{"$ref":"15"},"destinationKey":"Exit","guid":"c9c0e8d0-071c-43fc-9578-792d67e90009","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"19"},"sourceKey":"output","destinationUnit":{"$ref":"17"},"destinationKey":"fallback","guid":"a3dbd3b0-39dd-4faf-8746-fecaf2327d85","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"17"},"sourceKey":"value","destinationUnit":{"$ref":"15"},"destinationKey":"Result","guid":"752074b1-4457-413c-9cf7-802e03db0223","$type":"Unity.VisualScripting.ValueConnection"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys:
+  - keepDistance
+  description: 

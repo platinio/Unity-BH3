@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ArcaneOnyx.BehaviorTree;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -10,7 +11,7 @@ namespace ArcaneOnyx.BH3.Samples
         Enemy
     }
 
-    [RequireComponent(typeof(Health), typeof(NavMeshAgent))]
+    [RequireComponent(typeof(Health), typeof(NavMeshAgent), typeof(Knockback))]
     public sealed class Combatant : MonoBehaviour
     {
         public static readonly List<Combatant> All = new();
@@ -19,8 +20,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private Health health;
         private NavMeshAgent navAgent;
-        private Transform body;
-        private Vector3 bodyRestingScale;
+        private BodyPose bodyPose;
         private Vector3 spawnPosition;
         private Quaternion spawnRotation;
 
@@ -32,10 +32,10 @@ namespace ArcaneOnyx.BH3.Samples
         {
             health = GetComponent<Health>();
             navAgent = GetComponent<NavMeshAgent>();
-            body = AgentBody.Find(gameObject);
-            bodyRestingScale = body.localScale;
+            bodyPose = BodyPose.Of(AgentBody.Find(gameObject));
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
+            AgentVariableWriter.On(gameObject).Write(this, CombatFacts.Home, spawnPosition);
         }
 
         private void OnEnable() => All.Add(this);
@@ -48,7 +48,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             navAgent.Warp(spawnPosition);
             transform.rotation = spawnRotation;
-            body.localScale = bodyRestingScale;
+            bodyPose.RestoreInstantly();
             health.Revive();
         }
     }

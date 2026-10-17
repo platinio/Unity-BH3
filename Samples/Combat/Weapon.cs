@@ -12,11 +12,9 @@ namespace ArcaneOnyx.BH3.Samples
 
         public WeaponDefinition Definition => definition;
 
-        private void Awake()
-        {
-            facts = AgentVariableWriter.On(gameObject);
-            Publish();
-        }
+        private AgentVariableWriter Facts => facts != null ? facts : facts = AgentVariableWriter.On(gameObject);
+
+        private void Awake() => Publish();
 
         public void Equip(WeaponDefinition newDefinition)
         {
@@ -33,6 +31,14 @@ namespace ArcaneOnyx.BH3.Samples
         private void Hit(GameObject target)
         {
             if (target.TryGetComponent(out Health targetHealth)) targetHealth.Damage(definition.Damage);
+            if (definition.Knockback > 0f && target.TryGetComponent(out Knockback knockback)) knockback.Push(PushDirectionTo(target) * definition.Knockback);
+        }
+
+        private Vector3 PushDirectionTo(GameObject target)
+        {
+            Vector3 away = target.transform.position - transform.position;
+            away.y = 0f;
+            return away.normalized;
         }
 
         private void Shoot(GameObject target)
@@ -44,9 +50,9 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Publish()
         {
-            facts.Write(this, CombatFacts.WeaponId, definition.Id);
-            facts.Write(this, CombatFacts.AttackRange, definition.Range);
-            facts.Write(this, CombatFacts.AttackCooldown, definition.Cooldown);
+            Facts.Write(this, CombatFacts.WeaponId, definition.Id);
+            Facts.Write(this, CombatFacts.AttackRange, definition.Range);
+            Facts.Write(this, CombatFacts.AttackCooldown, definition.Cooldown);
         }
     }
 }

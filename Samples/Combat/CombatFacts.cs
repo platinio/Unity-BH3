@@ -9,5 +9,8 @@ namespace ArcaneOnyx.BH3.Samples
         public const string WeaponId = "weaponId";
         public const string AttackRange = "attackRange";
         public const string AttackCooldown = "attackCooldown";
+        public const string KeepDistance = "keepDistance";
+        public const string Home = "home";
+        public const string PlayerNearby = "playerNearby";
     }
 }

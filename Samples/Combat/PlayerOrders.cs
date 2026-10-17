@@ -11,12 +11,9 @@ namespace ArcaneOnyx.BH3.Samples
 
         [SerializeField] private Combatant player;
         [SerializeField] private DestinationMarker destinationMarker;
-        [SerializeField] private WeaponDefinition sword;
-        [SerializeField] private WeaponDefinition bow;
 
         private Camera viewCamera;
         private AgentVariableWriter playerFacts;
-        private Weapon playerWeapon;
         private Combatant currentTarget;
         private int ordersIssued;
         private bool playerWasAlive = true;
@@ -25,24 +22,13 @@ namespace ArcaneOnyx.BH3.Samples
         {
             viewCamera = Camera.main;
             playerFacts = AgentVariableWriter.On(player.gameObject);
-            playerWeapon = player.GetComponent<Weapon>();
         }
 
         private void Update()
         {
-            HandleWeaponKeys();
             HandleClick();
             DropTargetWhenItDies();
             ForgetOrdersWhenPlayerDies();
-        }
-
-        private void HandleWeaponKeys()
-        {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            if (keyboard.digit1Key.wasPressedThisFrame) playerWeapon.Equip(sword);
-            if (keyboard.digit2Key.wasPressedThisFrame) playerWeapon.Equip(bow);
         }
 
         private void HandleClick()

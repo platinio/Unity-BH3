@@ -13,6 +13,12 @@ namespace ArcaneOnyx.BH3.Samples
         private AgentVariableWriter facts;
         private float nextScanTime;
 
+        public float Radius
+        {
+            get => radius;
+            set => radius = value;
+        }
+
         private void Awake()
         {
             self = GetComponent<Combatant>();

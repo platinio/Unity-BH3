@@ -42,6 +42,30 @@ namespace ArcaneOnyx.BH3.Samples
             return Play(transform, duration, Easing.Linear,
                 progress => transform.localPosition = Vector3.Lerp(groundedPosition, apexPosition, ThereAndBack(progress)));
         }
+
+        public static Tween LeanAbout(this Transform body, BodyPose resting, Vector3 localAxis, float fromAngle, float toAngle,
+            float duration, Func<float, float> easing)
+        {
+            return Play(body, duration, easing, progress =>
+            {
+                Quaternion lean = Quaternion.AngleAxis(Mathf.Lerp(fromAngle, toAngle, progress), localAxis);
+                body.localRotation = lean * resting.RestingRotation;
+                body.localPosition = lean * resting.RestingPosition;
+            });
+        }
+
+        public static Tween ReturnToPose(this Transform body, BodyPose resting, float duration)
+        {
+            Vector3 startPosition = body.localPosition;
+            Quaternion startRotation = body.localRotation;
+
+            return Play(body, duration, Easing.OutQuad, progress =>
+            {
+                body.localPosition = Vector3.Lerp(startPosition, resting.RestingPosition, progress);
+                body.localRotation = Quaternion.Slerp(startRotation, resting.RestingRotation, progress);
+            });
+        }
+
         public static Tween ShakePosition(this Transform transform, float strength, float duration)
         {
             Vector3 originalPosition = transform.localPosition;

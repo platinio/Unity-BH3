@@ -14,7 +14,7 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Scale To";
-        public override string Description => "Scales the body of the agent to Scale over Duration seconds and leaves it there.";
+        public override string Description => "Scales the body of the agent to Scale times its resting size over Duration seconds and leaves it there.";
 
         private sealed class Memory
         {
@@ -33,8 +33,9 @@ namespace ArcaneOnyx.BH3.Samples
         {
             float scale = ctx.GetValue<float>(Scale);
             float duration = ctx.GetValue<float>(Duration);
+            Transform body = AgentBody.Find(ctx);
 
-            ctx.Memory<Memory>().Scaling = AgentBody.Find(ctx).ScaleTo(Vector3.one * scale, duration);
+            ctx.Memory<Memory>().Scaling = body.ScaleTo(BodyPose.Of(body).RestingScale * scale, duration);
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx) =>
