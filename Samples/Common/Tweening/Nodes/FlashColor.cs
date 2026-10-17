@@ -14,15 +14,12 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Flash Color";
-        public override string Description => "Tints the body of the agent with Tint and fades back over Duration seconds.";
+        public override string Description => "Tints the body of the unit with Tint and fades back over Duration seconds.";
 
         private sealed class Memory
         {
-            public Renderer Renderer;
-            public Color OriginalColor;
+            public Unit Unit;
             public Tween Flash;
-
-            public bool HasRenderer => Renderer != null;
         }
 
         protected override void Definition()
@@ -35,32 +32,23 @@ namespace ArcaneOnyx.BH3.Samples
 
         public override void OnEnter(BTContext ctx)
         {
-            Memory memory = ctx.Memory<Memory>();
-            memory.Renderer = AgentBody.FindRenderer(ctx);
-            if (!memory.HasRenderer) return;
-
             Color flashColor = ctx.GetValue<Color>(Tint);
             float duration = ctx.GetValue<float>(Duration);
 
-            memory.OriginalColor = memory.Renderer.material.color;
-            memory.Flash = memory.Renderer.FlashColor(flashColor, duration);
-        }
-
-        public override ExecutionStatus OnUpdate(BTContext ctx)
-        {
             Memory memory = ctx.Memory<Memory>();
-            if (!memory.HasRenderer) return ExecutionStatus.Failure;
-
-            return memory.Flash.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;
+            memory.Unit = Unit.Of(ctx);
+            memory.Unit.RestoreRestingColors();
+            memory.Flash = memory.Unit.FlashColor(flashColor, duration);
         }
+
+        public override ExecutionStatus OnUpdate(BTContext ctx) =>
+            ctx.Memory<Memory>().Flash.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;
 
         public override void OnExit(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            if (!memory.HasRenderer) return;
-
             memory.Flash.Kill();
-            memory.Renderer.material.color = memory.OriginalColor;
+            memory.Unit.RestoreRestingColors();
         }
     }
 }

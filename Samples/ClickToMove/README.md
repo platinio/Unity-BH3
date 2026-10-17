@@ -61,7 +61,7 @@ Each tree is its own asset. `ClickToMove` is the only one that knows the other t
 | `ClickToMoveInput` | The only script in the sample. Reads the mouse through the Input System, publishes the destination and the order number, pops the marker. |
 | `ClickToMoveFacts` | The three variable names as constants. |
 | `Hop` | Lifts the agent's body and lands it again. Lives in `Samples/Common/Tweening/Nodes` with Punch Scale and Flash Color. |
-| `Agent` | NavMeshAgent, BehaviorTreeMachine and AgentVariableWriter on the root; the capsule is a `Body` child the tween nodes animate. |
+| `Agent` | NavMeshAgent, BehaviorTreeMachine, AgentVariableWriter and `Unit` on the root; `Unit` points at the `Body` child and its renderers, which the tween nodes animate. |
 
 ## Notes
 

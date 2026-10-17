@@ -8,8 +8,8 @@ namespace ArcaneOnyx.BH3.Samples
     [RequireComponent(typeof(Combatant))]
     public sealed class Enemy : MonoBehaviour
     {
-        private const float CapsuleHeight = 2f;
-        private const float CapsuleRadius = 0.4f;
+        private const float AgentHeight = 2f;
+        private const float AgentRadius = 0.4f;
 
         [SerializeField] private EnemyKind kind;
 
@@ -41,17 +41,15 @@ namespace ArcaneOnyx.BH3.Samples
         {
             NavMeshAgent navAgent = GetComponent<NavMeshAgent>();
             navAgent.speed = kind.Speed;
-            navAgent.height = CapsuleHeight * kind.BodyScale;
-            navAgent.radius = CapsuleRadius * kind.BodyScale;
+            navAgent.height = AgentHeight * kind.BodyScale;
+            navAgent.radius = AgentRadius * kind.BodyScale;
         }
 
         private void DressBody()
         {
-            Transform body = AgentBody.Find(gameObject);
-            body.localScale = Vector3.one * kind.BodyScale;
-            body.localPosition = Vector3.up * kind.BodyScale;
-            AgentBody.FindRenderer(gameObject).sharedMaterial = kind.BodyMaterial;
-            BodyPose.Of(body).Capture();
+            Unit unit = Unit.Of(gameObject);
+            unit.Resize(kind.BodyScale);
+            unit.Dress(kind.BodyMaterial);
         }
     }
 }

@@ -12,6 +12,7 @@ namespace ArcaneOnyx.BH3.Samples
     }
 
     [RequireComponent(typeof(Health), typeof(NavMeshAgent), typeof(Knockback))]
+    [RequireComponent(typeof(Unit))]
     public sealed class Combatant : MonoBehaviour
     {
         public static readonly List<Combatant> All = new();
@@ -20,7 +21,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private Health health;
         private NavMeshAgent navAgent;
-        private BodyPose bodyPose;
+        private Unit unit;
         private Vector3 spawnPosition;
         private Quaternion spawnRotation;
 
@@ -32,7 +33,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             health = GetComponent<Health>();
             navAgent = GetComponent<NavMeshAgent>();
-            bodyPose = BodyPose.Of(AgentBody.Find(gameObject));
+            unit = GetComponent<Unit>();
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
             AgentVariableWriter.On(gameObject).Write(this, CombatFacts.Home, spawnPosition);
@@ -48,7 +49,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             navAgent.Warp(spawnPosition);
             transform.rotation = spawnRotation;
-            bodyPose.RestoreInstantly();
+            unit.RestoreRestingPose();
             health.Revive();
         }
     }

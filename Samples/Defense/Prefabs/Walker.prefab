@@ -149,7 +149,6 @@ GameObject:
   - component: {fileID: 7910254348953720023}
   - component: {fileID: 8996754375301743466}
   - component: {fileID: 2640217065195929985}
-  - component: {fileID: 522402090916291697}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -252,18 +251,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &522402090916291697
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3092046258070852624}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!1 &6597554196752858234
 GameObject:
   m_ObjectHideFlags: 0
@@ -283,6 +270,7 @@ GameObject:
   - component: {fileID: 3001660957839711846}
   - component: {fileID: 4177664701777706898}
   - component: {fileID: 1563284808864745854}
+  - component: {fileID: 369347366419369326}
   m_Layer: 0
   m_Name: Walker
   m_TagString: Untagged
@@ -446,3 +434,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: affcf99dac9450d41ba47b3eb0ea20e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Walker
+--- !u!114 &369347366419369326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6597554196752858234}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 7166062204581690546}
+  renderers:
+  - {fileID: 2640217065195929985}

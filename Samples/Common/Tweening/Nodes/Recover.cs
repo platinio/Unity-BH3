@@ -1,6 +1,5 @@
 using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.GraphCore;
-using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
 {
@@ -25,11 +24,8 @@ namespace ArcaneOnyx.BH3.Samples
             Duration = ValueInput<float>(nameof(Duration), 0.2f);
         }
 
-        public override void OnEnter(BTContext ctx)
-        {
-            Transform body = AgentBody.Find(ctx);
-            ctx.Memory<Memory>().Returning = body.ReturnToPose(BodyPose.Of(body), ctx.GetValue<float>(Duration));
-        }
+        public override void OnEnter(BTContext ctx) =>
+            ctx.Memory<Memory>().Returning = Unit.Of(ctx).ReturnToRestingPose(ctx.GetValue<float>(Duration));
 
         public override ExecutionStatus OnUpdate(BTContext ctx) =>
             ctx.Memory<Memory>().Returning.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;

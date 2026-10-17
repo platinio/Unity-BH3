@@ -178,7 +178,6 @@ GameObject:
   - component: {fileID: 183473273}
   - component: {fileID: 183473272}
   - component: {fileID: 183473271}
-  - component: {fileID: 183473270}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -201,18 +200,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1833349959}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &183473270
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 183473268}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &183473271
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -552,7 +539,6 @@ GameObject:
   - component: {fileID: 459628243}
   - component: {fileID: 459628242}
   - component: {fileID: 459628241}
-  - component: {fileID: 459628240}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -575,18 +561,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1006361038}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &459628240
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 459628238}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &459628241
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -816,7 +790,6 @@ GameObject:
   - component: {fileID: 534057954}
   - component: {fileID: 534057953}
   - component: {fileID: 534057952}
-  - component: {fileID: 534057951}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -839,18 +812,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1768912565}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &534057951
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 534057949}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &534057952
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -948,6 +909,7 @@ GameObject:
   - component: {fileID: 776903136}
   - component: {fileID: 776903135}
   - component: {fileID: 776903134}
+  - component: {fileID: 776903145}
   m_Layer: 0
   m_Name: Grunt A
   m_TagString: Untagged
@@ -1115,6 +1077,21 @@ Transform:
   - {fileID: 360776935}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &776903145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776903133}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 1629561934}
+  renderers:
+  - {fileID: 1629561936}
 --- !u!1 &829099900
 GameObject:
   m_ObjectHideFlags: 0
@@ -1127,7 +1104,6 @@ GameObject:
   - component: {fileID: 829099905}
   - component: {fileID: 829099904}
   - component: {fileID: 829099903}
-  - component: {fileID: 829099902}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -1150,18 +1126,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1625410897}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &829099902
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 829099900}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &829099903
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1257,6 +1221,7 @@ GameObject:
   - component: {fileID: 1006361030}
   - component: {fileID: 1006361032}
   - component: {fileID: 1006361031}
+  - component: {fileID: 1006361039}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1397,6 +1362,21 @@ Transform:
   - {fileID: 1930301359}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1006361039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1006361029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 459628239}
+  renderers:
+  - {fileID: 459628241}
 --- !u!1 &1011344954
 GameObject:
   m_ObjectHideFlags: 0
@@ -1521,7 +1501,6 @@ GameObject:
   - component: {fileID: 1040009567}
   - component: {fileID: 1040009566}
   - component: {fileID: 1040009565}
-  - component: {fileID: 1040009564}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -1544,18 +1523,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1898985169}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1040009564
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1040009562}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &1040009565
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1954,7 +1921,6 @@ GameObject:
   - component: {fileID: 1225428220}
   - component: {fileID: 1225428219}
   - component: {fileID: 1225428218}
-  - component: {fileID: 1225428217}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -1977,18 +1943,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1301007920}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1225428217
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1225428215}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &1225428218
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2180,6 +2134,7 @@ GameObject:
   - component: {fileID: 1301007912}
   - component: {fileID: 1301007911}
   - component: {fileID: 1301007910}
+  - component: {fileID: 1301007921}
   m_Layer: 0
   m_Name: Archer
   m_TagString: Untagged
@@ -2347,6 +2302,21 @@ Transform:
   - {fileID: 510304762}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1301007921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1301007909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 1225428216}
+  renderers:
+  - {fileID: 1225428218}
 --- !u!1 &1461179709
 GameObject:
   m_ObjectHideFlags: 0
@@ -2463,6 +2433,7 @@ GameObject:
   - component: {fileID: 1516472600}
   - component: {fileID: 1516472599}
   - component: {fileID: 1516472598}
+  - component: {fileID: 1516472609}
   m_Layer: 0
   m_Name: Grunt B
   m_TagString: Untagged
@@ -2630,6 +2601,21 @@ Transform:
   - {fileID: 1976818069}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1516472609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1516472597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 1747164910}
+  renderers:
+  - {fileID: 1747164912}
 --- !u!1 &1555990024
 GameObject:
   m_ObjectHideFlags: 0
@@ -2980,6 +2966,7 @@ GameObject:
   - component: {fileID: 1625410895}
   - component: {fileID: 1625410894}
   - component: {fileID: 1625410893}
+  - component: {fileID: 1625410898}
   m_Layer: 0
   m_Name: Chest - Bow
   m_TagString: Untagged
@@ -3059,6 +3046,21 @@ Transform:
   - {fileID: 829099901}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1625410898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1625410892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 829099901}
+  renderers:
+  - {fileID: 829099903}
 --- !u!1 &1629561933
 GameObject:
   m_ObjectHideFlags: 0
@@ -3071,7 +3073,6 @@ GameObject:
   - component: {fileID: 1629561938}
   - component: {fileID: 1629561937}
   - component: {fileID: 1629561936}
-  - component: {fileID: 1629561935}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -3094,18 +3095,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 776903144}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1629561935
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1629561933}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &1629561936
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -3198,7 +3187,6 @@ GameObject:
   - component: {fileID: 1747164914}
   - component: {fileID: 1747164913}
   - component: {fileID: 1747164912}
-  - component: {fileID: 1747164911}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -3221,18 +3209,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1516472608}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1747164911
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1747164909}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e70e475a35f3e6943b7ebb85ca89e2e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BodyPose
 --- !u!23 &1747164912
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -3326,6 +3302,7 @@ GameObject:
   - component: {fileID: 1768912563}
   - component: {fileID: 1768912562}
   - component: {fileID: 1768912561}
+  - component: {fileID: 1768912566}
   m_Layer: 0
   m_Name: Chest - Sword
   m_TagString: Untagged
@@ -3405,6 +3382,21 @@ Transform:
   - {fileID: 534057950}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1768912566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1768912560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 534057950}
+  renderers:
+  - {fileID: 534057952}
 --- !u!1 &1833349954
 GameObject:
   m_ObjectHideFlags: 0
@@ -3418,6 +3410,7 @@ GameObject:
   - component: {fileID: 1833349957}
   - component: {fileID: 1833349956}
   - component: {fileID: 1833349955}
+  - component: {fileID: 1833349960}
   m_Layer: 0
   m_Name: Chest - Hammer
   m_TagString: Untagged
@@ -3497,6 +3490,21 @@ Transform:
   - {fileID: 183473269}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1833349960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1833349954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 183473269}
+  renderers:
+  - {fileID: 183473271}
 --- !u!1 &1857388714
 GameObject:
   m_ObjectHideFlags: 0
@@ -3606,6 +3614,7 @@ GameObject:
   - component: {fileID: 1898985161}
   - component: {fileID: 1898985160}
   - component: {fileID: 1898985159}
+  - component: {fileID: 1898985170}
   m_Layer: 0
   m_Name: Brute
   m_TagString: Untagged
@@ -3773,6 +3782,21 @@ Transform:
   - {fileID: 167897149}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1898985170
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1898985158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acd06779b9b5d2b44b4cf8fe36cd68ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Unit
+  body: {fileID: 1040009563}
+  renderers:
+  - {fileID: 1040009565}
 --- !u!1 &1930301358
 GameObject:
   m_ObjectHideFlags: 0

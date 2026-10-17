@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
 {
-    [RequireComponent(typeof(AgentVariableWriter))]
+    [RequireComponent(typeof(AgentVariableWriter), typeof(Unit))]
     public sealed class Health : MonoBehaviour
     {
         private const float HurtFlashSeconds = 0.15f;
@@ -13,8 +13,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private int current;
         private AgentVariableWriter facts;
-        private Renderer body;
-        private Color restingColor;
+        private Unit unit;
 
         public event Action Changed;
 
@@ -26,8 +25,7 @@ namespace ArcaneOnyx.BH3.Samples
         private void Awake()
         {
             current = maxHealth;
-            body = AgentBody.FindRenderer(gameObject);
-            restingColor = body.material.color;
+            unit = GetComponent<Unit>();
             Publish();
         }
 
@@ -54,8 +52,8 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void FlashHurt()
         {
-            body.material.color = restingColor;
-            body.FlashColor(Color.red, HurtFlashSeconds);
+            unit.RestoreRestingColors();
+            unit.FlashColor(Color.red, HurtFlashSeconds);
         }
 
         private void Publish()

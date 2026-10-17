@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BH3.Samples
             GetComponent<Weapon>().Equip(kind.Weapon);
             GetComponent<Sight>().Radius = kind.Weapon.Range;
             GetComponent<NavMeshAgent>().enabled = false;
-            AgentBody.FindRenderer(gameObject).sharedMaterial = kind.BodyMaterial;
+            Unit.Of(gameObject).Dress(kind.BodyMaterial);
         }
     }
 }

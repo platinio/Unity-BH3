@@ -71,7 +71,7 @@ Chest
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
 | `Chest` | Publishes `playerNearby`; `GiveWeapon()` is what the chest tree calls. |
 | `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets both. |
-| `HealthBar`, `BodyPose` | A bar over each head; the body's resting pose that Charge, Recover and Respawn return to. |
+| `HealthBar`, `Unit` | A bar over each head; the body and renderers the tween nodes and the hurt flash act on, with the resting pose that Charge, Recover and Respawn return to. |
 | `Strike`, `Respawn`, `Give Weapon`, `Scale To`, `Charge`, `Recover` | The custom nodes this sample adds. |
 
 ## Notes

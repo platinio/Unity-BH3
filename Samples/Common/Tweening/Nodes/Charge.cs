@@ -27,8 +27,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private sealed class Memory
         {
-            public Transform Body;
-            public BodyPose Pose;
+            public Unit Unit;
             public Vector3 LeanAxis;
             public float SlamAngle;
             public float SlamDuration;
@@ -50,13 +49,12 @@ namespace ArcaneOnyx.BH3.Samples
         public override void OnEnter(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            memory.Body = AgentBody.Find(ctx);
-            memory.Pose = BodyPose.Of(memory.Body);
+            memory.Unit = Unit.Of(ctx);
             memory.LeanAxis = AxisToLeanAwayFrom(ctx, ctx.GetValue<GameObject>(Target));
             memory.SlamAngle = ctx.GetValue<float>(SlamAngle);
             memory.SlamDuration = ctx.GetValue<float>(SlamDuration);
             memory.Slam = null;
-            memory.Lean = memory.Body.LeanAbout(memory.Pose, memory.LeanAxis, 0f, -ctx.GetValue<float>(LeanAngle), ctx.GetValue<float>(WindUp), Easing.OutQuad);
+            memory.Lean = memory.Unit.LeanAbout(memory.LeanAxis, 0f, -ctx.GetValue<float>(LeanAngle), ctx.GetValue<float>(WindUp), Easing.OutQuad);
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx)
@@ -64,7 +62,7 @@ namespace ArcaneOnyx.BH3.Samples
             Memory memory = ctx.Memory<Memory>();
             if (memory.Lean.IsPlaying) return ExecutionStatus.Running;
 
-            if (memory.Slam == null) memory.Slam = memory.Body.LeanAbout(memory.Pose, memory.LeanAxis, -ctx.GetValue<float>(LeanAngle), memory.SlamAngle, memory.SlamDuration, Easing.InQuad);
+            if (memory.Slam == null) memory.Slam = memory.Unit.LeanAbout(memory.LeanAxis, -ctx.GetValue<float>(LeanAngle), memory.SlamAngle, memory.SlamDuration, Easing.InQuad);
 
             return memory.Slam.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;
         }

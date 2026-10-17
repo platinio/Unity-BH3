@@ -24,10 +24,9 @@ namespace ArcaneOnyx.BH3.Samples
 
         private static void RiseFromTheGround(Turret built)
         {
-            Transform body = AgentBody.Find(built.gameObject);
-            Vector3 restingScale = BodyPose.Of(body).RestingScale;
-            body.localScale = Vector3.zero;
-            body.ScaleTo(restingScale, RiseSeconds, Easing.OutBack);
+            Unit unit = Unit.Of(built.gameObject);
+            unit.Body.localScale = Vector3.zero;
+            unit.Body.ScaleTo(unit.RestingPose.Scale, RiseSeconds, Easing.OutBack);
         }
     }
 }
