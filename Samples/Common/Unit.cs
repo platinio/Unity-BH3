@@ -9,6 +9,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private Transform body;
         [SerializeField] private Renderer[] renderers;
         [SerializeField] private Transform[] parts;
+        [SerializeField] private Transform weaponSocket;
 
         private BodyPose authoredBodyPose;
         private BodyPose[] authoredPartPoses;
@@ -19,6 +20,7 @@ namespace ArcaneOnyx.BH3.Samples
         public Transform Body => body;
         public IReadOnlyList<Renderer> Renderers => renderers;
         public IReadOnlyList<Transform> Parts => parts;
+        public Transform WeaponSocket => weaponSocket;
         public BodyPose RestingPose => AuthoredBodyPose.Scaled(bodyScale);
 
         private BodyPose AuthoredBodyPose

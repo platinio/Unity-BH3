@@ -15,4 +15,7 @@ MonoBehaviour:
   range: 1.8
   cooldown: 1
   damage: 25
+  knockback: 0
+  slowSeconds: 0
   projectile: {fileID: 0}
+  visual: {fileID: 7354313053121012287, guid: 8e7210dd4f10109499e96393eee61cd5, type: 3}

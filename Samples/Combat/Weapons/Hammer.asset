@@ -16,4 +16,6 @@ MonoBehaviour:
   cooldown: 2.5
   damage: 45
   knockback: 6
+  slowSeconds: 0
   projectile: {fileID: 0}
+  visual: {fileID: 5898333997535620381, guid: d5f1ef7054d1af34589ff879e3bc1ae3, type: 3}

@@ -67,13 +67,13 @@ Chest
 | `Combatant` | Faction, spawn point, the live roster, `Respawn()`. Publishes `home`. |
 | `Enemy`, `EnemyKind` | Applies a kind's data to an enemy on Awake. |
 | `Health` | Hit points, the red hurt flash; publishes `isDead` and `health01`. |
-| `Weapon`, `WeaponDefinition` | The held weapon and its asset (range, cooldown, damage, knockback, projectile). Publishes `weaponId`, `attackRange`, `attackCooldown`. |
+| `Weapon`, `WeaponDefinition` | The held weapon and its asset (range, cooldown, damage, knockback, projectile, and the prefab shown in the hand). `Equip` publishes `weaponId`, `attackRange`, `attackCooldown` and spawns the visual on the unit's hand socket. |
 | `Knockback` | Shoves a NavMeshAgent along the mesh; the hammer uses it. |
 | `Projectile` | The bow's bolt. |
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
 | `Chest` | Publishes `playerNearby`; `GiveWeapon()` is what the chest tree calls. |
 | `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets both. |
-| `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, with the resting pose that Recover and Respawn return to. |
+| `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, the hand socket the weapon visual hangs from, and the resting pose that Recover and Respawn return to. |
 | `Strike`, `Respawn`, `Give Weapon`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
 
 ## Notes

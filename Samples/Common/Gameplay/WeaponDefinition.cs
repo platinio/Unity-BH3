@@ -13,6 +13,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private float knockback;
         [SerializeField] private float slowSeconds;
         [SerializeField] private Projectile projectile;
+        [SerializeField] private GameObject visual;
 
         public string Id => name;
         public float Range => range;
@@ -20,6 +21,7 @@ namespace ArcaneOnyx.BH3.Samples
         public int Damage => damage;
         public bool IsRanged => projectile != null;
         public Projectile Projectile => projectile;
+        public GameObject Visual => visual;
 
         public void Land(GameObject target, Vector3 from)
         {

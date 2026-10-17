@@ -9,6 +9,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private WeaponDefinition definition;
 
         private AgentVariableWriter facts;
+        private GameObject heldVisual;
 
         public WeaponDefinition Definition => definition;
 
@@ -16,13 +17,14 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Awake()
         {
-            if (definition != null) Publish();
+            if (definition != null) Equip(definition);
         }
 
         public void Equip(WeaponDefinition newDefinition)
         {
             definition = newDefinition;
             Publish();
+            ShowInHand();
         }
 
         public void Attack(GameObject target)
@@ -36,6 +38,19 @@ namespace ArcaneOnyx.BH3.Samples
             Vector3 muzzle = transform.position + Vector3.up;
             Projectile bolt = Instantiate(definition.Projectile, muzzle, Quaternion.identity);
             bolt.Launch(target, definition);
+        }
+
+        private void ShowInHand()
+        {
+            if (heldVisual != null) Destroy(heldVisual);
+            heldVisual = null;
+
+            Transform hand = Unit.Of(gameObject).WeaponSocket;
+            if (definition.Visual == null || hand == null) return;
+
+            heldVisual = Instantiate(definition.Visual, hand);
+            heldVisual.transform.localPosition = Vector3.zero;
+            heldVisual.transform.localRotation = Quaternion.identity;
         }
 
         private void Publish()
