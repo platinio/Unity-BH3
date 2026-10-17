@@ -34,6 +34,14 @@ namespace ArcaneOnyx.BH3.Samples
                 progress => transform.position = Vector3.LerpUnclamped(startPosition, targetPosition, progress));
         }
 
+        public static Tween Hop(this Transform transform, float height, float duration)
+        {
+            Vector3 groundedPosition = transform.localPosition;
+            Vector3 apexPosition = groundedPosition + Vector3.up * height;
+
+            return Play(transform, duration, Easing.Linear,
+                progress => transform.localPosition = Vector3.Lerp(groundedPosition, apexPosition, ThereAndBack(progress)));
+        }
         public static Tween ShakePosition(this Transform transform, float strength, float duration)
         {
             Vector3 originalPosition = transform.localPosition;

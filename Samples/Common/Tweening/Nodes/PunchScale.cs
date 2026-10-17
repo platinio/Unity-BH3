@@ -14,10 +14,11 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Punch Scale";
-        public override string Description => "Swells the agent by Strength and shrinks it back over Duration seconds.";
+        public override string Description => "Swells the body of the agent by Strength and shrinks it back over Duration seconds.";
 
         private sealed class Memory
         {
+            public Transform Body;
             public Vector3 OriginalScale;
             public Tween Punch;
         }
@@ -36,8 +37,9 @@ namespace ArcaneOnyx.BH3.Samples
             float duration = ctx.GetValue<float>(Duration);
 
             Memory memory = ctx.Memory<Memory>();
-            memory.OriginalScale = ctx.transform.localScale;
-            memory.Punch = ctx.transform.PunchScale(strength, duration);
+            memory.Body = AgentBody.Find(ctx);
+            memory.OriginalScale = memory.Body.localScale;
+            memory.Punch = memory.Body.PunchScale(strength, duration);
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx) =>
@@ -47,7 +49,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             Memory memory = ctx.Memory<Memory>();
             memory.Punch.Kill();
-            ctx.transform.localScale = memory.OriginalScale;
+            memory.Body.localScale = memory.OriginalScale;
         }
     }
 }
