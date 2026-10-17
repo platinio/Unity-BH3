@@ -27,7 +27,7 @@ Engage   (Required: target)
    │   └─ Selector [ SwordAttack (RG HoldsWeapon "Sword") | HammerAttack ("Hammer") | BowAttack ("Bow") ]
    └─ Chase     RG: not IsTargetInRange(target, attackRange), every 0.1 s
 
-SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-right up) → Swing Part(arm-right down) → Strike(target) → Recover ]
+SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ Charge(target) | Swing Part(arm-right up) → Swing Part(arm-right down) ] → Strike(target) → Recover ]
 HammerAttack (target):  Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ both arms up ] → Parallel Sequence [ both arms down | Charge(target) ] → Strike(target) → Recover ]
 BowAttack (target):     Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-left aims) → Swing Part(arm-right draws) → Strike(target) → Recover ]
 Chase / Kite / ReturnHome:            Parallel Selector [ Set Nav Agent Position(…) → wait | Repeater → Hop ]
@@ -51,7 +51,7 @@ Chest
 | **Enemies as data** | `EnemyKinds/Grunt`, `Archer`, `Brute` | Weapon, health, speed, sight, keep-distance, body size and the root tree, one asset each. The `Enemy` component applies it on Awake. Grunt and archer run the same tree; the brute runs its own. |
 | **One branch, every agent** | `Engage` | The player and all three kinds run the same asset. The player's `target` comes from a click, an enemy's from `Sight`; the archer kites because its kind publishes `keepDistance` 3, nobody else does. |
 | **The weapon owns its attack** | `SwordAttack`, `HammerAttack`, `BowAttack` | Each weapon's rhythm lives in its own tree. Engage picks one with a `HoldsWeapon` guard whose `wanted` port is an inline literal; take a different weapon from a chest and the guard swaps trees on the `weaponId` key. |
-| **Swings on body parts** | `Swing Part`, `Charge`, `Recover` | A Kenney character is six parts. Swing Part turns one about its own pivot and leaves it there, Charge leans the whole body, Recover eases everything back; Strike lands at the end of the swing. Interrupt any of them and the body snaps back on its own, so a kill mid-swing never leaves the attacker frozen. |
+| **Swings on body parts** | `Swing Part`, `Charge`, `Recover` | A Kenney character is six parts. Swing Part turns one about its own pivot and leaves it there, Charge leans the whole body away and slams it in, Recover eases everything back. The sword runs Charge and the arm swing side by side in a Parallel Sequence, so the body winds up as the arm rises and slams as it slashes; Strike lands when both are done. Interrupt any of them and the body snaps back on its own, so a kill mid-swing never leaves the attacker frozen. |
 | **Facing before the blow** | `Face Target` in the three attack trees | BH3's own node, fed by the `TransformOf(target)` Function. |
 | **Committed swing** | Attack's guard, Stops Its Own Branch off | A started charge finishes even if the target steps out of range during the wind-up. Chase and Kite carry the opposite guards. |
 | **Time-triggered guards** | The three `IsTargetInRange` guards, `IsFarFrom` | Distance changes without any variable write, so these poll. Every other guard in the samples wakes on a key. |
