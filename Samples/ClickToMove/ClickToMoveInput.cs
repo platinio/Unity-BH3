@@ -16,6 +16,7 @@ namespace ArcaneOnyx.BH3.Samples
         private Camera viewCamera;
         private AgentVariableWriter agentFacts;
         private Vector3 markerRestingScale;
+        private int ordersIssued;
 
         private void Awake()
         {
@@ -28,7 +29,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             if (!WasNavMeshClickedThisFrame(out Vector3 clickedPoint)) return;
 
-            PublishDestination(clickedPoint);
+            IssueOrder(clickedPoint);
             PopMarkerAt(clickedPoint);
         }
 
@@ -47,10 +48,11 @@ namespace ArcaneOnyx.BH3.Samples
             return true;
         }
 
-        private void PublishDestination(Vector3 point)
+        private void IssueOrder(Vector3 point)
         {
+            ordersIssued++;
             agentFacts.Write(this, ClickToMoveFacts.Destination, point);
-            agentFacts.Write(this, ClickToMoveFacts.HasDestination, true);
+            agentFacts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
         }
 
         private void PopMarkerAt(Vector3 point)
