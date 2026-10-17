@@ -8,13 +8,13 @@ namespace ArcaneOnyx.BH3.Samples
     public class FlashColor : GameplayNode
     {
         [Unity.VisualScripting.DoNotSerialize]
-        public ValueInput Color { get; private set; }
+        public ValueInput Tint { get; private set; }
 
         [Unity.VisualScripting.DoNotSerialize]
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Flash Color";
-        public override string Description => "Tints the agent's renderer with Color and fades back over Duration seconds.";
+        public override string Description => "Tints the body of the agent with Tint and fades back over Duration seconds.";
 
         private sealed class Memory
         {
@@ -29,17 +29,17 @@ namespace ArcaneOnyx.BH3.Samples
         {
             base.Definition();
 
-            Color = ValueInput<Color>(nameof(Color), UnityEngine.Color.red);
+            Tint = ValueInput<Color>(nameof(Tint), UnityEngine.Color.red);
             Duration = ValueInput<float>(nameof(Duration), 0.25f);
         }
 
         public override void OnEnter(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            memory.Renderer = ctx.GetComponent<Renderer>();
+            memory.Renderer = AgentBody.FindRenderer(ctx);
             if (!memory.HasRenderer) return;
 
-            Color flashColor = ctx.GetValue<Color>(Color);
+            Color flashColor = ctx.GetValue<Color>(Tint);
             float duration = ctx.GetValue<float>(Duration);
 
             memory.OriginalColor = memory.Renderer.material.color;

@@ -4,7 +4,8 @@
     "references": [
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.GraphCore",
-        "Unity.VisualScripting.Core"
+        "Unity.VisualScripting.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
