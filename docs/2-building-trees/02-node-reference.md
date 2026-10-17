@@ -62,6 +62,7 @@ and a guard when a branch should stop being valid the instant the world changes.
 |---|---|---|
 | Wait | `WaitTime` | Waits `Time` seconds, then succeeds. `Time` defaults to 0 |
 | Wait Range | `WaitTimeRandomRange` | Waits a random time between `minTime` and `maxTime`, both default 0 |
+| Wait Until | `WaitUntil` | Runs until `Value` is true, then succeeds. `Value` defaults to false |
 | Run Behavior Tree Graph | `RunBehaviorTreeGraphNode` | Runs another tree asset as a sub-tree, with its parameters as ports. See [Sub-trees](07-sub-trees.md) |
 
 ## Variables
