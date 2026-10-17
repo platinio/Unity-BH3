@@ -14,6 +14,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private float sightRadius = 8f;
         [SerializeField] private float keepDistance;
         [SerializeField] private float bodyScale = 1f;
+        [SerializeField] private int bounty = 10;
 
         public Material BodyMaterial => bodyMaterial;
         public WeaponDefinition Weapon => weapon;
@@ -23,5 +24,6 @@ namespace ArcaneOnyx.BH3.Samples
         public float SightRadius => sightRadius;
         public float KeepDistance => keepDistance;
         public float BodyScale => bodyScale;
+        public int Bounty => bounty;
     }
 }

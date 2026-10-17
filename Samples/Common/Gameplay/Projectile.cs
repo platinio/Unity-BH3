@@ -10,12 +10,14 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private float speed = 14f;
 
         private Transform target;
-        private int damage;
+        private WeaponDefinition weapon;
+        private Vector3 launchedFrom;
 
-        public void Launch(GameObject newTarget, int newDamage)
+        public void Launch(GameObject newTarget, WeaponDefinition firedBy)
         {
             target = newTarget.transform;
-            damage = newDamage;
+            weapon = firedBy;
+            launchedFrom = transform.position;
             Destroy(gameObject, LifetimeSeconds);
         }
 
@@ -31,7 +33,7 @@ namespace ArcaneOnyx.BH3.Samples
             transform.position = Vector3.MoveTowards(transform.position, aimPoint, speed * Time.deltaTime);
             if (Vector3.Distance(transform.position, aimPoint) > HitDistance) return;
 
-            if (target.TryGetComponent(out Health targetHealth)) targetHealth.Damage(damage);
+            weapon.Land(target.gameObject, launchedFrom);
             Destroy(gameObject);
         }
     }

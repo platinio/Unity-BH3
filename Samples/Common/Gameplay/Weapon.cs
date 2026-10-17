@@ -14,7 +14,10 @@ namespace ArcaneOnyx.BH3.Samples
 
         private AgentVariableWriter Facts => facts != null ? facts : facts = AgentVariableWriter.On(gameObject);
 
-        private void Awake() => Publish();
+        private void Awake()
+        {
+            if (definition != null) Publish();
+        }
 
         public void Equip(WeaponDefinition newDefinition)
         {
@@ -25,27 +28,14 @@ namespace ArcaneOnyx.BH3.Samples
         public void Attack(GameObject target)
         {
             if (definition.IsRanged) Shoot(target);
-            else Hit(target);
-        }
-
-        private void Hit(GameObject target)
-        {
-            if (target.TryGetComponent(out Health targetHealth)) targetHealth.Damage(definition.Damage);
-            if (definition.Knockback > 0f && target.TryGetComponent(out Knockback knockback)) knockback.Push(PushDirectionTo(target) * definition.Knockback);
-        }
-
-        private Vector3 PushDirectionTo(GameObject target)
-        {
-            Vector3 away = target.transform.position - transform.position;
-            away.y = 0f;
-            return away.normalized;
+            else definition.Land(target, transform.position);
         }
 
         private void Shoot(GameObject target)
         {
             Vector3 muzzle = transform.position + Vector3.up;
             Projectile bolt = Instantiate(definition.Projectile, muzzle, Quaternion.identity);
-            bolt.Launch(target, definition.Damage);
+            bolt.Launch(target, definition);
         }
 
         private void Publish()

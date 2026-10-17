@@ -5,7 +5,7 @@ using UnityEngine.AI;
 namespace ArcaneOnyx.BH3.Samples
 {
     [DefaultExecutionOrder(-50)]
-    [RequireComponent(typeof(Combatant), typeof(Weapon), typeof(Sight))]
+    [RequireComponent(typeof(Combatant))]
     public sealed class Enemy : MonoBehaviour
     {
         private const float CapsuleHeight = 2f;
@@ -15,14 +15,23 @@ namespace ArcaneOnyx.BH3.Samples
 
         public EnemyKind Kind => kind;
 
-        private void Awake() => Apply();
+        private void Awake()
+        {
+            if (kind != null) Apply();
+        }
+
+        public void Apply(EnemyKind newKind)
+        {
+            kind = newKind;
+            Apply();
+        }
 
         public void Apply()
         {
             GetComponent<BehaviorTreeMachine>().nest.macro = kind.Tree;
             GetComponent<Health>().SetMaxHealth(kind.MaxHealth);
-            GetComponent<Weapon>().Equip(kind.Weapon);
-            GetComponent<Sight>().Radius = kind.SightRadius;
+            if (TryGetComponent(out Weapon weapon) && kind.Weapon != null) weapon.Equip(kind.Weapon);
+            if (TryGetComponent(out Sight sight)) sight.Radius = kind.SightRadius;
             SizeAgent();
             DressBody();
             AgentVariableWriter.On(gameObject).Write(this, CombatFacts.KeepDistance, kind.KeepDistance);
@@ -42,6 +51,7 @@ namespace ArcaneOnyx.BH3.Samples
             body.localScale = Vector3.one * kind.BodyScale;
             body.localPosition = Vector3.up * kind.BodyScale;
             AgentBody.FindRenderer(gameObject).sharedMaterial = kind.BodyMaterial;
+            BodyPose.Of(body).Capture();
         }
     }
 }
