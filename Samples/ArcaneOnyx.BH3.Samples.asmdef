@@ -5,7 +5,8 @@
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.GraphCore",
         "Unity.VisualScripting.Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

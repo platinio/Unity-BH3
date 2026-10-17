@@ -1,6 +1,5 @@
 using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.GraphCore;
-using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
 {
@@ -11,10 +10,11 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Recover";
-        public override string Description => "Eases the body back to the pose it rested in before any Charge, over Duration seconds.";
+        public override string Description => "Eases the body and every part back to the pose they rested in before any Charge or Swing Part, over Duration seconds. Interrupted, it snaps them back.";
 
         private sealed class Memory
         {
+            public Unit Unit;
             public Tween Returning;
         }
 
@@ -27,13 +27,20 @@ namespace ArcaneOnyx.BH3.Samples
 
         public override void OnEnter(BTContext ctx)
         {
-            Transform body = AgentBody.Find(ctx);
-            ctx.Memory<Memory>().Returning = body.ReturnToPose(BodyPose.Of(body), ctx.GetValue<float>(Duration));
+            Memory memory = ctx.Memory<Memory>();
+            memory.Unit = Unit.Of(ctx);
+            memory.Returning = memory.Unit.ReturnToRestingPose(ctx.GetValue<float>(Duration));
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx) =>
             ctx.Memory<Memory>().Returning.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;
 
-        public override void OnExit(BTContext ctx) => ctx.Memory<Memory>().Returning.Kill();
+        public override void OnExit(BTContext ctx)
+        {
+            Memory memory = ctx.Memory<Memory>();
+            bool wasInterrupted = memory.Returning.IsPlaying;
+            memory.Returning.Kill();
+            if (wasInterrupted) memory.Unit.RestoreRestingPose();
+        }
     }
 }

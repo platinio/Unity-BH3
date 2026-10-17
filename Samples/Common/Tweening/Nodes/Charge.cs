@@ -23,17 +23,18 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput SlamDuration { get; private set; }
 
         public override string NodeName => "Charge";
-        public override string Description => "Pivots the body at its feet: leans LeanAngle degrees away from Target over WindUp seconds, then slams SlamAngle degrees into it. Leaves the body slammed; Recover brings it back.";
+        public override string Description => "Pivots the body at its feet: leans LeanAngle degrees away from Target over WindUp seconds, then slams SlamAngle degrees into it. Leaves the body slammed; Recover brings it back. An interrupted charge snaps back on its own.";
 
         private sealed class Memory
         {
-            public Transform Body;
-            public BodyPose Pose;
+            public Unit Unit;
             public Vector3 LeanAxis;
             public float SlamAngle;
             public float SlamDuration;
             public Tween Lean;
             public Tween Slam;
+
+            public bool IsMidCharge => Lean.IsPlaying || Slam == null || Slam.IsPlaying;
         }
 
         protected override void Definition()
@@ -50,13 +51,12 @@ namespace ArcaneOnyx.BH3.Samples
         public override void OnEnter(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            memory.Body = AgentBody.Find(ctx);
-            memory.Pose = BodyPose.Of(memory.Body);
+            memory.Unit = Unit.Of(ctx);
             memory.LeanAxis = AxisToLeanAwayFrom(ctx, ctx.GetValue<GameObject>(Target));
             memory.SlamAngle = ctx.GetValue<float>(SlamAngle);
             memory.SlamDuration = ctx.GetValue<float>(SlamDuration);
             memory.Slam = null;
-            memory.Lean = memory.Body.LeanAbout(memory.Pose, memory.LeanAxis, 0f, -ctx.GetValue<float>(LeanAngle), ctx.GetValue<float>(WindUp), Easing.OutQuad);
+            memory.Lean = memory.Unit.LeanAbout(memory.LeanAxis, 0f, -ctx.GetValue<float>(LeanAngle), ctx.GetValue<float>(WindUp), Easing.OutQuad);
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx)
@@ -64,7 +64,7 @@ namespace ArcaneOnyx.BH3.Samples
             Memory memory = ctx.Memory<Memory>();
             if (memory.Lean.IsPlaying) return ExecutionStatus.Running;
 
-            if (memory.Slam == null) memory.Slam = memory.Body.LeanAbout(memory.Pose, memory.LeanAxis, -ctx.GetValue<float>(LeanAngle), memory.SlamAngle, memory.SlamDuration, Easing.InQuad);
+            if (memory.Slam == null) memory.Slam = memory.Unit.LeanAbout(memory.LeanAxis, -ctx.GetValue<float>(LeanAngle), memory.SlamAngle, memory.SlamDuration, Easing.InQuad);
 
             return memory.Slam.IsPlaying ? ExecutionStatus.Running : ExecutionStatus.Success;
         }
@@ -72,8 +72,10 @@ namespace ArcaneOnyx.BH3.Samples
         public override void OnExit(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            memory.Lean?.Kill();
+            bool wasInterrupted = memory.IsMidCharge;
+            memory.Lean.Kill();
             memory.Slam?.Kill();
+            if (wasInterrupted) memory.Unit.RestoreRestingPose();
         }
 
         private static Vector3 AxisToLeanAwayFrom(BTContext ctx, GameObject target)

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16fe9452afbc58a49880896fc5fe6cf9, type: 3}
   m_Name: Brute
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.EnemyKind
-  bodyMaterial: {fileID: 2100000, guid: 6465c881ce50ac64687f8c221b2a8b31, type: 2}
+  bodyMaterial: {fileID: 0}
   weapon: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
   tree: {fileID: 11400000, guid: acc6fdeb705c2a941bbe64e776b0b02e, type: 2}
   maxHealth: 250

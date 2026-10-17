@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
@@ -43,26 +44,47 @@ namespace ArcaneOnyx.BH3.Samples
                 progress => transform.localPosition = Vector3.Lerp(groundedPosition, apexPosition, ThereAndBack(progress)));
         }
 
-        public static Tween LeanAbout(this Transform body, BodyPose resting, Vector3 localAxis, float fromAngle, float toAngle,
+        public static Tween LeanAbout(this Unit unit, Vector3 localAxis, float fromAngle, float toAngle,
             float duration, Func<float, float> easing)
         {
-            return Play(body, duration, easing, progress =>
+            Transform body = unit.Body;
+            BodyPose resting = unit.RestingPose;
+
+            return Play(unit, duration, easing, progress =>
             {
                 Quaternion lean = Quaternion.AngleAxis(Mathf.Lerp(fromAngle, toAngle, progress), localAxis);
-                body.localRotation = lean * resting.RestingRotation;
-                body.localPosition = lean * resting.RestingPosition;
+                body.localRotation = lean * resting.Rotation;
+                body.localPosition = lean * resting.Position;
             });
         }
 
-        public static Tween ReturnToPose(this Transform body, BodyPose resting, float duration)
+        public static Tween SwingPart(this Unit unit, Transform part, Vector3 localAxis, float fromAngle, float toAngle,
+            float duration)
         {
-            Vector3 startPosition = body.localPosition;
-            Quaternion startRotation = body.localRotation;
+            Quaternion restingRotation = unit.RestingPoseOf(part).Rotation;
 
-            return Play(body, duration, Easing.OutQuad, progress =>
+            return Play(unit, duration, Easing.OutQuad, progress =>
+                part.localRotation = Quaternion.AngleAxis(Mathf.Lerp(fromAngle, toAngle, progress), localAxis) * restingRotation);
+        }
+
+        public static Tween ReturnToRestingPose(this Unit unit, float duration)
+        {
+            Transform body = unit.Body;
+            IReadOnlyList<Transform> parts = unit.Parts;
+            BodyPose bodyStart = BodyPose.Of(body);
+            BodyPose bodyResting = unit.RestingPose;
+            var partStarts = new BodyPose[parts.Count];
+            var partRestings = new BodyPose[parts.Count];
+            for (int i = 0; i < parts.Count; i++)
             {
-                body.localPosition = Vector3.Lerp(startPosition, resting.RestingPosition, progress);
-                body.localRotation = Quaternion.Slerp(startRotation, resting.RestingRotation, progress);
+                partStarts[i] = BodyPose.Of(parts[i]);
+                partRestings[i] = unit.RestingPoseOf(parts[i]);
+            }
+
+            return Play(unit, duration, Easing.OutQuad, progress =>
+            {
+                BodyPose.Between(bodyStart, bodyResting, progress).ApplyTo(body);
+                for (int i = 0; i < parts.Count; i++) BodyPose.Between(partStarts[i], partRestings[i], progress).ApplyTo(parts[i]);
             });
         }
 
@@ -86,12 +108,20 @@ namespace ArcaneOnyx.BH3.Samples
                 progress => renderer.material.color = Color.LerpUnclamped(startColor, targetColor, progress));
         }
 
-        public static Tween FlashColor(this Renderer renderer, Color flashColor, float duration)
+        public static Tween FlashColor(this Unit unit, Color flashColor, float duration)
         {
-            Color originalColor = renderer.material.color;
+            IReadOnlyList<Renderer> renderers = unit.Renderers;
+            var originalColors = new Color[renderers.Count];
+            for (int i = 0; i < renderers.Count; i++) originalColors[i] = renderers[i].material.color;
 
-            return Play(renderer, duration, Easing.Linear,
-                progress => renderer.material.color = Color.Lerp(originalColor, flashColor, ThereAndBack(progress)));
+            return Play(unit, duration, Easing.Linear, progress =>
+            {
+                float blend = ThereAndBack(progress);
+                for (int i = 0; i < renderers.Count; i++)
+                {
+                    renderers[i].material.color = Color.Lerp(originalColors[i], flashColor, blend);
+                }
+            });
         }
 
         private static Tween Play(Object owner, float duration, Func<float, float> easing, Action<float> applyProgress)

@@ -14,7 +14,7 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput Duration { get; private set; }
 
         public override string NodeName => "Hop";
-        public override string Description => "Lifts the body of the agent by Height and lands it again over Duration seconds.";
+        public override string Description => "Lifts the body of the unit by Height and lands it again over Duration seconds.";
 
         private sealed class Memory
         {
@@ -37,7 +37,7 @@ namespace ArcaneOnyx.BH3.Samples
             float duration = ctx.GetValue<float>(Duration);
 
             Memory memory = ctx.Memory<Memory>();
-            memory.Body = AgentBody.Find(ctx);
+            memory.Body = Unit.Of(ctx).Body;
             memory.GroundedPosition = memory.Body.localPosition;
             memory.Jump = memory.Body.Hop(height, duration);
         }
