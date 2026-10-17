@@ -10,19 +10,16 @@ namespace ArcaneOnyx.BH3.Samples
         private const float MaxDistanceToNavMesh = 1f;
 
         [SerializeField] private GameObject agent;
-        [SerializeField] private Transform destinationMarker;
-        [SerializeField] private float markerPopDuration = 0.25f;
+        [SerializeField] private DestinationMarker destinationMarker;
 
         private Camera viewCamera;
         private AgentVariableWriter agentFacts;
-        private Vector3 markerRestingScale;
         private int ordersIssued;
 
         private void Awake()
         {
             viewCamera = Camera.main;
             agentFacts = AgentVariableWriter.On(agent);
-            markerRestingScale = destinationMarker.localScale;
         }
 
         private void Update()
@@ -30,7 +27,7 @@ namespace ArcaneOnyx.BH3.Samples
             if (!WasNavMeshClickedThisFrame(out Vector3 clickedPoint)) return;
 
             IssueOrder(clickedPoint);
-            PopMarkerAt(clickedPoint);
+            destinationMarker.ShowAt(clickedPoint);
         }
 
         private bool WasNavMeshClickedThisFrame(out Vector3 pointOnNavMesh)
@@ -53,13 +50,6 @@ namespace ArcaneOnyx.BH3.Samples
             ordersIssued++;
             agentFacts.Write(this, ClickToMoveFacts.Destination, point);
             agentFacts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
-        }
-
-        private void PopMarkerAt(Vector3 point)
-        {
-            destinationMarker.position = point;
-            destinationMarker.localScale = Vector3.zero;
-            destinationMarker.ScaleTo(markerRestingScale, markerPopDuration, Easing.OutBack);
         }
     }
 }

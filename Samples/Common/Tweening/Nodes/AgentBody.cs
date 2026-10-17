@@ -5,12 +5,16 @@ namespace ArcaneOnyx.BH3.Samples
 {
     public static class AgentBody
     {
-        public static Renderer FindRenderer(BTContext ctx) => ctx.gameObject.GetComponentInChildren<Renderer>();
+        public static Renderer FindRenderer(BTContext ctx) => FindRenderer(ctx.gameObject);
 
-        public static Transform Find(BTContext ctx)
+        public static Renderer FindRenderer(GameObject agent) => agent.GetComponentInChildren<Renderer>();
+
+        public static Transform Find(BTContext ctx) => Find(ctx.gameObject);
+
+        public static Transform Find(GameObject agent)
         {
-            Renderer renderer = FindRenderer(ctx);
-            return renderer != null ? renderer.transform : ctx.transform;
+            Renderer renderer = FindRenderer(agent);
+            return renderer != null ? renderer.transform : agent.transform;
         }
     }
 }
