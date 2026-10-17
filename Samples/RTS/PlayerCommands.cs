@@ -29,17 +29,47 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Command(RaycastHit hit)
         {
-            if (!NavMesh.SamplePosition(hit.point, out NavMeshHit navMeshHit, MaxDistanceToNavMesh, NavMesh.AllAreas)) return;
-
-            ordersIssued++;
-            foreach (Selectable unit in selection.Selected) OrderMove(unit.gameObject, navMeshHit.position);
+            ResourceNode resource = hit.collider.GetComponentInParent<ResourceNode>();
+            if (resource != null)
+            {
+                OrderGather(resource.gameObject);
+            }
+            else if (NavMesh.SamplePosition(hit.point, out NavMeshHit navMeshHit, MaxDistanceToNavMesh, NavMesh.AllAreas))
+            {
+                OrderMove(navMeshHit.position);
+            }
         }
 
-        private void OrderMove(GameObject unit, Vector3 point)
+        private void OrderGather(GameObject resource)
         {
-            AgentVariableWriter facts = AgentVariableWriter.On(unit);
-            facts.Write(this, ClickToMoveFacts.Destination, point);
-            facts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
+            ordersIssued++;
+            foreach (Selectable unit in selection.Selected)
+            {
+                if (!unit.TryGetComponent(out Carrier _)) continue;
+
+                AgentVariableWriter facts = AgentVariableWriter.On(unit.gameObject);
+                CancelOrder(facts, ClickToMoveFacts.OrderNumber, ClickToMoveFacts.CompletedOrder);
+                facts.Write(this, RtsFacts.Resource, resource);
+                facts.Write(this, RtsFacts.GatherOrder, ordersIssued);
+            }
+        }
+
+        private void OrderMove(Vector3 point)
+        {
+            ordersIssued++;
+            foreach (Selectable unit in selection.Selected)
+            {
+                AgentVariableWriter facts = AgentVariableWriter.On(unit.gameObject);
+                CancelOrder(facts, RtsFacts.GatherOrder, RtsFacts.CompletedGatherOrder);
+                facts.Write(this, ClickToMoveFacts.Destination, point);
+                facts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
+            }
+        }
+
+        private void CancelOrder(AgentVariableWriter facts, string orderKey, string completedKey)
+        {
+            object issued = facts.Read(orderKey);
+            if (issued != null) facts.Write(this, completedKey, issued);
         }
     }
 }

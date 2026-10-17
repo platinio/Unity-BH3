@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree;
 using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
@@ -15,6 +16,8 @@ namespace ArcaneOnyx.BH3.Samples
             if (kind != null) Apply();
         }
 
+        private void Start() => PublishNearestDepot();
+
         public void Apply(UnitKind newKind)
         {
             kind = newKind;
@@ -22,5 +25,11 @@ namespace ArcaneOnyx.BH3.Samples
         }
 
         public void Apply() => CombatantKindApplier.Apply(gameObject, kind);
+
+        private void PublishNearestDepot()
+        {
+            Depot depot = Depot.Nearest(transform.position);
+            if (depot != null) AgentVariableWriter.On(gameObject).Write(this, RtsFacts.Depot, depot.gameObject);
+        }
     }
 }

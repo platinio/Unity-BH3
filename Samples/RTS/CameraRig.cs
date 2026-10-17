@@ -36,9 +36,11 @@ namespace ArcaneOnyx.BH3.Samples
         private Vector2 EdgePan()
         {
             Mouse mouse = Mouse.current;
-            if (mouse == null || !Application.isFocused) return Vector2.zero;
+            if (mouse == null) return Vector2.zero;
 
             Vector2 cursor = mouse.position.ReadValue();
+            if (!IsInsideTheWindow(cursor)) return Vector2.zero;
+
             Vector2 pan = Vector2.zero;
             if (cursor.x <= edgeWidthPixels) pan.x -= 1f;
             if (cursor.x >= Screen.width - edgeWidthPixels) pan.x += 1f;
@@ -46,5 +48,8 @@ namespace ArcaneOnyx.BH3.Samples
             if (cursor.y >= Screen.height - edgeWidthPixels) pan.y += 1f;
             return pan;
         }
+
+        private static bool IsInsideTheWindow(Vector2 cursor) =>
+            cursor.x >= 0f && cursor.x <= Screen.width && cursor.y >= 0f && cursor.y <= Screen.height;
     }
 }
