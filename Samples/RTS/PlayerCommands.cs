@@ -29,6 +29,13 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Command(RaycastHit hit)
         {
+            Combatant combatant = hit.collider.GetComponentInParent<Combatant>();
+            if (combatant != null)
+            {
+                if (combatant.Faction == Faction.Enemy && combatant.IsAlive) OrderAttack(combatant);
+                return;
+            }
+
             Building building = hit.collider.GetComponentInParent<Building>();
             if (building != null)
             {
@@ -45,6 +52,30 @@ namespace ArcaneOnyx.BH3.Samples
             {
                 OrderMove(navMeshHit.position);
             }
+        }
+
+        private void OrderAttack(Combatant enemy)
+        {
+            ordersIssued++;
+            foreach (Selectable unit in selection.Selected)
+            {
+                if (unit.TryGetComponent(out Sight _)) AttackMoveTo(unit.gameObject, enemy.transform.position);
+                else Target(unit.gameObject, enemy);
+            }
+        }
+
+        private void AttackMoveTo(GameObject unit, Vector3 point)
+        {
+            AgentVariableWriter facts = CancelAllOrders(unit);
+            facts.Write(this, ClickToMoveFacts.Destination, point);
+            facts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
+        }
+
+        private void Target(GameObject unit, Combatant enemy)
+        {
+            AgentVariableWriter facts = CancelAllOrders(unit);
+            facts.Write(this, CombatFacts.Target, enemy.gameObject);
+            facts.Write(this, CombatFacts.HasTarget, true);
         }
 
         public void OrderBuild(GameObject site)

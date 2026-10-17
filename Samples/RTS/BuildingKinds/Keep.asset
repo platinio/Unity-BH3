@@ -19,5 +19,6 @@ MonoBehaviour:
   goldCost: 50
   buildSeconds: 30
   footprintRadius: 2.8
-  trains: []
+  trains:
+  - {fileID: 11400000, guid: d41472e0b4b1d17478bbea724381fe4b, type: 2}
   rallyOffset: {x: 0, y: 0, z: -4.8}

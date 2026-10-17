@@ -15,6 +15,9 @@ namespace ArcaneOnyx.BH3.Samples
         public const string Remaining = "remaining";
         public const string IsBuilt = "isBuilt";
         public const string Progress01 = "progress01";
+        public const string QueueCount = "queueCount";
+        public const string TrainSeconds = "trainSeconds";
+        public const string NextKind = "nextKind";
         public const string Wood = "wood";
         public const string Gold = "gold";
     }

@@ -1809,6 +1809,7 @@ GameObject:
   - component: {fileID: 1658808111}
   - component: {fileID: 1658808110}
   - component: {fileID: 1658808113}
+  - component: {fileID: 1658808114}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -1920,6 +1921,20 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0eea938898e83654ca9b75817683e9fd, type: 2}
   freeGhostMaterial: {fileID: 2100000, guid: a00f48bb04358ac46b9089114de61135, type: 2}
   blockedGhostMaterial: {fileID: 2100000, guid: f8bbaeea61389a4419e04c32e5b15076, type: 2}
+--- !u!114 &1658808114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1658808106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e87ee241b686644eb22328833cfb260, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.TrainingCommands
+  selection: {fileID: 1658808108}
+  treasury: {fileID: 1658808110}
 --- !u!1001 &1673744420
 PrefabInstance:
   m_ObjectHideFlags: 0

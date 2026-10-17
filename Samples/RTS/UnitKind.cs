@@ -6,6 +6,7 @@ namespace ArcaneOnyx.BH3.Samples
     [CreateAssetMenu(menuName = "BH3 Samples/Unit Kind")]
     public sealed class UnitKind : ScriptableObject, ICombatantKind
     {
+        [SerializeField] private RtsUnit prefab;
         [SerializeField] private Material bodyMaterial;
         [SerializeField] private WeaponDefinition weapon;
         [SerializeField] private BehaviorTreeGraphAsset tree;
@@ -19,6 +20,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private float trainSeconds = 6f;
 
         public string Id => name;
+        public RtsUnit Prefab => prefab;
         public Material BodyMaterial => bodyMaterial;
         public WeaponDefinition Weapon => weapon;
         public BehaviorTreeGraphAsset Tree => tree;
