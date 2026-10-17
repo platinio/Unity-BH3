@@ -49,7 +49,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             Unit unit = Unit.Of(gameObject);
             unit.Resize(kind.BodyScale);
-            unit.Dress(kind.BodyMaterial);
+            if (kind.BodyMaterial != null) unit.Dress(kind.BodyMaterial);
         }
     }
 }

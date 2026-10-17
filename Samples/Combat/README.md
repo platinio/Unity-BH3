@@ -1,12 +1,12 @@
 # Combat
 
-A small arena. Your blue capsule starts at the bottom between two chests. Left-click the ground to move,
+A small arena. Your character starts at the bottom between two chests. Left-click the ground to move,
 left-click an enemy to attack it: your unit chases until in range, stops, and strikes on a cooldown until
-the target dies. Three kinds of enemy roam the far side. Red **grunts** charge with swords, the orange
-**archer** shoots and keeps its distance, the big dark **brute** holds its ground and swings a hammer that
+the target dies. Three kinds of enemy roam the far side. **Grunts** swing swords, the
+**archer** throws from a distance and keeps it, the big **brute** holds its ground and swings a hammer that
 knocks you back. Walk into a chest to take its weapon: sword, bow, or the brute's hammer. Whoever dies
-flashes, shrinks away and respawns a couple of seconds later, so the fight never ends. Primitives and tweens
-only.
+flashes, shrinks away and respawns a couple of seconds later, so the fight never ends. Kenney blocky
+characters, primitives and tweens; every animation is a tween on a body part.
 
 Open `Combat.unity` and press Play.
 
@@ -27,8 +27,9 @@ Engage   (Required: target)
    │   └─ Selector [ SwordAttack (RG HoldsWeapon "Sword") | HammerAttack ("Hammer") | BowAttack ("Bow") ]
    └─ Chase     RG: not IsTargetInRange(target, attackRange), every 0.1 s
 
-SwordAttack / HammerAttack (target):  Stop Nav Agent → Cooldown(attackCooldown) → [ Charge(target) → Strike(target) → Recover ]
-BowAttack (target):                   Stop Nav Agent → Cooldown(attackCooldown) → [ Punch Scale → Strike(target) → Hop ]
+SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-right up) → Swing Part(arm-right down) → Strike(target) → Recover ]
+HammerAttack (target):  Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ both arms up ] → Parallel Sequence [ both arms down | Charge(target) ] → Strike(target) → Recover ]
+BowAttack (target):     Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-left aims) → Swing Part(arm-right draws) → Strike(target) → Recover ]
 Chase / Kite / ReturnHome:            Parallel Selector [ Set Nav Agent Position(…) → wait | Repeater → Hop ]
 Wander:                               random NavMesh point, hop there, linger 1–3 s
 Die:                                  Flash Color → Scale To 0 → Wait 2 → Respawn
@@ -47,10 +48,11 @@ Chest
 
 | Feature | Where | What to watch |
 |---|---|---|
-| **Enemies as data** | `EnemyKinds/Grunt`, `Archer`, `Brute` | Colour, weapon, health, speed, sight, keep-distance, body size and the root tree, one asset each. The `Enemy` component applies it on Awake. Grunt and archer run the same tree; the brute runs its own. |
+| **Enemies as data** | `EnemyKinds/Grunt`, `Archer`, `Brute` | Weapon, health, speed, sight, keep-distance, body size and the root tree, one asset each. The `Enemy` component applies it on Awake. Grunt and archer run the same tree; the brute runs its own. |
 | **One branch, every agent** | `Engage` | The player and all three kinds run the same asset. The player's `target` comes from a click, an enemy's from `Sight`; the archer kites because its kind publishes `keepDistance` 3, nobody else does. |
 | **The weapon owns its attack** | `SwordAttack`, `HammerAttack`, `BowAttack` | Each weapon's rhythm lives in its own tree. Engage picks one with a `HoldsWeapon` guard whose `wanted` port is an inline literal; take a different weapon from a chest and the guard swaps trees on the `weaponId` key. |
-| **Charge** | `Charge`, `Recover` | The body pivots at its feet, leans away from the target, slams into it; Strike lands at the slam; Recover eases it upright. The hammer uses the same two nodes with a longer lean and a slower recovery. |
+| **Swings on body parts** | `Swing Part`, `Charge`, `Recover` | A Kenney character is six parts. Swing Part turns one about its own pivot and leaves it there, Charge leans the whole body, Recover eases everything back; Strike lands at the end of the swing. Interrupt any of them and the body snaps back on its own, so a kill mid-swing never leaves the attacker frozen. |
+| **Facing before the blow** | `Face Target` in the three attack trees | BH3's own node, fed by the `TransformOf(target)` Function. |
 | **Committed swing** | Attack's guard, Stops Its Own Branch off | A started charge finishes even if the target steps out of range during the wind-up. Chase and Kite carry the opposite guards. |
 | **Time-triggered guards** | The three `IsTargetInRange` guards, `IsFarFrom` | Distance changes without any variable write, so these poll. Every other guard in the samples wakes on a key. |
 | **A leash** | `ReturnHome` above `Engage` | Stray more than twelve metres from home, mid-fight or not, and the enemy walks back. It is why the grunts that killed you do not camp your spawn. |
@@ -71,8 +73,8 @@ Chest
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
 | `Chest` | Publishes `playerNearby`; `GiveWeapon()` is what the chest tree calls. |
 | `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets both. |
-| `HealthBar`, `Unit` | A bar over each head; the body and renderers the tween nodes and the hurt flash act on, with the resting pose that Charge, Recover and Respawn return to. |
-| `Strike`, `Respawn`, `Give Weapon`, `Scale To`, `Charge`, `Recover` | The custom nodes this sample adds. |
+| `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, with the resting pose that Recover and Respawn return to. |
+| `Strike`, `Respawn`, `Give Weapon`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
 
 ## Notes
 

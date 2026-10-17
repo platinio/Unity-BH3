@@ -23,7 +23,7 @@ namespace ArcaneOnyx.BH3.Samples
         public ValueInput SlamDuration { get; private set; }
 
         public override string NodeName => "Charge";
-        public override string Description => "Pivots the body at its feet: leans LeanAngle degrees away from Target over WindUp seconds, then slams SlamAngle degrees into it. Leaves the body slammed; Recover brings it back.";
+        public override string Description => "Pivots the body at its feet: leans LeanAngle degrees away from Target over WindUp seconds, then slams SlamAngle degrees into it. Leaves the body slammed; Recover brings it back. An interrupted charge snaps back on its own.";
 
         private sealed class Memory
         {
@@ -33,6 +33,8 @@ namespace ArcaneOnyx.BH3.Samples
             public float SlamDuration;
             public Tween Lean;
             public Tween Slam;
+
+            public bool IsMidCharge => Lean.IsPlaying || Slam == null || Slam.IsPlaying;
         }
 
         protected override void Definition()
@@ -70,8 +72,10 @@ namespace ArcaneOnyx.BH3.Samples
         public override void OnExit(BTContext ctx)
         {
             Memory memory = ctx.Memory<Memory>();
-            memory.Lean?.Kill();
+            bool wasInterrupted = memory.IsMidCharge;
+            memory.Lean.Kill();
             memory.Slam?.Kill();
+            if (wasInterrupted) memory.Unit.RestoreRestingPose();
         }
 
         private static Vector3 AxisToLeanAwayFrom(BTContext ctx, GameObject target)

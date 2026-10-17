@@ -58,17 +58,33 @@ namespace ArcaneOnyx.BH3.Samples
             });
         }
 
+        public static Tween SwingPart(this Unit unit, Transform part, Vector3 localAxis, float fromAngle, float toAngle,
+            float duration)
+        {
+            Quaternion restingRotation = unit.RestingPoseOf(part).Rotation;
+
+            return Play(unit, duration, Easing.OutQuad, progress =>
+                part.localRotation = Quaternion.AngleAxis(Mathf.Lerp(fromAngle, toAngle, progress), localAxis) * restingRotation);
+        }
+
         public static Tween ReturnToRestingPose(this Unit unit, float duration)
         {
             Transform body = unit.Body;
-            BodyPose resting = unit.RestingPose;
-            Vector3 startPosition = body.localPosition;
-            Quaternion startRotation = body.localRotation;
+            IReadOnlyList<Transform> parts = unit.Parts;
+            BodyPose bodyStart = BodyPose.Of(body);
+            BodyPose bodyResting = unit.RestingPose;
+            var partStarts = new BodyPose[parts.Count];
+            var partRestings = new BodyPose[parts.Count];
+            for (int i = 0; i < parts.Count; i++)
+            {
+                partStarts[i] = BodyPose.Of(parts[i]);
+                partRestings[i] = unit.RestingPoseOf(parts[i]);
+            }
 
             return Play(unit, duration, Easing.OutQuad, progress =>
             {
-                body.localPosition = Vector3.Lerp(startPosition, resting.Position, progress);
-                body.localRotation = Quaternion.Slerp(startRotation, resting.Rotation, progress);
+                BodyPose.Between(bodyStart, bodyResting, progress).ApplyTo(body);
+                for (int i = 0; i < parts.Count; i++) BodyPose.Between(partStarts[i], partRestings[i], progress).ApplyTo(parts[i]);
             });
         }
 
