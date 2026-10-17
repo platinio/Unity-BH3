@@ -20,6 +20,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         public bool IsDead => current <= 0;
         public float Fraction => (float)current / maxHealth;
+        public bool IsFull => current >= maxHealth;
 
         private AgentVariableWriter Facts => facts != null ? facts : facts = AgentVariableWriter.On(gameObject);
 

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: CanEquipWeapon
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":[],"description":"True while taker holds a weapon other than weapon.","graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[{"hasDefaultValue":false,"defaultValue":null,"_type":"UnityEngine.GameObject","key":"taker","label":"taker","summary":null,"hideLabel":false},{"hasDefaultValue":false,"defaultValue":null,"_type":"ArcaneOnyx.BH3.Samples.WeaponDefinition","key":"weapon","label":"weapon","summary":null,"hideLabel":false}],"valueOutputDefinitions":[{"_type":"System.Boolean","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":0.0,"y":0.0},"zoom":1.0,"elements":[{"defaultValues":{},"position":{"x":-320.0,"y":0.0},"guid":"df53b2b0-9242-405b-b5a6-7c36e7e2ddf2","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphInput","$id":"15"},{"defaultValues":{},"position":{"x":320.0,"y":0.0},"guid":"2f5efb8d-0ab6-459f-81d4-7a55cc32dcff","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphOutput","$id":"17"},{"chainable":false,"parameterNames":["taker","weapon"],"member":{"name":"CanEquipWeapon","parameterTypes":["UnityEngine.GameObject","ArcaneOnyx.BH3.Samples.WeaponDefinition"],"targetType":"ArcaneOnyx.BH3.Samples.Pickups","targetTypeName":"ArcaneOnyx.BH3.Samples.Pickups","$version":"A"},"defaultValues":{"%taker":null,"%weapon":null},"position":{"x":0.0,"y":150.0},"guid":"db798c0b-ae8e-44a3-be72-dac7fa5d7a8e","$version":"A","$type":"Unity.VisualScripting.InvokeMember","$id":"19"},{"sourceUnit":{"$ref":"15"},"sourceKey":"Enter","destinationUnit":{"$ref":"19"},"destinationKey":"enter","guid":"f7e5f36a-fd51-4adb-a1b1-fd969bbdff22","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"19"},"sourceKey":"exit","destinationUnit":{"$ref":"17"},"destinationKey":"Exit","guid":"2a05cc7e-1949-495b-8eb5-488f78991ae7","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"15"},"sourceKey":"taker","destinationUnit":{"$ref":"19"},"destinationKey":"%taker","guid":"50e68f19-9799-4593-b1bf-5499ffa0f28c","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"15"},"sourceKey":"weapon","destinationUnit":{"$ref":"19"},"destinationKey":"%weapon","guid":"eae0b625-2fed-48b7-bb72-4d222cdb8b91","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"19"},"sourceKey":"result","destinationUnit":{"$ref":"17"},"destinationKey":"Result","guid":"0cede939-f7c8-4ba6-8946-8e713b199809","$type":"Unity.VisualScripting.ValueConnection"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys: []
+  description: True while taker holds a weapon other than weapon.

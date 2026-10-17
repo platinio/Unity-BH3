@@ -12,19 +12,26 @@ namespace ArcaneOnyx.BH3.Samples
         private const string TakerInput = "taker";
 
         [SerializeField, PerCallInput(TakerInput, typeof(GameObject))]
+        private FunctionCall<bool> canPickup;
+
+        [SerializeField, PerCallInput(TakerInput, typeof(GameObject))]
         private FunctionCall<bool> effect;
 
         private AgentVariableWriter facts;
+        private FunctionCall<bool>.Bound boundCanPickup;
         private FunctionCall<bool>.Bound boundEffect;
-        private InputSlot<GameObject> taker;
+        private InputSlot<GameObject> canPickupTaker;
+        private InputSlot<GameObject> effectTaker;
         private Combatant playerInReach;
         private float nextCheckTime;
 
         private void Awake()
         {
             facts = AgentVariableWriter.On(gameObject);
-            boundEffect = effect.Bind(gameObject, name);
-            taker = boundEffect.Input<GameObject>(TakerInput);
+            boundCanPickup = canPickup.Bind(gameObject, name + " canPickup");
+            boundEffect = effect.Bind(gameObject, name + " effect");
+            canPickupTaker = boundCanPickup.Input<GameObject>(TakerInput);
+            effectTaker = boundEffect.Input<GameObject>(TakerInput);
         }
 
         private void Update()
@@ -33,22 +40,28 @@ namespace ArcaneOnyx.BH3.Samples
             nextCheckTime = Time.time + CheckInterval;
 
             playerInReach = PlayerInReach();
-            facts.Write(this, CombatFacts.PlayerNearby, playerInReach != null);
+            facts.Write(this, CombatFacts.CanPickup, playerInReach != null && CanBeTakenBy(playerInReach));
         }
 
         public bool Apply()
         {
-            if (playerInReach == null) return false;
+            if (playerInReach == null || !CanBeTakenBy(playerInReach)) return false;
 
-            boundEffect.Set(taker, playerInReach.gameObject);
+            boundEffect.Set(effectTaker, playerInReach.gameObject);
             return boundEffect.Invoke();
+        }
+
+        private bool CanBeTakenBy(Combatant combatant)
+        {
+            boundCanPickup.Set(canPickupTaker, combatant.gameObject);
+            return boundCanPickup.Invoke();
         }
 
         private Combatant PlayerInReach()
         {
             foreach (Combatant combatant in Combatant.All)
             {
-                if (combatant.Faction != Faction.Player || !combatant.IsAlive) continue;
+                if (!combatant.IsPlayer || !combatant.IsAlive) continue;
                 if (Vector3.Distance(transform.position, combatant.transform.position) <= ReachDistance) return combatant;
             }
 

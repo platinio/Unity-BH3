@@ -36,7 +36,7 @@ Die:                                  Flash Color → Scale To 0 → Wait 2 → 
 
 Pickup (chests and health packs)
 └─ Repeater → Selector
-   ├─ HandOut   RG: playerNearby, Stops Its Own Branch OFF
+   ├─ HandOut   RG: canPickup, Stops Its Own Branch OFF
    │   └─ Punch Scale → Apply Pickup → Scale To 0.5 → Wait 20 → Scale To 1
    └─ Wait 0.2
 ```
@@ -57,7 +57,7 @@ Pickup (chests and health packs)
 | **Time-triggered guards** | The three `IsTargetInRange` guards, `IsFarFrom` | Distance changes without any variable write, so these poll. Every other guard in the samples wakes on a key. |
 | **A leash** | `ReturnHome` above `Engage` | Stray more than twelve metres from home, mid-fight or not, and the enemy walks back. It is why the grunts that killed you do not camp your spawn. |
 | **Top-priority takeover** | `Die` on every root | `isDead` flips and whatever was running is abandoned the same frame. |
-| **A tree on a prop, an effect in a Function** | `Pickup`, `GiveWeapon`, `Heal` | Chests and health packs run the same tree: wait for the player, pop, apply, shrink while spent, refill. What apply does is a Function picked on the Pickup component and run from code with the player as its `taker` input: `GiveWeapon(taker, weapon)` on a chest, `Heal(taker, amount)` on a potion. The hand-out keeps Stops Its Own Branch off so it finishes even if you walk away. |
+| **A tree on a prop, an effect in a Function** | `Pickup`, `GiveWeapon`, `Heal` | Chests and health packs run the same tree: wait for a player who can take it, pop, apply, shrink while spent, refill. Two Functions picked on the Pickup component decide what that means, run from code with the player as `taker`: `canPickup` is `CanEquipWeapon(taker, weapon)` on a chest and `IsHurt(taker)` on a potion, so a chest ignores a player already holding its weapon and a potion ignores a player at full health; `effect` is `GiveWeapon(taker, weapon)` or `Heal(taker, amount)`. The hand-out keeps Stops Its Own Branch off so it finishes even if you walk away. |
 | **Hit back** | `PlayerOrders`, `Health.Damaged` | Damage carries the attacker. When the player is hit with no target, the attacker becomes the target and Engage takes over; a pending move order resumes once the fight is done. |
 | **Functions reading objects** | `PositionOf`, `IsTargetInRange`, `IsFarFrom`, `RetreatPointFrom` | Pure graphs with GameObject and Vector3 inputs, reading transforms through member units. |
 
@@ -72,7 +72,7 @@ Pickup (chests and health packs)
 | `Knockback` | Shoves a NavMeshAgent along the mesh; the hammer uses it. |
 | `Projectile` | The bow's bolt. |
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
-| `Pickup`, `Pickups` | Publishes `playerNearby`; `Apply()` runs the effect Function on the player in reach. `Pickups` holds the two static helpers those Functions call. |
+| `Pickup`, `Pickups` | Publishes `canPickup` while a living player in reach passes its canPickup Function; `Apply()` runs the effect Function on that player. `Pickups` holds the four static helpers those Functions call. |
 | `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; a hit with no target makes the attacker the target; death forgets everything. |
 | `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, the hand socket the weapon visual hangs from, and the resting pose that Recover and Respawn return to. |
 | `Strike`, `Respawn`, `Apply Pickup`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |

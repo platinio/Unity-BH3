@@ -11,7 +11,7 @@ namespace ArcaneOnyx.BH3.Samples
         public const string AttackCooldown = "attackCooldown";
         public const string KeepDistance = "keepDistance";
         public const string Home = "home";
-        public const string PlayerNearby = "playerNearby";
+        public const string CanPickup = "canPickup";
         public const string Slowed = "slowed";
     }
 }

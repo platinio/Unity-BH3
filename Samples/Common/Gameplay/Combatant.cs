@@ -26,6 +26,7 @@ namespace ArcaneOnyx.BH3.Samples
         private Quaternion spawnRotation;
 
         public Faction Faction => faction;
+        public bool IsPlayer => faction == Faction.Player;
         public bool IsAlive => !health.IsDead;
         public Vector3 EyePosition => transform.position + Vector3.up;
 

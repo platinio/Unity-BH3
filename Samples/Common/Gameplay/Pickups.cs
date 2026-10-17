@@ -4,19 +4,25 @@ namespace ArcaneOnyx.BH3.Samples
 {
     public static class Pickups
     {
+        public static bool CanEquipWeapon(GameObject taker, WeaponDefinition weapon) =>
+            weapon != null && taker.TryGetComponent(out Weapon held) && held.Definition != weapon;
+
         public static bool GiveWeapon(GameObject taker, WeaponDefinition weapon)
         {
-            if (weapon == null || !taker.TryGetComponent(out Weapon held)) return false;
+            if (!CanEquipWeapon(taker, weapon)) return false;
 
-            held.Equip(weapon);
+            taker.GetComponent<Weapon>().Equip(weapon);
             return true;
         }
 
+        public static bool IsHurt(GameObject taker) =>
+            taker.TryGetComponent(out Health health) && !health.IsDead && !health.IsFull;
+
         public static bool Heal(GameObject taker, int amount)
         {
-            if (!taker.TryGetComponent(out Health health) || health.IsDead) return false;
+            if (!IsHurt(taker)) return false;
 
-            health.Heal(amount);
+            taker.GetComponent<Health>().Heal(amount);
             return true;
         }
     }

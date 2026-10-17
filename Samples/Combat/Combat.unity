@@ -1034,7 +1034,15 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 7e470c1a65e300144921f3d7999e3bf0, type: 2}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.function
+      value: 
+      objectReference: {fileID: 11400000, guid: 428e585a8d0c9cd4880328c4d90d4957, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
@@ -1046,11 +1054,27 @@ PrefabInstance:
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].key
+      value: weapon
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].kind
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.data[0].typeName
       value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].typeName
+      value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.data[0].objectValue
+      value: 
+      objectReference: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].objectValue
       value: 
       objectReference: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
     - target: {fileID: 8588134923476037938, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
@@ -1136,6 +1160,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 193b096a40c8cc54891dd9af58b9176f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Pickup
+  canPickup:
+    function: {fileID: 11400000, guid: 161e8b8af65f51840bd4e37646eb9c5f, type: 2}
+    arguments: []
   effect:
     function: {fileID: 11400000, guid: dadfb20da8facb747ab5981858394a65, type: 2}
     arguments:
@@ -1316,7 +1343,15 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 7e470c1a65e300144921f3d7999e3bf0, type: 2}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.function
+      value: 
+      objectReference: {fileID: 11400000, guid: 428e585a8d0c9cd4880328c4d90d4957, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
@@ -1328,11 +1363,27 @@ PrefabInstance:
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].key
+      value: weapon
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].kind
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.data[0].typeName
       value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       objectReference: {fileID: 0}
     - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].typeName
+      value: ArcaneOnyx.BH3.Samples.WeaponDefinition, ArcaneOnyx.BH3.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      objectReference: {fileID: 0}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
       propertyPath: effect.arguments.Array.data[0].objectValue
+      value: 
+      objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
+    - target: {fileID: 8059971214901710033, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
+      propertyPath: canPickup.arguments.Array.data[0].objectValue
       value: 
       objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
     - target: {fileID: 8588134923476037938, guid: 24f7df41ba4ea0f46b01d976e089b0ae, type: 3}
@@ -2450,6 +2501,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 193b096a40c8cc54891dd9af58b9176f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Pickup
+  canPickup:
+    function: {fileID: 11400000, guid: 161e8b8af65f51840bd4e37646eb9c5f, type: 2}
+    arguments: []
   effect:
     function: {fileID: 11400000, guid: dadfb20da8facb747ab5981858394a65, type: 2}
     arguments:
