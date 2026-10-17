@@ -4,7 +4,7 @@ using UnityEngine;
 namespace ArcaneOnyx.BH3.Samples
 {
     [CreateAssetMenu(menuName = "BH3 Samples/Enemy Kind")]
-    public sealed class EnemyKind : ScriptableObject
+    public sealed class EnemyKind : ScriptableObject, ICombatantKind
     {
         [SerializeField] private Material bodyMaterial;
         [SerializeField] private WeaponDefinition weapon;
