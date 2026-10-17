@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16fe9452afbc58a49880896fc5fe6cf9, type: 3}
+  m_Name: Swarmer
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.EnemyKind
+  bodyMaterial: {fileID: 2100000, guid: 458aa53303361b643a44f17990338f02, type: 2}
+  weapon: {fileID: 0}
+  tree: {fileID: 11400000, guid: 06055b8d095f31a4887f8aa630b45f2a, type: 2}
+  maxHealth: 20
+  speed: 4.5
+  sightRadius: 0
+  keepDistance: 0
+  bodyScale: 0.6
+  bounty: 5
