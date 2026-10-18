@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +18,8 @@ namespace ArcaneOnyx.BH3.Samples
         private bool isPressed;
         private bool isDragging;
         private readonly List<Selectable> selected = new();
+
+        public event Action Changed;
 
         public IReadOnlyList<Selectable> Selected => selected;
 
@@ -39,7 +42,7 @@ namespace ArcaneOnyx.BH3.Samples
             if (mouse == null) return;
 
             Vector2 cursor = mouse.position.ReadValue();
-            if (mouse.leftButton.wasPressedThisFrame) BeginPress(cursor);
+            if (mouse.leftButton.wasPressedThisFrame && !HudCursor.IsOverTheHud) BeginPress(cursor);
             if (isPressed && mouse.leftButton.isPressed) ContinuePress(cursor);
             if (isPressed && mouse.leftButton.wasReleasedThisFrame) Release(cursor);
         }
@@ -66,6 +69,8 @@ namespace ArcaneOnyx.BH3.Samples
 
             if (isDragging) SelectInside(ScreenRect(pressPosition, cursor));
             else SelectUnder(cursor);
+
+            Changed?.Invoke();
         }
 
         private static Rect ScreenRect(Vector2 corner, Vector2 oppositeCorner)
@@ -117,6 +122,9 @@ namespace ArcaneOnyx.BH3.Samples
             selected.Clear();
         }
 
-        private void ForgetTheGone() => selected.RemoveAll(selectable => selectable == null || !selectable.isActiveAndEnabled);
+        private void ForgetTheGone()
+        {
+            if (selected.RemoveAll(selectable => selectable == null || !selectable.isActiveAndEnabled) > 0) Changed?.Invoke();
+        }
     }
 }

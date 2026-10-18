@@ -12,6 +12,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         public int Count => waiting.Count;
         public UnitKind Next => waiting.Count > 0 ? waiting.Peek() : null;
+        public float Progress01 { get; private set; }
 
         private void Awake()
         {
@@ -28,8 +29,15 @@ namespace ArcaneOnyx.BH3.Samples
         public UnitKind Dequeue()
         {
             UnitKind kind = waiting.Dequeue();
+            SetProgress(0f);
             Publish();
             return kind;
+        }
+
+        public void SetProgress(float progress01)
+        {
+            Progress01 = Mathf.Clamp01(progress01);
+            facts.Write(this, RtsFacts.TrainProgress01, Progress01);
         }
 
         private void Publish()

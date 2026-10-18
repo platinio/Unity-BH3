@@ -68,10 +68,10 @@ namespace ArcaneOnyx.BH3.Samples
             if (placer.Placing != null) return "Click to place the " + placer.Placing.Id + ", right-click or Escape to cancel";
 
             Building building = training.SelectedBuilding;
-            if (building != null) return building.IsBuilt ? TrainingHint(building) : "Right-click it with Workers selected to help build";
+            if (building != null) return building.IsBuilt ? "Click what to train" : "Right-click it with Workers selected to help build";
             if (selection.Selected.Count == 0) return "Drag to select units, click a building to select it";
 
-            return WorkersAreSelected() ? PlacementHint() + "   Right-click: move, gather a tree or rock, build a site" : "Right-click: move, or attack an enemy";
+            return WorkersAreSelected() ? "Click what to build   Right-click: move, gather a tree or rock, build a site" : "Right-click: move, or attack an enemy";
         }
 
         private bool WorkersAreSelected()
@@ -82,36 +82,6 @@ namespace ArcaneOnyx.BH3.Samples
             }
 
             return false;
-        }
-
-        private string PlacementHint()
-        {
-            line.Clear();
-            for (int i = 0; i < placer.Kinds.Count; i++)
-            {
-                BuildingKind kind = placer.Kinds[i];
-                line.Append('[').Append(i + 1).Append("] ").Append(kind.Id).Append(" (").Append(Cost(kind.WoodCost, kind.GoldCost)).Append(")  ");
-            }
-
-            return line.ToString();
-        }
-
-        private string TrainingHint(Building building)
-        {
-            line.Clear();
-            UnitKind[] trains = building.Kind.Trains;
-            for (int i = 0; i < trains.Length; i++)
-            {
-                line.Append('[').Append(i + 1).Append("] ").Append(trains[i].Id).Append(" (").Append(Cost(trains[i].WoodCost, trains[i].GoldCost)).Append(")  ");
-            }
-
-            return trains.Length > 0 ? line.ToString() : "This building trains nothing";
-        }
-
-        private static string Cost(int wood, int gold)
-        {
-            if (wood > 0 && gold > 0) return wood + " wood, " + gold + " gold";
-            return wood > 0 ? wood + " wood" : gold + " gold";
         }
     }
 }

@@ -16,8 +16,8 @@ Open `RTS.unity` and press Play.
 |---|---|
 | Left drag | Selects every unit inside the rectangle. A click selects one unit, or a building, or clears the selection on ground. |
 | Right click | The order depends on what is under the cursor: an enemy is attacked, a tree or rock is gathered (Workers), an unfinished site is built (Workers), the ground is walked to. Fighters walking to a point fight anything they see on the way. |
-| **1**, **2** with Workers selected | Pick a Barracks or a Keep. A translucent ghost follows the cursor, red where the footprint is taken; left click places it, spends the wood and sends the selected Workers to build it. Right click or Escape cancels. |
-| **1**, **2** with a building selected | Queue a unit that building trains, if the treasury can pay. The HUD shows the queue. |
+| Action bar, Workers selected | The bar along the bottom lists the buildings they can raise, each with its cost and greyed out while the treasury cannot pay. Click one and a translucent ghost follows the cursor, red where the footprint is taken; a left click places it, spends the wood and sends the selected Workers to build it. Right click or Escape cancels. |
+| Action bar, a building selected | The bar lists what that building trains. Click one to pay for it and put it in the queue; a bar over the building fills while the unit trains. |
 | WASD, screen edge | Pan the camera inside the map. |
 
 **Automation is the point.** An order is given once and runs until it is finished or replaced. A Worker sent
@@ -58,7 +58,7 @@ Build (site, acceptedBuildOrder)
 Building
 └─ Repeater → Selector
    ├─ UnderConstruction  RG: not isBuilt      → Grow → Wait 0.1
-   ├─ Produce            RG: HasQueuedUnit    → Wait(trainSeconds) → Spawn Unit → Dequeue
+   ├─ Produce            RG: HasQueuedUnit    → Train → Spawn Unit → Dequeue
    └─ Wait 0.2
 
 Enemy (grunt, archer)                                  Brute
@@ -82,12 +82,14 @@ Enemy (grunt, archer)                                  Brute
 | **A branch that runs itself** | `Gather` | One trip per run. The branch decides what comes next at the end: the same node, the nearest node of the same kind, or done. Re-pointing writes the agent's `resource` fact, so the caller re-enters pointing at the new tree. |
 | **Functions as swappable pieces** | `Functions/`, `Common/Functions/ApproachPoint` | `HasResource` reads a node's `remaining` fact, `IsCarryingSomething` the agent's `carriedAmount`, `HasQueuedUnit` a building's `queueCount`; all three are three-unit graphs. `ApproachPoint` is `Vector3.MoveTowards` between two positions, so a unit stands beside a thing instead of on it, and the same Function serves trees, rocks, sites and the depot. `NearestResource` is the one that is better in code, a loop over a list, wrapped so the tree can swap the policy. |
 | **Kinds as data** | `UnitKinds/`, `BuildingKinds/`, `EnemyKinds/` | A unit kind is its prefab, weapon, tree, health, speed, sight, cost and training time; a building kind its prefab, costs, build time, footprint, what it trains and where it rallies. Every kind names the prefab to make, so a Worker, a Soldier, an Archer and a Knight each have their own Kenney character and a building its own shape, while the three fighters still share one `Fighter` tree and one `Engage`. Nothing is recoloured at runtime: a prefab keeps the material it was authored with. |
-| **A tree on a building** | `Building`, `Grow`, `Spawn Unit` | While `isBuilt` is false the body grows with `progress01`, which the Workers' `Construct` swings write. While `HasQueuedUnit` is true the building waits the head unit's `trainSeconds`, spawns it at the rally point and dequeues it; the guard wakes on `queueCount`, so the first order starts the branch and the last Dequeue ends it. |
+| **A tree on a building** | `Building`, `Grow`, `Spawn Unit` | While `isBuilt` is false the body grows with `progress01`, which the Workers' `Construct` swings write. While `HasQueuedUnit` is true the `Train` node works on the head unit for its training time, then Spawn Unit puts it at the rally point and Dequeue takes it off; the guard wakes on `queueCount`, so the first order starts the branch and the last Dequeue ends it. |
 | **Two Workers build twice as fast** | `Construct` | Each swing adds one second of work. Nothing counts builders; the sum does. |
 | **Attack-move is a move with Sight** | The Fighter tree | A right click on the ground is Click to move's `MoveTo`. `Sight` publishes what it sees on the way, Engage takes the slot, and when the target dies `MoveTo` resumes toward the same point with the same order. |
 | **Camps that stay cleared** | `Enemy`, `Brute`, `RtsGame` | Combat's enemies with Defense's `Perish` instead of `Die`. `RtsGame` scans the roster once a second and the HUD shows Victory once no enemy is alive. |
 | **Hitting back, shared** | `Retaliation`, `UnitTargeting` | Lifted out of Combat's `PlayerOrders` into `Common`: a hit with no target makes the attacker the target; a dead target is dropped. Workers, fighters, enemies and Combat's player all carry both. |
-| **Placing with a ghost** | `BuildingPlacer`, `BuildingGhost` | Keys pick a kind; the ghost is a copy of that kind's prefab body with its colliders stripped, so it is exactly the building you are about to raise. It follows the cursor and turns red over a building or a resource, and a click raises the kind's prefab and orders the selected Workers to it. Selection and commands are switched off while placing so the click reaches only the placer. |
+| **The selection decides the actions** | `ActionBar` | The bar along the bottom is rebuilt from whatever is selected: the buildings Workers can raise, or the units a building trains, each button greyed out while the Treasury cannot pay. A button calls the same `BuildingPlacer.BeginPlacing` and `TrainingCommands.Train` the sample has always used, so the UI is one more caller rather than a second way of doing things, and nothing reads the keyboard any more. |
+| **A node that publishes its progress** | `Train`, `ProductionBar` | A `Wait` keeps its elapsed time to itself, so the Produce branch uses a `Train` node instead: it works on the head of the queue for that unit's training time and publishes `trainProgress01` as it goes. The bar over the building reads the queue, the Variable Watch reads the fact, and the tree still owns the timing. |
+| **Placing with a ghost** | `BuildingPlacer`, `BuildingGhost` | The bar picks the kind; the ghost is a copy of that kind's prefab body with its colliders stripped, so it is exactly the building you are about to raise. It follows the cursor and turns red over a building or a resource, and a click raises the kind's prefab and orders the selected Workers to it. Selection and commands are switched off while placing so the click reaches only the placer. |
 
 ## The cast
 
@@ -100,12 +102,15 @@ Enemy (grunt, archer)                                  Brute
 | `ResourceNode`, `Resource` | A tree or a gold outcrop: kind, what is left (published as `remaining`), shrinks as it empties, hides when bare. `NearestLike` serves the Function. |
 | `Carrier` | What a Worker holds, twenty of one kind at most; publishes `carriedKind`, `carriedAmount`, `isCarryingFull`. |
 | `Depot`, `Treasury` | The Town Hall takes a carrier's load into the Treasury on the Game object, which publishes `wood` and `gold`. |
-| `Selectable`, `SelectionRing`, `SelectionBox` | The roster of what can be selected, the ring under a selected unit, and the drag rectangle that owns the selection. |
+| `Selectable`, `SelectionRing`, `SelectionBox` | The roster of what can be selected, the ring under a selected unit or building, and the drag rectangle that owns the selection. A building's ring widens itself to its kind's footprint, so a Keep is ringed wider than a Barracks. |
 | `PlayerCommands` | Right clicks become attack, build, gather or move orders for the selection, each numbered; the only writer of order facts. |
-| `BuildingPlacer`, `TrainingCommands` | Keys 1 and 2: a ghost and a site with Workers selected, a queued unit with a building selected. Both pay the Treasury. |
+| `BuildingPlacer`, `TrainingCommands` | What the action bar calls: one raises a ghost and then a site, the other pays for a unit and queues it. Neither reads the keyboard. |
+| `ActionBar`, `ActionButton` | The row of buttons, rebuilt whenever the selection changes and greyed out by what the Treasury holds. |
+| `ProductionBar` | The bar over a training building, floating just above its roof whatever the building is. |
+| `HudCursor` | Whether the pointer is over the HUD, so a click on the bar is not also a click on the world. |
 | `CameraRig`, `RtsHud`, `RtsGame` | The pan, the readout and the win check. |
 | `Retaliation`, `UnitTargeting` | In `Common`: hit back when there is no target, drop a dead one. |
-| `Harvest`, `Deposit`, `Construct`, `Grow`, `Spawn Unit`, `Dequeue` | The custom nodes this sample adds. |
+| `Harvest`, `Deposit`, `Construct`, `Grow`, `Train`, `Spawn Unit`, `Dequeue` | The custom nodes this sample adds. |
 
 ## Notes
 

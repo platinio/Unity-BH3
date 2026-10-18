@@ -23,51 +23,23 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Awake() => viewCamera = Camera.main;
 
-        private void Update()
+        public void BeginPlacing(BuildingKind kind)
         {
-            if (placing == null)
-            {
-                HandlePickKeys();
-                return;
-            }
-
-            FollowCursor();
-            HandleCancel();
-            HandlePlace();
-        }
-
-        private void HandlePickKeys()
-        {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard == null || !WorkersAreSelected()) return;
-
-            if (keyboard.digit1Key.wasPressedThisFrame) BeginPlacing(0);
-            if (keyboard.digit2Key.wasPressedThisFrame) BeginPlacing(1);
-        }
-
-        private bool WorkersAreSelected()
-        {
-            bool anyWorker = false;
-            foreach (Selectable selected in selection.Selected)
-            {
-                if (selected.SelectsAlone) return false;
-                anyWorker |= selected.TryGetComponent(out Carrier _);
-            }
-
-            return anyWorker;
-        }
-
-        private void BeginPlacing(int kindIndex)
-        {
-            if (kindIndex >= kinds.Length) return;
-
-            BuildingKind kind = kinds[kindIndex];
-            if (!treasury.CanAfford(kind.WoodCost, kind.GoldCost)) return;
+            if (placing != null || !treasury.CanAfford(kind.WoodCost, kind.GoldCost)) return;
 
             placing = kind;
             ghost = new BuildingGhost(kind, freeGhostMaterial, blockedGhostMaterial);
             selection.enabled = false;
             commands.enabled = false;
+        }
+
+        private void Update()
+        {
+            if (placing == null) return;
+
+            FollowCursor();
+            HandleCancel();
+            HandlePlace();
         }
 
         private void FollowCursor()
@@ -87,7 +59,7 @@ namespace ArcaneOnyx.BH3.Samples
         private void HandlePlace()
         {
             Mouse mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || !ghost.SpotIsFree) return;
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || HudCursor.IsOverTheHud || !ghost.SpotIsFree) return;
 
             if (treasury.TrySpend(placing.WoodCost, placing.GoldCost)) RaiseSite(placing, ghost.Spot);
             StopPlacing();

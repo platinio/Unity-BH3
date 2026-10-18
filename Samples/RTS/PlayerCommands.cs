@@ -19,7 +19,7 @@ namespace ArcaneOnyx.BH3.Samples
         private void Update()
         {
             Mouse mouse = Mouse.current;
-            if (mouse == null || !mouse.rightButton.wasPressedThisFrame || selection.Selected.Count == 0) return;
+            if (mouse == null || !mouse.rightButton.wasPressedThisFrame || HudCursor.IsOverTheHud || selection.Selected.Count == 0) return;
 
             Ray clickRay = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
             if (!Physics.Raycast(clickRay, out RaycastHit hit)) return;
