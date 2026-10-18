@@ -24,9 +24,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     public static class BehaviorTreeLayout
     {
         public const float GapBetweenSiblings = 90.0f;
-        public const float GapBetweenGenerations = 140.0f;
+        public const float GapBetweenGenerations = 320.0f;
         public const float GapBeforeFeeders = 70.0f;
-        public const float GapBetweenFeeders = 30.0f;
+        public const float GapBetweenFeeders = 45.0f;
         public const float GapBetweenUnrelatedBlocks = 240.0f;
 
         /// <summary>
