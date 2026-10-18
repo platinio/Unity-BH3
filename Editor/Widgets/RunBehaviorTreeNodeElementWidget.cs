@@ -195,15 +195,6 @@ namespace ArcaneOnyx.BehaviorTree
             EditorGUI.TextField(labelPosition, GUIContent.none, name, selection.Contains(element) ? RunBehaviorTreeNodeElementWidgetStyles.labelSelected : RunBehaviorTreeNodeElementWidgetStyles.label);
         }
 
-        /// <summary>
-        /// The graph the preview draws: the live instance while one exists, the authored asset otherwise.
-        /// <para>
-        /// The check asks <see cref="RunBehaviorTreeGraphNode.HasBehaviorTreeGraphInstance"/> rather than
-        /// reading the instance, because reading it used to create one — so the first repaint in edit mode
-        /// cloned the sub-tree and every repaint after that drew the frozen copy, and the asset could be
-        /// edited without the parent canvas ever changing.
-        /// </para>
-        /// </summary>
         private BehaviorTreeGraph GetBehaviorTreeGraph()
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;

@@ -43,22 +43,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string Description => "Executes BehaviorTreeGraphAsset";
 
-        /// <summary>
-        /// This call site's own copy of the sub-tree, or null until
-        /// <see cref="GetOrCreateBehaviorTreeGraphAssetInstance"/> has made one.
-        /// <para>
-        /// Reading used to create. The canvas preview asked whether an instance existed, made one by asking,
-        /// and drew that frozen copy from then on — so editing a sub-tree changed nothing on the parent canvas
-        /// until a play-mode boundary cleared the field. Creation is a verb now, and every reader that must
-        /// not trigger it — the preview, the per-frame hooks, teardown — simply reads.
-        /// </para>
-        /// </summary>
         public BehaviorTreeGraphAsset BehaviorTreeGraphAssetInstance => behaviorTreeGraphAssetInstance;
 
-        /// <summary>
-        /// Gives this call site its own copy of the sub-tree, once, which is what stops two agents running the
-        /// same branch from sharing node state. Hands back the copy it already made on every later call.
-        /// </summary>
+        /// <summary>A copy per call site, so two agents running one branch never share node state.</summary>
         public BehaviorTreeGraphAsset GetOrCreateBehaviorTreeGraphAssetInstance()
         {
             if (behaviorTreeGraphAssetInstance == null)

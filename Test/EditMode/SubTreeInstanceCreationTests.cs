@@ -6,21 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
-    /// <summary>
-    /// A call site makes its own copy of the sub-tree, and only when it is told to.
-    ///
-    /// <para>
-    /// The copy is what stops two agents running one branch from sharing node state, and it used to be made by
-    /// the first read of the property that returned it. That turned every reader into a writer. The canvas
-    /// preview asked whether a copy existed in order to decide what to draw, answered its own question by
-    /// making one, and drew that copy from then on — so a sub-tree could be edited without the parent canvas
-    /// ever changing, until a play-mode boundary cleared the field and the next repaint copied the asset again.
-    /// </para>
-    ///
-    /// <para>
-    /// The two halves are pinned separately: reading never creates, and the explicit verb creates once.
-    /// </para>
-    /// </summary>
     [TestFixture]
     public class SubTreeInstanceCreationTests
     {
@@ -47,7 +32,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return asset;
         }
 
-        /// <summary>A call site pointed at a one-leaf branch, with nothing awoken or entered yet.</summary>
         private RunBehaviorTreeGraphNode CallSite()
         {
             var branch = NewTree("Branch");
