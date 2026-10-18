@@ -65,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree
             // three walks of the sub-graph per repaint for one answer, each of which asks every node for the
             // guard stack above it, so the walk is quadratic in the sub-tree's size.
             BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
-            var bounds = SubTreeFootprint.BoundsOf(behaviorTreeGraph);
+            var bounds = SubTreeFootprint.BoundsWhileDrawing(behaviorTreeGraph.Canvas(), behaviorTreeGraph);
 
             position = SubTreeFootprint.BoxAt(position.position, bounds);
             DrawSubGraphGroup(offset, position);
@@ -247,7 +247,10 @@ namespace ArcaneOnyx.BehaviorTree
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
 
-            return SubTreeFootprint.BoxAt(position.position, SubTreeFootprint.BoundsOf(GetBehaviorTreeGraph()));
+            var graphBeingDrawn = GetBehaviorTreeGraph();
+
+            return SubTreeFootprint.BoxAt(
+                position.position, SubTreeFootprint.BoundsWhileDrawing(graphBeingDrawn.Canvas(), graphBeingDrawn));
         }
 
         public override void CachePosition()
