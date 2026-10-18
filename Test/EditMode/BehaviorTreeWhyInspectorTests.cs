@@ -84,45 +84,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 return this;
             }
 
-            public RecordingBuilder Enter(Guid node, int scope = 0) => Add(BehaviorTreeEventKind.NodeEnter, scope, node);
+            public RecordingBuilder Enter(Guid node, int scope = 0) =>
+                Add(BehaviorTreeEvent.NodeEntered(NextStamp(scope), node));
 
             public RecordingBuilder Exit(Guid node, ExecutionStatus status, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeExit, scope, node, status: status);
+                Add(BehaviorTreeEvent.NodeExited(NextStamp(scope), node, status));
 
             public RecordingBuilder Aborted(Guid node, Guid guard, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeAborted, scope, node, guard);
+                Add(BehaviorTreeEvent.NodeAbortedByGuard(NextStamp(scope), node, guard));
 
             public RecordingBuilder Skipped(Guid node, Guid guard, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeSkipped, scope, node, guard);
+                Add(BehaviorTreeEvent.NodeSkippedByGuard(NextStamp(scope), node, guard));
 
-            public RecordingBuilder TakenOver(Guid victim, Guid guard, string preemptorName, Guid preemptor, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeTakenOver, scope, victim, guard,
-                    key: preemptorName, newValue: preemptor.ToString());
+            public RecordingBuilder TakenOver(
+                Guid victim, Guid guard, string preemptorName, Guid preemptor, int scope = 0) =>
+                Add(BehaviorTreeEvent.NodeTakenOver(NextStamp(scope), victim, guard, preemptorName, preemptor));
 
             public RecordingBuilder GuardEval(Guid guard, Guid owner, bool result, int scope = 0) =>
-                Add(BehaviorTreeEventKind.GuardEval, scope, guard, owner, flag: result);
+                Add(BehaviorTreeEvent.GuardChanged(NextStamp(scope), guard, owner, result));
 
             public RecordingBuilder Write(
                 string key, string from, string to, Guid writer, int scope = 0,
                 BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object) =>
-                Add(BehaviorTreeEventKind.VariableWrite, scope, Guid.Empty, writer,
-                    key: key, oldValue: from, newValue: to, variableKind: variableKind);
+                Add(BehaviorTreeEvent.VariableWrittenByNode(
+                    NextStamp(scope), writer, key, variableKind, from, to));
 
             public RecordingBuilder ExternalWrite(
                 string key, string from, string to, string writer, int scope = 0,
                 BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object) =>
-                Add(BehaviorTreeEventKind.VariableWrite, scope, Guid.Empty,
-                    key: key, oldValue: from, newValue: to, variableKind: variableKind, writer: writer);
+                Add(BehaviorTreeEvent.VariableWrittenOutsideTree(
+                    NextStamp(scope), writer, key, variableKind, from, to));
 
-            private RecordingBuilder Add(
-                BehaviorTreeEventKind kind, int scope, Guid node, Guid related = default,
-                ExecutionStatus status = ExecutionStatus.None, bool flag = false,
-                string key = null, string oldValue = null, string newValue = null,
-                BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.None, string writer = null)
+            private BehaviorTreeEventStamp NextStamp(int scope) =>
+                new(tick, sequence++, tick, tick * 0.02f, scope);
+
+            private RecordingBuilder Add(in BehaviorTreeEvent recorded)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    kind, tick, sequence++, tick, tick * 0.02f, scope, node, related, status, flag,
-                    key, oldValue, newValue, variableKind, writer));
+                events.Add(recorded);
 
                 return this;
             }
@@ -135,7 +133,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 var last = events[events.Count - 1];
                 var nodes = new List<GuardTraceNode>
                 {
-                    new(last.NodeGuid, "guard", "BooleanReactiveGuard", last.Flag ? "true" : "false", 0, -1, -1),
+                    new(last.NodeGuid, "guard", "BooleanReactiveGuard", last.GuardResult ? "true" : "false", 0, -1, -1),
                 };
 
                 for (int i = 0; i < chain.Length; i++)
@@ -145,7 +143,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 }
 
                 traces.Add(new GuardTrace(
-                    last.Tick, last.Sequence, last.CallSiteId, last.NodeGuid, last.RelatedGuid, last.Flag, nodes, null));
+                    last.Tick, last.Sequence, last.CallSiteId, last.NodeGuid, last.RelatedGuid, last.GuardResult, nodes, null));
 
                 return this;
             }
@@ -663,7 +661,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ARealAbortRecordedByARealTreeExplainsAsAnAbort()
         {
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
 
             var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
             var graph = new BehaviorTreeGraph();
@@ -707,7 +705,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ARealSkipIsNotReportedAsAnAbort()
         {
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
 
             var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
             var graph = new BehaviorTreeGraph();
@@ -856,17 +854,17 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.SetFlightRecorder(recorder);
 
             // What VisualScriptGraphVariable does around the graph it runs.
-            BehaviorTreeRecorder.PushScriptGraphOwner(node);
-            BehaviorTreeRecorder.ScriptGraphVariableWrite(
+            BehaviorTreeDevRecorder.PushScriptGraphOwner(node);
+            BehaviorTreeDevRecorder.ScriptGraphVariableWrite(
                 null, "Script Graph", "hasTarget", BehaviorTreeVariableKind.Object, false, true);
-            BehaviorTreeRecorder.PopScriptGraphOwner();
+            BehaviorTreeDevRecorder.PopScriptGraphOwner();
 
             var written = recorder.EventAt(0);
 
             Assert.AreEqual(BehaviorTreeEventKind.VariableWrite, written.Kind);
             Assert.AreEqual(node.guid, written.RelatedGuid,
                 "A unit inside a graph has no guid of its own, so the node that ran the graph is the locatable writer.");
-            Assert.IsNull(written.Writer, "With a node to name, the weaker name field should stay empty.");
+            Assert.IsNull(written.WriterName, "With a node to name, the weaker name field should stay empty.");
         }
 
         [Test]
@@ -880,12 +878,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 // No push: a graph run outside a tree still has a writer worth recording, just not one the
                 // canvas can point at.
-                BehaviorTreeRecorder.ScriptGraphVariableWrite(
+                BehaviorTreeDevRecorder.ScriptGraphVariableWrite(
                     machine, "VisionCheck", "hasTarget", BehaviorTreeVariableKind.Object, false, true);
 
                 var written = recorder.EventAt(0);
 
-                Assert.AreEqual("VisionCheck", written.Writer);
+                Assert.AreEqual("VisionCheck", written.WriterName);
                 Assert.AreEqual(Guid.Empty, written.RelatedGuid);
             }
             finally
@@ -944,7 +942,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var written = reimported.EventAt(0);
 
             Assert.AreEqual(BehaviorTreeEventKind.VariableWrite, written.Kind);
-            Assert.AreEqual("TargetingSensor", written.Writer,
+            Assert.AreEqual("TargetingSensor", written.WriterName,
                 "The dump writes a node guid and a sensor name into one field; telling them apart on the way back is the importer's job.");
             Assert.AreEqual(Guid.Empty, written.RelatedGuid);
         }

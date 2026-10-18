@@ -65,15 +65,15 @@ turn it off:
 - The **Rec** button at the left of the Timeline toolbar switches recording off for every agent. Off stays
   off for the rest of the editor session, including across Play, and each panel puts up a warning saying
   so. Click it again to resume.
-- From code, `BehaviorTreeFlightRecorders.GloballyEnabled` is the same switch, and
-  `BehaviorTreeFlightRecorders.TracingGloballyEnabled` turns off only the guard-chain capture while keeping
+- From code, `BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled` is the same switch, and
+  `BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled` turns off only the guard-chain capture while keeping
   the event recording.
 
 Two buffers are involved, both per agent and both ring buffers:
 
 | Buffer | Default size | When it matters |
 |---|---|---|
-| Events | 2048 | "The recording is clipped" means the start of the story scrolled away. Raise `BehaviorTreeFlightRecorders.DefaultCapacity` before agents spawn, or reproduce closer to the moment |
+| Events | 2048 | "The recording is clipped" means the start of the story scrolled away. Raise `BehaviorTreeFlightRecorderRegistry.DefaultCapacity` before agents spawn, or reproduce closer to the moment |
 | Guard chains | 64 | A guard flipping very fast can push older chains out, so an abort may show no chain |
 
 ## The raw event log

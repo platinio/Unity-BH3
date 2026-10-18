@@ -239,7 +239,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.IsNotNull(preemption, "a takeover must be recorded as NodeTakenOver, not as a plain abort");
             Assert.AreEqual(low.guid, preemption.NodeGuid, "the event is about the branch that lost the slot");
             Assert.AreEqual(bid.guid, preemption.RelatedGuid, "and names the guard that made the bid");
-            Assert.AreEqual(high.NodeName, preemption.Key, "and the preemptor, so an explanation can name it");
+            Assert.AreEqual(high.NodeName, preemption.PreemptorName, "and the preemptor, so an explanation can name it");
         }
     }
 }

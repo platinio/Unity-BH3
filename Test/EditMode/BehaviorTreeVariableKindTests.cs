@@ -268,7 +268,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 
@@ -374,7 +374,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 
@@ -404,7 +404,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 
@@ -488,7 +488,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
             finally
             {
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 

@@ -50,10 +50,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            recordingWasEnabled = BehaviorTreeFlightRecorders.GloballyEnabled;
-            tracingWasEnabled = BehaviorTreeFlightRecorders.TracingGloballyEnabled;
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
-            BehaviorTreeFlightRecorders.TracingGloballyEnabled = true;
+            recordingWasEnabled = BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled;
+            tracingWasEnabled = BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled = true;
 
             FunctionEvaluator.InvalidateAll();
 
@@ -87,9 +87,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [TearDown]
         public void TearDown()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = recordingWasEnabled;
-            BehaviorTreeFlightRecorders.TracingGloballyEnabled = tracingWasEnabled;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = recordingWasEnabled;
+            BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled = tracingWasEnabled;
 
             FunctionEvaluator.InvalidateAll();
 

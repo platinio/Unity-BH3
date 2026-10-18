@@ -593,7 +593,7 @@ namespace ArcaneOnyx.BehaviorTree
                     ? conditionalExecution.EvaluateInternal(fresh)
                     : conditionalExecution.Ask(fresh);
 
-                Debugging.BehaviorTreeRecorder.GuardEval(this, conditionalExecution, passed);
+                Debugging.BehaviorTreeDevRecorder.GuardEval(this, conditionalExecution, passed);
 
                 if (!passed) return conditionalExecution;
             }
@@ -702,11 +702,11 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 // Never started, as opposed to started and killed. The two read differently to whoever is
                 // asking why this branch did not happen, so they are recorded as different events.
-                Debugging.BehaviorTreeRecorder.NodeSkipped(this, failed);
+                Debugging.BehaviorTreeDevRecorder.NodeSkipped(this, failed);
                 return;
             }
 
-            Debugging.BehaviorTreeRecorder.NodeEnter(this);
+            Debugging.BehaviorTreeDevRecorder.NodeEnter(this);
 
             base.OnNodeEnter();
         }
@@ -726,7 +726,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             base.OnNodeExit();
 
-            if (wasRunning) Debugging.BehaviorTreeRecorder.NodeExit(this, LastExecutionStatus);
+            if (wasRunning) Debugging.BehaviorTreeDevRecorder.NodeExit(this, LastExecutionStatus);
         }
 
         /// <summary>
@@ -809,7 +809,7 @@ namespace ArcaneOnyx.BehaviorTree
                 // for nodes that never started. Only a node that was running can be aborted; the other
                 // case was already recorded as skipped by OnNodeEnter, and recording it twice would
                 // report every declined branch as though something had interrupted it.
-                if (IsRunning) Debugging.BehaviorTreeRecorder.NodeAborted(this, failed);
+                if (IsRunning) Debugging.BehaviorTreeDevRecorder.NodeAborted(this, failed);
 
                 LastExecutionStatus = ExecutionStatus.Failure;
                 return ExecutionStatus.Failure;

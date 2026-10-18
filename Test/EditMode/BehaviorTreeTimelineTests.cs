@@ -57,35 +57,36 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 return this;
             }
 
-            public RecordingBuilder Enter(Guid node, int scope = 0) => Add(BehaviorTreeEventKind.NodeEnter, scope, node);
+            public RecordingBuilder Enter(Guid node, int scope = 0) =>
+                Add(BehaviorTreeEvent.NodeEntered(NextStamp(scope), node));
 
             public RecordingBuilder Exit(Guid node, ExecutionStatus status, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeExit, scope, node, status: status);
+                Add(BehaviorTreeEvent.NodeExited(NextStamp(scope), node, status));
 
             public RecordingBuilder Aborted(Guid node, Guid guard, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeAborted, scope, node, guard);
+                Add(BehaviorTreeEvent.NodeAbortedByGuard(NextStamp(scope), node, guard));
 
             public RecordingBuilder TakenOver(Guid victim, Guid guard, string preemptorName, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeTakenOver, scope, victim, guard, key: preemptorName);
+                Add(BehaviorTreeEvent.NodeTakenOver(NextStamp(scope), victim, guard, preemptorName, Guid.Empty));
 
             public RecordingBuilder Skipped(Guid node, Guid guard, int scope = 0) =>
-                Add(BehaviorTreeEventKind.NodeSkipped, scope, node, guard);
+                Add(BehaviorTreeEvent.NodeSkippedByGuard(NextStamp(scope), node, guard));
 
             public RecordingBuilder GuardEval(Guid guard, Guid owner, bool result, int scope = 0) =>
-                Add(BehaviorTreeEventKind.GuardEval, scope, guard, owner, flag: result);
+                Add(BehaviorTreeEvent.GuardChanged(NextStamp(scope), guard, owner, result));
 
             public RecordingBuilder Pushed(Guid runNode, string asset, int scope = 0) =>
-                Add(BehaviorTreeEventKind.TreePushed, scope, runNode, key: asset);
+                Add(BehaviorTreeEvent.SubTreePushed(NextStamp(scope), runNode, asset));
 
             public RecordingBuilder Popped(Guid runNode, string asset, int scope = 0) =>
-                Add(BehaviorTreeEventKind.TreePopped, scope, runNode, key: asset);
+                Add(BehaviorTreeEvent.SubTreePopped(NextStamp(scope), runNode, asset));
 
-            private RecordingBuilder Add(
-                BehaviorTreeEventKind kind, int scope, Guid node, Guid related = default,
-                ExecutionStatus status = ExecutionStatus.None, bool flag = false, string key = null)
+            private BehaviorTreeEventStamp NextStamp(int scope) =>
+                new(tick, sequence++, tick, tick * 0.02f, scope);
+
+            private RecordingBuilder Add(in BehaviorTreeEvent recorded)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    kind, tick, sequence++, tick, tick * 0.02f, scope, node, related, status, flag, key));
+                events.Add(recorded);
 
                 return this;
             }
@@ -637,8 +638,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         /// </summary>
         private static BehaviorTreeFlightRecorder RecordARealAbort(out Guid ownerGuid, out Guid guardGuid)
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             var recorder = new BehaviorTreeFlightRecorder("TestAgent", "TestTree");
             var graph = new BehaviorTreeGraph();
@@ -695,7 +696,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 + "must fail here rather than quietly drawing a Failure.");
             Assert.AreEqual(guardGuid, segment.GuardGuid);
 
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
         }
 
         [Test]

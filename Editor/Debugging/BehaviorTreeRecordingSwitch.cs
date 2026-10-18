@@ -4,7 +4,7 @@ using UnityEditor;
 namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
-    /// The editor's hand on <see cref="BehaviorTreeFlightRecorders.GloballyEnabled"/>: the same switch, made
+    /// The editor's hand on <see cref="BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled"/>: the same switch, made
     /// to survive a domain reload.
     ///
     /// <para>
@@ -35,10 +35,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Whether the live flight recorder is on, for every agent at once.</summary>
         public static bool Enabled
         {
-            get => BehaviorTreeFlightRecorders.GloballyEnabled;
+            get => BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled;
             set
             {
-                BehaviorTreeFlightRecorders.GloballyEnabled = value;
+                BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = value;
                 SessionState.SetBool(Key, value);
             }
         }
@@ -49,7 +49,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public static void Restore()
         {
-            BehaviorTreeFlightRecorders.GloballyEnabled = SessionState.GetBool(Key, true);
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = SessionState.GetBool(Key, true);
         }
 
         /// <summary>Forgets the session's choice and returns to the default: recording.</summary>

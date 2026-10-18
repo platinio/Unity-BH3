@@ -144,8 +144,8 @@ variable written with it has no recorded writer. Use **Set BT Variable** inside 
 | *Enter play mode to watch an agent* | Nothing is recording. Not in Play mode, or recording is off; the Timeline's **Rec** button turns it back on |
 | *This node has no recorded activity in the selected call site* | The node ran somewhere else. Check the call-site dropdown |
 | *The recording is empty* | Recording is off for this agent, or it has not ticked yet |
-| *The recording is clipped: N older events were dropped* | The buffer holds the most recent 2048 events and the start of the story scrolled away. Reproduce closer to the moment, or raise `BehaviorTreeFlightRecorders.DefaultCapacity` before agents spawn |
-| No guard chain on an abort | Chains are captured only when a guard *changes* its answer, and live in a shorter buffer (64 per agent). A guard flipping very fast can push older chains out. `BehaviorTreeFlightRecorders.TracingGloballyEnabled` turns chain capture off entirely; check it if you never see one |
+| *The recording is clipped: N older events were dropped* | The buffer holds the most recent 2048 events and the start of the story scrolled away. Reproduce closer to the moment, or raise `BehaviorTreeFlightRecorderRegistry.DefaultCapacity` before agents spawn |
+| No guard chain on an abort | Chains are captured only when a guard *changes* its answer, and live in a shorter buffer (64 per agent). A guard flipping very fast can push older chains out. `BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled` turns chain capture off entirely; check it if you never see one |
 
 ---
 
