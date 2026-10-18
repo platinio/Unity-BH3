@@ -119,6 +119,29 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return new { verified = paths, clean = findings.Count == 0, findings = findings.ToArray() };
         }
 
+        [CliCommand("bt_layout",
+            "Arrange trees so nothing is drawn on top of anything else: parents centred over their " +
+            "children, siblings left to right in priority order, and the literals and reads that feed a " +
+            "node's ports in columns beside it. Run it once when a tree is finished rather than placing " +
+            "nodes by hand while authoring. A tree whose nodes do not overlap is left exactly as its author " +
+            "arranged it, so a hand-tidied canvas survives. The trees a tree runs are arranged first: a " +
+            "sub-tree node is drawn as the whole tree it runs, so how big it is follows from that tree's " +
+            "own layout, and a branch can be thousands of pixels wide.")]
+        public static object LayoutCommand(
+            [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Worker,Trees/Engage", Required = true)] string trees)
+        {
+            var assets = trees
+                .Split(',')
+                .Select(tree => tree.Trim())
+                .Where(tree => tree.Length > 0)
+                .Select(tree => ResolveTree(tree, out _))
+                .ToArray();
+
+            if (assets.Length == 0) throw new ArgumentException("No tree paths given.");
+
+            return new { arranged = assets.SelectMany(BehaviorTreeLayout.Arrange).ToArray() };
+        }
+
         [CliCommand("bt_retarget_missing",
             "Replace nodes whose C# type no longer exists with a type that does, keeping every value, object " +
             "reference and connection the replacement still has a home for. This is the headless form of the " +
