@@ -16,24 +16,13 @@ namespace ArcaneOnyx.BH3.Samples
         private float workDone;
 
         public BuildingKind Kind => kind;
+        public Transform Body => Unit.Of(gameObject).Body;
         public float Progress01 => kind.BuildSeconds <= 0f ? 1f : Mathf.Clamp01(workDone / kind.BuildSeconds);
         public bool IsBuilt => Progress01 >= 1f;
         public Vector3 RallyPoint => transform.TransformPoint(kind.RallyOffset);
 
         private void Awake()
         {
-            if (kind != null) Apply();
-        }
-
-        public void Apply(BuildingKind newKind)
-        {
-            kind = newKind;
-            Apply();
-        }
-
-        public void Apply()
-        {
-            Dress();
             SizeFootprint();
             GetComponent<BehaviorTreeMachine>().nest.macro = kind.Tree;
             if (startsBuilt) workDone = kind.BuildSeconds;
@@ -47,22 +36,6 @@ namespace ArcaneOnyx.BH3.Samples
             workDone += seconds;
             if (IsBuilt) Unit.Of(gameObject).RestoreRestingPose();
             Publish();
-        }
-
-        private void Dress()
-        {
-            Transform model = transform.Find("Model");
-            if (model == null) model = PlaceModel();
-
-            Unit.Of(gameObject).AdoptBody(model, model.GetComponentsInChildren<Renderer>());
-        }
-
-        private Transform PlaceModel()
-        {
-            GameObject model = Instantiate(kind.Model, transform);
-            model.name = "Model";
-            model.transform.localScale = Vector3.one * kind.ModelScale;
-            return model.transform;
         }
 
         private void SizeFootprint()

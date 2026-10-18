@@ -1,18 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 namespace ArcaneOnyx.BH3.Samples
 {
     public sealed class BuildingPlacer : MonoBehaviour
     {
-        private const float MaxDistanceToNavMesh = 0.5f;
-
         [SerializeField] private SelectionBox selection;
         [SerializeField] private PlayerCommands commands;
         [SerializeField] private Treasury treasury;
-        [SerializeField] private Building buildingPrefab;
         [SerializeField] private Transform buildingsParent;
         [SerializeField] private BuildingKind[] kinds;
         [SerializeField] private Material freeGhostMaterial;
@@ -20,9 +16,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private Camera viewCamera;
         private BuildingKind placing;
-        private GameObject ghost;
-        private Vector3 ghostPoint;
-        private bool ghostSpotIsFree;
+        private BuildingGhost ghost;
 
         public IReadOnlyList<BuildingKind> Kinds => kinds;
         public BuildingKind Placing => placing;
@@ -71,47 +65,15 @@ namespace ArcaneOnyx.BH3.Samples
             if (!treasury.CanAfford(kind.WoodCost, kind.GoldCost)) return;
 
             placing = kind;
-            ghost = Instantiate(kind.Model);
-            ghost.name = kind.Id + " ghost";
-            ghost.transform.localScale = Vector3.one * kind.ModelScale;
-            foreach (Collider collider in ghost.GetComponentsInChildren<Collider>()) Destroy(collider);
+            ghost = new BuildingGhost(kind, freeGhostMaterial, blockedGhostMaterial);
             selection.enabled = false;
             commands.enabled = false;
         }
 
         private void FollowCursor()
         {
-            Mouse mouse = Mouse.current;
-            Ray cursorRay = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
-            if (!Physics.Raycast(cursorRay, out RaycastHit hit)) return;
-
-            ghostPoint = hit.point;
-            ghostSpotIsFree = IsFree(ghostPoint);
-            ghost.transform.position = ghostPoint;
-            Tint(ghostSpotIsFree ? freeGhostMaterial : blockedGhostMaterial);
-        }
-
-        private bool IsFree(Vector3 point)
-        {
-            if (!NavMesh.SamplePosition(point, out _, MaxDistanceToNavMesh, NavMesh.AllAreas)) return false;
-
-            foreach (Collider nearby in Physics.OverlapSphere(point, placing.FootprintRadius))
-            {
-                if (nearby.GetComponentInParent<Building>() != null) return false;
-                if (nearby.GetComponentInParent<ResourceNode>() != null) return false;
-            }
-
-            return true;
-        }
-
-        private void Tint(Material material)
-        {
-            foreach (Renderer renderer in ghost.GetComponentsInChildren<Renderer>())
-            {
-                var materials = new Material[renderer.sharedMaterials.Length];
-                for (int i = 0; i < materials.Length; i++) materials[i] = material;
-                renderer.sharedMaterials = materials;
-            }
+            Ray cursorRay = viewCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (Physics.Raycast(cursorRay, out RaycastHit hit)) ghost.ShowAt(hit.point);
         }
 
         private void HandleCancel()
@@ -125,24 +87,22 @@ namespace ArcaneOnyx.BH3.Samples
         private void HandlePlace()
         {
             Mouse mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || !ghostSpotIsFree) return;
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || !ghost.SpotIsFree) return;
 
-            if (treasury.TrySpend(placing.WoodCost, placing.GoldCost)) RaiseSite(placing, ghostPoint);
+            if (treasury.TrySpend(placing.WoodCost, placing.GoldCost)) RaiseSite(placing, ghost.Spot);
             StopPlacing();
         }
 
-        private void RaiseSite(BuildingKind kind, Vector3 point)
+        private void RaiseSite(BuildingKind kind, Vector3 spot)
         {
-            Building site = Instantiate(buildingPrefab, point, Quaternion.identity, buildingsParent);
+            Building site = Instantiate(kind.Prefab, spot, Quaternion.identity, buildingsParent);
             site.name = kind.Id;
-            site.Apply(kind);
-            site.gameObject.SetActive(true);
             commands.OrderBuild(site.gameObject);
         }
 
         private void StopPlacing()
         {
-            Destroy(ghost);
+            ghost.Hide();
             ghost = null;
             placing = null;
             selection.enabled = true;
