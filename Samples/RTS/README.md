@@ -4,8 +4,8 @@ A small real-time strategy map. You start with a Town Hall, three Workers, a lit
 forests, two gold outcrops and three enemy camps in the far corners. Workers gather wood and gold and
 carry it home; wood raises a Barracks or a Keep; buildings train Soldiers, Archers and Knights for gold;
 your fighters attack-move across the map and clear the camps. When no enemy is left standing the HUD says
-**Victory** and the game keeps running. There is no way to lose: the Town Hall cannot be destroyed and a
-dead Worker respawns where it was made. Kenney blocky characters, Kenney castle and forest pieces,
+**Victory** and the game keeps running. The Town Hall cannot be destroyed, but a dead unit is gone for good:
+lose every Worker with no gold left to train another and the game is over in all but name. Kenney blocky characters, Kenney castle and forest pieces,
 primitives and tweens; every animation is a tween on a body part.
 
 Open `RTS.unity` and press Play.
@@ -32,7 +32,7 @@ of code.
 ```
 Worker                                               Soldier / Archer / Knight (Fighter)
 └─ Repeater → Selector                               └─ Repeater → Selector
-   ├─ Die        RG: isDead                             ├─ Die       RG: isDead
+   ├─ Perish     RG: isDead                             ├─ Perish    RG: isDead
    ├─ FightBack  RG: hasTarget        (Combat's Engage)  ├─ Engage    RG: hasTarget   (Combat's Engage)
    ├─ Build      RG: HasNewOrder(buildOrder, completedBuildOrder)      ├─ AttackMove RG: HasNewOrder(orderNumber, completedOrder)
    ├─ Gather     RG: HasNewOrder(gatherOrder, completedGatherOrder)    │             (Click to move's MoveTo)
@@ -69,7 +69,7 @@ Enemy (grunt, archer)                                  Brute
    └─ Wander
 ```
 
-`Die`, `Engage`, the three attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets;
+`Engage`, the three attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets;
 `MoveTo` and `Idle` are Click to move's; `Perish` is Defense's. Combat's `Engage` gained a fourth branch,
 `PunchAttack` behind a `HoldsWeapon` guard on `"Fists"`, so a Worker can fight back with its hands.
 
