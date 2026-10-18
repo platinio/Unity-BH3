@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
@@ -9,168 +8,118 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
     /// <summary>
-    /// Runs the layout over a copy of the RTS Worker — a real tree, six branches deep, authored at
-    /// coordinates chosen before anyone knew how wide a sub-tree is drawn. The copy is made fresh for each
-    /// test and deleted afterwards, so the fixture stays as messy as it was committed.
+    /// A caller and the branch it runs, both built with every node dropped at the same spot, which is what
+    /// authoring from code produces before anybody says where anything goes.
     /// </summary>
     public class BehaviorTreeLayoutTests
     {
-        private const string UnderTestFolder = "MessyWorkerUnderTest";
+        private const string Folder = "Assets/__BehaviorTreeLayoutTests";
+        private const string BranchPath = Folder + "/Branch.asset";
+        private const string CallerPath = Folder + "/Caller.asset";
 
-        /// <summary>
-        /// The folder this test file lives in, wherever the module was installed: the reference project keeps
-        /// BH3 under <c>Assets/ArcaneOnyx/BH3</c>, but a release verify or a buyer's import lands it elsewhere.
-        /// </summary>
-        private static string Fixtures
-        {
-            get
-            {
-                var script = AssetDatabase.FindAssets("t:MonoScript " + nameof(BehaviorTreeLayoutTests))
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .FirstOrDefault(path => Path.GetFileName(path) == nameof(BehaviorTreeLayoutTests) + ".cs");
-
-                Assert.That(script, Is.Not.Null, "could not locate this test script in the asset database");
-
-                return Path.GetDirectoryName(script).Replace(Path.DirectorySeparatorChar, '/') + "/Fixtures";
-            }
-        }
-
-        private static string Fixture => Fixtures + "/MessyWorker";
-
-        private static string UnderTest => Fixtures + "/" + UnderTestFolder;
-
-        private BehaviorTreeGraphAsset worker;
-        private List<BehaviorTreeGraphAsset> trees;
+        private BehaviorTreeGraphAsset branch;
+        private BehaviorTreeGraphAsset caller;
+        private Selector selector;
+        private RunBehaviorTreeGraphNode runsTheBranch;
 
         [SetUp]
-        public void CopyTheFixture()
+        public void BuildTwoTreesWithEverythingOnTopOfEachOther()
         {
-            DeleteTheCopy();
-            AssetDatabase.CreateFolder(Fixtures, UnderTestFolder);
+            if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "__BehaviorTreeLayoutTests");
 
-            var copyOf = new Dictionary<string, string>();
-
-            foreach (var guid in AssetDatabase.FindAssets("t:BehaviorTreeGraphAsset", new[] { Fixture }))
+            branch = BehaviorTreeAuthoring.CreateTree(BranchPath);
+            var sequence = BehaviorTreeAuthoring.AddNode<Sequence>(branch, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(branch, branch.graph.EntryNode, sequence);
+            foreach (var _ in Enumerable.Range(0, 3))
             {
-                var original = AssetDatabase.GUIDToAssetPath(guid);
-                var copy = UnderTest + "/" + Path.GetFileName(original);
-
-                Assert.That(AssetDatabase.CopyAsset(original, copy), Is.True, "could not copy " + original);
-                copyOf[original] = copy;
+                BehaviorTreeAuthoring.Connect(branch, sequence, BehaviorTreeAuthoring.AddNode<WaitTime>(branch, 0.0f, 0.0f));
             }
+            BehaviorTreeAuthoring.Save(branch);
 
-            AssetDatabase.Refresh();
+            caller = BehaviorTreeAuthoring.CreateTree(CallerPath);
+            selector = BehaviorTreeAuthoring.AddNode<Selector>(caller, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(caller, caller.graph.EntryNode, selector);
 
-            var copiedFrom = copyOf.ToDictionary(
-                pair => pair.Key, pair => AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>(pair.Value));
-
-            PointBranchesAtTheCopies(copiedFrom);
-
-            trees = copiedFrom.Values.ToList();
-            worker = trees.Single(tree => tree.name == "Worker");
+            runsTheBranch = BehaviorTreeAuthoring.AddSubTree(caller, branch, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(caller, selector, runsTheBranch);
+            BehaviorTreeAuthoring.Connect(caller, selector, BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 0.0f, 0.0f));
+            BehaviorTreeAuthoring.Connect(caller, selector, BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 0.0f, 0.0f));
+            BehaviorTreeAuthoring.Save(caller);
         }
 
         [TearDown]
-        public void DeleteTheCopy()
+        public void DeleteTheTrees()
         {
-            if (AssetDatabase.IsValidFolder(UnderTest)) AssetDatabase.DeleteAsset(UnderTest);
+            AssetDatabase.DeleteAsset(Folder);
         }
 
         [Test]
-        public void ArrangesEveryTreeWhoseNodesOverlap()
+        public void ArrangesATreeWhoseNodesAreDrawnOverEachOther()
         {
-            Assert.That(trees.Sum(tree => BehaviorTreeLayout.CountOverlappingPairs(tree.graph)), Is.GreaterThan(0),
-                "the fixture is supposed to be a messy tree; nothing is being tested");
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.GreaterThan(0),
+                "the tree is supposed to start as a pile; nothing is being tested");
 
-            BehaviorTreeLayout.Arrange(worker);
+            BehaviorTreeLayout.Arrange(caller);
 
-            foreach (var tree in trees)
-            {
-                Assert.That(BehaviorTreeLayout.CountOverlappingPairs(tree.graph), Is.Zero, tree.name + " still overlaps");
-            }
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.Zero);
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(branch.graph), Is.Zero);
         }
 
         [Test]
         public void LeavesATreeNobodyIsDrawingOverWhereItIs()
         {
-            BehaviorTreeLayout.Arrange(worker);
-            var arrangedAt = PositionsOf(worker);
+            BehaviorTreeLayout.Arrange(caller);
+            var arrangedAt = PositionsOf(caller);
 
-            var secondRun = BehaviorTreeLayout.Arrange(worker);
+            var secondRun = BehaviorTreeLayout.Arrange(caller);
 
             Assert.That(secondRun.Any(tree => tree.arranged), Is.False, "a tidy tree was rearranged");
-            Assert.That(PositionsOf(worker), Is.EqualTo(arrangedAt));
+            Assert.That(PositionsOf(caller), Is.EqualTo(arrangedAt));
         }
 
         [Test]
-        public void SizesACallersBranchNodeFromTheBranchItRuns()
+        public void SizesTheCallersBranchNodeFromTheBranchItRuns()
         {
-            BehaviorTreeLayout.Arrange(worker);
+            BehaviorTreeLayout.Arrange(caller);
 
-            foreach (var caller in worker.graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
-            {
-                var branch = caller.BehaviorTreeGraphAsset;
-                var drawnAs = SubTreeFootprint.BoxAt(caller.Position.position, SubTreeFootprint.BoundsOf(branch.graph));
+            var drawnAs = SubTreeFootprint.BoxAt(runsTheBranch.Position.position, SubTreeFootprint.BoundsOf(branch.graph));
 
-                Assert.That(caller.Position.size, Is.EqualTo(drawnAs.size), caller.NodeName + " is not its branch's size");
-            }
+            Assert.That(runsTheBranch.Position.size, Is.EqualTo(drawnAs.size));
+            Assert.That(runsTheBranch.Position.width, Is.GreaterThan(SubTreeFootprint.EmptyNodeSize.x),
+                "a node that runs a three-node branch is still the size an empty one is created at");
         }
 
         [Test]
         public void ArrangesABranchBeforeTheTreeThatRunsIt()
         {
-            var arranged = BehaviorTreeLayout.Arrange(worker).Select(tree => tree.tree).ToList();
+            var arranged = BehaviorTreeLayout.Arrange(caller).Select(tree => tree.tree).ToList();
 
-            Assert.That(arranged.Last(), Is.EqualTo(PathOf("Worker")));
-            Assert.That(arranged.IndexOf(PathOf("Engage")), Is.LessThan(arranged.IndexOf(PathOf("Worker"))));
-            Assert.That(arranged.IndexOf(PathOf("SwordAttack")), Is.LessThan(arranged.IndexOf(PathOf("Engage"))));
+            Assert.That(arranged, Is.EqualTo(new[] { BranchPath, CallerPath }));
         }
 
         [Test]
         public void LaysSiblingsOutLeftToRightInPriorityOrder()
         {
-            BehaviorTreeLayout.Arrange(worker);
+            BehaviorTreeLayout.Arrange(caller);
 
-            foreach (var tree in trees)
-            {
-                foreach (var parent in tree.graph.Nodes)
-                {
-                    var children = tree.graph.ChildTransitionsInPriorityOrder(parent)
-                        .Select(transition => transition.destination as BehaviorTreeNode)
-                        .Where(child => child != null)
-                        .ToList();
+            var children = caller.graph.ChildTransitionsInPriorityOrder(selector)
+                .Select(transition => (BehaviorTreeNode)transition.destination)
+                .ToList();
 
-                    for (var next = 1; next < children.Count; next++)
-                    {
-                        Assert.That(children[next].Position.xMin, Is.GreaterThan(children[next - 1].Position.xMin),
-                            tree.name + ": " + parent.NodeName + "'s children are out of priority order");
-                    }
-                }
-            }
+            Assert.That(children.Select(child => child.Position.xMin), Is.Ordered.Ascending);
         }
 
-        private static void PointBranchesAtTheCopies(IReadOnlyDictionary<string, BehaviorTreeGraphAsset> copiedFrom)
+        [Test]
+        public void LeavesAGenerationOfRoomBelowAParent()
         {
-            foreach (var copy in copiedFrom.Values)
+            BehaviorTreeLayout.Arrange(caller);
+
+            foreach (var child in caller.graph.ChildTransitionsInPriorityOrder(selector).Select(t => (BehaviorTreeNode)t.destination))
             {
-                foreach (var caller in copy.graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
-                {
-                    var branch = caller.BehaviorTreeGraphAsset;
-                    if (branch == null) continue;
-
-                    if (copiedFrom.TryGetValue(AssetDatabase.GetAssetPath(branch), out var itsCopy))
-                    {
-                        caller.SetBehaviorTreeGraphAsset(itsCopy);
-                    }
-                }
-
-                EditorUtility.SetDirty(copy);
+                Assert.That(child.Position.yMin - selector.Position.yMax,
+                    Is.GreaterThanOrEqualTo(BehaviorTreeLayout.GapBetweenGenerations), child.NodeName + " sits too close");
             }
-
-            AssetDatabase.SaveAssets();
         }
-
-        private static string PathOf(string tree) => UnderTest + "/" + tree + ".asset";
 
         private static List<Rect> PositionsOf(BehaviorTreeGraphAsset tree) =>
             tree.graph.Nodes.Select(node => node.Position).ToList();
