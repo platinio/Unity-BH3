@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
@@ -14,10 +15,29 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     /// </summary>
     public class BehaviorTreeLayoutTests
     {
-        private const string Fixtures = "Assets/ArcaneOnyx/BH3/Test/EditMode/Fixtures";
-        private const string Fixture = Fixtures + "/MessyWorker";
         private const string UnderTestFolder = "MessyWorkerUnderTest";
-        private const string UnderTest = Fixtures + "/" + UnderTestFolder;
+
+        /// <summary>
+        /// The folder this test file lives in, wherever the module was installed: the reference project keeps
+        /// BH3 under <c>Assets/ArcaneOnyx/BH3</c>, but a release verify or a buyer's import lands it elsewhere.
+        /// </summary>
+        private static string Fixtures
+        {
+            get
+            {
+                var script = AssetDatabase.FindAssets("t:MonoScript " + nameof(BehaviorTreeLayoutTests))
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .FirstOrDefault(path => Path.GetFileName(path) == nameof(BehaviorTreeLayoutTests) + ".cs");
+
+                Assert.That(script, Is.Not.Null, "could not locate this test script in the asset database");
+
+                return Path.GetDirectoryName(script).Replace(Path.DirectorySeparatorChar, '/') + "/Fixtures";
+            }
+        }
+
+        private static string Fixture => Fixtures + "/MessyWorker";
+
+        private static string UnderTest => Fixtures + "/" + UnderTestFolder;
 
         private BehaviorTreeGraphAsset worker;
         private List<BehaviorTreeGraphAsset> trees;
@@ -33,7 +53,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             foreach (var guid in AssetDatabase.FindAssets("t:BehaviorTreeGraphAsset", new[] { Fixture }))
             {
                 var original = AssetDatabase.GUIDToAssetPath(guid);
-                var copy = UnderTest + "/" + System.IO.Path.GetFileName(original);
+                var copy = UnderTest + "/" + Path.GetFileName(original);
 
                 Assert.That(AssetDatabase.CopyAsset(original, copy), Is.True, "could not copy " + original);
                 copyOf[original] = copy;
