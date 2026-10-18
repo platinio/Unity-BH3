@@ -206,11 +206,12 @@ VariableDeclarations optionalDeclarations;  // parameters with a default
 
 The last two become input ports on any `RunBehaviorTreeGraphNode` that runs this tree.
 
-> **Never touch a `RunBehaviorTreeGraphNode`'s `BehaviorTreeGraphAssetInstance` or
-> `BehaviorTreeGraphInstance` from editor or tooling code.** Both call `Object.Instantiate` on first access,
-> so merely inspecting one clones the asset. Use `BehaviorTreeGraphAsset`, which is the serialized
-> reference. The machine's `GraphInstance` is different: it is the copy the machine already made at `Awake`,
-> and reading it at runtime is fine.
+> **A `RunBehaviorTreeGraphNode`'s `BehaviorTreeGraphAssetInstance` is the copy that one call site runs, and
+> it is null until the node is awoken.** Reading it creates nothing: guard on
+> `HasBehaviorTreeGraphInstance` and read, or call `GetOrCreateBehaviorTreeGraphAssetInstance()` when you
+> need the copy to exist. Editor and tooling code that wants the authored tree should use
+> `BehaviorTreeGraphAsset`, the serialized reference. The machine's `GraphInstance` is different: it is the
+> copy the machine already made at `Awake`, and reading it at runtime is fine.
 
 ---
 

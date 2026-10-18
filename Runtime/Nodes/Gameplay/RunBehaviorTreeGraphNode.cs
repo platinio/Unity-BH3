@@ -31,7 +31,7 @@ namespace ArcaneOnyx.BehaviorTree
         public IReadOnlyList<BehaviorTreeGraphParameter> Parameters => parameters;
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAsset => behaviorTreeGraphAsset;
-        public BehaviorTreeGraph BehaviorTreeGraphInstance => BehaviorTreeGraphAssetInstance.graph;
+        public BehaviorTreeGraph BehaviorTreeGraphInstance => behaviorTreeGraphAssetInstance.graph;
       
         public bool HasBehaviorTreeGraphInstance => behaviorTreeGraphAssetInstance != null;
        
@@ -43,17 +43,30 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string Description => "Executes BehaviorTreeGraphAsset";
 
-        public BehaviorTreeGraphAsset BehaviorTreeGraphAssetInstance
-        {
-            get
-            {
-                if (behaviorTreeGraphAssetInstance == null)
-                {
-                    behaviorTreeGraphAssetInstance = Object.Instantiate(behaviorTreeGraphAsset);
-                }
+        /// <summary>
+        /// This call site's own copy of the sub-tree, or null until
+        /// <see cref="GetOrCreateBehaviorTreeGraphAssetInstance"/> has made one.
+        /// <para>
+        /// Reading used to create. The canvas preview asked whether an instance existed, made one by asking,
+        /// and drew that frozen copy from then on — so editing a sub-tree changed nothing on the parent canvas
+        /// until a play-mode boundary cleared the field. Creation is a verb now, and every reader that must
+        /// not trigger it — the preview, the per-frame hooks, teardown — simply reads.
+        /// </para>
+        /// </summary>
+        public BehaviorTreeGraphAsset BehaviorTreeGraphAssetInstance => behaviorTreeGraphAssetInstance;
 
-                return behaviorTreeGraphAssetInstance;
+        /// <summary>
+        /// Gives this call site its own copy of the sub-tree, once, which is what stops two agents running the
+        /// same branch from sharing node state. Hands back the copy it already made on every later call.
+        /// </summary>
+        public BehaviorTreeGraphAsset GetOrCreateBehaviorTreeGraphAssetInstance()
+        {
+            if (behaviorTreeGraphAssetInstance == null)
+            {
+                behaviorTreeGraphAssetInstance = Object.Instantiate(behaviorTreeGraphAsset);
             }
+
+            return behaviorTreeGraphAssetInstance;
         }
       
         public override string NodeName
@@ -245,7 +258,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void OnAwake()
         {
-            BehaviorTreeGraphInstance.OnAwake();
+            GetOrCreateBehaviorTreeGraphAssetInstance().graph.OnAwake();
         }
 
         public void ThrowIfCausesRecursion()
@@ -281,7 +294,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             ApplyParameters();
 
-            BehaviorTreeGraphInstance.OnEnter();
+            GetOrCreateBehaviorTreeGraphAssetInstance().graph.OnEnter();
         }
 
         private void ApplyParameters()
@@ -331,7 +344,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override ExecutionStatus OnUpdate()
         {
-            return BehaviorTreeGraphInstance.OnUpdate();
+            return GetOrCreateBehaviorTreeGraphAssetInstance().graph.OnUpdate();
         }
 
         /// <summary>
@@ -345,9 +358,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// </para>
         ///
         /// <para>
-        /// Guarded on <see cref="HasBehaviorTreeGraphInstance"/> for the reason <see cref="OnExit"/> is:
-        /// reading the instance <em>clones the asset on first access</em>, so an unguarded read here would
-        /// make a per-frame hook instantiate a branch that had never run. The graph reached this way runs
+        /// Guarded on <see cref="HasBehaviorTreeGraphInstance"/> for the reason <see cref="OnExit"/> is: a
+        /// branch that never ran has no instance, so there is nothing to tick. The graph reached this way runs
         /// the same <c>IsRunning</c> filter over its own nodes, so nesting costs a walk per running branch
         /// rather than a hook on an idle one.
         /// </para>
@@ -392,13 +404,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// it, for the whole session — multiplying with exactly the nested, modular trees this tool
         /// encourages, and invisible until a wave-based scene has spawned a few hundred agents.
         /// </para>
-        /// <para>
-        /// Reads the <em>field</em>, never <see cref="BehaviorTreeGraphAssetInstance"/>. The property's getter
-        /// instantiates on demand, so asking it here would manufacture a clone purely in order to destroy it —
-        /// and on a call site the agent never entered, that is a clone brought into existence for the first
-        /// time at teardown. <c>ExitingASubTreeThatNeverRanDoesNotInstantiateIt</c> pins the same trap for
-        /// <see cref="OnExit"/>.
-        /// </para>
         /// </summary>
         public override void OnDestroy()
         {
@@ -424,7 +429,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.SetMachine(machine);
 
-            var nodes = BehaviorTreeGraphInstance.Nodes;
+            var nodes = GetOrCreateBehaviorTreeGraphAssetInstance().graph.Nodes;
             foreach (var node in nodes)
             {
                 node.SetMachine(machine);
@@ -439,7 +444,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.SetVariableScope(scope);
 
-            var instance = BehaviorTreeGraphAssetInstance;
+            var instance = GetOrCreateBehaviorTreeGraphAssetInstance();
             if (instance == null) return;
 
             innerScope = new BehaviorTreeVariableScope(instance.declarations, scope);
@@ -462,7 +467,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.SetFlightRecorder(recorder);
 
-            var instance = BehaviorTreeGraphAssetInstance;
+            var instance = GetOrCreateBehaviorTreeGraphAssetInstance();
             if (instance == null) return;
 
             foreach (var node in instance.graph.Nodes)
@@ -475,9 +480,11 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.CanvasUpdate();
 
+            if (!HasBehaviorTreeGraphInstance) return;
+
             foreach (var node in BehaviorTreeGraphInstance.Nodes)
             {
-               node.CanvasUpdate(); 
+                node.CanvasUpdate();
             }
         }
     }
