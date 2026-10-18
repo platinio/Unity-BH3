@@ -58,7 +58,7 @@ Pickup (chests and health packs)
 | **A leash** | `ReturnHome` above `Engage` | Stray more than twelve metres from home, mid-fight or not, and the enemy walks back. It is why the grunts that killed you do not camp your spawn. |
 | **Top-priority takeover** | `Die` on every root | `isDead` flips and whatever was running is abandoned the same frame. |
 | **A tree on a prop, an effect in a Function** | `Pickup`, `GiveWeapon`, `Heal` | Chests and health packs run the same tree: wait for a player who can take it, pop, apply, shrink while spent, refill. Two Functions picked on the Pickup component decide what that means, run from code with the player as `taker`: `canPickup` is `CanEquipWeapon(taker, weapon)` on a chest and `IsHurt(taker)` on a potion, so a chest ignores a player already holding its weapon and a potion ignores a player at full health; `effect` is `GiveWeapon(taker, weapon)` or `Heal(taker, amount)`. The hand-out keeps Stops Its Own Branch off so it finishes even if you walk away. |
-| **Hit back** | `PlayerOrders`, `Health.Damaged` | Damage carries the attacker. When the player is hit with no target, the attacker becomes the target and Engage takes over; a pending move order resumes once the fight is done. |
+| **Hit back** | `Retaliation`, `UnitTargeting`, `Health.Damaged` | Damage carries the attacker. When the player is hit with no target, `Retaliation` makes the attacker the target and Engage takes over; `UnitTargeting` drops the target when it dies, and a pending move order resumes once the fight is done. |
 | **Functions reading objects** | `PositionOf`, `IsTargetInRange`, `IsFarFrom`, `RetreatPointFrom` | Pure graphs with GameObject and Vector3 inputs, reading transforms through member units. |
 
 ## The cast
@@ -73,7 +73,8 @@ Pickup (chests and health packs)
 | `Projectile` | The bow's bolt. |
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
 | `Pickup`, `Pickups` | Publishes `canPickup` while a living player in reach passes its canPickup Function; `Apply()` runs the effect Function on that player. `Pickups` holds the four static helpers those Functions call. |
-| `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; a hit with no target makes the attacker the target; death forgets everything. |
+| `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets everything. |
+| `Retaliation`, `UnitTargeting` | A hit with no target makes the attacker the target; a dead target is dropped. Shared with the RTS sample. |
 | `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, the hand socket the weapon visual hangs from, and the resting pose that Recover and Respawn return to. |
 | `Strike`, `Respawn`, `Apply Pickup`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
 

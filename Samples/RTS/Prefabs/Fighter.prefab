@@ -100,6 +100,8 @@ GameObject:
   - component: {fileID: 7525256403592927531}
   - component: {fileID: 4675813206977887275}
   - component: {fileID: 4186439144646584150}
+  - component: {fileID: 554763190962845815}
+  - component: {fileID: 2367751938376219167}
   m_Layer: 0
   m_Name: Fighter
   m_TagString: Untagged
@@ -322,6 +324,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Sight
   radius: 8
   scanInterval: 0.2
+--- !u!114 &554763190962845815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3103487560563083616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f41ab0f53c93a248a80e2fddfc65237, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Retaliation
+--- !u!114 &2367751938376219167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3103487560563083616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00c0d955f16f1c946af51fb021dd4977, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitTargeting
 --- !u!1 &5262862874143545610
 GameObject:
   m_ObjectHideFlags: 0
