@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Soldier
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitKind
   prefab: {fileID: 1515965207677720143, guid: 9234c842d63cd7f4097e32c7579fc38a, type: 3}
-  bodyMaterial: {fileID: 2100000, guid: 0a41150a135c6be479fffa5de0085af5, type: 2}
+  bodyMaterial: {fileID: 0}
   weapon: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
   tree: {fileID: 11400000, guid: ed69d24f8e766544dbca7095f5b1c3db, type: 2}
   maxHealth: 120

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Knight
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitKind
   prefab: {fileID: 1515965207677720143, guid: 9234c842d63cd7f4097e32c7579fc38a, type: 3}
-  bodyMaterial: {fileID: 2100000, guid: 15b52017598accf49a28306963d626dd, type: 2}
+  bodyMaterial: {fileID: 0}
   weapon: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
   tree: {fileID: 11400000, guid: ed69d24f8e766544dbca7095f5b1c3db, type: 2}
   maxHealth: 250

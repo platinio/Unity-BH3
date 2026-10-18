@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Archer
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitKind
   prefab: {fileID: 1515965207677720143, guid: 9234c842d63cd7f4097e32c7579fc38a, type: 3}
-  bodyMaterial: {fileID: 2100000, guid: 2fd9ac3025ed75c4caa066f3ec7c3314, type: 2}
+  bodyMaterial: {fileID: 0}
   weapon: {fileID: 11400000, guid: f44274dda75956f488c0b27641b57a1d, type: 2}
   tree: {fileID: 11400000, guid: ed69d24f8e766544dbca7095f5b1c3db, type: 2}
   maxHealth: 80
