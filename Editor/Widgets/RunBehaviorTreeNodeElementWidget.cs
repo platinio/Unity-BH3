@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree.Authoring;
 using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -21,8 +22,6 @@ namespace ArcaneOnyx.BehaviorTree
         }
         
         private static readonly GUIContent maxHeadLabelSizeContent = new GUIContent("M");
-        
-        private Vector2 EmptyNodeSize => new (150.0f, 100f);
         
         private void AdjustLabelFontSize()
         {
@@ -55,7 +54,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (GetBehaviorTreeGraphAsset() == null || willCauseRecursion)
             {
-                position = new Rect(position.position, EmptyNodeSize);
+                position = new Rect(position.position, SubTreeFootprint.EmptyNodeSize);
                 base.CachePosition();
                 base.DrawForeground(offset, IsRepaint, useSelection);
                 return;
@@ -66,16 +65,16 @@ namespace ArcaneOnyx.BehaviorTree
             // three walks of the sub-graph per repaint for one answer, each of which asks every node for the
             // guard stack above it, so the walk is quadratic in the sub-tree's size.
             BehaviorTreeGraph behaviorTreeGraph = GetBehaviorTreeGraph();
-            var bounds = CalculateSubTreeBounds(behaviorTreeGraph);
+            var bounds = SubTreeFootprint.BoundsOf(behaviorTreeGraph);
 
-            position = BoxFor(bounds);
+            position = SubTreeFootprint.BoxAt(position.position, bounds);
             DrawSubGraphGroup(offset, position);
 
             // The sub-tree's own coordinates mean nothing to this canvas, so the whole preview is drawn
             // through one translation: its bounds' corner lands one padding inside the frame's. Everything
             // in the preview — nodes, guards, wires — shifts by this same vector, which is what keeps them
             // attached to each other no matter where the sub-tree was authored.
-            Vector2 subBehaviorTreeOffset = position.position + SubTreePadding - bounds.position + offset;
+            Vector2 subBehaviorTreeOffset = position.position + SubTreeFootprint.Padding - bounds.position + offset;
 
             DrawSubTreeNodes(behaviorTreeGraph, subBehaviorTreeOffset);
 
@@ -180,7 +179,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             using (LudiqGUI.color.Override(Color.cyan))
             {
-                box.position += new Vector2(0, -GROUP_HEADER_LIFT) + offset;
+                box.position += new Vector2(0, -SubTreeFootprint.GroupHeaderLift) + offset;
                 RunBehaviorTreeNodeElementWidgetStyles.group.Draw(box, false, false, true, false);
             }
             
@@ -220,19 +219,13 @@ namespace ArcaneOnyx.BehaviorTree
                 // working it out again.
                 willCauseRecursion = false;
 
-                position = new Rect(position.position, EmptyNodeSize);
+                position = new Rect(position.position, SubTreeFootprint.EmptyNodeSize);
                 base.DrawForeground(Vector2.zero, e.IsRepaint);
                 return;
             }
 
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
-
-        /// <summary>Room the frame keeps between its edges and the sub-tree's bounds, per side.</summary>
-        private static readonly Vector2 SubTreePadding = new Vector2(50.0f, 50.0f);
-
-        /// <summary>How far the group frame's header band is drawn above the frame's own rect.</summary>
-        private const float GROUP_HEADER_LIFT = 40.0f;
 
         /// <summary>
         /// The name label's width: the text plus one 'M' of slack so the editable field is never exactly the
@@ -254,64 +247,7 @@ namespace ArcaneOnyx.BehaviorTree
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
             if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null) return default;
 
-            return BoxFor(CalculateSubTreeBounds(GetBehaviorTreeGraph()));
-        }
-
-        /// <summary>
-        /// The frame's rect for a sub-tree that measures <paramref name="bounds"/> — its size plus a padding
-        /// on every side, anchored where the node already sits.
-        /// <para>
-        /// Split out from the measuring so a caller that has already measured can derive the box without
-        /// walking the sub-graph again. That walk asks every node for the guard stack above it, so it is
-        /// quadratic in the sub-tree's size and was being repeated three times per repaint.
-        /// </para>
-        /// </summary>
-        private Rect BoxFor(Rect bounds)
-        {
-            if (bounds.size == Vector2.zero) return new Rect(position.position, EmptyNodeSize);
-
-            var r = position;
-            r.size = bounds.size + SubTreePadding * 2.0f;
-
-            return r;
-        }
-
-        /// <summary>
-        /// The rectangle the sub-tree actually occupies, in its own graph's coordinates: full node rects,
-        /// the guard stacks above their owners, and a nested frame's header band. This is what sizes the
-        /// frame, so anything drawn in the preview has to be counted here or it leaks outside the box —
-        /// which is exactly what the "larger side times two" estimate this replaces did to any tree not
-        /// authored symmetrically around its own origin.
-        /// </summary>
-        private Rect CalculateSubTreeBounds(BehaviorTreeGraph behaviorTreeGraph)
-        {
-            var subCanvas = behaviorTreeGraph.Canvas();
-
-            float left = float.MaxValue, up = float.MaxValue;
-            float right = float.MinValue, down = float.MinValue;
-
-            foreach (var graphElement in behaviorTreeGraph.elements)
-            {
-                if (!graphElement.DrawInSubTree) continue;
-                if (!(graphElement is BehaviorTreeNode node) || graphElement is PlaceHolderNode) continue;
-
-                // A guard has no authored position — its widget anchors it to its owner — so its room is
-                // counted from the owner below via the same measured stack height the widgets place it with.
-                if (graphElement is ConditionalExecution) continue;
-
-                var nodePosition = node.Position;
-                var top = nodePosition.yMin - ConditionalExecutionWidget.StackHeightAbove(subCanvas, node);
-                if (node is RunBehaviorTreeGraphNode) top -= GROUP_HEADER_LIFT;
-
-                left = Mathf.Min(left, nodePosition.xMin);
-                right = Mathf.Max(right, nodePosition.xMax);
-                up = Mathf.Min(up, top);
-                down = Mathf.Max(down, nodePosition.yMax);
-            }
-
-            if (left > right) return default;
-
-            return Rect.MinMaxRect(left, up, right, down);
+            return SubTreeFootprint.BoxAt(position.position, SubTreeFootprint.BoundsOf(GetBehaviorTreeGraph()));
         }
 
         public override void CachePosition()
