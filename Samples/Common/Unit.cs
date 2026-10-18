@@ -67,15 +67,6 @@ namespace ArcaneOnyx.BH3.Samples
             for (int i = 0; i < parts.Length; i++) RestingPoseOf(parts[i]).ApplyTo(parts[i]);
         }
 
-        public void AdoptBody(Transform newBody, Renderer[] newRenderers)
-        {
-            body = newBody;
-            renderers = newRenderers;
-            parts = System.Array.Empty<Transform>();
-            restingColors = null;
-            CaptureAuthoredPoses();
-        }
-
         public void Dress(Material material)
         {
             foreach (Renderer renderer in renderers) renderer.sharedMaterial = material;

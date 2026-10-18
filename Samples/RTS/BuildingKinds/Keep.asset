@@ -12,8 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08a47275aaba93648b2cfc1824595dc9, type: 3}
   m_Name: Keep
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.BuildingKind
-  model: {fileID: 919132149155446097, guid: 972b91b51be856c40b37be33a0ccf047, type: 3}
-  modelScale: 5.5
+  prefab: {fileID: 4065790534713659680, guid: e0307f36c61928745a5a0fad5873f1bb, type: 3}
   tree: {fileID: 11400000, guid: cd2c123bdf21b2a4788f830f53eecbee, type: 2}
   woodCost: 200
   goldCost: 50

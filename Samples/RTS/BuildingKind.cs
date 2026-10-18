@@ -6,8 +6,7 @@ namespace ArcaneOnyx.BH3.Samples
     [CreateAssetMenu(menuName = "BH3 Samples/Building Kind")]
     public sealed class BuildingKind : ScriptableObject
     {
-        [SerializeField] private GameObject model;
-        [SerializeField] private float modelScale = 4f;
+        [SerializeField] private Building prefab;
         [SerializeField] private BehaviorTreeGraphAsset tree;
         [SerializeField] private int woodCost = 100;
         [SerializeField] private int goldCost;
@@ -17,8 +16,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private Vector3 rallyOffset = new(0f, 0f, -4f);
 
         public string Id => name;
-        public GameObject Model => model;
-        public float ModelScale => modelScale;
+        public Building Prefab => prefab;
         public BehaviorTreeGraphAsset Tree => tree;
         public int WoodCost => woodCost;
         public int GoldCost => goldCost;
