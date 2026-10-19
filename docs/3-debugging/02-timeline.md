@@ -105,7 +105,7 @@ so:
 Buffer clipped: 1204 older events dropped — the left edge is a cut, not a beginning.
 ```
 
-Raise `BehaviorTreeFlightRecorderRegistry.DefaultCapacity` before agents spawn, or reproduce the problem closer to
+Raise `BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity` before agents spawn, or reproduce the problem closer to
 the moment you start watching.
 
 ## If the Timeline is empty

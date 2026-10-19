@@ -5,11 +5,6 @@ using Unity.VisualScripting.FullSerializer;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
-    /// <summary>
-    /// A recording as JSON. Node guids are the same ones <see cref="BehaviorTreeDump"/> emits, so a dump and
-    /// a recording together are an account of a bug someone else can read without the scene: the dump says
-    /// what was built, the recording says what it did.
-    /// </summary>
     public static class BehaviorTreeRecordingDump
     {
         public static string ToJson(BehaviorTreeFlightRecorder recorder)
@@ -68,10 +63,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             json.Set("events", described);
         }
 
-        /// <summary>
-        /// Only the fields that mean something for the event's kind are written: a dump where the presence
-        /// of a field is itself information reads better than one where every event carries empty slots.
-        /// </summary>
         private static fsData DescribeEvent(in BehaviorTreeEvent recorded)
         {
             var json = FsJson.Object();
@@ -131,9 +122,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// Guard traces live in their own array, linked to their events by tick and sequence. Nesting them
-        /// would mean most events carried an empty field, and a recording whose traces had scrolled out of
-        /// their shorter ring would read as though its guards were never traced.
+        /// Nested in their events, most events would carry an empty field, and traces that had scrolled
+        /// out of their shorter ring would read as though the guards were never traced.
         /// </summary>
         private static void AddTraces(fsData json, BehaviorTreeFlightRecorder recorder)
         {

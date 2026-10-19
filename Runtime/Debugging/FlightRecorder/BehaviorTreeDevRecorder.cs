@@ -17,10 +17,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private const string EditorDefine = "UNITY_EDITOR";
 
         /// <summary>
-        /// The node whose script graph is running, innermost first. A Visual Scripting unit has no way back
-        /// to the node that invoked its graph, so the node announces itself for the duration of the call. A
-        /// stack rather than a field because a graph can run another graph; safe as a static because graph
-        /// evaluation is synchronous and single-threaded.
+        /// A Visual Scripting unit has no way back to the node that invoked its graph, so the node
+        /// announces itself for the duration of the call. A stack because a graph can run another graph,
+        /// and a static because graph evaluation is synchronous and single-threaded.
         /// </summary>
         private static readonly Stack<BehaviorTreeNode> scriptGraphOwners = new();
 
@@ -32,7 +31,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var recorder = new BehaviorTreeFlightRecorder(
                 machine.gameObject != null ? machine.gameObject.name : BehaviorTreeRecordingNames.UnnamedAgent,
                 treeName,
-                BehaviorTreeFlightRecorderRegistry.DefaultCapacity,
+                BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity,
                 BehaviorTreeFlightRecorderRegistry.DefaultTraceCapacity);
 
             machine.SetFlightRecorder(recorder);
@@ -40,9 +39,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// The machine's own reference is cleared as well as the registration, so "detached" and "still
-        /// holding a recording" stop being possible at the same time: every editor-side check for whether an
-        /// agent is recording reads that reference, which keeps answering on a destroyed machine.
+        /// Clears the machine's own reference as well as the registration, because a destroyed machine goes
+        /// on answering FlightRecorder and would still read as recording.
         /// </summary>
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void Detach(BehaviorTreeMachine machine)
@@ -137,7 +135,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             writer?.FlightRecorder?.VariableWrite(writer, key, variableKind, oldValue, newValue);
         }
 
-        /// <summary>Announces the node about to run a script graph. Always pair with <see cref="PopScriptGraphOwner"/>.</summary>
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void PushScriptGraphOwner(BehaviorTreeNode node)
         {
@@ -150,10 +147,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (scriptGraphOwners.Count > 0) scriptGraphOwners.Pop();
         }
 
-        /// <summary>
-        /// A write made by a unit inside a Visual Scripting graph, attributed to the node that ran the graph
-        /// when one announced itself and to a plain name when none did.
-        /// </summary>
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void ScriptGraphVariableWrite(
             BehaviorTreeMachine machine,
@@ -176,11 +169,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, kind);
         }
 
-        /// <summary>
-        /// A write made by something outside the tree, such as a perception sensor publishing a fact. A
-        /// sensor should call this rather than reaching for the recorder, so that publishing costs it nothing
-        /// outside the editor and dev builds.
-        /// </summary>
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void ExternalVariableWrite(
             BehaviorTreeMachine machine,

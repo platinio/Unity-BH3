@@ -5,13 +5,12 @@ using ArcaneOnyx.GraphCore;
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
     /// <summary>
-    /// The per-agent black box. It observes and never participates: nothing here may change what the tree
-    /// decides, and every entry point tolerates a node with no machine, no scope or a half-built graph.
+    /// Observes and never participates: nothing here may change what the tree decides, and every entry
+    /// point tolerates a node with no machine, no scope or a half-built graph.
     /// </summary>
     public sealed class BehaviorTreeFlightRecorder : IBehaviorTreeRecording
     {
-        /// <summary>Events, not ticks: one tick produces anywhere from zero to a dozen of them.</summary>
-        public const int DefaultCapacity = 2048;
+        public const int DefaultEventCapacity = 2048;
 
         private readonly BehaviorTreeEventRing events;
         private readonly GuardTraceRing guardTraces;
@@ -24,7 +23,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public BehaviorTreeFlightRecorder(
             string agentName,
             string treeName,
-            int capacity = DefaultCapacity,
+            int capacity = DefaultEventCapacity,
             int traceCapacity = GuardTraceRing.DefaultCapacity)
         {
             AgentName = agentName;
@@ -42,7 +41,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public int Tick { get; private set; }
 
-        /// <summary>Turning this off leaves the buffer intact, so the evidence stops scrolling away.</summary>
         public bool IsEnabled { get; set; } = true;
 
         public bool IsTracingEnabled { get; set; } = true;
@@ -70,10 +68,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public GuardTrace TraceFor(int tick, int sequence) => guardTraces.Find(tick, sequence);
 
-        /// <summary>
-        /// Opens a new tick, once per machine update. Counted per agent rather than taken from the frame
-        /// count so a recording of an agent spawned mid-session still starts at zero.
-        /// </summary>
         public void BeginTick()
         {
             Tick++;
@@ -101,10 +95,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return id;
         }
 
-        /// <summary>
-        /// Binds the root tree's scope to the root call site, which the constructor already created from the
-        /// tree name before any scope existed.
-        /// </summary>
         public void BindRootScope(BehaviorTreeVariableScope scope)
         {
             if (scope == null) return;
@@ -188,8 +178,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// A guard result, kept only when it differs from the last one seen: guards evaluate every tick
-        /// while their owner runs, and the repeats would push the transitions out of the buffer.
+        /// Guards evaluate every tick while their owner runs, so only a change is kept: the repeats would
+        /// push the transitions out of the buffer.
         /// </summary>
         public void GuardEval(BehaviorTreeNode guardedNode, ConditionalExecution guard, bool result)
         {
@@ -234,9 +224,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// A variable written by something outside the tree, such as a perception sensor. Unused by BH3
-        /// itself: the facts a tree reads are mostly published by always-on sensors, and without this the
-        /// question of who wrote the value that flipped a guard has no answer in that common case.
+        /// Unused inside BH3, and kept because sensors outside the tree publish most of the facts a tree
+        /// reads: without it, who wrote the value that flipped a guard has no answer in that common case.
         /// </summary>
         public void ExternalVariableWrite(
             string writerName,

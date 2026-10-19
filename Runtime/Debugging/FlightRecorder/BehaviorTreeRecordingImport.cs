@@ -7,17 +7,11 @@ using Unity.VisualScripting.FullSerializer;
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
     /// <summary>
-    /// Reads back what <see cref="BehaviorTreeRecordingDump"/> wrote, so an exported recording can be
-    /// interrogated with the same tools as a live one.
-    ///
-    /// <para>
-    /// Unknown event kinds and missing optional fields are skipped rather than fatal, so a recording written
-    /// by a newer build still opens in an older one. A malformed document throws.
-    /// </para>
+    /// Unknown event kinds and missing optional fields are skipped rather than fatal, so a recording
+    /// written by a newer build still opens in an older one. A malformed document throws.
     /// </summary>
     public static class BehaviorTreeRecordingImport
     {
-        /// <summary>Throws <see cref="FormatException"/> if the text is not valid JSON.</summary>
         public static BehaviorTreeRecordingSnapshot FromJson(string json)
         {
             return FromJson(FsJson.Parse(json));

@@ -38,7 +38,6 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (count < events.Length) count++;
         }
 
-        /// <summary>Oldest first. Index 0 is the oldest event still held, not the oldest ever recorded.</summary>
         public BehaviorTreeEvent this[int index]
         {
             get

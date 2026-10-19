@@ -3,9 +3,8 @@ using System;
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
     /// <summary>
-    /// One running instance of a tree. A sub-tree asset is cloned per call site and node guids are
-    /// serialized, so the same guid appears once per call site: pairing the two is what makes a node
-    /// address unique again.
+    /// A sub-tree asset is cloned per call site and node guids are serialized, so one guid appears once
+    /// per call site. Pairing the two is what makes a node address unique again.
     /// </summary>
     public readonly struct BehaviorTreeCallSite
     {

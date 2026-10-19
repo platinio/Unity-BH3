@@ -73,7 +73,7 @@ Two buffers are involved, both per agent and both ring buffers:
 
 | Buffer | Default size | When it matters |
 |---|---|---|
-| Events | 2048 | "The recording is clipped" means the start of the story scrolled away. Raise `BehaviorTreeFlightRecorderRegistry.DefaultCapacity` before agents spawn, or reproduce closer to the moment |
+| Events | 2048 | "The recording is clipped" means the start of the story scrolled away. Raise `BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity` before agents spawn, or reproduce closer to the moment |
 | Guard chains | 64 | A guard flipping very fast can push older chains out, so an abort may show no chain |
 
 ## The raw event log

@@ -270,7 +270,7 @@ See [Writing facts from a sensor](../2-building-trees/04-variables-and-scope.md#
 ```csharp
 BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled          // the Rec switch
 BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled   // guard-chain capture only
-BehaviorTreeFlightRecorderRegistry.DefaultCapacity            // events per agent, default 2048; set before agents spawn
+BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity       // events per agent, default 2048; set before agents spawn
 BehaviorTreeFlightRecorderRegistry.DefaultTraceCapacity       // guard chains per agent, default 64
 BehaviorTreeRecordingDump.ToJson(recorder)                    // the same JSON the Timeline's Save button writes
 ```
