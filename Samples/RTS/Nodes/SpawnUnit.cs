@@ -30,7 +30,6 @@ namespace ArcaneOnyx.BH3.Samples
         {
             RtsUnit unit = Object.Instantiate(kind.Prefab, spot, Quaternion.identity);
             unit.name = kind.Id;
-            unit.Apply(kind);
             unit.gameObject.SetActive(true);
         }
     }

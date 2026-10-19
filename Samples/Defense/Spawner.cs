@@ -9,8 +9,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         [SerializeField] private Transform spawnPoint;
         [SerializeField] private PathRoute route;
-        [SerializeField] private Walker walkerPrefab;
-        [SerializeField] private EnemyKind[] kinds;
+        [SerializeField] private Walker[] enemies;
 
         private DefenseGame game;
 
@@ -18,14 +17,13 @@ namespace ArcaneOnyx.BH3.Samples
 
         public int WaveSize(int wave) => 3 + wave;
 
-        public EnemyKind KindFor(int wave, int indexInWave) =>
-            wave < FirstMixedWave ? kinds[0] : kinds[(wave + indexInWave) % kinds.Length];
+        public Walker EnemyFor(int wave, int indexInWave) =>
+            wave < FirstMixedWave ? enemies[0] : enemies[(wave + indexInWave) % enemies.Length];
 
-        public void Spawn(EnemyKind kind)
+        public void Spawn(Walker enemy)
         {
-            Walker walker = Instantiate(walkerPrefab, spawnPoint.position, spawnPoint.rotation);
-            walker.name = kind.name;
-            walker.GetComponent<Enemy>().Apply(kind);
+            Walker walker = Instantiate(enemy, spawnPoint.position, spawnPoint.rotation);
+            walker.name = enemy.name;
             walker.Follow(route, Game);
             walker.gameObject.SetActive(true);
         }

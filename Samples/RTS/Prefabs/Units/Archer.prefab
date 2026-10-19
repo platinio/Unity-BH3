@@ -106,7 +106,7 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 0.4
-  m_Speed: 4.5
+  m_Speed: 3.8
   m_Acceleration: 20
   avoidancePriority: 50
   m_AngularSpeed: 720
@@ -131,7 +131,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.VisualScripting.Core::Unity.VisualScripting.Variables
   _data:
-    _json: '{"declarations":{"Kind":"Object","collection":{"$content":[],"$version":"A"},"$version":"A"}}'
+    _json: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"keepDistance","value":{"$content":3.0,"$type":"System.Single"},"typeHandle":{"Identification":null,"$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
     _objectReferences: []
 --- !u!114 &3445526895032297095
 MonoBehaviour:
@@ -157,7 +157,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d18f850ee0944db429f230ac72a0a142, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Health
-  maxHealth: 300
+  maxHealth: 80
 --- !u!114 &9201794979865974504
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,7 +195,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d41593a98ce251e4ea70164340ca998f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Weapon
-  definition: {fileID: 0}
+  definition: {fileID: 11400000, guid: f44274dda75956f488c0b27641b57a1d, type: 2}
 --- !u!114 &5302062775912803915
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,7 +211,7 @@ MonoBehaviour:
   _data:
     _json: '{"OriginalMacro":null,"FlightRecorder":null,"Variables":null,"nest":{"source":"Macro","macro":0,"embed":null}}'
     _objectReferences:
-    - {fileID: 11400000, guid: 11772025b3d5982479efc66ccc1203fe, type: 2}
+    - {fileID: 11400000, guid: ed69d24f8e766544dbca7095f5b1c3db, type: 2}
 --- !u!114 &8066246293875414989
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -291,7 +291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5258ac622f8bb242a70092393d43cc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Sight
-  radius: 8
+  radius: 10
   scanInterval: 0.2
 --- !u!114 &554763190962845815
 MonoBehaviour:

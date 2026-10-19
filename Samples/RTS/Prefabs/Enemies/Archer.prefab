@@ -79,6 +79,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1187065798740212395, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: m_Speed
+      value: 3.6
+      objectReference: {fileID: 0}
     - target: {fileID: 3103487560563083616, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: m_Name
       value: Archer
@@ -91,6 +95,22 @@ PrefabInstance:
       propertyPath: kind
       value: 
       objectReference: {fileID: 11400000, guid: 2cc6dd8a2ae7be647bc610831033e320, type: 2}
+    - target: {fileID: 4186439144646584150, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: radius
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 4372850451994383882, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: maxHealth
+      value: 80
+      objectReference: {fileID: 0}
+    - target: {fileID: 5302062775912803915, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: '_data._objectReferences.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 9436bed70d0b83142898d5c14a02f362, type: 2}
+    - target: {fileID: 6606618478189618187, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: definition
+      value: 
+      objectReference: {fileID: 11400000, guid: f44274dda75956f488c0b27641b57a1d, type: 2}
     - target: {fileID: 8066246293875414989, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: body
       value: 
@@ -147,6 +167,10 @@ PrefabInstance:
       propertyPath: 'renderers.Array.data[5]'
       value: 
       objectReference: {fileID: 8183282269581248336}
+    - target: {fileID: 8097420736249186815, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: _data._json
+      value: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"keepDistance","value":{"$content":3.0,"$type":"System.Single"},"typeHandle":{"Identification":null,"$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7559855291551585528, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}

@@ -45,7 +45,7 @@ namespace ArcaneOnyx.BH3.Samples
             if (Time.time < memory.NextSpawnAt) return ExecutionStatus.Running;
 
             Spawner spawner = ctx.GetComponent<Spawner>();
-            spawner.Spawn(spawner.KindFor(memory.Wave, memory.Spawned));
+            spawner.Spawn(spawner.EnemyFor(memory.Wave, memory.Spawned));
             memory.Spawned++;
             memory.NextSpawnAt = Time.time + ctx.GetValue<float>(SecondsBetweenEnemies);
             return memory.Spawned >= memory.ToSpawn ? ExecutionStatus.Success : ExecutionStatus.Running;

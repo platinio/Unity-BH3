@@ -251,6 +251,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1187065798740212395, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: m_Speed
+      value: 3.8
+      objectReference: {fileID: 0}
     - target: {fileID: 3103487560563083616, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: m_Name
       value: Grunt
@@ -263,6 +267,18 @@ PrefabInstance:
       propertyPath: kind
       value: 
       objectReference: {fileID: 11400000, guid: a3d7ba8782cc3ef4489a57bc2d017618, type: 2}
+    - target: {fileID: 4372850451994383882, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: maxHealth
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 5302062775912803915, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: '_data._objectReferences.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 9436bed70d0b83142898d5c14a02f362, type: 2}
+    - target: {fileID: 6606618478189618187, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: definition
+      value: 
+      objectReference: {fileID: 11400000, guid: 8f51dafc06e50bf47995e9125fc21068, type: 2}
     - target: {fileID: 8066246293875414989, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: body
       value: 
@@ -319,6 +335,10 @@ PrefabInstance:
       propertyPath: 'renderers.Array.data[5]'
       value: 
       objectReference: {fileID: 9158052435714651591}
+    - target: {fileID: 8097420736249186815, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: _data._json
+      value: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"keepDistance","value":{"$content":0.0,"$type":"System.Single"},"typeHandle":{"Identification":null,"$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7559855291551585528, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}

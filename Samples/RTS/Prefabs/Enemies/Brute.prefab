@@ -95,6 +95,18 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1187065798740212395, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: m_Speed
+      value: 2.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187065798740212395, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: m_Height
+      value: 2.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187065798740212395, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: m_Radius
+      value: 0.56
+      objectReference: {fileID: 0}
     - target: {fileID: 3103487560563083616, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: m_Name
       value: Brute
@@ -107,6 +119,22 @@ PrefabInstance:
       propertyPath: kind
       value: 
       objectReference: {fileID: 11400000, guid: d19c062dd9852d648a9449b96efbd6cf, type: 2}
+    - target: {fileID: 4186439144646584150, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: radius
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4372850451994383882, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: maxHealth
+      value: 250
+      objectReference: {fileID: 0}
+    - target: {fileID: 5302062775912803915, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: '_data._objectReferences.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: e5848a4d4dd8a61458fbea2ee3cb1bfb, type: 2}
+    - target: {fileID: 6606618478189618187, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: definition
+      value: 
+      objectReference: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
     - target: {fileID: 8066246293875414989, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
       propertyPath: body
       value: 
@@ -163,6 +191,10 @@ PrefabInstance:
       propertyPath: 'renderers.Array.data[5]'
       value: 
       objectReference: {fileID: 755553629296253591}
+    - target: {fileID: 8097420736249186815, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
+      propertyPath: _data._json
+      value: '{"declarations":{"Kind":"Object","collection":{"$content":[{"name":"keepDistance","value":{"$content":0.0,"$type":"System.Single"},"typeHandle":{"Identification":null,"$version":"A"},"$version":"A"}],"$version":"A"},"$version":"A"}}'
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7559855291551585528, guid: 554e6b957e6ff1745b581cfe95da518f, type: 3}
@@ -185,6 +217,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3242435156279229666}
     m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 486ae03b7f0836346aca6a3ba2be7020, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 486ae03b7f0836346aca6a3ba2be7020, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 486ae03b7f0836346aca6a3ba2be7020, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 486ae03b7f0836346aca6a3ba2be7020, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
