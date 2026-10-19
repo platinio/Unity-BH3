@@ -198,11 +198,11 @@ namespace ArcaneOnyx.BehaviorTree
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
 
-            if (runBehaviorTreeGraphNode.BehaviorTreeGraphInstance != null)
+            if (runBehaviorTreeGraphNode.HasBehaviorTreeGraphInstance)
             {
                 return runBehaviorTreeGraphNode.BehaviorTreeGraphInstance;
             }
-            
+
             return runBehaviorTreeGraphNode.BehaviorTreeGraphAsset.graph;
         }
 
