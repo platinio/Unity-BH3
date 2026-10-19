@@ -429,9 +429,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 nodesByGuid[node.guid] = node;
 
-                // Reading the instance is safe here only because play mode has already built it; the machine
-                // instantiates every sub-tree in Awake. Touching it outside play mode would clone the asset.
-                if (node is RunBehaviorTreeGraphNode runNode && Application.isPlaying)
+                if (node is RunBehaviorTreeGraphNode runNode && runNode.HasBehaviorTreeGraphInstance)
                 {
                     Index(runNode.BehaviorTreeGraphInstance, depth + 1);
                 }
