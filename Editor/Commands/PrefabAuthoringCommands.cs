@@ -26,7 +26,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "and saved, with its nested prefabs intact and without putting anything in a scene. Takes the " +
             "same property names set_component_properties takes — the ones the inspector shows, which for a " +
             "Unity component are the m_ names. An object reference is given as the asset path of what it " +
-            "should point at, or null to clear it.")]
+            "should point at, or null to clear it; a list is given whole, as an array.")]
         public static object SetPrefabPropertiesCommand(
             [CliArg("prefab", "Asset path of the prefab, e.g. Assets/Game/Prefabs/Soldier.prefab.", Required = true)] string prefab,
             [CliArg("type", "Component type name on the target object, e.g. Health or NavMeshAgent.", Required = true)] string type,
@@ -123,6 +123,12 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         private static void Write(SerializedProperty property, JToken value)
         {
+            if (property.isArray && property.propertyType == SerializedPropertyType.Generic)
+            {
+                WriteEvery(property, value as JArray);
+                return;
+            }
+
             switch (property.propertyType)
             {
                 case SerializedPropertyType.Boolean: property.boolValue = value.Value<bool>(); return;
@@ -140,6 +146,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     throw new ArgumentException(
                         $"'{property.propertyPath}' is a {property.propertyType}, which this command does not know how to write.");
             }
+        }
+
+        /// <summary>A list is written whole, so what it holds afterwards is what was asked for.</summary>
+        private static void WriteEvery(SerializedProperty property, JArray values)
+        {
+            if (values == null)
+                throw new ArgumentException($"'{property.propertyPath}' is a list, so it takes a list of values.");
+
+            property.arraySize = values.Count;
+
+            for (var index = 0; index < values.Count; index++) Write(property.GetArrayElementAtIndex(index), values[index]);
         }
 
         private static int EnumIndexOf(SerializedProperty property, JToken value)

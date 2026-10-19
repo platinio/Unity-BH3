@@ -26,7 +26,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var lamp = new GameObject("Lamp", typeof(Light));
             lamp.GetComponent<Light>().type = LightType.Spot;
-            var shade = new GameObject("Shade", typeof(BoxCollider));
+            var shade = new GameObject("Shade", typeof(BoxCollider), typeof(MeshRenderer));
             shade.transform.SetParent(lamp.transform, false);
 
             PrefabUtility.SaveAsPrefabAsset(lamp, PrefabPath);
@@ -81,6 +81,20 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 PrefabPath, "Light", JObject.Parse("{\"m_Type\": \"Directional\"}"));
 
             Assert.That(Reloaded().GetComponent<Light>().type, Is.EqualTo(LightType.Directional));
+        }
+
+        [Test]
+        public void WritesAListWhole()
+        {
+            AssetDatabase.CreateAsset(new Material(Shader.Find("Unlit/Color")), Folder + "/Paint.mat");
+
+            PrefabAuthoringCommands.SetPrefabPropertiesCommand(
+                PrefabPath, "MeshRenderer", JObject.Parse("{\"m_Materials\": [\"" + Folder + "/Paint.mat\"]}"), "Shade");
+
+            var painted = Reloaded().transform.Find("Shade").GetComponent<MeshRenderer>();
+
+            Assert.That(painted.sharedMaterials.Length, Is.EqualTo(1));
+            Assert.That(painted.sharedMaterial, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Material>(Folder + "/Paint.mat")));
         }
 
         [Test]
