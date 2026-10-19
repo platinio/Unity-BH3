@@ -98,7 +98,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 yield return null;
             }
 
-            Assert.AreNotSame(slow.BehaviorTreeGraphAssetInstance, fast.BehaviorTreeGraphAssetInstance,
+            Assert.AreNotSame(
+                RunningCall(machine, slow).BehaviorTreeGraphAssetInstance,
+                RunningCall(machine, fast).BehaviorTreeGraphAssetInstance,
                 "Each call site instantiates the asset, so the two runs are different objects.");
 
             Assert.AreEqual(1.0f, ReadBranchVariable(machine, slow, "speed"),
@@ -190,13 +192,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         }
 
         /// <summary>
-        /// What a running branch holds for a name, read from the live instance the call site opened.
+        /// The clone the machine is running for an authored call site. The authored node is not the one
+        /// running -- the machine cloned the whole tree -- so anything asked of a live branch goes through
+        /// here, including whether it instantiated its branch at all.
         /// </summary>
-        private static object ReadBranchVariable(
-            BehaviorTreeMachine machine, RunBehaviorTreeGraphNode authoredCall, string key)
+        private static RunBehaviorTreeGraphNode RunningCall(
+            BehaviorTreeMachine machine, RunBehaviorTreeGraphNode authoredCall)
         {
-            // The authored call node is not the one running -- the machine cloned the whole tree -- so find
-            // the clone by guid before asking it anything.
             var runningCall = machine.RunningGraph.Nodes
                 .OfType<RunBehaviorTreeGraphNode>()
                 .FirstOrDefault(n => n.guid == authoredCall.guid);
@@ -205,7 +207,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.IsTrue(runningCall.HasBehaviorTreeGraphInstance,
                 "and it must have instantiated its branch, or nothing was ever run.");
 
-            return runningCall.BehaviorTreeGraphAssetInstance.declarations.Get(key);
+            return runningCall;
+        }
+
+        private static object ReadBranchVariable(
+            BehaviorTreeMachine machine, RunBehaviorTreeGraphNode authoredCall, string key)
+        {
+            return RunningCall(machine, authoredCall).BehaviorTreeGraphAssetInstance.declarations.Get(key);
         }
 
         #endregion
