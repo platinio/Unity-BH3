@@ -5,10 +5,10 @@ using ArcaneOnyx.GraphCore;
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
     /// <summary>
-    /// What the running tree records through. Every method is <see cref="ConditionalAttribute"/>-gated, so
-    /// outside the editor and dev builds the compiler removes the call sites themselves, argument evaluation
-    /// included. Two Conditional attributes mean "or". Anything added here must return void, which is the
-    /// only shape the attribute applies to.
+    /// The calls the running tree makes to record what it is doing. They cost nothing in a release build:
+    /// outside the editor, and outside a player built with BH3_DEV_TOOLS defined, the compiler deletes
+    /// every call to this class along with the arguments it would have evaluated. A method added here
+    /// must return void, or [Conditional] does not apply to it and its calls survive.
     /// </summary>
     public static class BehaviorTreeDevRecorder
     {
