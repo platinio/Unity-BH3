@@ -41,14 +41,24 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         /// <summary>
         /// Arranges <paramref name="asset"/> and every tree it runs, deepest first, and saves the ones that
-        /// changed. Returns a line per tree, so a caller can report what was crossed out and what was left
-        /// as the author arranged it.
+        /// changed. A tree whose nodes do not overlap and whose wires all reach is left as its author left
+        /// it. Returns a line per tree.
         /// </summary>
-        public static IReadOnlyList<ArrangedTree> Arrange(BehaviorTreeGraphAsset asset)
+        public static IReadOnlyList<ArrangedTree> Arrange(BehaviorTreeGraphAsset asset) =>
+            Walk(asset, leavingTidyTreesAlone: true);
+
+        /// <summary>
+        /// The same, on every tree whether it needs it or not. For when these rules have changed and the
+        /// trees arranged under the old ones are tidy by the old measure.
+        /// </summary>
+        public static IReadOnlyList<ArrangedTree> RearrangeEverything(BehaviorTreeGraphAsset asset) =>
+            Walk(asset, leavingTidyTreesAlone: false);
+
+        private static IReadOnlyList<ArrangedTree> Walk(BehaviorTreeGraphAsset asset, bool leavingTidyTreesAlone)
         {
             var arranged = new List<ArrangedTree>();
 
-            ArrangeBranchesFirst(asset, new HashSet<BehaviorTreeGraphAsset>(), arranged);
+            ArrangeBranchesFirst(asset, new HashSet<BehaviorTreeGraphAsset>(), arranged, leavingTidyTreesAlone);
 
             return arranged;
         }
@@ -77,11 +87,12 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         }
 
         private static void ArrangeBranchesFirst(
-            BehaviorTreeGraphAsset asset, HashSet<BehaviorTreeGraphAsset> alreadySeen, List<ArrangedTree> arranged)
+            BehaviorTreeGraphAsset asset, HashSet<BehaviorTreeGraphAsset> alreadySeen, List<ArrangedTree> arranged,
+            bool leavingTidyTreesAlone)
         {
             if (asset == null || asset.graph == null || !alreadySeen.Add(asset)) return;
 
-            foreach (var branch in BranchTreesOf(asset.graph)) ArrangeBranchesFirst(branch, alreadySeen, arranged);
+            foreach (var branch in BranchTreesOf(asset.graph)) ArrangeBranchesFirst(branch, alreadySeen, arranged, leavingTidyTreesAlone);
 
             var resized = ResizeBranchNodes(asset.graph);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
@@ -90,7 +101,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             // length of a tidy canvas is the whole complaint, and once about where this pass has just put
             // things, because a tree that arrived as a pile had no distances worth judging.
             var readsAdded = GiveFarConsumersTheirOwnRead(asset.graph);
-            var wasArranged = overlapsBefore > 0 || readsAdded > 0;
+            var wasArranged = !leavingTidyTreesAlone || overlapsBefore > 0 || readsAdded > 0;
 
             if (wasArranged)
             {
@@ -511,7 +522,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
                 Node.Position = new Rect(nodeLeft, top, Node.Position.width, Node.Position.height);
 
-                PlaceFeeders(nodeLeft, top + Node.Position.height * 0.5f);
+                PlaceFeeders(nodeLeft, top);
             }
 
             private float BlockWidth => FeedersWidth + Node.Position.width;
@@ -521,16 +532,20 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     ? 0.0f
                     : feederColumns.Sum(WidthOf) + feederColumns.Count * GapBeforeFeeders;
 
-            private void PlaceFeeders(float nodeLeft, float nodeMiddle)
+            /// <summary>
+            /// Stacked downward from the top of what they feed, because that is where its ports are: a
+            /// node lays its ports out under its header, and a sub-tree frame carries its parameters just
+            /// below its name. Centred on the node instead, a column beside a branch two thousand pixels
+            /// tall ends up a screen below the port it is wired to.
+            /// </summary>
+            private void PlaceFeeders(float nodeLeft, float portsBeginAt)
             {
                 var columnRight = nodeLeft - GapBeforeFeeders;
 
                 foreach (var column in feederColumns)
                 {
                     var columnWidth = WidthOf(column);
-                    var height = column.Sum(feeder => feeder.Node.Position.height)
-                               + (column.Count - 1) * GapBetweenFeeders;
-                    var top = nodeMiddle - height * 0.5f;
+                    var top = portsBeginAt;
 
                     foreach (var feeder in column)
                     {

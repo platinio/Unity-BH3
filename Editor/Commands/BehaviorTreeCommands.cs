@@ -128,7 +128,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "sub-tree node is drawn as the whole tree it runs, so how big it is follows from that tree's " +
             "own layout, and a branch can be thousands of pixels wide.")]
         public static object LayoutCommand(
-            [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Worker,Trees/Engage", Required = true)] string trees)
+            [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Worker,Trees/Engage", Required = true)] string trees,
+            [CliArg("force", "Arrange even a tree that reads as tidy, for when these rules have changed since it was laid out.")] bool force = false)
         {
             var assets = trees
                 .Split(',')
@@ -139,7 +140,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             if (assets.Length == 0) throw new ArgumentException("No tree paths given.");
 
-            return new { arranged = assets.SelectMany(BehaviorTreeLayout.Arrange).ToArray() };
+            var arranged = force
+                ? assets.SelectMany(BehaviorTreeLayout.RearrangeEverything)
+                : assets.SelectMany(BehaviorTreeLayout.Arrange);
+
+            return new { arranged = arranged.ToArray() };
         }
 
         [CliCommand("bt_retarget_missing",
