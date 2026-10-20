@@ -61,7 +61,7 @@ namespace ArcaneOnyx.BehaviorTree
         private readonly Vector2 ICON_POSITION_OFFSET = new Vector2(28.0f, 0.0f);
         private readonly Vector2 ICON_SIZE = new Vector2(65.0f, 65.0f);
         private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -40.0f);
-        private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
+        private static readonly Vector2 EXECUTION_STATE_ICON_SIZE = new Vector2(25.0f, 25.0f);
 
         protected const float TITLE_HEIGHT = 25.0f;
 
@@ -301,20 +301,46 @@ namespace ArcaneOnyx.BehaviorTree
 
         private const float PROBLEM_BADGE_SIZE = 18.0f;
 
-        private const float PROBLEM_BADGE_INSET_FROM_THE_LEFT_EDGE = 2.0f;
+        /// <summary>How far a corner marker hangs past the edge it is anchored to.</summary>
+        private const float CORNER_MARKER_OVERHANG = 6.0f;
 
-        /// <summary>How far the badge is lifted above the node, so it straddles the top edge.</summary>
-        private const float PROBLEM_BADGE_LIFT = 6.0f;
+        /// <summary>The clear strip between the bottom of the node's name and the bottom of the box.</summary>
+        private const float GAP_BELOW_THE_NAME = 5.0f;
 
         /// <summary>
-        /// The execution-status icon owns the opposite corner, and on a narrow node -- a guard, or anything
-        /// at the default 150 width -- the two corners are close enough that a badge on the right sat on
-        /// top of it.
+        /// Where a marker hung from a bottom corner starts. The node's name is drawn across the bottom of
+        /// the box, so anchoring to the edge itself would put the marker on the end of the name.
+        /// </summary>
+        public static float BelowTheNameOf(Rect nodeRect) => nodeRect.yMax - GAP_BELOW_THE_NAME;
+
+        /// <summary>
+        /// The node's bottom-left corner.
+        /// <para>
+        /// It used to hang off the top-left, where it overlapped both the breakpoint dot and the problem
+        /// badge, and where the collapse toggle now goes. The rect it is drawn at is the rect this
+        /// returns: the draw used to shift it again by (-10, 20), so what was cached and what appeared
+        /// were never the same rectangle and nothing could reason about either.
+        /// </para>
+        /// </summary>
+        public static Rect ExecutionStateIconOn(Rect nodeRect) =>
+            new Rect(new Vector2(nodeRect.x + CORNER_MARKER_INSET, BelowTheNameOf(nodeRect)), EXECUTION_STATE_ICON_SIZE);
+
+        /// <summary>How far a corner marker sits in from the side it is anchored to.</summary>
+        private const float CORNER_MARKER_INSET = 2.0f;
+
+        /// <summary>
+        /// The node's bottom-right corner.
+        /// <para>
+        /// It used to straddle the top-left, which is now the collapse toggle's and which the
+        /// execution-status icon already overhangs. Of the four corners this is the one nothing else
+        /// claims: the priority badge owns the top-right, and the node's name is drawn centred across the
+        /// bottom, so the right end of that band is clear.
+        /// </para>
         /// </summary>
         public static Rect ProblemBadgeOn(Rect nodeRect) =>
             new Rect(
-                nodeRect.x + PROBLEM_BADGE_INSET_FROM_THE_LEFT_EDGE,
-                nodeRect.y - PROBLEM_BADGE_LIFT,
+                nodeRect.xMax - PROBLEM_BADGE_SIZE + CORNER_MARKER_OVERHANG,
+                BelowTheNameOf(nodeRect),
                 PROBLEM_BADGE_SIZE,
                 PROBLEM_BADGE_SIZE);
 
@@ -364,7 +390,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (count > 1)
             {
-                // Reads outward from the icon, away from the node, so the number never lands on the title.
+                // Reads outward from the icon, past the node's edge, so the number never lands on its name.
                 var countRect = new Rect(badge.xMax - 3.0f, badge.y - 2.0f, 18.0f, 14.0f);
                 GUI.Label(countRect, count.ToString(), Styles.problemCount);
             }
@@ -485,7 +511,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (style == null) return;
 
             Rect p = LastExecutionStateIconRect;
-            p.position += offset + new Vector2(-10, 20);
+            p.position += offset;
 
             using (BehaviorTreeScrubOverride.Ghost())
             {
@@ -562,13 +588,12 @@ namespace ArcaneOnyx.BehaviorTree
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
             Vector2 titleSize = new Vector2(element.Width, TITLE_HEIGHT);
-            Vector2 lastExecutionIconPosition = innerOrigin + LAST_EXECUTION_STATE_ICON_OFFSET;
-            
+
             using (LudiqGUIUtility.iconSize.Override(IconSize.Small))
             {
                 IconRect = new Rect(iconPosition, ICON_SIZE);
                 TittleRect = new Rect(titlePosition, titleSize);
-                LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
+                LastExecutionStateIconRect = ExecutionStateIconOn(element.Position);
             }
         }
 

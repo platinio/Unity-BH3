@@ -138,6 +138,28 @@ beside each one that can be fixed in one click. See [Checking your tree](09-chec
 
 ---
 
+## Markers on a node
+
+A node carries up to five markers, one to a corner, so that any combination of them can be on at once
+without covering each other or the node's ports and name.
+
+![A collapsed sub-tree node with every marker on at once: a plus button centred on its top-left corner, a red breakpoint dot beside it, a priority badge numbered 1 on its top-right, a green success tick under its bottom-left, and an orange problem badge on its bottom-right](../images/node-markers.png)
+
+| Where | Marker | It means | Shown when |
+|---|---|---|---|
+| Top-left | **Collapse toggle** | `+` expands the sub-tree preview, `-` collapses it | the node runs another tree ([Sub-trees](07-sub-trees.md)) |
+| Top edge, beside it | **Breakpoint dot** | the editor will stop here; grey means armed but switched off | a breakpoint is set ([Breakpoints](../3-debugging/05-breakpoints.md)) |
+| Top-right | **Priority badge** | which child of a composite this is, counting from 1; amber means the layout and the stored order disagree | the node is one of two or more children ([Execution order](05-execution-order.md)) |
+| Bottom-left | **Execution status** | what the node returned the last time it ran | a tree has run, or the timeline is parked on a tick ([Timeline](../3-debugging/02-timeline.md)) |
+| Bottom-right | **Problem badge** | red for an error, amber for a warning; hover it for the reason | the node cannot work as authored ([Checking your tree](09-checking-your-tree.md)) |
+
+The collapse toggle and the priority badge are centred on their corners; the two bottom markers hang from
+the underside of the node's name rather than from the edge of the box, so they never land on the name
+however long it is. The breakpoint dot steps aside only on a node that has a collapse toggle; everywhere
+else it sits on the corner itself.
+
+---
+
 ## Sticky notes
 
 **Create Sticky Note**, at the top of the right-click menu, adds a note to the canvas. Trees get large

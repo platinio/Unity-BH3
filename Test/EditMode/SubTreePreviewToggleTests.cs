@@ -34,22 +34,71 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(button.yMax, Is.LessThan(NodeRect.center.y));
         }
 
+        /// <summary>
+        /// A node carries one marker per corner so that any combination of them can be on at once. Three
+        /// of them used to pile into the top-left and overlap each other.
+        /// </summary>
         [Test]
-        public void TheButtonStartsWhereTheProblemBadgeEnds()
+        public void NoTwoCornerMarkersOverlap()
         {
             var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+            var badge = BehaviorTreeNodeElementWidget.ProblemBadgeOn(NodeRect);
+            var executionStatus = BehaviorTreeNodeElementWidget.ExecutionStateIconOn(NodeRect);
 
-            Assert.That(button.xMin,
-                Is.GreaterThan(BehaviorTreeNodeElementWidget.ProblemBadgeOn(NodeRect).xMax));
+            Assert.That(button.Overlaps(badge), Is.False, "collapse toggle over the problem badge");
+            Assert.That(button.Overlaps(executionStatus), Is.False, "collapse toggle over the execution status");
+            Assert.That(badge.Overlaps(executionStatus), Is.False, "problem badge over the execution status");
+        }
+
+        /// <summary>
+        /// The dot is anchored a little left of the node's own edge, so the room the button claims has to
+        /// cover that as well as the button.
+        /// </summary>
+        [Test]
+        public void TheRoomTheButtonClaimsLeavesTheBreakpointDotClear()
+        {
+            var node = NodeRunningABranch();
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+
+            Assert.That(NodeRect.xMin + SubTreePreviewToggle.RoomTakenOn(node),
+                Is.GreaterThan(button.xMax));
         }
 
         [Test]
-        public void TheButtonIsAtTheNodesLeftEdge()
+        public void ANodeThatCannotCollapseClaimsNoneOfItsCorner()
+        {
+            Assert.That(SubTreePreviewToggle.RoomTakenOn(new WaitTime()), Is.Zero);
+            Assert.That(SubTreePreviewToggle.RoomTakenOn(new RunBehaviorTreeGraphNode()), Is.Zero);
+        }
+
+        [Test]
+        public void TheBottomMarkersHangBelowTheNodesName()
+        {
+            Assert.That(BehaviorTreeNodeElementWidget.ProblemBadgeOn(NodeRect).yMin,
+                Is.GreaterThanOrEqualTo(BehaviorTreeNodeElementWidget.BelowTheNameOf(NodeRect)));
+            Assert.That(BehaviorTreeNodeElementWidget.ExecutionStateIconOn(NodeRect).yMin,
+                Is.GreaterThanOrEqualTo(BehaviorTreeNodeElementWidget.BelowTheNameOf(NodeRect)));
+        }
+
+        [Test]
+        public void TheButtonTakesTheTopLeftCornerAndTheProblemBadgeTheOpposite()
+        {
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+            var badge = BehaviorTreeNodeElementWidget.ProblemBadgeOn(NodeRect);
+
+            Assert.That(button.center.x, Is.LessThan(NodeRect.center.x));
+            Assert.That(button.center.y, Is.LessThan(NodeRect.center.y));
+            Assert.That(badge.center.x, Is.GreaterThan(NodeRect.center.x));
+            Assert.That(badge.center.y, Is.GreaterThan(NodeRect.center.y));
+        }
+
+        [Test]
+        public void TheButtonIsCentredOnTheNodesTopLeftCorner()
         {
             var button = SubTreePreviewToggle.ButtonOn(NodeRect);
 
-            Assert.That(button.xMin, Is.GreaterThanOrEqualTo(NodeRect.xMin));
-            Assert.That(button.center.x, Is.LessThan(NodeRect.center.x));
+            Assert.That(button.center.x, Is.EqualTo(NodeRect.xMin).Within(0.001f));
+            Assert.That(button.center.y, Is.EqualTo(NodeRect.yMin).Within(0.001f));
         }
 
         [Test]
