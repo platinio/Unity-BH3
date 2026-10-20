@@ -39,6 +39,12 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>The element, typed. This widget is registered for exactly one node type.</summary>
         private RunBehaviorTreeGraphNode RunNode => (RunBehaviorTreeGraphNode)element;
 
+        /// <summary>
+        /// The node and its collapse button. The canvas decides which widget a click belongs to from this,
+        /// so leaving it as the node alone made most of the button unclickable.
+        /// </summary>
+        public override Rect hotArea => SubTreePreviewToggle.WithTheButton(position, element);
+
         private BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
         {
             var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;

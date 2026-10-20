@@ -58,14 +58,37 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private const float GapAfterTheButton = 10.0f;
 
+        /// <summary>Whether this node shows a button at all, which is every node but this one.</summary>
+        public static bool IsShownOn(BehaviorTreeNode node) =>
+            node is RunBehaviorTreeGraphNode runNode && CanBeToggled(runNode);
+
         /// <summary>
         /// How much of this node's top-left corner the button claims, so another marker drawn there can
-        /// start clear of it. Zero for a node that never shows one, which is every node but this one.
+        /// start clear of it. Zero for a node that shows none.
         /// </summary>
         public static float RoomTakenOn(BehaviorTreeNode node) =>
-            node is RunBehaviorTreeGraphNode runNode && CanBeToggled(runNode)
-                ? RoomNeededAtTheCorner + GapAfterTheButton
-                : 0.0f;
+            IsShownOn(node) ? RoomNeededAtTheCorner + GapAfterTheButton : 0.0f;
+
+        /// <summary>
+        /// The node's rect grown to take the button in.
+        /// <para>
+        /// A canvas offers a widget only the events that land inside its hot area, and that area is the
+        /// node's own rect. Three quarters of this button hangs outside the box, so without this the only
+        /// clickable part of it was the quarter overlapping the corner.
+        /// </para>
+        /// </summary>
+        public static Rect WithTheButton(Rect nodeRect, BehaviorTreeNode node)
+        {
+            if (!IsShownOn(node)) return nodeRect;
+
+            var button = ButtonOn(nodeRect);
+
+            return Rect.MinMaxRect(
+                Mathf.Min(nodeRect.xMin, button.xMin),
+                Mathf.Min(nodeRect.yMin, button.yMin),
+                Mathf.Max(nodeRect.xMax, button.xMax),
+                Mathf.Max(nodeRect.yMax, button.yMax));
+        }
 
         public static bool IsHit(Rect nodeRect, RunBehaviorTreeGraphNode node, Vector2 mousePosition) =>
             CanBeToggled(node) && ButtonOn(nodeRect).Contains(mousePosition);

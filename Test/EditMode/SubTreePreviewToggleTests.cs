@@ -64,6 +64,41 @@ namespace ArcaneOnyx.BehaviorTree.Tests
                 Is.GreaterThan(button.xMax));
         }
 
+        /// <summary>
+        /// The canvas offers a widget only the events inside its hot area. Most of the button hangs
+        /// outside the node, so a hot area of just the node leaves most of it unclickable.
+        /// </summary>
+        [Test]
+        public void TheHotAreaTakesInTheWholeButton()
+        {
+            var node = NodeRunningABranch();
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+            var hotArea = SubTreePreviewToggle.WithTheButton(NodeRect, node);
+
+            Assert.That(hotArea.Contains(button.min), Is.True);
+            Assert.That(hotArea.Contains(button.max - new Vector2(0.001f, 0.001f)), Is.True);
+            Assert.That(hotArea.Contains(NodeRect.max - new Vector2(0.001f, 0.001f)), Is.True,
+                "the node itself dropped out of its own hot area");
+        }
+
+        [Test]
+        public void TheCornerOfTheButtonFurthestFromTheNodeIsStillAHit()
+        {
+            var node = NodeRunningABranch();
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+            var outermost = button.min + new Vector2(1.0f, 1.0f);
+
+            Assert.That(NodeRect.Contains(outermost), Is.False, "this point is supposed to be off the node");
+            Assert.That(SubTreePreviewToggle.IsHit(NodeRect, node, outermost), Is.True);
+            Assert.That(SubTreePreviewToggle.WithTheButton(NodeRect, node).Contains(outermost), Is.True);
+        }
+
+        [Test]
+        public void ANodeWithNoButtonKeepsTheNodeAsItsHotArea()
+        {
+            Assert.That(SubTreePreviewToggle.WithTheButton(NodeRect, new WaitTime()), Is.EqualTo(NodeRect));
+        }
+
         [Test]
         public void ANodeThatCannotCollapseClaimsNoneOfItsCorner()
         {
