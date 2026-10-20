@@ -104,6 +104,12 @@ connect takes the number of the place it sits in, and deleting one closes the ga
 badge means the canvas layout and the stored order disagree; the tree still runs in badge order. See
 [Execution order](05-execution-order.md).
 
+### Collapsing a sub-tree
+
+A node that runs another tree is drawn as a frame around the whole tree it runs. The button in its
+top-left corner collapses that preview to a named box, and the choice is saved with the tree. See
+[Sub-trees](07-sub-trees.md).
+
 ### Guards
 
 A **Conditional Execution** or **Reactive Guard** is not parented either. Right-click the node it should

@@ -299,6 +299,17 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Border weight of the problem outline, in pixels.</summary>
         private const int PROBLEM_BORDER_THICKNESS = 2;
 
+        private const float PROBLEM_BADGE_SIZE = 18.0f;
+
+        /// <summary>
+        /// Public so that anything else drawing in that corner can be kept clear of it by a test rather
+        /// than by a comment. The execution-status icon owns the opposite corner, and on a narrow node --
+        /// a guard, or anything at the default 150 width -- the two corners are close enough that a badge
+        /// on the right sat on top of it.
+        /// </summary>
+        public static Rect ProblemBadgeOn(Rect nodeRect) =>
+            new Rect(nodeRect.x + 2.0f, nodeRect.y - 6.0f, PROBLEM_BADGE_SIZE, PROBLEM_BADGE_SIZE);
+
         /// <summary>
         /// Carries the badge's hover text. Static and reused: <c>GUI.Label</c> reads the content and keeps
         /// nothing, and one instance per badge per repaint is the allocation this file is being cleaned of.
@@ -340,10 +351,7 @@ namespace ArcaneOnyx.BehaviorTree
             var icon = EditorGUIUtility.IconContent(isError ? ERROR_ICON : WARNING_ICON);
             if (icon?.image == null) return;
 
-            // Top-left. The execution-status icon owns the opposite corner, and on a narrow node -- a guard,
-            // or anything at the default 150 width -- the two corners are close enough that a badge on the
-            // right sat on top of it.
-            var badge = new Rect(nodeRect.x + 2.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
+            var badge = ProblemBadgeOn(nodeRect);
             GUI.DrawTexture(badge, icon.image, ScaleMode.ScaleToFit);
 
             if (count > 1)

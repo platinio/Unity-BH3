@@ -52,7 +52,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             willCauseRecursion = GraphWillCauseRecursion();
 
-            if (GetBehaviorTreeGraphAsset() == null || willCauseRecursion)
+            if (!element.DrawsSubTreePreview || willCauseRecursion)
             {
                 position = new Rect(position.position, SubTreeFootprint.EmptyNodeSize);
                 base.CachePosition();
@@ -84,6 +84,57 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void DrawTitle(Vector2 offset, string title)
         {
             base.DrawTitle(offset, willCauseRecursion ? "RECURSION ERROR!" : element.NodeName);
+        }
+
+        /// <summary>
+        /// The collapse button, in the overlay pass for the reason the base class documents: this widget
+        /// replaces the foreground body without calling base, and the overlay is the one pass that reaches
+        /// it. Only the host canvas runs that pass, which is what keeps the button out of a preview, where
+        /// it would be drawn and could not be clicked.
+        /// </summary>
+        public override void DrawOverlay()
+        {
+            base.DrawOverlay();
+
+            if (!e.IsRepaint || !element.IsVisible) return;
+
+            if (element is RunBehaviorTreeGraphNode runNode) SubTreePreviewToggle.Draw(position, runNode);
+        }
+
+        /// <summary>
+        /// Takes the click before the base does. The whole frame is this node's hot area, so left to itself
+        /// the base would read the press as the start of a drag and the button would never fire.
+        /// </summary>
+        public override void HandleInput()
+        {
+            if (e.IsMouseDown(Unity.VisualScripting.MouseButton.Left) &&
+                element is RunBehaviorTreeGraphNode runNode &&
+                SubTreePreviewToggle.IsHit(position, runNode, mousePosition))
+            {
+                TogglePreview(runNode);
+                e.Use();
+                return;
+            }
+
+            base.HandleInput();
+        }
+
+        /// <summary>
+        /// Writes the node the size it is about to be drawn at, rather than leaving that to the next
+        /// repaint. <c>Position</c> is serialized and read by everything that measures the canvas, so a
+        /// collapsed node carrying the frame's old size would be laid out as though its preview were still
+        /// there.
+        /// </summary>
+        private void TogglePreview(RunBehaviorTreeGraphNode runNode)
+        {
+            UndoUtility.RecordEditedObject(
+                runNode.IsSubTreePreviewCollapsed ? "Expand Sub-Tree" : "Collapse Sub-Tree");
+
+            runNode.IsSubTreePreviewCollapsed = !runNode.IsSubTreePreviewCollapsed;
+            position = SubTreeFootprint.DrawnAs(runNode);
+
+            Reposition();
+            GUI.changed = true;
         }
 
         private bool GraphWillCauseRecursion()
@@ -255,13 +306,12 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void CachePosition()
         {
-            var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
-            if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null)
+            if (!element.DrawsSubTreePreview)
             {
                 base.CachePosition();
                 return;
             }
-            
+
             CacheParameterPortPositions();
         }
 

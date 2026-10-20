@@ -20,6 +20,26 @@ Assign one in the node inspector and a simplified, read-only preview of that tre
 
 You cannot edit the preview. Open the sub-tree asset to change it.
 
+### Collapsing the preview
+
+A preview is the right default, because you can read a branch without opening it. It is also what makes a
+tree built out of branches hard to read: a branch that is genuinely 3,000 px wide pushes its siblings
+3,000 px apart, and every wire between them follows.
+
+The button in the node's top-left corner collapses it. A collapsed node is the small box it was created
+at, carrying the branch's name and its parameter ports and nothing else. The glyph says what the click
+will do: **-** while the preview is showing, **+** while it is collapsed.
+
+![A collapsed Run Behavior Tree Graph node: a small box labelled Engage with a plus button in its top-left corner and its priority badge in the other](../images/sub-tree-collapsed.png)
+
+The state is stored on the node, in the tree that calls the branch, so a canvas you collapsed opens
+collapsed the next time. It travels with the asset, which means it is not just your view of the tree:
+everyone who opens it afterwards sees the same thing, and collapsing one shows up as a change to commit.
+
+Collapsing leaves a hole where the preview used to be, because the siblings are still spaced around the
+size it used to have. `bt_layout` closes it: a tree whose sub-tree node changed size is rearranged, not
+only one whose nodes overlap.
+
 Otherwise the node behaves like any other: it has a status and finishes at some point, unless the sub-tree
 keeps itself alive with a `Repeater`. Nesting can go to any depth.
 

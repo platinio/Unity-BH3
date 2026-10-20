@@ -10,9 +10,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// siblings left to right in priority order, the nodes that feed a node's ports in columns beside it.
     ///
     /// <para>
-    /// A tree is only rearranged when something overlaps. An author who has placed nodes by hand has said
-    /// what they want, and a tidy canvas is already what this would produce; a crossed-out one is the only
-    /// thing worth overruling.
+    /// A tree is rearranged when something overlaps, or when a sub-tree node is no longer the size the
+    /// arrangement was built around. An author who has placed nodes by hand has said what they want, and a
+    /// tidy canvas is already what this would produce; a crossed-out one is the only thing worth overruling.
     /// </para>
     ///
     /// <para>
@@ -75,10 +75,16 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             var resized = ResizeBranchNodes(asset.graph);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
-            var wasArranged = overlapsBefore > 0;
 
-            if (wasArranged) Place(asset.graph);
-            if (wasArranged || resized) SaveOnlyThisTree(asset);
+            // Collapsing a branch overlaps nothing, and leaves the canvas as wide as the preview that is
+            // no longer there: the siblings are still spaced around the size it used to be.
+            var wasArranged = overlapsBefore > 0 || resized;
+
+            if (wasArranged)
+            {
+                Place(asset.graph);
+                SaveOnlyThisTree(asset);
+            }
 
             arranged.Add(new ArrangedTree(
                 AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph)));
@@ -111,10 +117,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var node in graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
             {
-                var branch = node.BehaviorTreeGraphAsset;
-                if (branch == null) continue;
+                if (node.BehaviorTreeGraphAsset == null) continue;
 
-                var drawnAs = SubTreeFootprint.BoxAt(node.Position.position, SubTreeFootprint.BoundsOf(branch.graph));
+                var drawnAs = SubTreeFootprint.DrawnAs(node);
                 if (drawnAs.size == node.Position.size) continue;
 
                 node.Position = drawnAs;

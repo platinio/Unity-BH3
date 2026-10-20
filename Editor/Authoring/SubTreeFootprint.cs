@@ -59,8 +59,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 ? new Rect(anchor, EmptyNodeSize)
                 : new Rect(anchor, bounds.size + Padding * 2.0f);
 
+        /// <summary>
+        /// Asked by both the widget and <see cref="BehaviorTreeLayout"/>, so that a collapsed node cannot
+        /// be drawn one size and laid out at another.
+        /// </summary>
+        public static Rect DrawnAs(RunBehaviorTreeGraphNode node) =>
+            node.DrawsSubTreePreview
+                ? BoxAt(node.Position.position, BoundsOf(node.BehaviorTreeGraphAsset.graph))
+                : new Rect(node.Position.position, EmptyNodeSize);
+
         private static float WithTheGroupHeader(float guards, BehaviorTreeNode node) =>
-            node is RunBehaviorTreeGraphNode ? guards + GroupHeaderLift : guards;
+            node.DrawsSubTreePreview ? guards + GroupHeaderLift : guards;
 
         private static Rect Bounds(BehaviorTreeGraph graph, Func<BehaviorTreeNode, float> roomAbove)
         {
