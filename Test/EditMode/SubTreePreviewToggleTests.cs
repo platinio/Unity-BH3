@@ -21,22 +21,45 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             created.Clear();
         }
 
+        /// <summary>
+        /// Hanging across the top edge is what keeps the button off the node's contents: the port rows
+        /// start a few pixels inside the box, and a collapsed node is almost nothing else.
+        /// </summary>
         [Test]
-        public void TheButtonSitsInsideTheNode()
+        public void TheButtonHangsAcrossTheNodesTopEdge()
         {
             var button = SubTreePreviewToggle.ButtonOn(NodeRect);
 
-            Assert.That(NodeRect.Contains(button.min), Is.True);
-            Assert.That(NodeRect.Contains(button.max), Is.True);
+            Assert.That(button.yMin, Is.LessThan(NodeRect.yMin));
+            Assert.That(button.yMax, Is.LessThan(NodeRect.center.y));
         }
 
         [Test]
-        public void TheButtonIsInTheNodesTopLeftCorner()
+        public void TheButtonStartsWhereTheProblemBadgeEnds()
         {
             var button = SubTreePreviewToggle.ButtonOn(NodeRect);
 
+            Assert.That(button.xMin,
+                Is.GreaterThan(BehaviorTreeNodeElementWidget.ProblemBadgeOn(NodeRect).xMax));
+        }
+
+        [Test]
+        public void TheButtonIsAtTheNodesLeftEdge()
+        {
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+
+            Assert.That(button.xMin, Is.GreaterThanOrEqualTo(NodeRect.xMin));
             Assert.That(button.center.x, Is.LessThan(NodeRect.center.x));
-            Assert.That(button.center.y, Is.LessThan(NodeRect.center.y));
+        }
+
+        [Test]
+        public void TheRoomTheButtonNeedsCoversTheButton()
+        {
+            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
+
+            Assert.That(NodeRect.xMin + SubTreePreviewToggle.RoomNeededAtTheCorner,
+                Is.GreaterThanOrEqualTo(button.xMax),
+                "a header drawn beside the button would start underneath it");
         }
 
         [Test]

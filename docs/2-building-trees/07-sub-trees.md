@@ -26,11 +26,12 @@ A preview is the right default, because you can read a branch without opening it
 tree built out of branches hard to read: a branch that is genuinely 3,000 px wide pushes its siblings
 3,000 px apart, and every wire between them follows.
 
-The button in the node's top-left corner collapses it. A collapsed node is the small box it was created
+The button hanging across the node's top-left edge collapses it, at the same height as the priority badge
+on the opposite corner and clear of the problem badge. A collapsed node is the small box it was created
 at, carrying the branch's name and its parameter ports and nothing else. The glyph says what the click
 will do: **-** while the preview is showing, **+** while it is collapsed.
 
-![A collapsed Run Behavior Tree Graph node: a small box labelled Engage with a plus button in its top-left corner and its priority badge in the other](../images/sub-tree-collapsed.png)
+![A collapsed Run Behavior Tree Graph node: a small box labelled Engage, with a plus button hanging across its top-left edge](../images/sub-tree-collapsed.png)
 
 The state is stored on the node, in the tree that calls the branch, so a canvas you collapsed opens
 collapsed the next time. It travels with the asset, which means it is not just your view of the tree:

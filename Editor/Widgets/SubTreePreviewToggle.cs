@@ -7,15 +7,10 @@ namespace ArcaneOnyx.BehaviorTree
     /// </summary>
     public static class SubTreePreviewToggle
     {
-        /// <summary>
-        /// Big enough to hit at the zoom levels a graph is edited at, and small enough to sit inside the
-        /// padding the preview frame already leaves empty at its corner.
-        /// </summary>
-        private const float ButtonSize = 22.0f;
+        /// <summary>The priority badge's size, so the two markers read as a pair across the node's top.</summary>
+        private const float ButtonSize = 26.0f;
 
-        private const float InsetFromTheLeftEdge = 4.0f;
-
-        private const float InsetFromTheTopEdge = 14.0f;
+        private const float GapAfterTheProblemBadge = 4.0f;
 
         private const float GlyphThickness = 3.0f;
 
@@ -37,12 +32,28 @@ namespace ArcaneOnyx.BehaviorTree
 
         private const string CollapseTooltip = "Collapse this sub-tree to a named box";
 
+        /// <summary>
+        /// Hung across the node's top edge at the same height as the priority badge on the opposite corner,
+        /// and started from the problem badge's right edge rather than from the node's.
+        /// <para>
+        /// Reading the badge's own rect is what keeps the two apart: the corner is the badge's, its place
+        /// there is fixed, and a constant copied from it would be a second copy to keep in step. Centring
+        /// the button on the edge rather than hanging it below also keeps it off the port rows, which
+        /// begin a few pixels inside the box and are most of what a collapsed node contains.
+        /// </para>
+        /// </summary>
         public static Rect ButtonOn(Rect nodeRect) =>
             new Rect(
-                nodeRect.x + InsetFromTheLeftEdge,
-                nodeRect.y + InsetFromTheTopEdge,
+                BehaviorTreeNodeElementWidget.ProblemBadgeOn(nodeRect).xMax + GapAfterTheProblemBadge,
+                nodeRect.y - (ButtonSize / 2.0f),
                 ButtonSize,
                 ButtonSize);
+
+        /// <summary>
+        /// How much room the markers take at a node's top-left corner, so a header drawn in the same band
+        /// can start beside them instead of underneath them.
+        /// </summary>
+        public static float RoomNeededAtTheCorner => ButtonOn(new Rect(0.0f, 0.0f, 0.0f, 0.0f)).xMax;
 
         public static bool IsHit(Rect nodeRect, RunBehaviorTreeGraphNode node, Vector2 mousePosition) =>
             CanBeToggled(node) && ButtonOn(nodeRect).Contains(mousePosition);

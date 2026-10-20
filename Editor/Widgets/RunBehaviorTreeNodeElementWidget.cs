@@ -249,7 +249,8 @@ namespace ArcaneOnyx.BehaviorTree
             
             var labelPosition = new Rect
             (
-                box.x + RunBehaviorTreeNodeElementWidgetStyles.label.margin.left,
+                box.x + RunBehaviorTreeNodeElementWidgetStyles.label.margin.left
+                      + SubTreePreviewToggle.RoomNeededAtTheCorner,
                 box.y + RunBehaviorTreeNodeElementWidgetStyles.label.margin.top,
                 LabelWidth(name),
                 RunBehaviorTreeNodeElementWidgetStyles.group.border.top
