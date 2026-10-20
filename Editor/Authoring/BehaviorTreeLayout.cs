@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,6 +30,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public const float GapBeforeFeeders = 70.0f;
         public const float GapBetweenFeeders = 45.0f;
         public const float GapBetweenUnrelatedBlocks = 240.0f;
+
+        /// <summary>How far a wire may run before the node at its end is given a read of its own.</summary>
+        public const float ReachOfAWire = 900.0f;
 
         /// <summary>
         /// Arranges <paramref name="asset"/> and every tree it runs, deepest first, and saves the ones that
@@ -75,13 +80,27 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             var resized = ResizeBranchNodes(asset.graph);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
-            var wasArranged = overlapsBefore > 0;
 
-            if (wasArranged) Place(asset.graph);
+            // Asked twice on purpose: once about the tree as its author left it, where a wire running the
+            // length of a tidy canvas is the whole complaint, and once about where this pass has just put
+            // things, because a tree that arrived as a pile had no distances worth judging.
+            var readsAdded = GiveFarConsumersTheirOwnRead(asset.graph);
+            var wasArranged = overlapsBefore > 0 || readsAdded > 0;
+
+            if (wasArranged)
+            {
+                Place(asset.graph);
+
+                var readsAddedOnceItWasLaidOut = GiveFarConsumersTheirOwnRead(asset.graph);
+                if (readsAddedOnceItWasLaidOut > 0) Place(asset.graph);
+
+                readsAdded += readsAddedOnceItWasLaidOut;
+            }
+
             if (wasArranged || resized) SaveOnlyThisTree(asset);
 
             arranged.Add(new ArrangedTree(
-                AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph)));
+                AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph), readsAdded));
         }
 
         /// <summary>
@@ -240,6 +259,112 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 var loose = new Branch(node, SubTreeFootprint.RoomAbove(node), new List<Feeder>());
                 loose.PlaceAt(left, 0.0f);
                 left += loose.Width + GapBetweenSiblings;
+            }
+        }
+
+        /// <summary>
+        /// Gives a node its own copy of the value it reads when the one it shares is too far away to
+        /// follow. A reader can only sit beside one of its consumers; every other one is left with a wire
+        /// across the canvas, which in a tree of branches runs for thousands of pixels. Copying the read
+        /// costs nothing — two Get Variable nodes on one key are one fact, read twice.
+        /// <para>
+        /// Only a node that reads nothing itself is copied. One with inputs of its own is the head of a
+        /// chain, and copying a chain copies work rather than a lookup.
+        /// </para>
+        /// </summary>
+        private static int GiveFarConsumersTheirOwnRead(BehaviorTreeGraph graph)
+        {
+            var control = ControlNodesOf(graph);
+            var added = 0;
+
+            foreach (var reader in PlaceableNodesOf(graph).ToList())
+            {
+                if (control.Contains(reader) || !ReadsNothingItself(graph, reader)) continue;
+
+                var wires = WiresFrom(graph, reader);
+                if (wires.Count < 2) continue;
+
+                foreach (var wire in wires.OrderBy(wire => DistanceBetween(reader, ConsumerOf(wire))).Skip(1).ToList())
+                {
+                    if (DistanceBetween(reader, ConsumerOf(wire)) <= ReachOfAWire) continue;
+
+                    Rewire(graph, wire, CopyOf(graph, reader));
+                    added++;
+                }
+            }
+
+            return added;
+        }
+
+        private static List<PortValueConnection> WiresFrom(BehaviorTreeGraph graph, BehaviorTreeNode reader) =>
+            graph.valueConnections.Where(wire => (wire.source?.behaviorTreeNode as BehaviorTreeNode) == reader).ToList();
+
+        private static bool ReadsNothingItself(BehaviorTreeGraph graph, BehaviorTreeNode reader) =>
+            graph.valueConnections.All(wire => (wire.destination?.behaviorTreeNode as BehaviorTreeNode) != reader);
+
+        /// <summary>Where a wire ends on the canvas: a guard is drawn on its owner, so that is what it reaches.</summary>
+        private static BehaviorTreeNode ConsumerOf(PortValueConnection wire)
+        {
+            var reader = wire.destination?.behaviorTreeNode as BehaviorTreeNode;
+
+            return reader is ConditionalExecution guard ? guard.Owner : reader;
+        }
+
+        private static float DistanceBetween(BehaviorTreeNode from, BehaviorTreeNode to)
+        {
+            if (to == null) return 0.0f;
+
+            var here = from.Position;
+            var there = to.Position;
+            var across = Mathf.Max(0.0f, Mathf.Max(here.xMin - there.xMax, there.xMin - here.xMax));
+            var down = Mathf.Max(0.0f, Mathf.Max(here.yMin - there.yMax, there.yMin - here.yMax));
+
+            return Mathf.Sqrt(across * across + down * down);
+        }
+
+        private static void Rewire(BehaviorTreeGraph graph, PortValueConnection wire, BehaviorTreeNode reader)
+        {
+            var destination = wire.destination;
+            var key = wire.source.key;
+
+            graph.valueConnections.Remove(wire);
+            reader.valueOutputs.First(port => port.key == key).ValidlyConnectTo(destination);
+        }
+
+        /// <summary>
+        /// A second node reading the same thing: the same type, the same serialized state and the same
+        /// values typed into its ports, with a guid and a place on the canvas of its own.
+        /// </summary>
+        private static BehaviorTreeNode CopyOf(BehaviorTreeGraph graph, BehaviorTreeNode reader)
+        {
+            var copy = (BehaviorTreeNode)Activator.CreateInstance(reader.GetType());
+            copy.Position = reader.Position;
+            graph.Nodes.Add(copy);
+
+            foreach (var field in StateOf(reader.GetType())) field.SetValue(copy, field.GetValue(reader));
+            foreach (var typed in reader.defaultValues) copy.defaultValues[typed.Key] = typed.Value;
+
+            return copy;
+        }
+
+        /// <summary>
+        /// What a node keeps, minus what makes it that node: a copy needs a guid of its own, and the
+        /// layout is about to give it a place of its own.
+        /// </summary>
+        private static IEnumerable<FieldInfo> StateOf(Type type)
+        {
+            for (var declaring = type; declaring != null; declaring = declaring.BaseType)
+            {
+                const BindingFlags Declared = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+                foreach (var field in declaring.GetFields(Declared))
+                {
+                    if (field.Name == "guid" || field.Name.Contains("osition")) continue;
+                    if (!field.IsDefined(typeof(Unity.VisualScripting.SerializeAttribute), true)
+                        && !field.IsDefined(typeof(SerializeField), true)) continue;
+
+                    yield return field;
+                }
             }
         }
 
@@ -420,12 +545,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// <summary>What <see cref="BehaviorTreeLayout.Arrange"/> did to one tree.</summary>
     public sealed class ArrangedTree
     {
-        public ArrangedTree(string tree, int overlapsBefore, bool arranged, int overlapsAfter)
+        public ArrangedTree(string tree, int overlapsBefore, bool arranged, int overlapsAfter, int readsAdded)
         {
             this.tree = tree;
             this.overlapsBefore = overlapsBefore;
             this.arranged = arranged;
             this.overlapsAfter = overlapsAfter;
+            this.readsAdded = readsAdded;
         }
 
         public string tree { get; }
@@ -435,5 +561,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public bool arranged { get; }
 
         public int overlapsAfter { get; }
+
+        public int readsAdded { get; }
     }
 }
