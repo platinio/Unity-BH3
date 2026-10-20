@@ -31,8 +31,13 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public const float GapBetweenFeeders = 45.0f;
         public const float GapBetweenUnrelatedBlocks = 240.0f;
 
-        /// <summary>How far a wire may run before the node at its end is given a read of its own.</summary>
-        public const float ReachOfAWire = 900.0f;
+        /// <summary>
+        /// How far a wire may run before the node at its end is given a read of its own: about the width
+        /// of one node, so a read serves the consumer it sits beside and at most its neighbour. A branch
+        /// is drawn as the whole tree it runs, metres tall, and a wire to the far side of one is a wire
+        /// nobody follows even when the gap between the boxes reads as small.
+        /// </summary>
+        public const float ReachOfAWire = 200.0f;
 
         /// <summary>
         /// Arranges <paramref name="asset"/> and every tree it runs, deepest first, and saves the ones that

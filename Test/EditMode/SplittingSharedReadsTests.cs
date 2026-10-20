@@ -51,15 +51,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void LeavesNeighboursSharingTheOneRead()
+        public void LeavesTwoGuardsOnOneNodeSharingItsRead()
         {
-            GuardTwoLeavesOnOneRead();
+            GuardOneLeafTwiceOnOneRead();
 
             var added = BehaviorTreeLayout.Arrange(caller).Single(tree => tree.tree == CallerPath).readsAdded;
 
             Assert.That(added, Is.Zero);
-            Assert.That(ReadsIn(caller).Count, Is.EqualTo(1), "a short wire was replaced by a duplicate");
+            Assert.That(ReadsIn(caller).Count, Is.EqualTo(1), "a read serving one node was duplicated");
         }
+
 
         [Test]
         public void TheNewReadReadsWhatTheOldOneReads()
@@ -111,19 +112,17 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             ShareOneReadBetween(left, right);
         }
 
-        /// <summary>Two leaves side by side, where a single read is beside both of them.</summary>
-        private void GuardTwoLeavesOnOneRead()
+        /// <summary>One node with two guards, where the single read sits beside the only node that reads it.</summary>
+        private void GuardOneLeafTwiceOnOneRead()
         {
             caller = BehaviorTreeAuthoring.CreateTree(CallerPath);
             selector = BehaviorTreeAuthoring.AddNode<Selector>(caller, 0.0f, 0.0f);
             BehaviorTreeAuthoring.Connect(caller, caller.graph.EntryNode, selector);
 
-            var left = BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 0.0f, 0.0f);
-            var right = BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 0.0f, 0.0f);
-            BehaviorTreeAuthoring.Connect(caller, selector, left);
-            BehaviorTreeAuthoring.Connect(caller, selector, right);
+            var leaf = BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Connect(caller, selector, leaf);
 
-            ShareOneReadBetween(left, right);
+            ShareOneReadBetween(leaf, leaf);
         }
 
         /// <summary>
