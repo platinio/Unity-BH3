@@ -85,12 +85,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (callSiteIdsByScope.TryGetValue(scope, out var alreadyRegistered)) return alreadyRegistered;
 
             var id = callSites.Count;
-            var parentId = parentScope != null && callSiteIdsByScope.TryGetValue(parentScope, out var found)
-                ? found
-                : BehaviorTreeCallSite.RootId;
 
             callSiteIdsByScope[scope] = id;
-            callSites.Add(new BehaviorTreeCallSite(id, parentId, runNodeGuid, assetName));
+            callSites.Add(new BehaviorTreeCallSite(id, CallSiteIdOf(parentScope), runNodeGuid, assetName));
 
             return id;
         }
@@ -102,9 +99,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             callSiteIdsByScope[scope] = BehaviorTreeCallSite.RootId;
         }
 
-        public int CallSiteOf(BehaviorTreeNode node)
+        public int CallSiteOf(BehaviorTreeNode node) => CallSiteIdOf(node?.VariableScope);
+
+        private int CallSiteIdOf(BehaviorTreeVariableScope scope)
         {
-            var scope = node?.VariableScope;
             if (scope == null) return BehaviorTreeCallSite.RootId;
 
             return callSiteIdsByScope.TryGetValue(scope, out var id) ? id : BehaviorTreeCallSite.RootId;
@@ -125,12 +123,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var callSiteId = CallSiteOf(node);
 
             Record(BehaviorTreeEvent.NodeEntered(NextStamp(callSiteId), node.guid));
-
-            if (node is RunBehaviorTreeGraphNode runNode)
-            {
-                Record(BehaviorTreeEvent.SubTreePushed(
-                    NextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
-            }
+            RecordSubTreeEntered(node, callSiteId);
         }
 
         public void NodeExit(BehaviorTreeNode node, ExecutionStatus status)
@@ -139,13 +132,26 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             var callSiteId = CallSiteOf(node);
 
+            RecordSubTreeLeft(node, callSiteId);
+            Record(BehaviorTreeEvent.NodeExited(NextStamp(callSiteId), node.guid, status));
+        }
+
+        private void RecordSubTreeEntered(BehaviorTreeNode node, int callSiteId)
+        {
+            if (node is RunBehaviorTreeGraphNode runNode)
+            {
+                Record(BehaviorTreeEvent.SubTreePushed(
+                    NextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
+            }
+        }
+
+        private void RecordSubTreeLeft(BehaviorTreeNode node, int callSiteId)
+        {
             if (node is RunBehaviorTreeGraphNode runNode)
             {
                 Record(BehaviorTreeEvent.SubTreePopped(
                     NextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
             }
-
-            Record(BehaviorTreeEvent.NodeExited(NextStamp(callSiteId), node.guid, status));
         }
 
         public void NodeSkipped(BehaviorTreeNode node, ConditionalExecution guard)
@@ -173,7 +179,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 NextStamp(CallSiteOf(victim)),
                 victim.guid,
                 GuidOf(guard),
-                preemptor != null ? preemptor.NodeName : null,
+                NameOf(preemptor),
                 GuidOf(preemptor)));
         }
 
@@ -188,19 +194,31 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var callSiteId = CallSiteOf(guardedNode);
             var guardAtCallSite = new GuardAtCallSite(callSiteId, guard.guid);
 
-            if (lastGuardResults.TryGetValue(guardAtCallSite, out var previous) && previous == result) return;
+            if (IsSameAsLastResult(guardAtCallSite, result)) return;
 
             lastGuardResults[guardAtCallSite] = result;
 
             var stamp = NextStamp(callSiteId);
 
             Record(BehaviorTreeEvent.GuardChanged(stamp, guard.guid, guardedNode.guid, result));
+            CaptureTrace(guardedNode, guard, result, stamp);
+        }
 
-            if (IsTracing)
-            {
-                guardTraces.Add(GuardTraceCapture.Capture(
-                    guardedNode, guard, result, stamp.Tick, stamp.Sequence, callSiteId));
-            }
+        private bool IsSameAsLastResult(in GuardAtCallSite guardAtCallSite, bool result)
+        {
+            return lastGuardResults.TryGetValue(guardAtCallSite, out var previous) && previous == result;
+        }
+
+        private void CaptureTrace(
+            BehaviorTreeNode guardedNode,
+            ConditionalExecution guard,
+            bool result,
+            in BehaviorTreeEventStamp stamp)
+        {
+            if (!IsTracing) return;
+
+            guardTraces.Add(GuardTraceCapture.Capture(
+                guardedNode, guard, result, stamp.Tick, stamp.Sequence, stamp.CallSiteId));
         }
 
         public void VariableWrite(
@@ -239,9 +257,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             Record(
                 BehaviorTreeEvent.VariableWrittenOutsideTree(
                     NextStamp(BehaviorTreeCallSite.RootId),
-                    string.IsNullOrEmpty(writerName)
-                        ? BehaviorTreeRecordingNames.UnnamedExternalWriter
-                        : writerName,
+                    NameOfExternalWriter(writerName),
                     key,
                     variableKind,
                     BehaviorTreeEvent.DescribeValue(oldValue),
@@ -267,6 +283,15 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static Guid GuidOf(ConditionalExecution guard) => guard?.guid ?? Guid.Empty;
 
         private static Guid GuidOf(BehaviorTreeNode node) => node?.guid ?? Guid.Empty;
+
+        private static string NameOf(BehaviorTreeNode node) => node != null ? node.NodeName : null;
+
+        private static string NameOfExternalWriter(string writerName)
+        {
+            return string.IsNullOrEmpty(writerName)
+                ? BehaviorTreeRecordingNames.UnnamedExternalWriter
+                : writerName;
+        }
 
         private readonly struct GuardAtCallSite : IEquatable<GuardAtCallSite>
         {
