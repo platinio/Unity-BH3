@@ -30,11 +30,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         private static readonly Color GlyphColor = new(0.96f, 0.97f, 0.98f, 1.0f);
 
-        /// <summary>
-        /// Carries the hover text. Reused rather than allocated: this runs for every sub-tree node on every
-        /// repaint, and <c>GUI.Label</c> reads the content and keeps nothing.
-        /// </summary>
-        private static readonly GUIContent tooltipContent = new GUIContent();
+        /// <summary>Reused rather than allocated per repaint.</summary>
+        private static readonly GUIContent tooltipContent = new();
 
         private const string ExpandTooltip = "Expand this sub-tree's preview";
 
@@ -51,9 +48,11 @@ namespace ArcaneOnyx.BehaviorTree
             CanBeToggled(node) && ButtonOn(nodeRect).Contains(mousePosition);
 
         /// <summary>
-        /// Draws a minus while the preview is showing and a plus while it is collapsed: the glyph says what
-        /// the click will do, not what the node is.
+        /// The glyph says what the click will do rather than what the node is, so a collapsed preview
+        /// offers a plus and a showing one a minus.
         /// </summary>
+        public static bool ShowsPlusGlyph(RunBehaviorTreeGraphNode node) => node.IsSubTreePreviewCollapsed;
+
         public static void Draw(Rect nodeRect, RunBehaviorTreeGraphNode node)
         {
             if (!CanBeToggled(node)) return;
@@ -66,19 +65,28 @@ namespace ArcaneOnyx.BehaviorTree
             GUI.DrawTexture(button, Texture2D.whiteTexture);
 
             GUI.color = ButtonColor;
-            GUI.DrawTexture(Shrink(button, OutlineThickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(Inset(button, OutlineThickness), Texture2D.whiteTexture);
 
             GUI.color = GlyphColor;
             GUI.DrawTexture(HorizontalBarOf(button), Texture2D.whiteTexture);
 
-            if (node.IsSubTreePreviewCollapsed)
+            if (ShowsPlusGlyph(node))
             {
                 GUI.DrawTexture(VerticalBarOf(button), Texture2D.whiteTexture);
             }
 
             GUI.color = previousColor;
 
-            tooltipContent.tooltip = node.IsSubTreePreviewCollapsed ? ExpandTooltip : CollapseTooltip;
+            DrawHoverText(button, ShowsPlusGlyph(node) ? ExpandTooltip : CollapseTooltip);
+        }
+
+        /// <summary>
+        /// An empty label over the button. The button itself is drawn from textures, and a label is the
+        /// only thing IMGUI will attach hover text to.
+        /// </summary>
+        private static void DrawHoverText(Rect button, string text)
+        {
+            tooltipContent.tooltip = text;
             GUI.Label(button, tooltipContent);
         }
 
@@ -100,7 +108,11 @@ namespace ArcaneOnyx.BehaviorTree
                 GlyphThickness,
                 GlyphLength);
 
-        private static Rect Shrink(Rect rect, float by) =>
-            new Rect(rect.x + by, rect.y + by, rect.width - (by * 2.0f), rect.height - (by * 2.0f));
+        private static Rect Inset(Rect rect, float pixels) =>
+            new Rect(
+                rect.x + pixels,
+                rect.y + pixels,
+                rect.width - (pixels * 2.0f),
+                rect.height - (pixels * 2.0f));
     }
 }

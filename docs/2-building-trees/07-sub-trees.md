@@ -35,6 +35,7 @@ will do: **-** while the preview is showing, **+** while it is collapsed.
 The state is stored on the node, in the tree that calls the branch, so a canvas you collapsed opens
 collapsed the next time. It travels with the asset, which means it is not just your view of the tree:
 everyone who opens it afterwards sees the same thing, and collapsing one shows up as a change to commit.
+Two people collapsing different nodes in the same shared tree conflict like any other edit to it.
 
 Collapsing leaves a hole where the preview used to be, because the siblings are still spaced around the
 size it used to have. `bt_layout` closes it: a tree whose sub-tree node changed size is rearranged, not

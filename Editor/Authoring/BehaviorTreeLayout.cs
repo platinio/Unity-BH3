@@ -73,18 +73,15 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var branch in BranchTreesOf(asset.graph)) ArrangeBranchesFirst(branch, alreadySeen, arranged);
 
-            var resized = ResizeBranchNodes(asset.graph);
+            var resized = ResizeBranchNodes(asset.graph, out var aBranchChangedWidth);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
 
             // Collapsing a branch overlaps nothing, and leaves the canvas as wide as the preview that is
-            // no longer there: the siblings are still spaced around the size it used to be.
-            var wasArranged = overlapsBefore > 0 || resized;
+            // no longer there: the siblings are still spaced around the width it used to be.
+            var wasArranged = overlapsBefore > 0 || aBranchChangedWidth;
 
-            if (wasArranged)
-            {
-                Place(asset.graph);
-                SaveOnlyThisTree(asset);
-            }
+            if (wasArranged) Place(asset.graph);
+            if (wasArranged || resized) SaveOnlyThisTree(asset);
 
             arranged.Add(new ArrangedTree(
                 AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph)));
@@ -111,9 +108,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Writes each sub-tree node the size it is actually drawn at. Until this runs, a branch added from
         /// code is still the 150x100 it was created at and the canvas is measured against a fiction.
         /// </summary>
-        private static bool ResizeBranchNodes(BehaviorTreeGraph graph)
+        /// <param name="aBranchChangedWidth">
+        /// Whether a node ended up a different width, which is the part that moves its siblings: they are
+        /// spaced left to right, so a branch that collapsed leaves a hole the arrangement was built around.
+        /// A height that merely drifts moves nothing, and it drifts routinely -- a guard is counted here at
+        /// its nominal height and drawn at its measured one -- so placing the tree again on that would
+        /// discard a hand-made layout every run.
+        /// </param>
+        private static bool ResizeBranchNodes(BehaviorTreeGraph graph, out bool aBranchChangedWidth)
         {
             var resized = false;
+            aBranchChangedWidth = false;
 
             foreach (var node in graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
             {
@@ -122,6 +127,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 var drawnAs = SubTreeFootprint.DrawnAs(node);
                 if (drawnAs.size == node.Position.size) continue;
 
+                aBranchChangedWidth |= !Mathf.Approximately(drawnAs.width, node.Position.width);
                 node.Position = drawnAs;
                 resized = true;
             }

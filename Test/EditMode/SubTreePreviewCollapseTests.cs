@@ -89,14 +89,20 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void CollapsingLeavesTheBranchNodeWhereItAlreadySits()
+        public void ACollapsedBranchNodeIsNeverSmallerThanTheParametersItDeclares()
         {
-            BehaviorTreeLayout.Arrange(caller);
-            var wasAt = runsTheBranch.Position.position;
-
+            BehaviorTreeAuthoring.Declare(branch, "attackRange", 0.0f, BehaviorTreeAuthoring.DeclarationScope.Required);
+            BehaviorTreeAuthoring.Declare(branch, "idleTime", 3.5f, BehaviorTreeAuthoring.DeclarationScope.Optional);
+            BehaviorTreeAuthoring.Save(branch);
+            runsTheBranch.RefreshParameters();
             runsTheBranch.IsSubTreePreviewCollapsed = true;
 
-            Assert.That(SubTreeFootprint.DrawnAs(runsTheBranch).position, Is.EqualTo(wasAt));
+            var collapsed = SubTreeFootprint.DrawnAs(runsTheBranch);
+
+            Assert.That(collapsed.size, Is.EqualTo(ContractPortLayout.SizeForPorts(runsTheBranch)),
+                "the collapsed box reports a size the node is not drawn at, so the layout will keep correcting it");
+            Assert.That(collapsed.width, Is.GreaterThanOrEqualTo(SubTreeFootprint.EmptyNodeSize.x));
+            Assert.That(collapsed.height, Is.GreaterThanOrEqualTo(SubTreeFootprint.EmptyNodeSize.y));
         }
 
         [Test]
@@ -132,6 +138,44 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(runsTheBranch.Position.size, Is.EqualTo(SubTreeFootprint.EmptyNodeSize));
         }
 
+        /// <summary>
+        /// The layout writes each sub-tree node the size it is drawn at. If that size is one the node is
+        /// never actually drawn at, every run finds the same difference, rearranges the whole tree to correct
+        /// it and saves -- throwing away a hand-made layout each time, silently.
+        /// </summary>
+        [Test]
+        public void ArrangingACollapsedTreeTwiceLeavesItWhereTheFirstRunPutIt()
+        {
+            runsTheBranch.IsSubTreePreviewCollapsed = true;
+            BehaviorTreeLayout.Arrange(caller);
+            var arrangedAt = PositionsOfTheCaller();
+
+            var secondRun = BehaviorTreeLayout.Arrange(caller);
+
+            Assert.That(secondRun.Any(tree => tree.arranged), Is.False, "a tidy collapsed tree was rearranged");
+            Assert.That(PositionsOfTheCaller(), Is.EqualTo(arrangedAt));
+        }
+
+        /// <summary>
+        /// A guard is counted by the layout at its nominal height and drawn at its measured one, so the two
+        /// disagree for any branch holding one. That difference is a height, and a height moves no siblings.
+        /// </summary>
+        [Test]
+        public void ArrangingATreeWhoseBranchHoldsAGuardTwiceLeavesItWhereTheFirstRunPutIt()
+        {
+            var guarded = branch.graph.Nodes.OfType<WaitTime>().First();
+            BehaviorTreeAuthoring.GuardOnVariable(branch, guarded, "isAlerted", true, false, 0.0f, 0.0f);
+            BehaviorTreeAuthoring.Save(branch);
+
+            BehaviorTreeLayout.Arrange(caller);
+            var arrangedAt = PositionsOfTheCaller();
+
+            var secondRun = BehaviorTreeLayout.Arrange(caller);
+
+            Assert.That(secondRun.Any(tree => tree.arranged), Is.False, "a tidy guarded tree was rearranged");
+            Assert.That(PositionsOfTheCaller(), Is.EqualTo(arrangedAt));
+        }
+
         [Test]
         public void CollapsingABranchNarrowsTheCanvasTheTreeIsArrangedInto()
         {
@@ -142,6 +186,17 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeLayout.Arrange(caller);
 
             Assert.That(WidthOfTheArrangedCaller(), Is.LessThan(expandedWidth));
+        }
+
+        [Test]
+        public void CollapsingABranchLeavesItsSiblingsWhereTheyAreUntilTheTreeIsArranged()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+            var siblingWasAt = caller.graph.Nodes.OfType<WaitTime>().Single().Position.position;
+
+            runsTheBranch.IsSubTreePreviewCollapsed = true;
+
+            Assert.That(caller.graph.Nodes.OfType<WaitTime>().Single().Position.position, Is.EqualTo(siblingWasAt));
         }
 
         [Test]
@@ -171,6 +226,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             return nodes.Max(node => node.Position.xMax) - nodes.Min(node => node.Position.xMin);
         }
+
+        private Rect[] PositionsOfTheCaller() =>
+            caller.graph.Nodes.Select(node => node.Position).ToArray();
 
         /// <summary>
         /// Reads the saved file back as a genuinely fresh deserialization.

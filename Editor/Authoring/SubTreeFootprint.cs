@@ -66,7 +66,20 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public static Rect DrawnAs(RunBehaviorTreeGraphNode node) =>
             node.DrawsSubTreePreview
                 ? BoxAt(node.Position.position, BoundsOf(node.BehaviorTreeGraphAsset.graph))
-                : new Rect(node.Position.position, EmptyNodeSize);
+                : PlainBoxAt(node);
+
+        /// <summary>
+        /// The box a node is drawn as when it is not drawing a preview: <see cref="EmptyNodeSize"/>, grown
+        /// if the parameters it declares need more room than that.
+        /// <para>
+        /// Measured rather than assumed, because the widget hands a node in this state to the base widget,
+        /// which sizes it to its port rows. Returning a flat <see cref="EmptyNodeSize"/> here reported a
+        /// size the node is never drawn at, and <see cref="BehaviorTreeLayout"/> then rearranged the tree
+        /// on every run to correct a difference that came straight back.
+        /// </para>
+        /// </summary>
+        public static Rect PlainBoxAt(BehaviorTreeNode node) =>
+            new Rect(node.Position.position, ContractPortLayout.SizeForPorts(node));
 
         private static float WithTheGroupHeader(float guards, BehaviorTreeNode node) =>
             node.DrawsSubTreePreview ? guards + GroupHeaderLift : guards;

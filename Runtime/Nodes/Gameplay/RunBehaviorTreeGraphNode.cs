@@ -22,10 +22,7 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize]
         private List<BehaviorTreeGraphParameter> parameters = new();
 
-        /// <summary>
-        /// Travels with the asset, so collapsing a branch is not one person's view of the tree: everyone
-        /// who opens it afterwards sees it collapsed too.
-        /// </summary>
+        /// <summary>Travels with the asset, so it is not one person's view of the tree.</summary>
         [Serialize]
         public bool IsSubTreePreviewCollapsed { get; set; }
 

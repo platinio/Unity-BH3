@@ -5,6 +5,7 @@ using ArcaneOnyx.GraphCore;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using MouseButton = Unity.VisualScripting.MouseButton;
 
 namespace ArcaneOnyx.BehaviorTree
 {
@@ -20,6 +21,13 @@ namespace ArcaneOnyx.BehaviorTree
             get => element.Position;
             set => element.Position = value;
         }
+
+        /// <summary>
+        /// This node owns its own size in both states: the frame is measured from the sub-tree, and the
+        /// plain box from <see cref="SubTreeFootprint.PlainBoxAt"/>. Letting the base shorten it to its port
+        /// rows afterwards left the node drawn at a height nothing else could predict.
+        /// </summary>
+        protected override bool SizesHeightToPorts => false;
         
         private static readonly GUIContent maxHeadLabelSizeContent = new GUIContent("M");
         
@@ -27,6 +35,9 @@ namespace ArcaneOnyx.BehaviorTree
         {
             RunBehaviorTreeNodeElementWidgetStyles.label.fontSize = RunBehaviorTreeNodeElementWidgetStyles.labelSelected.fontSize = Mathf.RoundToInt(RunBehaviorTreeNodeElementWidgetStyles.headerFontSize / graph.zoom);
         }
+
+        /// <summary>The element, typed. This widget is registered for exactly one node type.</summary>
+        private RunBehaviorTreeGraphNode RunNode => (RunBehaviorTreeGraphNode)element;
 
         private BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
         {
@@ -54,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (!element.DrawsSubTreePreview || willCauseRecursion)
             {
-                position = new Rect(position.position, SubTreeFootprint.EmptyNodeSize);
+                position = SubTreeFootprint.PlainBoxAt(element);
                 base.CachePosition();
                 base.DrawForeground(offset, IsRepaint, useSelection);
                 return;
@@ -87,10 +98,8 @@ namespace ArcaneOnyx.BehaviorTree
         }
 
         /// <summary>
-        /// The collapse button, in the overlay pass for the reason the base class documents: this widget
-        /// replaces the foreground body without calling base, and the overlay is the one pass that reaches
-        /// it. Only the host canvas runs that pass, which is what keeps the button out of a preview, where
-        /// it would be drawn and could not be clicked.
+        /// The collapse button. Only the host canvas runs the overlay pass, which is what keeps the button
+        /// out of a preview, where it would be drawn and could not be clicked.
         /// </summary>
         public override void DrawOverlay()
         {
@@ -98,7 +107,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (!e.IsRepaint || !element.IsVisible) return;
 
-            if (element is RunBehaviorTreeGraphNode runNode) SubTreePreviewToggle.Draw(position, runNode);
+            SubTreePreviewToggle.Draw(position, RunNode);
         }
 
         /// <summary>
@@ -107,11 +116,10 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public override void HandleInput()
         {
-            if (e.IsMouseDown(Unity.VisualScripting.MouseButton.Left) &&
-                element is RunBehaviorTreeGraphNode runNode &&
-                SubTreePreviewToggle.IsHit(position, runNode, mousePosition))
+            if (e.IsMouseDown(MouseButton.Left) &&
+                SubTreePreviewToggle.IsHit(position, RunNode, mousePosition))
             {
-                TogglePreview(runNode);
+                TogglePreview(RunNode);
                 e.Use();
                 return;
             }
@@ -169,7 +177,11 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 if (!graphElement.DrawInSubTree) continue;
 
-                if (graphElement is RunBehaviorTreeGraphNode runNode && subCanvas.Widget(runNode) is RunBehaviorTreeNodeElementWidget w)
+                // A collapsed sub-tree node is not a frame but an opaque box, so it waits for the last
+                // pass with the other nodes rather than being painted over by the wires.
+                if (graphElement is RunBehaviorTreeGraphNode runNode
+                    && runNode.DrawsSubTreePreview
+                    && subCanvas.Widget(runNode) is RunBehaviorTreeNodeElementWidget w)
                 {
                     w.DrawSubTreePreview(offset);
                 }
@@ -204,7 +216,8 @@ namespace ArcaneOnyx.BehaviorTree
 
             foreach (var graphElement in behaviorTreeGraph.elements)
             {
-                if (!graphElement.DrawInSubTree || graphElement is RunBehaviorTreeGraphNode) continue;
+                if (!graphElement.DrawInSubTree) continue;
+                if (graphElement is BehaviorTreeNode alreadyDrawn && alreadyDrawn.DrawsSubTreePreview) continue;
 
                 if (graphElement is BehaviorTreeNode node && subCanvas.Widget(node) is BehaviorTreeNodeElementWidget w)
                 {
@@ -263,18 +276,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public override void DrawForeground()
         {
-            var runBehaviorTreeGraphNode = element as RunBehaviorTreeGraphNode;
-            if (runBehaviorTreeGraphNode == null || runBehaviorTreeGraphNode.BehaviorTreeGraphAsset == null)
-            {
-                // Nothing referenced is nothing to recurse into, and the title below reads this rather than
-                // working it out again.
-                willCauseRecursion = false;
-
-                position = new Rect(position.position, SubTreeFootprint.EmptyNodeSize);
-                base.DrawForeground(Vector2.zero, e.IsRepaint);
-                return;
-            }
-
             DrawForeground(Vector2.zero, e.IsRepaint);
         }
 
