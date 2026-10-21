@@ -2,157 +2,110 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BehaviorTree
 {
-    /// <summary>
-    /// The button that collapses a sub-tree node's preview to a plain box and expands it again.
-    /// </summary>
     public static class SubTreePreviewToggle
     {
-        /// <summary>The priority badge's size, so the two markers read as a pair across the node's top.</summary>
         private const float ButtonSize = 26.0f;
 
+        private const float GapAfterTheButton = 10.0f;
+
+        private const float OutlineThickness = 2.0f;
 
         private const float GlyphThickness = 3.0f;
 
         private const float GlyphLength = 12.0f;
 
-        private const float OutlineThickness = 2.0f;
-
         private static readonly Color ButtonColor = new(0.20f, 0.22f, 0.26f, 0.96f);
 
-        /// <summary>A dark ring, so the button reads against a pale node header as well as a dark one.</summary>
         private static readonly Color OutlineColor = new(0.06f, 0.07f, 0.09f, 0.9f);
 
         private static readonly Color GlyphColor = new(0.96f, 0.97f, 0.98f, 1.0f);
-
-        /// <summary>Reused rather than allocated per repaint.</summary>
-        private static readonly GUIContent tooltipContent = new();
 
         private const string ExpandTooltip = "Expand this sub-tree's preview";
 
         private const string CollapseTooltip = "Collapse this sub-tree to a named box";
 
-        /// <summary>
-        /// Centred on the node's top-left corner, so a quarter of it covers the corner and the rest hangs
-        /// outside the box.
-        /// <para>
-        /// Outside rather than inside because a node has almost no room there: the port rows begin a few
-        /// pixels below the top edge, and a collapsed node is little else.
-        /// </para>
-        /// </summary>
+        /// <summary>Reused rather than allocated per repaint.</summary>
+        private static readonly GUIContent tooltipContent = new();
+
         public static Rect ButtonOn(Rect nodeRect) =>
-            new Rect(
-                nodeRect.x - (ButtonSize / 2.0f),
-                nodeRect.y - (ButtonSize / 2.0f),
-                ButtonSize,
-                ButtonSize);
+            CentredOn(nodeRect.position, ButtonSize);
 
-        /// <summary>
-        /// How much room the button takes at a node's top-left corner, so a header drawn in the same band
-        /// can start beside it instead of underneath it.
-        /// </summary>
-        public static float RoomNeededAtTheCorner => ButtonOn(new Rect(0.0f, 0.0f, 0.0f, 0.0f)).xMax;
-
-        /// <summary>
-        /// Enough to clear the button and whatever the next marker hangs past the corner by: the breakpoint
-        /// dot, the one marker that follows it, is anchored a little left of the node edge itself.
-        /// </summary>
-        private const float GapAfterTheButton = 10.0f;
-
-        /// <summary>Whether this node shows a button at all, which is every node but this one.</summary>
         public static bool IsShownOn(BehaviorTreeNode node) =>
-            node is RunBehaviorTreeGraphNode runNode && CanBeToggled(runNode);
+            node is RunBehaviorTreeGraphNode runNode && RunsABranch(runNode);
 
         /// <summary>
-        /// How much of this node's top-left corner the button claims, so another marker drawn there can
-        /// start clear of it. Zero for a node that shows none.
+        /// How much of a node's top-left corner the button claims, so another marker drawn there can start
+        /// clear of it.
         /// </summary>
         public static float RoomTakenOn(BehaviorTreeNode node) =>
-            IsShownOn(node) ? RoomNeededAtTheCorner + GapAfterTheButton : 0.0f;
+            IsShownOn(node) ? (ButtonSize / 2.0f) + GapAfterTheButton : 0.0f;
 
-        /// <summary>
-        /// The node's rect grown to take the button in.
-        /// <para>
-        /// A canvas offers a widget only the events that land inside its hot area, and that area is the
-        /// node's own rect. Three quarters of this button hangs outside the box, so without this the only
-        /// clickable part of it was the quarter overlapping the corner.
-        /// </para>
-        /// </summary>
-        public static Rect WithTheButton(Rect nodeRect, BehaviorTreeNode node)
-        {
-            if (!IsShownOn(node)) return nodeRect;
-
-            var button = ButtonOn(nodeRect);
-
-            return Rect.MinMaxRect(
-                Mathf.Min(nodeRect.xMin, button.xMin),
-                Mathf.Min(nodeRect.yMin, button.yMin),
-                Mathf.Max(nodeRect.xMax, button.xMax),
-                Mathf.Max(nodeRect.yMax, button.yMax));
-        }
+        /// <summary>A canvas offers a widget only the events landing in its hot area.</summary>
+        public static Rect HotAreaFor(Rect nodeRect, BehaviorTreeNode node) =>
+            IsShownOn(node) ? Union(nodeRect, ButtonOn(nodeRect)) : nodeRect;
 
         public static bool IsHit(Rect nodeRect, RunBehaviorTreeGraphNode node, Vector2 mousePosition) =>
-            CanBeToggled(node) && ButtonOn(nodeRect).Contains(mousePosition);
+            RunsABranch(node) && ButtonOn(nodeRect).Contains(mousePosition);
 
-        /// <summary>
-        /// The glyph says what the click will do rather than what the node is, so a collapsed preview
-        /// offers a plus and a showing one a minus.
-        /// </summary>
-        public static bool ShowsPlusGlyph(RunBehaviorTreeGraphNode node) => node.IsSubTreePreviewCollapsed;
+        /// <summary>The glyph says what the click will do, not what the node is.</summary>
+        public static bool OffersToExpand(RunBehaviorTreeGraphNode node) =>
+            node.IsSubTreePreviewCollapsed;
 
         public static void Draw(Rect nodeRect, RunBehaviorTreeGraphNode node)
         {
-            if (!CanBeToggled(node)) return;
+            if (!RunsABranch(node)) return;
 
             var button = ButtonOn(nodeRect);
-            var previousColor = GUI.color;
 
-            // Ring first, face on top of it, so the outline reads as a border rather than a halo.
-            GUI.color = OutlineColor;
-            GUI.DrawTexture(button, Texture2D.whiteTexture);
-
-            GUI.color = ButtonColor;
-            GUI.DrawTexture(Inset(button, OutlineThickness), Texture2D.whiteTexture);
-
-            GUI.color = GlyphColor;
-            GUI.DrawTexture(HorizontalBarOf(button), Texture2D.whiteTexture);
-
-            if (ShowsPlusGlyph(node))
-            {
-                GUI.DrawTexture(VerticalBarOf(button), Texture2D.whiteTexture);
-            }
-
-            GUI.color = previousColor;
-
-            DrawHoverText(button, ShowsPlusGlyph(node) ? ExpandTooltip : CollapseTooltip);
+            DrawFace(button);
+            DrawGlyph(button, node);
+            DrawHoverText(button, OffersToExpand(node) ? ExpandTooltip : CollapseTooltip);
         }
 
-        /// <summary>
-        /// An empty label over the button. The button itself is drawn from textures, and a label is the
-        /// only thing IMGUI will attach hover text to.
-        /// </summary>
+        private static void DrawFace(Rect button)
+        {
+            Fill(button, OutlineColor);
+            Fill(Inset(button, OutlineThickness), ButtonColor);
+        }
+
+        private static void DrawGlyph(Rect button, RunBehaviorTreeGraphNode node)
+        {
+            Fill(HorizontalBarOf(button), GlyphColor);
+
+            if (OffersToExpand(node)) Fill(VerticalBarOf(button), GlyphColor);
+        }
+
+        /// <summary>A label is the only thing IMGUI will attach hover text to, and this button is textures.</summary>
         private static void DrawHoverText(Rect button, string text)
         {
             tooltipContent.tooltip = text;
             GUI.Label(button, tooltipContent);
         }
 
-        /// <summary>A node with no branch referenced has no preview either way, so it gets no button.</summary>
-        private static bool CanBeToggled(RunBehaviorTreeGraphNode node) =>
+        private static void Fill(Rect rect, Color color)
+        {
+            var previousColor = GUI.color;
+
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+
+            GUI.color = previousColor;
+        }
+
+        private static bool RunsABranch(RunBehaviorTreeGraphNode node) =>
             node != null && node.BehaviorTreeGraphAsset != null;
 
+        private static Rect CentredOn(Vector2 point, float size) =>
+            new Rect(point.x - (size / 2.0f), point.y - (size / 2.0f), size, size);
+
         private static Rect HorizontalBarOf(Rect button) =>
-            new Rect(
-                button.center.x - (GlyphLength / 2.0f),
-                button.center.y - (GlyphThickness / 2.0f),
-                GlyphLength,
-                GlyphThickness);
+            CentredOn(button.center, GlyphLength, GlyphThickness);
 
         private static Rect VerticalBarOf(Rect button) =>
-            new Rect(
-                button.center.x - (GlyphThickness / 2.0f),
-                button.center.y - (GlyphLength / 2.0f),
-                GlyphThickness,
-                GlyphLength);
+            CentredOn(button.center, GlyphThickness, GlyphLength);
+
+        private static Rect CentredOn(Vector2 point, float width, float height) =>
+            new Rect(point.x - (width / 2.0f), point.y - (height / 2.0f), width, height);
 
         private static Rect Inset(Rect rect, float pixels) =>
             new Rect(
@@ -160,5 +113,12 @@ namespace ArcaneOnyx.BehaviorTree
                 rect.y + pixels,
                 rect.width - (pixels * 2.0f),
                 rect.height - (pixels * 2.0f));
+
+        private static Rect Union(Rect first, Rect second) =>
+            Rect.MinMaxRect(
+                Mathf.Min(first.xMin, second.xMin),
+                Mathf.Min(first.yMin, second.yMin),
+                Mathf.Max(first.xMax, second.xMax),
+                Mathf.Max(first.yMax, second.yMax));
     }
 }

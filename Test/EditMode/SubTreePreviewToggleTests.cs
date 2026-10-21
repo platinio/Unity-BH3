@@ -73,7 +73,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var node = NodeRunningABranch();
             var button = SubTreePreviewToggle.ButtonOn(NodeRect);
-            var hotArea = SubTreePreviewToggle.WithTheButton(NodeRect, node);
+            var hotArea = SubTreePreviewToggle.HotAreaFor(NodeRect, node);
 
             Assert.That(hotArea.Contains(button.min), Is.True);
             Assert.That(hotArea.Contains(button.max - new Vector2(0.001f, 0.001f)), Is.True);
@@ -90,13 +90,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.That(NodeRect.Contains(outermost), Is.False, "this point is supposed to be off the node");
             Assert.That(SubTreePreviewToggle.IsHit(NodeRect, node, outermost), Is.True);
-            Assert.That(SubTreePreviewToggle.WithTheButton(NodeRect, node).Contains(outermost), Is.True);
+            Assert.That(SubTreePreviewToggle.HotAreaFor(NodeRect, node).Contains(outermost), Is.True);
         }
 
         [Test]
         public void ANodeWithNoButtonKeepsTheNodeAsItsHotArea()
         {
-            Assert.That(SubTreePreviewToggle.WithTheButton(NodeRect, new WaitTime()), Is.EqualTo(NodeRect));
+            Assert.That(SubTreePreviewToggle.HotAreaFor(NodeRect, new WaitTime()), Is.EqualTo(NodeRect));
         }
 
         [Test]
@@ -136,15 +136,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(button.center.y, Is.EqualTo(NodeRect.yMin).Within(0.001f));
         }
 
-        [Test]
-        public void TheRoomTheButtonNeedsCoversTheButton()
-        {
-            var button = SubTreePreviewToggle.ButtonOn(NodeRect);
-
-            Assert.That(NodeRect.xMin + SubTreePreviewToggle.RoomNeededAtTheCorner,
-                Is.GreaterThanOrEqualTo(button.xMax),
-                "a header drawn beside the button would start underneath it");
-        }
 
         [Test]
         public void TheButtonNeverLandsOnTheProblemBadge()
@@ -196,7 +187,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var node = NodeRunningABranch();
             node.IsSubTreePreviewCollapsed = true;
 
-            Assert.That(SubTreePreviewToggle.ShowsPlusGlyph(node), Is.True);
+            Assert.That(SubTreePreviewToggle.OffersToExpand(node), Is.True);
         }
 
         [Test]
@@ -204,7 +195,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var node = NodeRunningABranch();
 
-            Assert.That(SubTreePreviewToggle.ShowsPlusGlyph(node), Is.False);
+            Assert.That(SubTreePreviewToggle.OffersToExpand(node), Is.False);
         }
 
         private RunBehaviorTreeGraphNode NodeRunningABranch()

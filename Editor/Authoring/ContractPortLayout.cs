@@ -74,10 +74,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return position;
         }
 
-        /// <summary>
-        /// The same measurement without writing it, for a caller that needs to know how big a node will be
-        /// drawn before anything draws it.
-        /// </summary>
         public static Vector2 SizeForPorts(BehaviorTreeNode node)
         {
             if (node == null) return new Vector2(MinimumWidth, MinimumHeight);

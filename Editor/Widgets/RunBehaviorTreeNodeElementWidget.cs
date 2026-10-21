@@ -22,11 +22,6 @@ namespace ArcaneOnyx.BehaviorTree
             set => element.Position = value;
         }
 
-        /// <summary>
-        /// This node owns its own size in both states: the frame is measured from the sub-tree, and the
-        /// plain box from <see cref="SubTreeFootprint.PlainBoxAt"/>. Letting the base shorten it to its port
-        /// rows afterwards left the node drawn at a height nothing else could predict.
-        /// </summary>
         protected override bool SizesHeightToPorts => false;
         
         private static readonly GUIContent maxHeadLabelSizeContent = new GUIContent("M");
@@ -36,14 +31,9 @@ namespace ArcaneOnyx.BehaviorTree
             RunBehaviorTreeNodeElementWidgetStyles.label.fontSize = RunBehaviorTreeNodeElementWidgetStyles.labelSelected.fontSize = Mathf.RoundToInt(RunBehaviorTreeNodeElementWidgetStyles.headerFontSize / graph.zoom);
         }
 
-        /// <summary>The element, typed. This widget is registered for exactly one node type.</summary>
         private RunBehaviorTreeGraphNode RunNode => (RunBehaviorTreeGraphNode)element;
 
-        /// <summary>
-        /// The node and its collapse button. The canvas decides which widget a click belongs to from this,
-        /// so leaving it as the node alone made most of the button unclickable.
-        /// </summary>
-        public override Rect hotArea => SubTreePreviewToggle.WithTheButton(position, element);
+        public override Rect hotArea => SubTreePreviewToggle.HotAreaFor(position, element);
 
         private BehaviorTreeGraphAsset GetBehaviorTreeGraphAsset()
         {
@@ -103,10 +93,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.DrawTitle(offset, willCauseRecursion ? "RECURSION ERROR!" : element.NodeName);
         }
 
-        /// <summary>
-        /// The collapse button. Only the host canvas runs the overlay pass, which is what keeps the button
-        /// out of a preview, where it would be drawn and could not be clicked.
-        /// </summary>
+        /// <summary>Only the host canvas runs this pass, which keeps the button out of a preview.</summary>
         public override void DrawOverlay()
         {
             base.DrawOverlay();
@@ -116,10 +103,7 @@ namespace ArcaneOnyx.BehaviorTree
             SubTreePreviewToggle.Draw(position, RunNode);
         }
 
-        /// <summary>
-        /// Takes the click before the base does. The whole frame is this node's hot area, so left to itself
-        /// the base would read the press as the start of a drag and the button would never fire.
-        /// </summary>
+        /// <summary>The base reads an unclaimed press as the start of a drag.</summary>
         public override void HandleInput()
         {
             if (e.IsMouseDown(MouseButton.Left) &&
@@ -133,12 +117,7 @@ namespace ArcaneOnyx.BehaviorTree
             base.HandleInput();
         }
 
-        /// <summary>
-        /// Writes the node the size it is about to be drawn at, rather than leaving that to the next
-        /// repaint. <c>Position</c> is serialized and read by everything that measures the canvas, so a
-        /// collapsed node carrying the frame's old size would be laid out as though its preview were still
-        /// there.
-        /// </summary>
+        /// <summary><c>Position</c> is serialized, so it is written now rather than at the next repaint.</summary>
         private void TogglePreview(RunBehaviorTreeGraphNode runNode)
         {
             UndoUtility.RecordEditedObject(
@@ -256,7 +235,7 @@ namespace ArcaneOnyx.BehaviorTree
             var labelPosition = new Rect
             (
                 box.x + RunBehaviorTreeNodeElementWidgetStyles.label.margin.left
-                      + SubTreePreviewToggle.RoomNeededAtTheCorner,
+                      + SubTreePreviewToggle.RoomTakenOn(element),
                 box.y + RunBehaviorTreeNodeElementWidgetStyles.label.margin.top,
                 LabelWidth(name),
                 RunBehaviorTreeNodeElementWidgetStyles.group.border.top

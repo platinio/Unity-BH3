@@ -301,42 +301,17 @@ namespace ArcaneOnyx.BehaviorTree
 
         private const float PROBLEM_BADGE_SIZE = 18.0f;
 
-        /// <summary>How far a corner marker hangs past the edge it is anchored to.</summary>
         private const float CORNER_MARKER_OVERHANG = 6.0f;
 
-        /// <summary>The clear strip between the bottom of the node's name and the bottom of the box.</summary>
+        private const float CORNER_MARKER_INSET = 2.0f;
+
         private const float GAP_BELOW_THE_NAME = 5.0f;
 
-        /// <summary>
-        /// Where a marker hung from a bottom corner starts. The node's name is drawn across the bottom of
-        /// the box, so anchoring to the edge itself would put the marker on the end of the name.
-        /// </summary>
         public static float BelowTheNameOf(Rect nodeRect) => nodeRect.yMax - GAP_BELOW_THE_NAME;
 
-        /// <summary>
-        /// The node's bottom-left corner.
-        /// <para>
-        /// It used to hang off the top-left, where it overlapped both the breakpoint dot and the problem
-        /// badge, and where the collapse toggle now goes. The rect it is drawn at is the rect this
-        /// returns: the draw used to shift it again by (-10, 20), so what was cached and what appeared
-        /// were never the same rectangle and nothing could reason about either.
-        /// </para>
-        /// </summary>
         public static Rect ExecutionStateIconOn(Rect nodeRect) =>
             new Rect(new Vector2(nodeRect.x + CORNER_MARKER_INSET, BelowTheNameOf(nodeRect)), EXECUTION_STATE_ICON_SIZE);
 
-        /// <summary>How far a corner marker sits in from the side it is anchored to.</summary>
-        private const float CORNER_MARKER_INSET = 2.0f;
-
-        /// <summary>
-        /// The node's bottom-right corner.
-        /// <para>
-        /// It used to straddle the top-left, which is now the collapse toggle's and which the
-        /// execution-status icon already overhangs. Of the four corners this is the one nothing else
-        /// claims: the priority badge owns the top-right, and the node's name is drawn centred across the
-        /// bottom, so the right end of that band is clear.
-        /// </para>
-        /// </summary>
         public static Rect ProblemBadgeOn(Rect nodeRect) =>
             new Rect(
                 nodeRect.xMax - PROBLEM_BADGE_SIZE + CORNER_MARKER_OVERHANG,

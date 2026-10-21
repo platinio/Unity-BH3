@@ -106,10 +106,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Writes each sub-tree node the size it is actually drawn at. Until this runs, a branch added from
         /// code is still the 150x100 it was created at and the canvas is measured against a fiction.
         /// </summary>
-        /// <param name="arrangedAroundAStaleWidth">
-        /// Whether the tree is spaced around a width a branch no longer has, which is the only thing here
-        /// worth arranging it again for.
-        /// </param>
         private static bool ResizeBranchNodes(BehaviorTreeGraph graph, out bool arrangedAroundAStaleWidth)
         {
             var resized = false;
@@ -138,11 +134,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// directions: a tree saved collapsed is already spaced correctly for it and must be left alone
         /// when it is opened, and a branch somebody added nodes to needs arranging again without anything
         /// having been collapsed at all.
-        /// </para>
-        /// <para>
-        /// Only a width, because siblings are spaced left to right: a height that drifts moves nothing,
-        /// and it drifts routinely -- a guard is counted here at its nominal height and drawn at its
-        /// measured one.
         /// </para>
         /// </summary>
         private static bool IsArrangedAroundAStaleWidth(RunBehaviorTreeGraphNode node, Rect drawnAs) =>
