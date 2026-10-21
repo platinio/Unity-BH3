@@ -176,6 +176,77 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.That(PositionsOfTheCaller(), Is.EqualTo(arrangedAt));
         }
 
+        /// <summary>
+        /// Being collapsed is not by itself a reason to arrange a tree: one that was saved collapsed is
+        /// already spaced for it. Arranging on the flag rather than on a stale width would rewrite every
+        /// node's position, and save it, each time somebody opened such a tree.
+        /// </summary>
+        [Test]
+        public void OpeningATreeThatWasSavedCollapsedDoesNotRearrangeIt()
+        {
+            runsTheBranch.IsSubTreePreviewCollapsed = true;
+            BehaviorTreeLayout.Arrange(caller);
+            BehaviorTreeAuthoring.Save(caller);
+
+            var reopened = Reload();
+            var arrangedAt = reopened.graph.Nodes.Select(node => node.Position).ToArray();
+
+            var opening = BehaviorTreeLayout.Arrange(reopened);
+
+            Assert.That(System.Linq.Enumerable.Any(opening, tree => tree.arranged), Is.False,
+                "a tree that was saved collapsed was rearranged just for being collapsed");
+            Assert.That(reopened.graph.Nodes.Select(node => node.Position).ToArray(), Is.EqualTo(arrangedAt));
+        }
+
+        /// <summary>
+        /// The case that separates "the arrangement is stale" from "the branch is collapsed" with nothing
+        /// else to fall back on. Pointing a node at a smaller branch narrows it, which leaves a hole and
+        /// overlaps nothing -- so neither the overlap count nor the collapsed flag notices, and only the
+        /// width does.
+        /// </summary>
+        [Test]
+        public void PointingANodeAtASmallerBranchRearrangesTheTreeThatRunsIt()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+
+            var smaller = BehaviorTreeAuthoring.CreateTree(Folder + "/Smaller.asset");
+            BehaviorTreeAuthoring.Connect(smaller, smaller.graph.EntryNode,
+                BehaviorTreeAuthoring.AddNode<WaitTime>(smaller, 0.0f, 0.0f));
+            BehaviorTreeAuthoring.Save(smaller);
+            BehaviorTreeLayout.Arrange(smaller);
+
+            runsTheBranch.SetBehaviorTreeGraphAsset(smaller);
+
+            var afterShrinking = BehaviorTreeLayout.Arrange(caller);
+
+            Assert.That(runsTheBranch.IsSubTreePreviewCollapsed, Is.False, "nothing here was collapsed");
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.Zero,
+                "a narrower node overlaps nothing, so the overlap count cannot be what catches this");
+            Assert.That(System.Linq.Enumerable.Any(afterShrinking, tree => tree.arranged), Is.True,
+                "the tree is still spaced around a width the branch no longer has");
+        }
+
+        /// <summary>
+        /// The other direction: a branch that grew needs arranging again although nothing was collapsed.
+        /// </summary>
+        [Test]
+        public void ABranchThatGrewRearrangesTheTreeThatRunsIt()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+
+            var sequence = branch.graph.Nodes.OfType<Sequence>().Single();
+            foreach (var _ in Enumerable.Range(0, 4))
+            {
+                BehaviorTreeAuthoring.Connect(branch, sequence,
+                    BehaviorTreeAuthoring.AddNode<WaitTime>(branch, 0.0f, 0.0f));
+            }
+            BehaviorTreeAuthoring.Save(branch);
+
+            var afterGrowing = BehaviorTreeLayout.Arrange(caller);
+
+            Assert.That(System.Linq.Enumerable.Any(afterGrowing, tree => tree.arranged), Is.True);
+        }
+
         [Test]
         public void CollapsingABranchNarrowsTheCanvasTheTreeIsArrangedInto()
         {

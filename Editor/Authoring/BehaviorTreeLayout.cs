@@ -73,12 +73,10 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var branch in BranchTreesOf(asset.graph)) ArrangeBranchesFirst(branch, alreadySeen, arranged);
 
-            var resized = ResizeBranchNodes(asset.graph, out var aBranchChangedWidth);
+            var resized = ResizeBranchNodes(asset.graph, out var arrangedAroundAStaleWidth);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
 
-            // Collapsing a branch overlaps nothing, and leaves the canvas as wide as the preview that is
-            // no longer there: the siblings are still spaced around the width it used to be.
-            var wasArranged = overlapsBefore > 0 || aBranchChangedWidth;
+            var wasArranged = overlapsBefore > 0 || arrangedAroundAStaleWidth;
 
             if (wasArranged) Place(asset.graph);
             if (wasArranged || resized) SaveOnlyThisTree(asset);
@@ -108,17 +106,14 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Writes each sub-tree node the size it is actually drawn at. Until this runs, a branch added from
         /// code is still the 150x100 it was created at and the canvas is measured against a fiction.
         /// </summary>
-        /// <param name="aBranchChangedWidth">
-        /// Whether a node ended up a different width, which is the part that moves its siblings: they are
-        /// spaced left to right, so a branch that collapsed leaves a hole the arrangement was built around.
-        /// A height that merely drifts moves nothing, and it drifts routinely -- a guard is counted here at
-        /// its nominal height and drawn at its measured one -- so placing the tree again on that would
-        /// discard a hand-made layout every run.
+        /// <param name="arrangedAroundAStaleWidth">
+        /// Whether the tree is spaced around a width a branch no longer has, which is the only thing here
+        /// worth arranging it again for.
         /// </param>
-        private static bool ResizeBranchNodes(BehaviorTreeGraph graph, out bool aBranchChangedWidth)
+        private static bool ResizeBranchNodes(BehaviorTreeGraph graph, out bool arrangedAroundAStaleWidth)
         {
             var resized = false;
-            aBranchChangedWidth = false;
+            arrangedAroundAStaleWidth = false;
 
             foreach (var node in graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
             {
@@ -127,13 +122,31 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 var drawnAs = SubTreeFootprint.DrawnAs(node);
                 if (drawnAs.size == node.Position.size) continue;
 
-                aBranchChangedWidth |= !Mathf.Approximately(drawnAs.width, node.Position.width);
+                arrangedAroundAStaleWidth |= IsArrangedAroundAStaleWidth(node, drawnAs);
                 node.Position = drawnAs;
                 resized = true;
             }
 
             return resized;
         }
+
+        /// <summary>
+        /// Whether the width this node is spaced around is no longer the width it will be drawn at.
+        /// <para>
+        /// Deliberately not "has the branch been collapsed". Collapsing is one way to get here, but the
+        /// question is whether the <em>arrangement</em> is stale, and the two part company in both
+        /// directions: a tree saved collapsed is already spaced correctly for it and must be left alone
+        /// when it is opened, and a branch somebody added nodes to needs arranging again without anything
+        /// having been collapsed at all.
+        /// </para>
+        /// <para>
+        /// Only a width, because siblings are spaced left to right: a height that drifts moves nothing,
+        /// and it drifts routinely -- a guard is counted here at its nominal height and drawn at its
+        /// measured one.
+        /// </para>
+        /// </summary>
+        private static bool IsArrangedAroundAStaleWidth(RunBehaviorTreeGraphNode node, Rect drawnAs) =>
+            !Mathf.Approximately(drawnAs.width, node.Position.width);
 
         private static void Place(BehaviorTreeGraph graph)
         {
