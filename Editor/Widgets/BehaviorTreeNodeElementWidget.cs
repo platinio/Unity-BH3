@@ -61,7 +61,7 @@ namespace ArcaneOnyx.BehaviorTree
         private readonly Vector2 ICON_POSITION_OFFSET = new Vector2(28.0f, 0.0f);
         private readonly Vector2 ICON_SIZE = new Vector2(65.0f, 65.0f);
         private readonly Vector2 TITLE_POSITION_OFFSET = new Vector2(-15.0f, -40.0f);
-        private readonly Vector2 LAST_EXECUTION_STATE_ICON_OFFSET = new Vector2(-15.0f, -35.0f);
+        private static readonly Vector2 EXECUTION_STATE_ICON_SIZE = new Vector2(25.0f, 25.0f);
 
         protected const float TITLE_HEIGHT = 25.0f;
 
@@ -299,6 +299,26 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>Border weight of the problem outline, in pixels.</summary>
         private const int PROBLEM_BORDER_THICKNESS = 2;
 
+        private const float PROBLEM_BADGE_SIZE = 18.0f;
+
+        private const float CORNER_MARKER_OVERHANG = 6.0f;
+
+        private const float CORNER_MARKER_INSET = 2.0f;
+
+        private const float GAP_BELOW_THE_NAME = 5.0f;
+
+        public static float BelowTheNameOf(Rect nodeRect) => nodeRect.yMax - GAP_BELOW_THE_NAME;
+
+        public static Rect ExecutionStateIconOn(Rect nodeRect) =>
+            new Rect(new Vector2(nodeRect.x + CORNER_MARKER_INSET, BelowTheNameOf(nodeRect)), EXECUTION_STATE_ICON_SIZE);
+
+        public static Rect ProblemBadgeOn(Rect nodeRect) =>
+            new Rect(
+                nodeRect.xMax - PROBLEM_BADGE_SIZE + CORNER_MARKER_OVERHANG,
+                BelowTheNameOf(nodeRect),
+                PROBLEM_BADGE_SIZE,
+                PROBLEM_BADGE_SIZE);
+
         /// <summary>
         /// Carries the badge's hover text. Static and reused: <c>GUI.Label</c> reads the content and keeps
         /// nothing, and one instance per badge per repaint is the allocation this file is being cleaned of.
@@ -340,15 +360,12 @@ namespace ArcaneOnyx.BehaviorTree
             var icon = EditorGUIUtility.IconContent(isError ? ERROR_ICON : WARNING_ICON);
             if (icon?.image == null) return;
 
-            // Top-left. The execution-status icon owns the opposite corner, and on a narrow node -- a guard,
-            // or anything at the default 150 width -- the two corners are close enough that a badge on the
-            // right sat on top of it.
-            var badge = new Rect(nodeRect.x + 2.0f, nodeRect.y - 6.0f, 18.0f, 18.0f);
+            var badge = ProblemBadgeOn(nodeRect);
             GUI.DrawTexture(badge, icon.image, ScaleMode.ScaleToFit);
 
             if (count > 1)
             {
-                // Reads outward from the icon, away from the node, so the number never lands on the title.
+                // Reads outward from the icon, past the node's edge, so the number never lands on its name.
                 var countRect = new Rect(badge.xMax - 3.0f, badge.y - 2.0f, 18.0f, 14.0f);
                 GUI.Label(countRect, count.ToString(), Styles.problemCount);
             }
@@ -469,7 +486,7 @@ namespace ArcaneOnyx.BehaviorTree
             if (style == null) return;
 
             Rect p = LastExecutionStateIconRect;
-            p.position += offset + new Vector2(-10, 20);
+            p.position += offset;
 
             using (BehaviorTreeScrubOverride.Ghost())
             {
@@ -546,13 +563,12 @@ namespace ArcaneOnyx.BehaviorTree
             Vector2 iconPosition = innerOrigin + ICON_POSITION_OFFSET;
             Vector2 titlePosition = GetTitlePosition(innerOrigin);
             Vector2 titleSize = new Vector2(element.Width, TITLE_HEIGHT);
-            Vector2 lastExecutionIconPosition = innerOrigin + LAST_EXECUTION_STATE_ICON_OFFSET;
-            
+
             using (LudiqGUIUtility.iconSize.Override(IconSize.Small))
             {
                 IconRect = new Rect(iconPosition, ICON_SIZE);
                 TittleRect = new Rect(titlePosition, titleSize);
-                LastExecutionStateIconRect = new Rect(lastExecutionIconPosition, new Vector2(25, 25));
+                LastExecutionStateIconRect = ExecutionStateIconOn(element.Position);
             }
         }
 

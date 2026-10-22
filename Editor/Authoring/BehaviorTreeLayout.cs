@@ -12,9 +12,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// siblings left to right in priority order, the nodes that feed a node's ports in columns beside it.
     ///
     /// <para>
-    /// A tree is only rearranged when something overlaps. An author who has placed nodes by hand has said
-    /// what they want, and a tidy canvas is already what this would produce; a crossed-out one is the only
-    /// thing worth overruling.
+    /// A tree is rearranged when something overlaps, or when a sub-tree node is no longer the size the
+    /// arrangement was built around. An author who has placed nodes by hand has said what they want, and a
+    /// tidy canvas is already what this would produce; a crossed-out one is the only thing worth overruling.
     /// </para>
     ///
     /// <para>
@@ -94,14 +94,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             foreach (var branch in BranchTreesOf(asset.graph)) ArrangeBranchesFirst(branch, alreadySeen, arranged, leavingTidyTreesAlone);
 
-            var resized = ResizeBranchNodes(asset.graph);
+            var resized = ResizeBranchNodes(asset.graph, out var arrangedAroundAStaleWidth);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
 
             // Asked twice on purpose: once about the tree as its author left it, where a wire running the
             // length of a tidy canvas is the whole complaint, and once about where this pass has just put
             // things, because a tree that arrived as a pile had no distances worth judging.
             var readsAdded = GiveFarConsumersTheirOwnRead(asset.graph);
-            var wasArranged = !leavingTidyTreesAlone || overlapsBefore > 0 || readsAdded > 0;
+            var wasArranged = !leavingTidyTreesAlone
+                              || overlapsBefore > 0
+                              || readsAdded > 0
+                              || arrangedAroundAStaleWidth;
 
             if (wasArranged)
             {
@@ -140,24 +143,38 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// Writes each sub-tree node the size it is actually drawn at. Until this runs, a branch added from
         /// code is still the 150x100 it was created at and the canvas is measured against a fiction.
         /// </summary>
-        private static bool ResizeBranchNodes(BehaviorTreeGraph graph)
+        private static bool ResizeBranchNodes(BehaviorTreeGraph graph, out bool arrangedAroundAStaleWidth)
         {
             var resized = false;
+            arrangedAroundAStaleWidth = false;
 
             foreach (var node in graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
             {
-                var branch = node.BehaviorTreeGraphAsset;
-                if (branch == null) continue;
+                if (node.BehaviorTreeGraphAsset == null) continue;
 
-                var drawnAs = SubTreeFootprint.BoxAt(node.Position.position, SubTreeFootprint.BoundsOf(branch.graph));
+                var drawnAs = SubTreeFootprint.DrawnAs(node);
                 if (drawnAs.size == node.Position.size) continue;
 
+                arrangedAroundAStaleWidth |= IsArrangedAroundAStaleWidth(node, drawnAs);
                 node.Position = drawnAs;
                 resized = true;
             }
 
             return resized;
         }
+
+        /// <summary>
+        /// Whether the width this node is spaced around is no longer the width it will be drawn at.
+        /// <para>
+        /// Deliberately not "has the branch been collapsed". Collapsing is one way to get here, but the
+        /// question is whether the <em>arrangement</em> is stale, and the two part company in both
+        /// directions: a tree saved collapsed is already spaced correctly for it and must be left alone
+        /// when it is opened, and a branch somebody added nodes to needs arranging again without anything
+        /// having been collapsed at all.
+        /// </para>
+        /// </summary>
+        private static bool IsArrangedAroundAStaleWidth(RunBehaviorTreeGraphNode node, Rect drawnAs) =>
+            !Mathf.Approximately(drawnAs.width, node.Position.width);
 
         private static void Place(BehaviorTreeGraph graph)
         {
