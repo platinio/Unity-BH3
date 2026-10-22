@@ -4,10 +4,7 @@ using ArcaneOnyx.GraphCore;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
-    /// <summary>
-    /// Observes and never participates: nothing here may change what the tree decides, and every entry
-    /// point tolerates a node with no machine, no scope or a half-built graph.
-    /// </summary>
+    /// <summary>Observes and never participates: nothing here may change what the tree decides.</summary>
     public sealed class BehaviorTreeFlightRecorder : IBehaviorTreeRecording
     {
         public const int DefaultEventCapacity = 2048;
