@@ -47,8 +47,10 @@ namespace ArcaneOnyx.BehaviorTree
             var breakpoint = BreakpointOn(node);
             if (breakpoint == null) return;
 
+            // Along the top edge, past whatever the collapse toggle claims of the corner -- nothing, on
+            // every node that cannot run a sub-tree.
             var dot = new Rect(
-                nodeRect.x - (DotSize * 0.35f),
+                nodeRect.x - (DotSize * 0.35f) + SubTreePreviewToggle.RoomTakenOn(node),
                 nodeRect.y - (DotSize * 0.35f),
                 DotSize,
                 DotSize);
