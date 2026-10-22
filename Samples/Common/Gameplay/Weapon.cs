@@ -55,7 +55,7 @@ namespace ArcaneOnyx.BH3.Samples
 
         private void Publish()
         {
-            Facts.Write(this, CombatFacts.WeaponId, definition.Id);
+            Facts.Write(this, CombatFacts.AttackTree, definition.Attack);
             Facts.Write(this, CombatFacts.AttackRange, definition.Range);
             Facts.Write(this, CombatFacts.AttackCooldown, definition.Cooldown);
         }

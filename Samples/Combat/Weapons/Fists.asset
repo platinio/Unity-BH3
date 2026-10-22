@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7c4d5a7e9be83140be91e9b6f0a0d0c, type: 3}
   m_Name: Fists
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.WeaponDefinition
+  attack: {fileID: 11400000, guid: 9d53bb779f3936f4593b204758b76a7a, type: 2}
   range: 1.5
   cooldown: 1
   damage: 5

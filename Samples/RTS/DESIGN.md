@@ -41,11 +41,11 @@ for anything new.
 | `Enemy`, `EnemyKind` | `Common/Gameplay/` | A kind asset applied on Awake: tree, weapon, health, speed, sight, keep-distance, body scale, bounty. The model for `UnitKind` and `BuildingKind`. |
 | Tween nodes | `Common/Tweening/Nodes/` | Hop (walking), Punch Scale (idle breath, pop), Scale To (shrink, grow), Flash Color (hurt), Charge, Swing Part, Recover (attacks). All snap back if interrupted. |
 | `Pickup`, `Pickups` and the `FunctionCall` pattern | `Combat/Pickup.cs`, `Common/Gameplay/Pickups.cs` | A component that runs Functions picked in the inspector (`canPickup`, `effect`) with a per-call `taker`. The model for anything configurable per object. |
-| Functions | `Common/Functions/` | `PositionOf`, `TransformOf`, `IsTargetInRange`, `IsFarFrom`, `RetreatPointFrom`, `HoldsWeapon`, `GiveWeapon`, `Heal`, `CanEquipWeapon`, `IsHurt`. |
+| Functions | `Common/Functions/` | `PositionOf`, `TransformOf`, `IsTargetInRange`, `IsFarFrom`, `RetreatPointFrom`, `GiveWeapon`, `Heal`, `CanEquipWeapon`, `IsHurt`. |
 | Combat trees | `Combat/Trees/` | `Engage` (kite, attack with held weapon, chase), `SwordAttack`, `HammerAttack`, `BowAttack`, `Die`, `Chase`, `Kite`, `ReturnHome`, `Wander`, `Enemy`, `Brute`. The enemy side of the RTS runs these unchanged. |
 | Click to move trees | `ClickToMove/Trees/` | `MoveTo` with numbered orders (a trip completes only its own order), `Idle`, the `HasNewOrder` Function. |
 | Defense pieces | `Defense/` | `Spawner` (spawn an inactive prefab, apply a kind, activate), `DefenseGame` (points, lives, facts), `DefenseHud` (uGUI text in Screen Space Camera), `BuildPad` + `TurretBuilder` (keys pick a kind, click places it), `TurretKind`. |
-| Facts | `Common/Gameplay/CombatFacts.cs`, `ClickToMove/ClickToMoveFacts.cs` | `target`, `hasTarget`, `isDead`, `health01`, `weaponId`, `attackRange`, `attackCooldown`, `keepDistance`, `home`, `canPickup`, `slowed`; `destination`, `orderNumber`, `completedOrder`. |
+| Facts | `Common/Gameplay/CombatFacts.cs`, `ClickToMove/ClickToMoveFacts.cs` | `target`, `hasTarget`, `isDead`, `health01`, `attackTree`, `attackRange`, `attackCooldown`, `keepDistance`, `home`, `canPickup`, `slowed`; `destination`, `orderNumber`, `completedOrder`. |
 | Core nodes worth knowing | BH3 `Runtime/Nodes` | Wait Until, Cooldown, Parallel Sequence / Selector, Repeater, Random Chance, Wait Range, Set Variable, Set Nav Agent Position, Wait Until Reach Nav Target Position, Generate Random NavMesh Position, Stop Nav Agent, Face Target, Run Behavior Tree Graph. |
 
 The RTS adds no new core BH3 node unless section 9 lists it. Everything else is a sample node under

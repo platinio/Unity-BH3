@@ -71,7 +71,7 @@ Enemy (grunt, archer)                                  Brute
 
 `Engage`, the three attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets;
 `MoveTo` and `Idle` are Click to move's; `Perish` is Defense's. Combat's `Engage` gained a fourth branch,
-`PunchAttack` behind a `HoldsWeapon` guard on `"Fists"`, so a Worker can fight back with its hands.
+the attack tree a unit's weapon names, so a Worker fights back with its hands by holding `Fists`.
 
 ## What each piece demonstrates
 

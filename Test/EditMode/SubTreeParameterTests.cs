@@ -88,7 +88,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var runNode = reloaded.graph.Nodes.OfType<RunBehaviorTreeGraphNode>().First();
 
             CollectionAssert.AreEquivalent(
-                new[] { "attackRange", "idleTime" },
+                new[] { "Tree", "attackRange", "idleTime" },
                 runNode.valueInputs.Select(port => port.key).ToList());
 
             Assert.AreEqual(3.5f, runNode.valueInputs.First(port => port.key == "idleTime").GetValue());

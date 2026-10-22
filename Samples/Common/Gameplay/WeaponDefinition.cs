@@ -1,3 +1,4 @@
+using ArcaneOnyx.BehaviorTree;
 using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
@@ -7,6 +8,7 @@ namespace ArcaneOnyx.BH3.Samples
     {
         private const float SlowedSpeedFactor = 0.5f;
 
+        [SerializeField] private BehaviorTreeGraphAsset attack;
         [SerializeField] private float range = 1.8f;
         [SerializeField] private float cooldown = 1f;
         [SerializeField] private int damage = 25;
@@ -15,7 +17,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private Projectile projectile;
         [SerializeField] private GameObject visual;
 
-        public string Id => name;
+        public BehaviorTreeGraphAsset Attack => attack;
         public float Range => range;
         public float Cooldown => cooldown;
         public int Damage => damage;
