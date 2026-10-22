@@ -104,6 +104,12 @@ connect takes the number of the place it sits in, and deleting one closes the ga
 badge means the canvas layout and the stored order disagree; the tree still runs in badge order. See
 [Execution order](05-execution-order.md).
 
+### Collapsing a sub-tree
+
+A node that runs another tree is drawn as a frame around the whole tree it runs. The button in its
+top-left corner collapses that preview to a named box, and the choice is saved with the tree. See
+[Sub-trees](07-sub-trees.md).
+
 ### Guards
 
 A **Conditional Execution** or **Reactive Guard** is not parented either. Right-click the node it should
@@ -129,6 +135,28 @@ A node that cannot work as authored says so before you press Play: a **red** bor
 (it will throw or silently do the wrong thing), **amber** for a warning (it will still do something sensible).
 Hover the icon for the reason. Select the node and the inspector lists the same problems, with a button
 beside each one that can be fixed in one click. See [Checking your tree](09-checking-your-tree.md).
+
+---
+
+## Markers on a node
+
+A node carries up to five markers, one to a corner, so that any combination of them can be on at once
+without covering each other or the node's ports and name.
+
+![A collapsed sub-tree node with every marker on at once: a plus button centred on its top-left corner, a red breakpoint dot beside it, a priority badge numbered 1 on its top-right, a green success tick under its bottom-left, and an orange problem badge on its bottom-right](../images/node-markers.png)
+
+| Where | Marker | It means | Shown when |
+|---|---|---|---|
+| Top-left | **Collapse toggle** | `+` expands the sub-tree preview, `-` collapses it | the node runs another tree ([Sub-trees](07-sub-trees.md)) |
+| Top edge, beside it | **Breakpoint dot** | the editor will stop here; grey means armed but switched off | a breakpoint is set ([Breakpoints](../3-debugging/05-breakpoints.md)) |
+| Top-right | **Priority badge** | which child of a composite this is, counting from 1; amber means the layout and the stored order disagree | the node is one of two or more children ([Execution order](05-execution-order.md)) |
+| Bottom-left | **Execution status** | what the node returned the last time it ran | a tree has run, or the timeline is parked on a tick ([Timeline](../3-debugging/02-timeline.md)) |
+| Bottom-right | **Problem badge** | red for an error, amber for a warning; hover it for the reason | the node cannot work as authored ([Checking your tree](09-checking-your-tree.md)) |
+
+The collapse toggle and the priority badge are centred on their corners; the two bottom markers hang from
+the underside of the node's name rather than from the edge of the box, so they never land on the name
+however long it is. The breakpoint dot steps aside only on a node that has a collapse toggle; everywhere
+else it sits on the corner itself.
 
 ---
 

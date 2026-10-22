@@ -67,6 +67,17 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         {
             if (node == null) return default;
 
+            var position = node.Position;
+            position.size = SizeForPorts(node);
+            node.Position = position;
+
+            return position;
+        }
+
+        public static Vector2 SizeForPorts(BehaviorTreeNode node)
+        {
+            if (node == null) return new Vector2(MinimumWidth, MinimumHeight);
+
             var rowHeight = UnityEditor.EditorGUIUtility.singleLineHeight;
 
             var inputRows = CountAndMeasure(node.valueInputs, node.controlInputs, out var widestInput);
@@ -81,12 +92,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             // once rather than the widest label overall.
             var width = widestInput + widestOutput + PortChromeWidth;
 
-            var position = node.Position;
-            position.width = Mathf.Max(MinimumWidth, width);
-            position.height = Mathf.Max(MinimumHeight, height);
-            node.Position = position;
-
-            return position;
+            return new Vector2(Mathf.Max(MinimumWidth, width), Mathf.Max(MinimumHeight, height));
         }
 
         /// <summary>

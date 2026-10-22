@@ -22,6 +22,13 @@ namespace ArcaneOnyx.BehaviorTree
         [Serialize]
         private List<BehaviorTreeGraphParameter> parameters = new();
 
+        /// <summary>Travels with the asset, so it is not one person's view of the tree.</summary>
+        [Serialize]
+        public bool IsSubTreePreviewCollapsed { get; set; }
+
+        public override bool DrawsSubTreePreview =>
+            behaviorTreeGraphAsset != null && !IsSubTreePreviewCollapsed;
+
         [DoNotSerialize]
         private readonly Dictionary<string, ValueInput> parameterPorts = new();
 
