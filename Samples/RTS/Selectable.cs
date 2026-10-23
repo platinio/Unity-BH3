@@ -13,8 +13,8 @@ namespace ArcaneOnyx.BH3.Samples
         public event Action<bool> SelectionChanged;
 
         /// <summary>
-        /// Raised as a selectable leaves, while it is still safe to touch: Unity calls OnDisable before it
-        /// destroys anything, so a listener has until the end of this call to let go of it.
+        /// Unity calls OnDisable before it destroys anything, so a listener has this call to let go while the
+        /// reference is still valid.
         /// </summary>
         public static event Action<Selectable> Gone;
 

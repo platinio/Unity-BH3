@@ -39,13 +39,8 @@ namespace ArcaneOnyx.BH3.Samples
         private void OnDisable() => Selectable.Gone -= Forget;
 
         /// <summary>
-        /// Lets go of a selectable that is leaving the scene.
-        /// <para>
-        /// Told rather than noticed. Sweeping the list from this component's own Update left it holding a
-        /// destroyed entry for the part of the frame before that Update ran, and the HUD, the action bar and
-        /// the order code all read the selection from Update too — whichever of them Unity happened to call
-        /// first threw on the dead unit.
-        /// </para>
+        /// Told rather than noticed: everything that reads the selection reads it from Update, so sweeping
+        /// this list from Update left a destroyed entry visible to whatever ran first.
         /// </summary>
         private void Forget(Selectable selectable)
         {
