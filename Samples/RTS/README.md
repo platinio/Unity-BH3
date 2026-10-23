@@ -41,9 +41,9 @@ Worker                                               Soldier / Archer / Knight (
 
 Gather (resource, acceptedGatherOrder)                            one trip per run
 └─ Sequence
-   ├─ Parallel Selector [ Set Nav Agent Position(ApproachPoint(resource, 2)) → Wait Until Reach | Repeater → Hop ]
+   ├─ WalkTo(ApproachPoint(resource, 2))
    ├─ Until Failure → Sequence [ Face Target(TransformOf(resource)) → Swing Part up → Swing Part down → Harvest(resource) → Wait 0.5 ]
-   ├─ Return Success → Sequence [ Boolean Condition(IsCarryingSomething) → walk to ApproachPoint(depot, 3.5) → Deposit(depot) ]
+   ├─ Return Success → Sequence [ Boolean Condition(IsCarryingSomething) → WalkTo(ApproachPoint(depot, 3.5)) → Deposit(depot) ]
    └─ Selector
       ├─ Boolean Condition(HasResource(resource))                                   same node next time
       ├─ Sequence [ Boolean Condition(Is Not Null(NearestResource(resource))) → Set Variable resource ← NearestResource(resource) ]
@@ -51,7 +51,7 @@ Gather (resource, acceptedGatherOrder)                            one trip per r
 
 Build (site, acceptedBuildOrder)
 └─ Sequence
-   ├─ walk to ApproachPoint(site, 3.5)
+   ├─ WalkTo(ApproachPoint(site, 3.5))
    ├─ Until Failure → Sequence [ Face Target(TransformOf(site)) → Swing Part up → Swing Part down → Construct(site, 1 s) → Wait 0.3 ]
    └─ Set Variable completedBuildOrder ← acceptedBuildOrder
 
@@ -69,7 +69,8 @@ Enemy (grunt, archer)                                  Brute
    └─ Wander
 ```
 
-`Engage`, the three attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets;
+`Engage`, the attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets; `WalkTo` and
+`StepToward` are Common's, and every branch above that moves a unit runs one of them;
 `MoveTo` and `Idle` are Click to move's; `Perish` is Defense's. Combat's `Engage` gained a fourth branch,
 the attack tree a unit's weapon names, so a Worker fights back with its hands by holding `Fists`.
 

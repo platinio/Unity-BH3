@@ -13,12 +13,12 @@ Open `Defense.unity` and press Play.
 Turret                                      Walker
 └─ Repeater → Selector                      └─ Repeater → Selector
    ├─ Shoot   RG: hasTarget                    ├─ Perish      RG: isDead
-   │   └─ Shoot     Tree <- attackTree, default ArrowShot
+   │   └─ ArrowShot (dynamic)   Tree <- attackTree
    └─ Idle                                     ├─ Breach      RG: reachedEnd
                                                └─ FollowPath
 
 ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ a tween → Strike(target) → … ]
-FollowPath:  Parallel Selector [ Set Nav Agent Position(nextWaypoint) → Wait Until Reach → Advance Waypoint | Repeater → Hop ]
+FollowPath:  Sequence [ WalkTo(nextWaypoint) → Advance Waypoint ]
 Perish:      Flash Color → Scale To 0 → Destroy Object(This)
 Breach:      Breach Base → Destroy Object(This)
 
