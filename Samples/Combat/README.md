@@ -30,8 +30,13 @@ Engage   (Required: target)
 SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ Charge(target) | Swing Part(arm-right up) → Swing Part(arm-right down) ] → Strike(target) → Recover ]
 HammerAttack (target):  Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ both arms up ] → Parallel Sequence [ both arms down | Charge(target) ] → Strike(target) → Recover ]
 BowAttack (target):     Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-left aims) → Swing Part(arm-right draws) → Strike(target) → Recover ]
-Chase / Kite / ReturnHome:            Parallel Selector [ Set Nav Agent Position(…) → wait | Repeater → Hop ]
-Wander:                               random NavMesh point, hop there, linger 1–3 s
+Chase:                                StepToward(PositionOf(target), 0.25 s)
+Kite:                                 StepToward(RetreatPointFrom(target, 4), 0.3 s)
+ReturnHome:                           WalkTo(home)
+Wander:                               WalkTo(a random NavMesh point), then linger 1–3 s
+
+WalkTo (destination)                  Parallel Selector [ Sequence [ Set Nav Agent Position(destination) → Wait Until Reach ] | Repeater → Hop ]
+StepToward (destination, seconds)     the same race, waiting 'seconds' instead of arrival, so a chaser re-paths at an interval
 Die:                                  Flash Color → Scale To 0 → Wait 2 → Respawn
 
 Pickup (chests and health packs)
@@ -49,6 +54,7 @@ Pickup (chests and health packs)
 | Feature | Where | What to watch |
 |---|---|---|
 | **Enemies as data** | `EnemyKinds/Grunt`, `Archer`, `Brute` | Weapon, health, speed, sight, keep-distance, body size and the root tree, one asset each. The `Enemy` component applies it on Awake. Grunt and archer run the same tree; the brute runs its own. |
+| **Walking is one branch, not nine** | `Common/Trees/WalkTo`, `StepToward` | Nine branches across four samples each spelled out the same race: walk to a point while a Repeater hops the body. They call one of two sub-trees now, so how a unit moves — and how high it hops — is one asset to open rather than nine to keep in step. The only thing a caller passes is where to go. |
 | **One branch, every agent** | `Engage` | The player and all three kinds run the same asset. The player's `target` comes from a click, an enemy's from `Sight`; the archer kites because its kind publishes `keepDistance` 3, nobody else does. |
 | **The weapon owns its attack** | `WeaponDefinition.attack`, Engage's Attack node | Each weapon's rhythm lives in its own tree, and the weapon asset names it. Engage runs one sub-tree node whose `Tree` port is fed by the `attackTree` fact, so Engage never learns that swords exist: a new weapon is an asset and a tree, and nothing shared is edited. Take a hammer from a chest and the swing in progress finishes, then the next one is the hammer's. A unit whose weapon names no tree falls back to the node's own pick, `PunchAttack`. |
 | **Swings on body parts** | `Swing Part`, `Charge`, `Recover` | A Kenney character is six parts. Swing Part turns one about its own pivot and leaves it there, Charge leans the whole body away and slams it in, Recover eases everything back. The sword runs Charge and the arm swing side by side in a Parallel Sequence, so the body winds up as the arm rises and slams as it slashes; Strike lands when both are done. Interrupt any of them and the body snaps back on its own, so a kill mid-swing never leaves the attacker frozen. |

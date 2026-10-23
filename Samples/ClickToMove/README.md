@@ -19,9 +19,8 @@ ClickToMove
 
 MoveTo   (Required parameters: tripDestination, acceptedOrder)
 └─ Parallel Selector              ends when any child succeeds
-   ├─ Sequence: Set Nav Agent Position(tripDestination) → Wait Until Reach → Set Variable completedOrder = acceptedOrder
-   ├─ Until Success → Boolean Condition ← OrdersDiffer(orderNumber, acceptedOrder)
-   └─ Repeater → Hop
+   ├─ Sequence: WalkTo(tripDestination) → Set Variable completedOrder = acceptedOrder
+   └─ Until Success → Boolean Condition ← OrdersDiffer(orderNumber, acceptedOrder)
 
 Idle
 └─ Repeater → Punch Scale         the breathing
