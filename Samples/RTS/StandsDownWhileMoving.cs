@@ -3,15 +3,6 @@ using UnityEngine;
 
 namespace ArcaneOnyx.BH3.Samples
 {
-    /// <summary>
-    /// Engage outranks MoveTo in every fighter tree, so the move branch is reached only while nothing is
-    /// targeted, and <see cref="Sight"/> republishes a target every scan while an enemy is in range.
-    /// Without this, a unit in a fight can never be ordered anywhere.
-    /// <para>
-    /// Attack-move writes the same destination and order number, so dropping
-    /// <see cref="RtsFacts.HoldsFire"/> from the condition below stops fighters engaging on the way.
-    /// </para>
-    /// </summary>
     [DefaultExecutionOrder(-50)]
     [RequireComponent(typeof(AgentVariableWriter))]
     public sealed class StandsDownWhileMoving : MonoBehaviour
@@ -34,6 +25,7 @@ namespace ArcaneOnyx.BH3.Samples
             else TakeUpArms();
         }
 
+        // Attack-move is an unfinished move order too, so hold fire is the whole difference.
         private bool IsWalkingAway => HoldsFire && HasAnUnfinishedMoveOrder;
 
         private bool HoldsFire => facts.Read(RtsFacts.HoldsFire) is true;
