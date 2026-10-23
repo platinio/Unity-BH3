@@ -6,6 +6,7 @@ namespace ArcaneOnyx.BH3.Samples
         public const string GatherOrder = "gatherOrder";
         public const string CompletedGatherOrder = "completedGatherOrder";
         public const string Site = "site";
+        public const string HoldsFire = "holdsFire";
         public const string BuildOrder = "buildOrder";
         public const string CompletedBuildOrder = "completedBuildOrder";
         public const string CarriedKind = "carriedKind";
