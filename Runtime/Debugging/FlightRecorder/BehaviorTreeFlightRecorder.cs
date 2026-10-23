@@ -199,7 +199,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (node is RunBehaviorTreeGraphNode runNode)
             {
                 Add(BehaviorTreeEventKind.TreePushed, callSite, node.guid,
-                    key: runNode.BehaviorTreeGraphAsset != null ? runNode.BehaviorTreeGraphAsset.name : "(none assigned)");
+                    key: runNode.RunningTree != null ? runNode.RunningTree.name : "(none assigned)");
             }
         }
 
@@ -212,7 +212,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (node is RunBehaviorTreeGraphNode runNode)
             {
                 Add(BehaviorTreeEventKind.TreePopped, callSite, node.guid,
-                    key: runNode.BehaviorTreeGraphAsset != null ? runNode.BehaviorTreeGraphAsset.name : "(none assigned)");
+                    key: runNode.RunningTree != null ? runNode.RunningTree.name : "(none assigned)");
             }
 
             Add(BehaviorTreeEventKind.NodeExit, callSite, node.guid, status: status);

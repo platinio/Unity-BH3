@@ -24,7 +24,7 @@ Engage   (Required: target)
 └─ Repeater → Selector
    ├─ Kite      RG: IsTargetInRange(target, keepDistance), every 0.1 s
    ├─ Attack    RG: IsTargetInRange(target, attackRange), every 0.1 s, Stops Its Own Branch OFF
-   │   └─ Selector [ SwordAttack (RG HoldsWeapon "Sword") | HammerAttack ("Hammer") | BowAttack ("Bow") ]
+   │   └─ Attack    Tree <- attackTree, default PunchAttack
    └─ Chase     RG: not IsTargetInRange(target, attackRange), every 0.1 s
 
 SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ Charge(target) | Swing Part(arm-right up) → Swing Part(arm-right down) ] → Strike(target) → Recover ]
@@ -50,7 +50,7 @@ Pickup (chests and health packs)
 |---|---|---|
 | **Enemies as data** | `EnemyKinds/Grunt`, `Archer`, `Brute` | Weapon, health, speed, sight, keep-distance, body size and the root tree, one asset each. The `Enemy` component applies it on Awake. Grunt and archer run the same tree; the brute runs its own. |
 | **One branch, every agent** | `Engage` | The player and all three kinds run the same asset. The player's `target` comes from a click, an enemy's from `Sight`; the archer kites because its kind publishes `keepDistance` 3, nobody else does. |
-| **The weapon owns its attack** | `SwordAttack`, `HammerAttack`, `BowAttack` | Each weapon's rhythm lives in its own tree. Engage picks one with a `HoldsWeapon` guard whose `wanted` port is an inline literal; take a different weapon from a chest and the guard swaps trees on the `weaponId` key. |
+| **The weapon owns its attack** | `WeaponDefinition.attack`, Engage's Attack node | Each weapon's rhythm lives in its own tree, and the weapon asset names it. Engage runs one sub-tree node whose `Tree` port is fed by the `attackTree` fact, so Engage never learns that swords exist: a new weapon is an asset and a tree, and nothing shared is edited. Take a hammer from a chest and the swing in progress finishes, then the next one is the hammer's. A unit whose weapon names no tree falls back to the node's own pick, `PunchAttack`. |
 | **Swings on body parts** | `Swing Part`, `Charge`, `Recover` | A Kenney character is six parts. Swing Part turns one about its own pivot and leaves it there, Charge leans the whole body away and slams it in, Recover eases everything back. The sword runs Charge and the arm swing side by side in a Parallel Sequence, so the body winds up as the arm rises and slams as it slashes; Strike lands when both are done. Interrupt any of them and the body snaps back on its own, so a kill mid-swing never leaves the attacker frozen. |
 | **Facing before the blow** | `Face Target` in the three attack trees | BH3's own node, fed by the `TransformOf(target)` Function. |
 | **Committed swing** | Attack's guard, Stops Its Own Branch off | A started charge finishes even if the target steps out of range during the wind-up. Chase and Kite carry the opposite guards. |
@@ -68,7 +68,7 @@ Pickup (chests and health packs)
 | `Combatant` | Faction, spawn point, the live roster, `Respawn()`. Publishes `home`. |
 | `Enemy`, `EnemyKind` | Applies a kind's data to an enemy on Awake. |
 | `Health` | Hit points, the red hurt flash; publishes `isDead` and `health01`. |
-| `Weapon`, `WeaponDefinition` | The held weapon and its asset (range, cooldown, damage, knockback, projectile, and the prefab shown in the hand). `Equip` publishes `weaponId`, `attackRange`, `attackCooldown` and spawns the visual on the unit's hand socket. |
+| `Weapon`, `WeaponDefinition` | The held weapon and its asset (its attack tree, range, cooldown, damage, knockback, projectile, and the prefab shown in the hand). `Equip` publishes `attackTree`, `attackRange`, `attackCooldown` and spawns the visual on the unit's hand socket. |
 | `Knockback` | Shoves a NavMeshAgent along the mesh; the hammer uses it. |
 | `Projectile` | The bow's bolt. |
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
@@ -80,7 +80,7 @@ Pickup (chests and health packs)
 
 ## Notes
 
-- Facts a guard may read before anyone has published them (`attackRange`, `attackCooldown`, `weaponId`,
+- Facts a guard may read before anyone has published them (`attackRange`, `attackCooldown`,
   `keepDistance`, `home`) go through variable-read Functions with a fallback.
 - Every tunable is a port default on a canvas, a field on a `WeaponDefinition` or `EnemyKind` asset, or a
   NavMeshAgent setting.

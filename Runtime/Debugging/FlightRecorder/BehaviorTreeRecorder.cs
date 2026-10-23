@@ -113,7 +113,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 scope,
                 parentScope,
                 runNode.guid,
-                runNode.BehaviorTreeGraphAsset != null ? runNode.BehaviorTreeGraphAsset.name : "(none assigned)");
+                runNode.RunningTree != null ? runNode.RunningTree.name : "(none assigned)");
         }
 
         #endregion

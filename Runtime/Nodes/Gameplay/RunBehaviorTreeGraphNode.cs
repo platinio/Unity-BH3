@@ -15,6 +15,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         private BehaviorTreeGraphAsset behaviorTreeGraphAssetInstance = null;
 
+        [DoNotSerialize]
+        private BehaviorTreeGraphAsset runningTree;
+
         /// <summary>
         /// The sub-tree's contract as this node remembers it, and the only thing <see cref="Definition"/>
         /// reads. See <see cref="BehaviorTreeGraphParameter"/> for why it is copied rather than looked up.
@@ -28,6 +31,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override bool DrawsSubTreePreview =>
             behaviorTreeGraphAsset != null && !IsSubTreePreviewCollapsed;
+
+        [DoNotSerialize]
+        public ValueInput Tree { get; private set; }
 
         [DoNotSerialize]
         private readonly Dictionary<string, ValueInput> parameterPorts = new();
@@ -46,17 +52,21 @@ namespace ArcaneOnyx.BehaviorTree
         {
             behaviorTreeGraphAsset = asset;
             behaviorTreeGraphAssetInstance = null;
+            runningTree = null;
         }
 
         public override string Description => "Executes BehaviorTreeGraphAsset";
 
         public BehaviorTreeGraphAsset BehaviorTreeGraphAssetInstance => behaviorTreeGraphAssetInstance;
 
+        public BehaviorTreeGraphAsset RunningTree => runningTree != null ? runningTree : behaviorTreeGraphAsset;
+
         /// <summary>A copy per call site, so two agents running one branch never share node state.</summary>
         public BehaviorTreeGraphAsset GetOrCreateBehaviorTreeGraphAssetInstance()
         {
             if (behaviorTreeGraphAssetInstance == null)
             {
+                runningTree = behaviorTreeGraphAsset;
                 behaviorTreeGraphAssetInstance = Object.Instantiate(behaviorTreeGraphAsset);
             }
 
@@ -67,8 +77,12 @@ namespace ArcaneOnyx.BehaviorTree
         {
             get
             {
+                if (runningTree != null) return runningTree.name;
                 if (behaviorTreeGraphAsset == null) return "Missing Graph!";
-                return behaviorTreeGraphAsset.name;
+
+                // Said out loud, because the canvas otherwise draws the tree picked here as though it were
+                // the only one this node ever runs -- which is the opposite of why the port is wired.
+                return IsHandedItsTree ? behaviorTreeGraphAsset.name + " (dynamic)" : behaviorTreeGraphAsset.name;
             }
         }
         
@@ -82,6 +96,10 @@ namespace ArcaneOnyx.BehaviorTree
             base.Definition();
 
             parameterPorts.Clear();
+
+            // Declared safe to leave alone rather than given a default: a default draws an inline object
+            // field beside the one this node's inspector already shows.
+            Tree = ValueInput<BehaviorTreeGraphAsset>(nameof(Tree)).SafeToLeaveUnconnected();
 
             if (parameters == null) return;
 
@@ -255,9 +273,11 @@ namespace ArcaneOnyx.BehaviorTree
             GetOrCreateBehaviorTreeGraphAssetInstance().graph.OnAwake();
         }
 
-        public void ThrowIfCausesRecursion()
+        public void ThrowIfCausesRecursion() => ThrowIfCausesRecursion(behaviorTreeGraphAsset);
+
+        private void ThrowIfCausesRecursion(BehaviorTreeGraphAsset tree)
         {
-            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { behaviorTreeGraphAsset });
+            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { tree });
             if (!GraphWillCauseRecursion(runStack)) return;
           
             string stackTraceLog = "";
@@ -286,9 +306,112 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         public override void OnEnter()
         {
+            RunWhateverTheTreePortSays();
             ApplyParameters();
 
             GetOrCreateBehaviorTreeGraphAssetInstance().graph.OnEnter();
+        }
+
+        /// <summary>
+        /// Runs whatever the <see cref="Tree"/> port hands over, in place of the tree picked in the
+        /// inspector. Asked on every enter, so the answer is allowed to change while the game runs.
+        /// </summary>
+        private void RunWhateverTheTreePortSays()
+        {
+            if (!IsHandedItsTree) return;
+
+            var wanted = Tree.GetValue<BehaviorTreeGraphAsset>();
+            if (wanted == null || wanted == RunningTree) return;
+
+            // ThrowIfCausesRecursion walks the serialized assets once, at awake, so it has never seen this
+            // one. A tree reached only through this port can still close a loop.
+            ThrowIfCausesRecursion(wanted);
+            ThrowIfItCannotTakeTheParameters(wanted);
+
+            ReleaseTheRunningTree();
+
+            runningTree = wanted;
+            behaviorTreeGraphAssetInstance = Object.Instantiate(wanted);
+
+            BringTheRunningTreeAlive();
+        }
+
+        private bool IsHandedItsTree => Tree != null && Tree.hasValidConnection;
+
+        private void ThrowIfItCannotTakeTheParameters(BehaviorTreeGraphAsset wanted)
+        {
+            if (parameters == null) return;
+
+            foreach (var parameter in parameters)
+            {
+                if (parameter == null || parameter.Optional || Declares(wanted, parameter.Name)) continue;
+
+                throw new Exception(
+                    $"'{NodeName}' was handed '{wanted.name}' through its Tree port, but that tree does not " +
+                    $"declare '{parameter.Name}'. A tree handed to this port takes the same parameters as " +
+                    "the one picked in the inspector.");
+            }
+        }
+
+        private static bool Declares(BehaviorTreeGraphAsset tree, string name) =>
+            (tree.requiredDeclarations != null && tree.requiredDeclarations.IsDefined(name))
+            || (tree.optionalDeclarations != null && tree.optionalDeclarations.IsDefined(name));
+
+        /// <summary>
+        /// Gives the incoming clone the four things the machine's startup gave the outgoing one: the
+        /// machine, a scope of its own, the recorder, and its awake. A clone built after startup has had
+        /// none of them, and nothing comes back later to hand them over.
+        /// </summary>
+        private void BringTheRunningTreeAlive()
+        {
+            var nodes = behaviorTreeGraphAssetInstance.graph.Nodes;
+
+            foreach (var node in nodes) node.SetMachine(Machine);
+
+            innerScope = new BehaviorTreeVariableScope(behaviorTreeGraphAssetInstance.declarations, VariableScope);
+            innerScope.SeedDefaults(behaviorTreeGraphAssetInstance.optionalDeclarations);
+            Debugging.BehaviorTreeRecorder.RegisterCallSite(this, innerScope, VariableScope);
+
+            foreach (var node in nodes) node.SetVariableScope(innerScope);
+            foreach (var node in nodes) node.SetFlightRecorder(FlightRecorder);
+
+            behaviorTreeGraphAssetInstance.graph.OnAwake();
+        }
+
+        /// <summary>
+        /// Puts the outgoing tree down the way <c>BehaviorTreeMachine.ReleaseTree</c> does: exit before
+        /// destroy, because exiting is what hands a running branch its <c>OnExit</c> and <c>OnDestroy</c>
+        /// alone never reaches that.
+        /// </summary>
+        private void ReleaseTheRunningTree()
+        {
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            ExitTheRunningTree();
+
+            BehaviorTreeGraphInstance.OnDestroy();
+            DestroyTheRunningTreesClone();
+        }
+
+        private void ExitTheRunningTree()
+        {
+            if (!HasBehaviorTreeGraphInstance) return;
+
+            foreach (var node in BehaviorTreeGraphInstance.Nodes)
+            {
+                ExitDuringTeardown(node);
+            }
+        }
+
+        private void DestroyTheRunningTreesClone()
+        {
+            // Outside play mode Destroy refuses and the object survives, which would make this quietly do
+            // nothing in exactly the edit-mode tests written to prove it works. ReactiveGuard reads the
+            // clock through the same switch for the same reason.
+            if (UnityEngine.Application.isPlaying) Object.Destroy(behaviorTreeGraphAssetInstance);
+            else Object.DestroyImmediate(behaviorTreeGraphAssetInstance);
+
+            behaviorTreeGraphAssetInstance = null;
         }
 
         private void ApplyParameters()
@@ -380,12 +503,7 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.OnExit();
 
-            if (!HasBehaviorTreeGraphInstance) return;
-
-            foreach (var node in BehaviorTreeGraphInstance.Nodes)
-            {
-                ExitDuringTeardown(node);
-            }
+            ExitTheRunningTree();
         }
 
         /// <summary>
@@ -410,13 +528,7 @@ namespace ArcaneOnyx.BehaviorTree
             // leak precisely the deep trees that cost the most.
             behaviorTreeGraphAssetInstance.graph.OnDestroy();
 
-            // Outside play mode Destroy refuses and the object survives, which would make this method quietly
-            // do nothing in exactly the edit-mode tests written to prove it works. ReactiveGuard reads the
-            // clock through the same switch for the same reason.
-            if (UnityEngine.Application.isPlaying) Object.Destroy(behaviorTreeGraphAssetInstance);
-            else Object.DestroyImmediate(behaviorTreeGraphAssetInstance);
-
-            behaviorTreeGraphAssetInstance = null;
+            DestroyTheRunningTreesClone();
         }
 
         public override void SetMachine(IGraphMachine machine)

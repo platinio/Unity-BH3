@@ -595,6 +595,108 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return node;
         }
 
+        /// <summary>
+        /// Removes a node and everything that existed only to serve it: the guards that name it as their
+        /// owner, the transitions it sits on either end of, and the value wires into and out of its ports.
+        /// Returns the name of every node it removed.
+        ///
+        /// <para>
+        /// A node's feeders are left where they are. A read or a literal can serve more than one branch, so
+        /// deleting one consumer must not take it with them; what is left with nothing reading it is
+        /// reported by <c>bt_verify</c> as an orphan, which is a decision for whoever is editing the tree.
+        /// </para>
+        /// </summary>
+        public static List<string> DeleteNode(BehaviorTreeGraphAsset asset, BehaviorTreeNode node)
+        {
+            if (node == asset.graph.EntryNode)
+                throw new InvalidOperationException("Entry is where the tree starts and cannot be deleted.");
+
+            var removed = new List<string>();
+
+            foreach (var guard in GuardsOf(asset.graph, node))
+            {
+                removed.AddRange(DeleteNode(asset, guard));
+            }
+
+            foreach (var wire in WiresTouching(asset.graph, node))
+            {
+                asset.graph.valueConnections.Remove(wire);
+            }
+
+            var parents = new List<BehaviorTreeNode>();
+
+            foreach (var transition in TransitionsTouching(asset.graph, node))
+            {
+                if (transition.destination == node && transition.source != null) parents.Add(transition.source);
+
+                asset.graph.Transitions.Remove(transition);
+            }
+
+            asset.graph.Nodes.Remove(node);
+            removed.Add(node.NodeName);
+
+            foreach (var parent in parents)
+            {
+                CloseTheGapInThePriorityOrder(asset.graph, parent);
+            }
+
+            return removed;
+        }
+
+        private static List<ConditionalExecution> GuardsOf(BehaviorTreeGraph graph, BehaviorTreeNode node) =>
+            graph.Nodes.OfType<ConditionalExecution>().Where(guard => guard.Owner == node).ToList();
+
+        private static List<PortValueConnection> WiresTouching(BehaviorTreeGraph graph, BehaviorTreeNode node) =>
+            graph.valueConnections
+                .Where(wire => wire.source.behaviorTreeNode as BehaviorTreeNode == node
+                               || wire.destination.behaviorTreeNode as BehaviorTreeNode == node)
+                .ToList();
+
+        private static List<BehaviorTreeTransition> TransitionsTouching(BehaviorTreeGraph graph, BehaviorTreeNode node) =>
+            graph.Transitions.Where(each => each.source == node || each.destination == node).ToList();
+
+        /// <summary>
+        /// Renumbers a parent's remaining children 0..n-1, because the runtime reads those indices as the
+        /// priority order only while they form one — a gap sends it to canvas X instead.
+        /// </summary>
+        private static void CloseTheGapInThePriorityOrder(BehaviorTreeGraph graph, BehaviorTreeNode parent)
+        {
+            var siblings = graph.ChildTransitionsInPriorityOrder(parent);
+
+            for (var index = 0; index < siblings.Count; index++)
+            {
+                siblings[index].SetTransitionIndex(index);
+            }
+        }
+
+        /// <summary>
+        /// Wires a value output into a value input, replacing whatever fed it.
+        ///
+        /// <para>
+        /// An input takes one source, so feeding it again has to take the old wire out first — leaving both
+        /// gives a port two answers, and which one it reads is whichever the collection happens to return.
+        /// </para>
+        /// </summary>
+        public static void ConnectValue(BehaviorTreeGraphAsset asset, ValueOutput output, ValueInput input)
+        {
+            foreach (var wire in asset.graph.valueConnections.Where(each => each.destination == input).ToList())
+            {
+                asset.graph.valueConnections.Remove(wire);
+            }
+
+            output.ValidlyConnectTo(input);
+        }
+
+        /// <summary>
+        /// Chooses which variable store a <see cref="GetVariable"/> node reads. A node added from code has
+        /// no store picked, and reading one throws rather than quietly answering null — so an authoring
+        /// path that skips this builds a tree that looks right and fails on its first tick.
+        /// </summary>
+        public static void SetVariableKind(GetVariable read, BehaviorTreeVariableKind kind)
+        {
+            SetPrivateField(read, "VariableKind", kind);
+        }
+
         public static void Save(BehaviorTreeGraphAsset asset)
         {
             EditorUtility.SetDirty(asset);

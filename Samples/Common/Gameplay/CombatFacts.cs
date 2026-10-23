@@ -6,7 +6,7 @@ namespace ArcaneOnyx.BH3.Samples
         public const string HasTarget = "hasTarget";
         public const string IsDead = "isDead";
         public const string Health01 = "health01";
-        public const string WeaponId = "weaponId";
+        public const string AttackTree = "attackTree";
         public const string AttackRange = "attackRange";
         public const string AttackCooldown = "attackCooldown";
         public const string KeepDistance = "keepDistance";

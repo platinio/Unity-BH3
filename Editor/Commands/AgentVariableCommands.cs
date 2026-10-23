@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Unity.Pipeline.Commands;
@@ -31,7 +32,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             [CliArg("prefab", "Asset path of the prefab, e.g. Assets/Game/Prefabs/Archer.prefab.", Required = true)] string prefab,
             [CliArg("key", "Variable name, exactly as the tree reads it.", Required = true)] string key,
             [CliArg("value", "The value to start with.", Required = true)] JToken value,
-            [CliArg("child", "Path of a child under the prefab root. Omit for the root, which is where an agent's variables live.")] string child = null)
+            [CliArg("child", "Path of a child under the prefab root. Omit for the root, which is where an agent's variables live.")] string child = null,
+            [CliArg("type", "What the value is: float, int, bool, string, vector3, or object for an asset path. "
+                + "Omit it and the value's own JSON type decides, which is right from the command line and wrong "
+                + "through a bridge that sends every argument as text — a 'number' arriving as text is then stored "
+                + "as a string, and the tree that reads it throws about the type on its first tick.")] string type = null)
         {
             if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("'key' cannot be blank.");
 
@@ -48,7 +53,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 if (variables == null)
                     throw new ArgumentException($"'{agent.name}' has no Variables component, so it holds no agent variables.");
 
-                var written = ValueFrom(value);
+                var written = string.IsNullOrEmpty(type) ? ValueFrom(value) : ValueOfType(value, type);
                 variables.declarations.Set(key, written);
                 EditorUtility.SetDirty(variables);
 
@@ -69,6 +74,49 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             if (found == null) throw new ArgumentException($"No child '{child}' under '{root.name}'.");
 
             return found.gameObject;
+        }
+
+        /// <summary>
+        /// The value read as the type the caller named, rather than as whatever JSON type it arrived in.
+        /// </summary>
+        private static object ValueOfType(JToken value, string type)
+        {
+            if (value.Type == JTokenType.Array) return Vector3From((JArray)value);
+
+            var text = value.Type == JTokenType.String ? value.Value<string>() : value.ToString();
+
+            switch (type.ToLowerInvariant())
+            {
+                case "float": return float.Parse(text, CultureInfo.InvariantCulture);
+                case "int": return int.Parse(text, CultureInfo.InvariantCulture);
+                case "bool": return bool.Parse(text);
+                case "string": return text;
+                case "vector3": return Vector3FromText(text);
+                case "object": return AssetFor(text);
+
+                default:
+                    throw new ArgumentException(
+                        $"'{type}' is not a value type. Use float, int, bool, string, vector3 or object.");
+            }
+        }
+
+        private static Vector3 Vector3FromText(string text)
+        {
+            var axes = text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            if (axes.Length != 3) throw new ArgumentException($"A vector3 is three numbers, as '1,2,3', and this was '{text}'.");
+
+            return new Vector3(
+                float.Parse(axes[0], CultureInfo.InvariantCulture),
+                float.Parse(axes[1], CultureInfo.InvariantCulture),
+                float.Parse(axes[2], CultureInfo.InvariantCulture));
+        }
+
+        private static UnityEngine.Object AssetFor(string path)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+            if (asset == null) throw new ArgumentException($"No asset at '{path}'.");
+
+            return asset;
         }
 
         private static object ValueFrom(JToken value)

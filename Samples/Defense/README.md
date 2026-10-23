@@ -13,7 +13,7 @@ Open `Defense.unity` and press Play.
 Turret                                      Walker
 └─ Repeater → Selector                      └─ Repeater → Selector
    ├─ Shoot   RG: hasTarget                    ├─ Perish      RG: isDead
-   │   └─ Selector [ ArrowShot (RG HoldsWeapon "Arrow") | CannonShot ("Cannon") | FrostShot ("Frost") ]
+   │   └─ Shoot     Tree <- attackTree, default ArrowShot
    └─ Idle                                     ├─ Breach      RG: reachedEnd
                                                └─ FollowPath
 
@@ -26,7 +26,7 @@ WaveDirector (on the Game object)
 └─ Repeater → Sequence: Wait 5 → Spawn Wave → Wait 12 → Next Wave
 ```
 
-`Idle` comes from Click to move. `HoldsWeapon`, `Health`, `Weapon`, `Sight`, `Projectile` and the rest of
+`Idle` comes from Click to move. `Health`, `Weapon`, `Sight`, `Projectile` and the rest of
 the gameplay components are the Combat sample's, now in `Samples/Common`.
 
 ## What each piece demonstrates
@@ -34,7 +34,7 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 | Feature | Where | What to watch |
 |---|---|---|
 | **A tree running a game system** | `WaveDirector` | The spawner is a behavior tree: breathe, spawn this wave's enemies one by one, let them walk, bump the wave. Spawn Wave grows the count with the wave number. |
-| **Combat's mechanism, a different game** | `Turret` | A turret cannot move, so there is no Engage: while `Sight` publishes a target, fire with the held weapon, picked by the same `HoldsWeapon` guard Combat uses. The weapon's range is the turret's sight radius. |
+| **Combat's mechanism, a different game** | `Turret` | A turret cannot move, so there is no Engage: while `Sight` publishes a target, run the tree the held weapon names, through the same `attackTree` fact Combat's Engage reads. The weapon's range is the turret's sight radius. |
 | **The weapon owns its shot** | `ArrowShot`, `CannonShot`, `FrostShot` | Three rhythms in three trees. The data does the rest: the Cannon asset carries knockback that shoves walkers back down the path, the Frost asset carries a two-second slow. |
 | **Path following as a branch** | `FollowPath` | One leg at a time: walk to `nextWaypoint`, hop, advance. The `Walker` component publishes the waypoint; the tree never sees the route. |
 | **Takeover on a published fact** | `Breach`, `Perish` | `reachedEnd` and `isDead` are written by components; the guards wake on the key and take over the walk. |
@@ -58,7 +58,7 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 
 ## Notes
 
-- Facts read before anyone publishes them (`attackCooldown`, `weaponId`, `nextWaypoint`) go through
+- Facts read before anyone publishes them (`attackCooldown`, `nextWaypoint`) go through
   variable-read Functions with a fallback.
 - Every tunable is a port default on a canvas, a field on a `WeaponDefinition`, `EnemyKind` or `TurretKind`
   asset, or a NavMeshAgent setting. Wave size lives in `Spawner.WaveSize`.
