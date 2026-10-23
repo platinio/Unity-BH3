@@ -12,7 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c497c8885d6eee4aa75556544defa55, type: 3}
   m_Name: Arrow
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.TurretKind
-  bodyMaterial: {fileID: 2100000, guid: 3c3c7f7223106c7498b61c484fee2f94, type: 2}
-  weapon: {fileID: 11400000, guid: c2a8b57de183a36488e7771f92a9c1af, type: 2}
-  tree: {fileID: 11400000, guid: 12c4d7f1f50efcf4c9d572394a450eb5, type: 2}
+  prefab: {fileID: 963218013843537543, guid: e74ca525c4fccaf49aa6f3397c5ffffe, type: 3}
   cost: 50
