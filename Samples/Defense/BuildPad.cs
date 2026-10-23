@@ -10,13 +10,12 @@ namespace ArcaneOnyx.BH3.Samples
 
         public bool IsFree => turret == null;
 
-        public bool TryBuild(TurretKind kind, Turret prefab, DefenseGame game)
+        public bool TryBuild(TurretKind kind, DefenseGame game)
         {
             if (!IsFree || !game.TrySpend(kind.Cost)) return false;
 
-            turret = Instantiate(prefab, transform.position, Quaternion.identity);
+            turret = Instantiate(kind.Prefab, transform.position, Quaternion.identity);
             turret.name = kind.Id + " turret";
-            turret.Apply(kind);
             turret.gameObject.SetActive(true);
             RiseFromTheGround(turret);
             return true;

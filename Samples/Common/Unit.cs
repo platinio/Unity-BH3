@@ -67,12 +67,6 @@ namespace ArcaneOnyx.BH3.Samples
             for (int i = 0; i < parts.Length; i++) RestingPoseOf(parts[i]).ApplyTo(parts[i]);
         }
 
-        public void Dress(Material material)
-        {
-            foreach (Renderer renderer in renderers) renderer.sharedMaterial = material;
-            restingColors = null;
-        }
-
         public void RestoreRestingColors()
         {
             Color[] colors = RestingColors;

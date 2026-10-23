@@ -3,7 +3,7 @@
 A winding path from a purple gate to your blue base. Enemies walk it in waves; each one that reaches the
 base costs a life. White pads beside the path are where turrets go: pick Arrow, Cannon or Frost on the bar at the bottom
 (or press **1**, **2** or **3**), carry the ghost to a free pad and click to build it; right click cancels. Killing enemies earns points, turrets cost them. Lose all ten
-lives and the board resets to wave 1. Primitives and tweens only.
+lives and the board resets to wave 1. Kenney blocky characters, Kenney siege engines, primitives and tweens.
 
 Open `Defense.unity` and press Play.
 
@@ -17,7 +17,7 @@ Turret                                      Walker
    └─ Idle                                     ├─ Breach      RG: reachedEnd
                                                └─ FollowPath
 
-ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ a tween → Strike(target) → … ]
+ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ Face Target → a tween → Strike(target) → … ]
 FollowPath:  Sequence [ WalkTo(nextWaypoint) → Advance Waypoint ]
 Perish:      Flash Color → Scale To 0 → Destroy Object(This)
 Breach:      Breach Base → Destroy Object(This)
@@ -35,12 +35,12 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 |---|---|---|
 | **A tree running a game system** | `WaveDirector` | The spawner is a behavior tree: breathe, spawn this wave's enemies one by one, let them walk, bump the wave. Spawn Wave grows the count with the wave number. |
 | **Combat's mechanism, a different game** | `Turret` | A turret cannot move, so there is no Engage: while `Sight` publishes a target, run the tree the held weapon names, through the same `attackTree` fact Combat's Engage reads. The weapon's range is the turret's sight radius. |
-| **The weapon owns its shot** | `ArrowShot`, `CannonShot`, `FrostShot` | Three rhythms in three trees. The data does the rest: the Cannon asset carries knockback that shoves walkers back down the path, the Frost asset carries a two-second slow. |
+| **The weapon owns its shot** | `ArrowShot`, `CannonShot`, `FrostShot` | Each shot turns the engine onto its target first, then plays its rhythm; three rhythms in three trees. The data does the rest: the Cannon asset carries knockback that shoves walkers back down the path, the Frost asset carries a two-second slow. |
 | **Path following as a branch** | `FollowPath` | One leg at a time: walk to `nextWaypoint`, hop, advance. The `Walker` component publishes the waypoint; the tree never sees the route. |
 | **Takeover on a published fact** | `Breach`, `Perish` | `reachedEnd` and `isDead` are written by components; the guards wake on the key and take over the walk. |
 | **A status effect without a status system** | `Slowed` | Frost writes `slowed` on the walker and halves its speed; the fact is visible in the Variable Watch while it lasts. |
-| **Kinds as data again** | `EnemyKinds/Runner`, `Brute`, `Swarmer`, `TurretKinds/Arrow`, `Cannon`, `Frost` | Health, speed, size, bounty and tree per enemy kind; weapon, cost and tree per turret kind. The `Enemy` and `Turret` components apply them when the prefab is spawned. |
-| **Spawning an agent with a tree** | `Spawner`, `BuildPad` | The prefabs are saved inactive: apply the kind, then activate, so the machine awakens with its tree already set. |
+| **Kinds as data again** | `EnemyKinds/Runner`, `Brute`, `Swarmer`, `TurretKinds/Arrow`, `Cannon`, `Frost` | An enemy kind is its bounty, a turret kind its prefab and cost. Everything else, the Kenney character or siege engine, the weapon, the sight radius and the tree, is authored on the prefab, where a designer can see it. |
+| **Spawning an agent with a tree** | `Spawner`, `BuildPad` | The prefabs are saved inactive and carry their tree, so the machine awakens with it already set the moment they are activated. |
 
 ## The cast
 
@@ -50,7 +50,7 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 | `Spawner` | Which kind comes next, and `Spawn()`; the WaveDirector tree calls it. |
 | `Walker` | Follows a `PathRoute`, publishes `nextWaypoint` and `reachedEnd`, pays its bounty when it dies, costs a life when it breaches. |
 | `PathRoute` | The waypoints, as child transforms in order. |
-| `Turret`, `TurretKind` | Applies a kind to a spawned turret. |
+| `Turret`, `TurretKind` | A turret kind names its prefab and cost; the prefab is the siege engine with its weapon, sight and tree. |
 | `BuildPad`, `TurretBuilder`, `TurretGhost` | One build spot each; the builder walks a ghost of the turret over the pads and builds where you click. |
 | `TurretBar`, `TurretButton` | The bar at the bottom: one button per turret kind, the one being placed lit, the ones you cannot afford disabled. |
 | `Slowed` | Halves a NavMeshAgent's speed for a while; `WeaponDefinition.Land` applies it. |

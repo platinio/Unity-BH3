@@ -6,7 +6,6 @@ namespace ArcaneOnyx.BH3.Samples
     public sealed class TurretBuilder : MonoBehaviour
     {
         [SerializeField] private DefenseGame game;
-        [SerializeField] private Turret turretPrefab;
         [SerializeField] private TurretKind[] kinds;
         [SerializeField] private Material freeGhostMaterial;
         [SerializeField] private Material blockedGhostMaterial;
@@ -24,7 +23,10 @@ namespace ArcaneOnyx.BH3.Samples
         {
             if (!game.CanAfford(kind.Cost)) return;
 
-            if (placing == null) ghost = new TurretGhost(turretPrefab, freeGhostMaterial, blockedGhostMaterial);
+            if (placing == kind) return;
+
+            ghost?.Hide();
+            ghost = new TurretGhost(kind.Prefab, freeGhostMaterial, blockedGhostMaterial);
             placing = kind;
         }
 
@@ -76,7 +78,7 @@ namespace ArcaneOnyx.BH3.Samples
             Mouse mouse = Mouse.current;
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame || HudCursor.IsOverTheHud || !ghost.IsOverFreePad) return;
 
-            ghost.Pad.TryBuild(placing, turretPrefab, game);
+            ghost.Pad.TryBuild(placing, game);
             StopPlacing();
         }
 

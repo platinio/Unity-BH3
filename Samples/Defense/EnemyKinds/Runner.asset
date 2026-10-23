@@ -12,12 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16fe9452afbc58a49880896fc5fe6cf9, type: 3}
   m_Name: Runner
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.EnemyKind
-  bodyMaterial: {fileID: 2100000, guid: 1ff7987c48faaf745af2a53e1637f7d1, type: 2}
-  weapon: {fileID: 0}
-  tree: {fileID: 11400000, guid: 06055b8d095f31a4887f8aa630b45f2a, type: 2}
-  maxHealth: 40
-  speed: 3.6
-  sightRadius: 0
-  keepDistance: 0
-  bodyScale: 0.8
   bounty: 10
