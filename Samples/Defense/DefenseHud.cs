@@ -15,7 +15,7 @@ namespace ArcaneOnyx.BH3.Samples
         private void Update()
         {
             text.text = "Points " + game.Points + "   Lives " + game.Lives + "   Wave " + game.Wave
-                      + "\nPick a turret below, then click a pad.";
+                      + "\nPick a turret below and click a free pad to build it. Right click cancels.";
         }
     }
 }

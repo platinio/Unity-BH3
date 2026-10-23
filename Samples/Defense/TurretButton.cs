@@ -11,7 +11,7 @@ namespace ArcaneOnyx.BH3.Samples
         [SerializeField] private Text label;
         [SerializeField] private Text cost;
         [SerializeField] private Color restingColor = new(0.16f, 0.2f, 0.26f, 0.9f);
-        [SerializeField] private Color selectedColor = new(0.3f, 0.45f, 0.7f, 0.95f);
+        [SerializeField] private Color placingColor = new(0.3f, 0.45f, 0.7f, 0.95f);
         [SerializeField] private Color unaffordableCostColor = new(1f, 0.5f, 0.5f);
 
         private Button button;
@@ -29,8 +29,12 @@ namespace ArcaneOnyx.BH3.Samples
             button.onClick.AddListener(() => onClick());
         }
 
-        public void ShowSelected(bool isSelected) => background.color = isSelected ? selectedColor : restingColor;
+        public void ShowPlacing(bool isPlacing) => background.color = isPlacing ? placingColor : restingColor;
 
-        public void ShowAffordable(bool isAffordable) => cost.color = isAffordable ? Color.white : unaffordableCostColor;
+        public void ShowAffordable(bool isAffordable)
+        {
+            button.interactable = isAffordable;
+            cost.color = isAffordable ? Color.white : unaffordableCostColor;
+        }
     }
 }

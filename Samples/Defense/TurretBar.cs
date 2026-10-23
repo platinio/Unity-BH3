@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             foreach (TurretButton button in shown)
             {
-                button.ShowSelected(button.Kind == builder.Selected);
+                button.ShowPlacing(button.Kind == builder.Placing);
                 button.ShowAffordable(game.CanAfford(button.Kind.Cost));
             }
         }
@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BH3.Samples
         private void Add(TurretKind kind, int shortcutKey)
         {
             TurretButton button = Instantiate(buttonPrefab, transform);
-            button.Show(kind, shortcutKey, () => builder.Select(kind));
+            button.Show(kind, shortcutKey, () => builder.BeginPlacing(kind));
             shown.Add(button);
         }
     }
