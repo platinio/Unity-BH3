@@ -15,7 +15,7 @@ Open `RTS.unity` and press Play.
 | Input | What it does |
 |---|---|
 | Left drag | Selects every unit inside the rectangle. A click selects one unit, or a building, or clears the selection on ground. |
-| Right click | The order depends on what is under the cursor: an enemy is attacked, a tree or rock is gathered (Workers), an unfinished site is built (Workers), the ground is walked to. Fighters walking to a point fight anything they see on the way. |
+| Right click | The order depends on what is under the cursor: an enemy is attacked, a tree or rock is gathered (Workers), an unfinished site is built (Workers), the ground is walked to. A right click on an **enemy** is an attack-move: fighters fight anything they see on the way. A right click on the **ground** is a withdrawal: they break off and walk, and pick nothing up on the way. |
 | Action bar, Workers selected | The bar along the bottom lists the buildings they can raise, each with its cost and greyed out while the treasury cannot pay. Click one and a translucent ghost follows the cursor, red where the footprint is taken; a left click places it, spends the wood and sends the selected Workers to build it. Right click or Escape cancels. |
 | Action bar, a building selected | The bar lists what that building trains. Click one to pay for it and put it in the queue; a bar over the building fills while the unit trains. |
 | WASD, screen edge | Pan the camera inside the map. |
@@ -25,7 +25,8 @@ to a tree gathers, walks the load home, walks back and keeps going; when the tre
 nearest tree of the same kind; it stops only when nothing is left or when you tell it to do something else.
 A Worker sent to a site builds until the building stands. Any unit that is hit while doing something else
 fights back and then **resumes what it was doing**, which falls out of the tree shape below rather than out
-of code.
+of code. The one order that outranks a fight is a plain move: right-click the ground and the unit breaks
+off, walks there and does not swing at anything on the way, because that is what you asked for.
 
 ## The trees
 
@@ -78,6 +79,7 @@ the attack tree a unit's weapon names, so a Worker fights back with its hands by
 
 | Feature | Where | What to watch |
 |---|---|---|
+| **A move order outranks the fight** | `StandsDownWhileMoving`, `PlayerCommands.OrderMove` | Engage sits above MoveTo in every fighter tree, which is what makes a unit defend itself mid-walk — and it also means the move branch is only reached while nothing is targeted. So a plain move drops the target and the unit stops looking: `Sight` and `Retaliation` are switched off until it arrives, then switched back on. Without that, `Sight` republishes a target every 0.2 s and a unit in combat could never be pulled out. Attack-move writes the same destination and order number and is told apart by `holdsFire` alone, so it still fights its way to the point. |
 | **Interrupt and resume without code** | The Worker tree | FightBack sits above the long jobs. A hit sets `target` and `hasTarget`, the guard takes over and the Gather or Build branch is aborted mid-swing, its tween snapping the body back. When the target dies `UnitTargeting` drops `hasTarget`, the Selector falls through, and the job re-enters with the **same parameters**: the order facts were never cleared, and the load is a fact on the Worker, not state inside the tree. |
 | **Numbered orders, three channels** | `PlayerCommands`, the Worker's three guards | A move writes `destination` and `orderNumber`, a gather writes `resource` and `gatherOrder`, a build writes `site` and `buildOrder`. Each branch completes **its own** number, so an order given on the frame a branch finishes is never lost. One Function, Click to move's `HasNewOrder`, guards all three channels. |
 | **A branch that runs itself** | `Gather` | One trip per run. The branch decides what comes next at the end: the same node, the nearest node of the same kind, or done. Re-pointing writes the agent's `resource` fact, so the caller re-enters pointing at the new tree. |

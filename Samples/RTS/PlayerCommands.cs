@@ -110,6 +110,8 @@ namespace ArcaneOnyx.BH3.Samples
             foreach (Selectable unit in selection.Selected)
             {
                 AgentVariableWriter facts = CancelAllOrders(unit.gameObject);
+                facts.Write(this, CombatFacts.HasTarget, false);
+                facts.Write(this, RtsFacts.HoldsFire, true);
                 facts.Write(this, ClickToMoveFacts.Destination, point);
                 facts.Write(this, ClickToMoveFacts.OrderNumber, ordersIssued);
             }
@@ -118,6 +120,7 @@ namespace ArcaneOnyx.BH3.Samples
         private AgentVariableWriter CancelAllOrders(GameObject unit)
         {
             AgentVariableWriter facts = AgentVariableWriter.On(unit);
+            facts.Write(this, RtsFacts.HoldsFire, false);
             CancelOrder(facts, ClickToMoveFacts.OrderNumber, ClickToMoveFacts.CompletedOrder);
             CancelOrder(facts, RtsFacts.GatherOrder, RtsFacts.CompletedGatherOrder);
             CancelOrder(facts, RtsFacts.BuildOrder, RtsFacts.CompletedBuildOrder);
