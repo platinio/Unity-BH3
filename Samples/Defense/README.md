@@ -2,7 +2,7 @@
 
 A winding path from a purple gate to your blue base. Enemies walk it in waves; each one that reaches the
 base costs a life. White pads beside the path are where turrets go: pick Arrow, Cannon or Frost on the bar at the bottom
-(or press **1**, **2** or **3**), then click a pad. Killing enemies earns points, turrets cost them. Lose all ten
+(or press **1**, **2** or **3**), carry the ghost to a free pad and click to build it; right click cancels. Killing enemies earns points, turrets cost them. Lose all ten
 lives and the board resets to wave 1. Primitives and tweens only.
 
 Open `Defense.unity` and press Play.
@@ -51,8 +51,8 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 | `Walker` | Follows a `PathRoute`, publishes `nextWaypoint` and `reachedEnd`, pays its bounty when it dies, costs a life when it breaches. |
 | `PathRoute` | The waypoints, as child transforms in order. |
 | `Turret`, `TurretKind` | Applies a kind to a spawned turret. |
-| `BuildPad`, `TurretBuilder` | One build spot each; the builder keeps the picked kind and turns pad clicks into builds. |
-| `TurretBar`, `TurretButton` | The bar at the bottom: one button per turret kind, the picked one lit, the cost red when points run short. |
+| `BuildPad`, `TurretBuilder`, `TurretGhost` | One build spot each; the builder walks a ghost of the turret over the pads and builds where you click. |
+| `TurretBar`, `TurretButton` | The bar at the bottom: one button per turret kind, the one being placed lit, the ones you cannot afford disabled. |
 | `Slowed` | Halves a NavMeshAgent's speed for a while; `WeaponDefinition.Land` applies it. |
 | `DefenseHud` | Points, lives and wave at the top left. |
 | `Spawn Wave`, `Next Wave`, `Advance Waypoint`, `Breach Base` | The four custom nodes this sample adds. |
