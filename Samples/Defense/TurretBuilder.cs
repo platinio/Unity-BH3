@@ -20,7 +20,13 @@ namespace ArcaneOnyx.BH3.Samples
         private void Update()
         {
             HandleSelectionKeys();
-            HandleClick();
+            HandlePadClick();
+        }
+
+        public void Select(TurretKind kind)
+        {
+            int index = System.Array.IndexOf(kinds, kind);
+            if (index >= 0) selected = index;
         }
 
         private void HandleSelectionKeys()
@@ -28,15 +34,17 @@ namespace ArcaneOnyx.BH3.Samples
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
-            if (keyboard.digit1Key.wasPressedThisFrame) selected = 0;
-            if (keyboard.digit2Key.wasPressedThisFrame) selected = Mathf.Min(1, kinds.Length - 1);
-            if (keyboard.digit3Key.wasPressedThisFrame) selected = Mathf.Min(2, kinds.Length - 1);
+            if (keyboard.digit1Key.wasPressedThisFrame) SelectAt(0);
+            if (keyboard.digit2Key.wasPressedThisFrame) SelectAt(1);
+            if (keyboard.digit3Key.wasPressedThisFrame) SelectAt(2);
         }
 
-        private void HandleClick()
+        private void SelectAt(int index) => selected = Mathf.Min(index, kinds.Length - 1);
+
+        private void HandlePadClick()
         {
             Mouse mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || HudCursor.IsOverTheHud) return;
 
             Ray clickRay = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
             if (!Physics.Raycast(clickRay, out RaycastHit hit)) return;

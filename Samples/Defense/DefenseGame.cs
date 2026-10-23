@@ -21,9 +21,11 @@ namespace ArcaneOnyx.BH3.Samples
             ResetBoard();
         }
 
+        public bool CanAfford(int cost) => Points >= cost;
+
         public bool TrySpend(int cost)
         {
-            if (Points < cost) return false;
+            if (!CanAfford(cost)) return false;
 
             Points -= cost;
             Publish();
