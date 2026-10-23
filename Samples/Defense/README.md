@@ -17,7 +17,7 @@ Turret                                      Walker
    └─ Idle                                     ├─ Breach      RG: reachedEnd
                                                └─ FollowPath
 
-ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ a tween → Strike(target) → … ]
+ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ Face Target → a tween → Strike(target) → … ]
 FollowPath:  Sequence [ WalkTo(nextWaypoint) → Advance Waypoint ]
 Perish:      Flash Color → Scale To 0 → Destroy Object(This)
 Breach:      Breach Base → Destroy Object(This)
@@ -35,7 +35,7 @@ the gameplay components are the Combat sample's, now in `Samples/Common`.
 |---|---|---|
 | **A tree running a game system** | `WaveDirector` | The spawner is a behavior tree: breathe, spawn this wave's enemies one by one, let them walk, bump the wave. Spawn Wave grows the count with the wave number. |
 | **Combat's mechanism, a different game** | `Turret` | A turret cannot move, so there is no Engage: while `Sight` publishes a target, run the tree the held weapon names, through the same `attackTree` fact Combat's Engage reads. The weapon's range is the turret's sight radius. |
-| **The weapon owns its shot** | `ArrowShot`, `CannonShot`, `FrostShot` | Three rhythms in three trees. The data does the rest: the Cannon asset carries knockback that shoves walkers back down the path, the Frost asset carries a two-second slow. |
+| **The weapon owns its shot** | `ArrowShot`, `CannonShot`, `FrostShot` | Each shot turns the engine onto its target first, then plays its rhythm; three rhythms in three trees. The data does the rest: the Cannon asset carries knockback that shoves walkers back down the path, the Frost asset carries a two-second slow. |
 | **Path following as a branch** | `FollowPath` | One leg at a time: walk to `nextWaypoint`, hop, advance. The `Walker` component publishes the waypoint; the tree never sees the route. |
 | **Takeover on a published fact** | `Breach`, `Perish` | `reachedEnd` and `isDead` are written by components; the guards wake on the key and take over the walk. |
 | **A status effect without a status system** | `Slowed` | Frost writes `slowed` on the walker and halves its speed; the fact is visible in the Variable Watch while it lasts. |
