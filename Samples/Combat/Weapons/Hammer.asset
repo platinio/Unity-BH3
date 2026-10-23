@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7c4d5a7e9be83140be91e9b6f0a0d0c, type: 3}
   m_Name: Hammer
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.WeaponDefinition
+  attack: {fileID: 11400000, guid: 9a934581ff91ba54b960287b046190f2, type: 2}
   range: 2.2
   cooldown: 2.5
   damage: 45

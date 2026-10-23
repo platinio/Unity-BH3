@@ -186,6 +186,8 @@ GameObject:
   - component: {fileID: 8342588423113323535}
   - component: {fileID: 2125247645812271897}
   - component: {fileID: 719564932563591554}
+  - component: {fileID: 2239860173333609820}
+  - component: {fileID: 6708745869160017601}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -354,6 +356,30 @@ MonoBehaviour:
   - {fileID: 8874247045367805082}
   - {fileID: 1829778638050069846}
   weaponSocket: {fileID: 1841733667236526804}
+--- !u!114 &2239860173333609820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4921928307282656157}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f41ab0f53c93a248a80e2fddfc65237, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Retaliation
+--- !u!114 &6708745869160017601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4921928307282656157}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00c0d955f16f1c946af51fb021dd4977, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitTargeting
 --- !u!1001 &19038895406175299
 PrefabInstance:
   m_ObjectHideFlags: 0

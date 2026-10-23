@@ -281,8 +281,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: ArcaneOnyx.BehaviorTree::ArcaneOnyx.BehaviorTree.BehaviorTreeMachine
   _data:
-    _json: '{"OriginalMacro":null,"FlightRecorder":null,"Variables":null,"nest":{"source":"Macro","macro":null,"embed":null}}'
-    _objectReferences: []
+    _json: '{"OriginalMacro":null,"FlightRecorder":null,"Variables":null,"nest":{"source":"Macro","macro":0,"embed":null}}'
+    _objectReferences:
+    - {fileID: 11400000, guid: 06055b8d095f31a4887f8aa630b45f2a, type: 2}
 --- !u!114 &3001660957839711846
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -347,6 +348,7 @@ MonoBehaviour:
   - {fileID: 7666835013582828848}
   - {fileID: 3125092439403933262}
   - {fileID: 5268519239627151234}
+  weaponSocket: {fileID: 0}
 --- !u!1001 &5781078662036246167
 PrefabInstance:
   m_ObjectHideFlags: 0

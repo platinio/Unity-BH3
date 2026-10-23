@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: Worker.gatherOrderRead
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":["gatherOrder"],"description":null,"graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[],"valueOutputDefinitions":[{"_type":"System.Object","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":0.0,"y":0.0},"zoom":1.0,"elements":[{"defaultValues":{},"position":{"x":-320.0,"y":0.0},"guid":"07ab4374-625f-4e10-b8d7-1134e4c19e0c","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphInput","$id":"13"},{"defaultValues":{},"position":{"x":320.0,"y":0.0},"guid":"45da9f52-e005-45b4-b0df-1a6f136d8a5b","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphOutput","$id":"15"},{"specifyFallback":true,"kind":"Object","defaultValues":{"name":{"$content":"gatherOrder","$type":"System.String"},"object":null},"position":{"x":-120.0,"y":0.0},"guid":"92e179ee-a01c-4e8e-8f6e-688fcaa6c73c","$version":"A","$type":"Unity.VisualScripting.GetVariable","$id":"17"},{"type":"System.Int32","value":{"$content":0,"$type":"System.Int32"},"defaultValues":{},"position":{"x":-320.0,"y":140.0},"guid":"b6aac214-45c4-4249-a878-9191f1bd7eae","$version":"A","$type":"Unity.VisualScripting.Literal","$id":"19"},{"sourceUnit":{"$ref":"13"},"sourceKey":"Enter","destinationUnit":{"$ref":"15"},"destinationKey":"Exit","guid":"3933d6f4-1cf3-46f7-b8a8-28ce668be714","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"19"},"sourceKey":"output","destinationUnit":{"$ref":"17"},"destinationKey":"fallback","guid":"f5f35324-b30b-488f-abbf-54075e2631f5","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"17"},"sourceKey":"value","destinationUnit":{"$ref":"15"},"destinationKey":"Result","guid":"9bf53f10-9e08-46d0-b73e-716180fdcf16","$type":"Unity.VisualScripting.ValueConnection"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys:
+  - gatherOrder
+  description: 

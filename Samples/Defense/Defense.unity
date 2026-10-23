@@ -1734,11 +1734,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.Spawner
   spawnPoint: {fileID: 434208704}
   route: {fileID: 796147268}
-  walkerPrefab: {fileID: 1563284808864745854, guid: 9b95fc52c523b3346bbcfe44cb257966, type: 3}
-  kinds:
-  - {fileID: 11400000, guid: b47c6c203117caa45959e7fbaeb0de8e, type: 2}
-  - {fileID: 11400000, guid: aafd5424720e8bf49979723e9dc9b988, type: 2}
-  - {fileID: 11400000, guid: ed785e8ede57ba84699f4196abdd5d3d, type: 2}
+  enemies:
+  - {fileID: 1349162897365576887, guid: b1e5187945316474a9cbd8114f3cfc49, type: 3}
+  - {fileID: 2064692609101806922, guid: 40292948ddb7fc749b6fae527d6226b6, type: 3}
+  - {fileID: 5110372523745505895, guid: 52cc5640530cbb94baff46c94bbea31b, type: 3}
 --- !u!114 &1407319748
 MonoBehaviour:
   m_ObjectHideFlags: 0

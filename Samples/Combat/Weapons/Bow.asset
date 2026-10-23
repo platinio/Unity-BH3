@@ -12,7 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7c4d5a7e9be83140be91e9b6f0a0d0c, type: 3}
   m_Name: Bow
   m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.WeaponDefinition
+  attack: {fileID: 11400000, guid: 63e5e1b9cffa14147bd911b5005014d5, type: 2}
   range: 7
   cooldown: 1.6
   damage: 20
+  knockback: 0
+  slowSeconds: 0
   projectile: {fileID: 5155663657844420057, guid: 1754d2da6f5156b44a10a01ba1cd84ec, type: 3}
+  visual: {fileID: 0}

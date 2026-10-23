@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e48880e2ff4a747a37a932bb4aa5e5, type: 3}
+  m_Name: NearestResource
+  m_EditorClassIdentifier: ArcaneOnyx.VisualScriptingExtension.Runtime::ArcaneOnyx.VisualScriptingExtension.FunctionGraphAsset
+  _data:
+    _json: '{"pure":true,"watchedKeys":[],"description":"The closest resource node of the same kind as like that still has something left, or null when none does.","graph":{"variables":{"Kind":"Flow","collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[{"key":"Enter","label":"Enter","summary":null,"hideLabel":false}],"controlOutputDefinitions":[{"key":"Exit","label":"Exit","summary":null,"hideLabel":false}],"valueInputDefinitions":[{"hasDefaultValue":false,"defaultValue":null,"_type":"UnityEngine.GameObject","key":"like","label":"like","summary":null,"hideLabel":false}],"valueOutputDefinitions":[{"_type":"UnityEngine.GameObject","key":"Result","label":"Result","summary":null,"hideLabel":false}],"title":null,"summary":null,"pan":{"x":0.0,"y":0.0},"zoom":1.0,"elements":[{"defaultValues":{},"position":{"x":-320.0,"y":0.0},"guid":"51891211-48aa-4534-a790-238976eae7ad","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphInput","$id":"14"},{"defaultValues":{},"position":{"x":320.0,"y":0.0},"guid":"33b0a1f1-e4a7-4440-86c1-cd0517948f10","$version":"A","$type":"ArcaneOnyx.VisualScriptingExtension.ScriptGraphOutput","$id":"16"},{"defaultValues":{},"position":{"x":-320.0,"y":160.0},"guid":"f7c0b029-f679-433f-8300-7d7f555c52fe","$version":"A","$type":"Unity.VisualScripting.This","$id":"18"},{"chainable":false,"parameterNames":["from","like"],"member":{"name":"NearestLike","parameterTypes":["UnityEngine.GameObject","UnityEngine.GameObject"],"targetType":"ArcaneOnyx.BH3.Samples.ResourceNode","targetTypeName":"ArcaneOnyx.BH3.Samples.ResourceNode","$version":"A"},"defaultValues":{"%from":null,"%like":null},"position":{"x":0.0,"y":150.0},"guid":"a396afc3-60e3-4a95-94fc-db67261087fb","$version":"A","$type":"Unity.VisualScripting.InvokeMember","$id":"20"},{"sourceUnit":{"$ref":"14"},"sourceKey":"Enter","destinationUnit":{"$ref":"20"},"destinationKey":"enter","guid":"d96be5c6-8a30-4511-80a6-3e8320571036","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"20"},"sourceKey":"exit","destinationUnit":{"$ref":"16"},"destinationKey":"Exit","guid":"2a1748cd-8f23-4839-b103-665bc9667193","$type":"Unity.VisualScripting.ControlConnection"},{"sourceUnit":{"$ref":"18"},"sourceKey":"self","destinationUnit":{"$ref":"20"},"destinationKey":"%from","guid":"78171bd6-160e-4fbf-9b5d-b8d187678381","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"14"},"sourceKey":"like","destinationUnit":{"$ref":"20"},"destinationKey":"%like","guid":"ae6dcc83-7f74-4d41-9093-5f2e10504a95","$type":"Unity.VisualScripting.ValueConnection"},{"sourceUnit":{"$ref":"20"},"sourceKey":"result","destinationUnit":{"$ref":"16"},"destinationKey":"Result","guid":"b8ee8865-5d76-4601-95fb-f7ee137a9ed3","$type":"Unity.VisualScripting.ValueConnection"}],"$version":"A"}}'
+    _objectReferences: []
+  pure: 1
+  watchedKeys: []
+  description: The closest resource node of the same kind as like that still has something left, or null when none does.
