@@ -530,6 +530,8 @@ MonoBehaviour:
   - {fileID: 576211572}
   - {fileID: 576211571}
   - {fileID: 576211570}
+  parts: []
+  weaponSocket: {fileID: 0}
 --- !u!1 &975673585
 GameObject:
   m_ObjectHideFlags: 0
