@@ -12,6 +12,12 @@ namespace ArcaneOnyx.BH3.Samples
 
         public event Action<bool> SelectionChanged;
 
+        /// <summary>
+        /// Raised as a selectable leaves, while it is still safe to touch: Unity calls OnDisable before it
+        /// destroys anything, so a listener has until the end of this call to let go of it.
+        /// </summary>
+        public static event Action<Selectable> Gone;
+
         public bool IsSelected { get; private set; }
         public bool SelectsAlone => selectsAlone;
 
@@ -21,6 +27,7 @@ namespace ArcaneOnyx.BH3.Samples
         {
             All.Remove(this);
             Deselect();
+            Gone?.Invoke(this);
         }
 
         public void Select()

@@ -34,10 +34,28 @@ namespace ArcaneOnyx.BH3.Samples
             box.gameObject.SetActive(false);
         }
 
+        private void OnEnable() => Selectable.Gone += Forget;
+
+        private void OnDisable() => Selectable.Gone -= Forget;
+
+        /// <summary>
+        /// Lets go of a selectable that is leaving the scene.
+        /// <para>
+        /// Told rather than noticed. Sweeping the list from this component's own Update left it holding a
+        /// destroyed entry for the part of the frame before that Update ran, and the HUD, the action bar and
+        /// the order code all read the selection from Update too — whichever of them Unity happened to call
+        /// first threw on the dead unit.
+        /// </para>
+        /// </summary>
+        private void Forget(Selectable selectable)
+        {
+            if (!selected.Remove(selectable)) return;
+
+            Changed?.Invoke();
+        }
+
         private void Update()
         {
-            ForgetTheGone();
-
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
 
@@ -120,11 +138,6 @@ namespace ArcaneOnyx.BH3.Samples
         {
             foreach (Selectable selectable in selected) selectable.Deselect();
             selected.Clear();
-        }
-
-        private void ForgetTheGone()
-        {
-            if (selected.RemoveAll(selectable => selectable == null || !selectable.isActiveAndEnabled) > 0) Changed?.Invoke();
         }
     }
 }
