@@ -34,10 +34,23 @@ namespace ArcaneOnyx.BH3.Samples
             box.gameObject.SetActive(false);
         }
 
+        private void OnEnable() => Selectable.Gone += Forget;
+
+        private void OnDisable() => Selectable.Gone -= Forget;
+
+        /// <summary>
+        /// Told rather than noticed: everything that reads the selection reads it from Update, so sweeping
+        /// this list from Update left a destroyed entry visible to whatever ran first.
+        /// </summary>
+        private void Forget(Selectable selectable)
+        {
+            if (!selected.Remove(selectable)) return;
+
+            Changed?.Invoke();
+        }
+
         private void Update()
         {
-            ForgetTheGone();
-
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
 
@@ -120,11 +133,6 @@ namespace ArcaneOnyx.BH3.Samples
         {
             foreach (Selectable selectable in selected) selectable.Deselect();
             selected.Clear();
-        }
-
-        private void ForgetTheGone()
-        {
-            if (selected.RemoveAll(selectable => selectable == null || !selectable.isActiveAndEnabled) > 0) Changed?.Invoke();
         }
     }
 }
