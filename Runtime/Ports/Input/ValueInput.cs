@@ -99,6 +99,18 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override bool hasValidConnection => connection != null;
 
+        // A designer can rewire a running tree in the Editor, so there every read looks the wire up again.
+        // A player cannot, so there each port looks it up once and keeps the answer.
+        internal static bool isWiringFixed =
+#if UNITY_EDITOR
+            false;
+#else
+            true;
+#endif
+
+        private ValueOutput rememberedFeedingOutput;
+        private bool hasRememberedFeedingOutput;
+
         public void SetDefaultValue(object value)
         {
             Ensure.That(nameof(value)).IsOfType(value, Type);
@@ -210,18 +222,25 @@ namespace ArcaneOnyx.BehaviorTree
         
         public object GetValue()
         {
-            if (connection != null)
-            {
-                var output = connection.source;
-                var value = output.GetPortValue();
+            var feedingOutput = FeedingOutput();
 
-                return value;
-            }
-            else
+            if (feedingOutput != null) return feedingOutput.GetPortValue();
+            if (behaviorTreeNode.defaultValues.TryGetValue(key, out var value)) return value;
+
+            throw new MissingValuePortInputException(key);
+        }
+
+        private ValueOutput FeedingOutput() => isWiringFixed ? RememberedFeedingOutput() : connection?.source;
+
+        private ValueOutput RememberedFeedingOutput()
+        {
+            if (!hasRememberedFeedingOutput)
             {
-                if (behaviorTreeNode.defaultValues.TryGetValue(key, out var value)) return value;
-                throw new MissingValuePortInputException(key);
+                rememberedFeedingOutput = connection?.source;
+                hasRememberedFeedingOutput = true;
             }
+
+            return rememberedFeedingOutput;
         }
 
         /// <summary>
@@ -348,10 +367,11 @@ namespace ArcaneOnyx.BehaviorTree
 
         public T GetComponent<T>() where T : Component
         {
-            if (connection == null) return default;
-            
-            var value = GetValue();
-            
+            var feedingOutput = FeedingOutput();
+            if (feedingOutput == null) return default;
+
+            var value = feedingOutput.GetPortValue();
+
             if (value is T component) return component;
             if (value is GameObject go) return go.GetComponent<T>();
 
