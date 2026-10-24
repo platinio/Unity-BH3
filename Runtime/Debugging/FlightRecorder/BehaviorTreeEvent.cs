@@ -3,6 +3,7 @@ using ArcaneOnyx.GraphCore;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
+    /// <summary>One flat struct for every kind, because the ring that holds them must not allocate.</summary>
     public readonly struct BehaviorTreeEvent
     {
         public const int MaxValueLength = 64;
@@ -174,11 +175,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         public static string DescribeValue(object value)
         {
-            if (value == null) return "null";
+            if (value == null) return BehaviorTreeRecordingNames.NullValue;
 
             // ToString on a destroyed UnityEngine.Object reads "null", which is what the recording wants.
             var text = value.ToString();
-            if (string.IsNullOrEmpty(text)) return "\"\"";
+            if (string.IsNullOrEmpty(text)) return BehaviorTreeRecordingNames.EmptyStringValue;
 
             return text.Length <= MaxValueLength ? text : text.Substring(0, MaxValueLength) + "…";
         }

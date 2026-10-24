@@ -2,6 +2,7 @@ using System;
 using ArcaneOnyx.GraphCore;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting.FullSerializer;
+using Keys = ArcaneOnyx.BehaviorTree.Debugging.BehaviorTreeRecordingKeys;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
@@ -9,32 +10,37 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     {
         public static string ToJson(BehaviorTreeFlightRecorder recorder)
         {
-            if (recorder == null) return FsJson.Object().Set("recorder", "(null)").Pretty();
+            if (recorder == null)
+            {
+                return FsJson.Object()
+                    .Set(Keys.Recorder, BehaviorTreeRecordingNames.NoRecorder)
+                    .Pretty();
+            }
 
-            var json = FsJson.Object();
+            var recordingJson = FsJson.Object();
 
-            AddHeader(json, recorder);
-            AddCallSites(json, recorder);
-            AddEvents(json, recorder.Events);
-            AddTraces(json, recorder);
+            AddHeader(recordingJson, recorder);
+            AddCallSites(recordingJson, recorder);
+            AddEvents(recordingJson, recorder.Events);
+            AddTraces(recordingJson, recorder);
 
-            return json.Pretty();
+            return recordingJson.Pretty();
         }
 
-        private static void AddHeader(fsData json, BehaviorTreeFlightRecorder recorder)
+        private static void AddHeader(fsData recordingJson, BehaviorTreeFlightRecorder recorder)
         {
             var events = recorder.Events;
 
-            json.Set("agent", recorder.AgentName ?? BehaviorTreeRecordingNames.UnnamedAgent);
-            json.Set("tree", recorder.TreeName ?? BehaviorTreeRecordingNames.UnnamedTree);
-            json.Set("tick", recorder.Tick);
-            json.Set("recording", recorder.IsRecording ? "on" : "off");
-            json.Set("capacity", events.Capacity);
-            json.Set("count", events.Count);
-            json.Set("dropped", events.DroppedEventCount);
+            recordingJson.Set(Keys.Agent, recorder.AgentName ?? BehaviorTreeRecordingNames.UnnamedAgent);
+            recordingJson.Set(Keys.Tree, recorder.TreeName ?? BehaviorTreeRecordingNames.UnnamedTree);
+            recordingJson.Set(Keys.Tick, recorder.Tick);
+            recordingJson.Set(Keys.Recording, recorder.IsRecording ? "on" : "off");
+            recordingJson.Set(Keys.Capacity, events.Capacity);
+            recordingJson.Set(Keys.Count, events.Count);
+            recordingJson.Set(Keys.Dropped, events.DroppedEventCount);
         }
 
-        private static void AddCallSites(fsData json, BehaviorTreeFlightRecorder recorder)
+        private static void AddCallSites(fsData recordingJson, BehaviorTreeFlightRecorder recorder)
         {
             var callSites = FsJson.List();
 
@@ -43,26 +49,26 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 callSites.Add(DescribeCallSite(callSite));
             }
 
-            json.Set("callSites", callSites);
+            recordingJson.Set(Keys.CallSites, callSites);
         }
 
         private static fsData DescribeCallSite(in BehaviorTreeCallSite callSite)
         {
-            var json = FsJson.Object();
+            var callSiteJson = FsJson.Object();
 
-            json.Set("id", callSite.Id);
-            json.Set("asset", callSite.AssetName ?? BehaviorTreeRecordingNames.Unnamed);
+            callSiteJson.Set(Keys.Id, callSite.Id);
+            callSiteJson.Set(Keys.Asset, callSite.AssetName ?? BehaviorTreeRecordingNames.Unnamed);
 
             if (!callSite.IsRoot)
             {
-                json.Set("parent", callSite.ParentId);
-                json.Set("runNode", callSite.RunNodeGuid.ToString());
+                callSiteJson.Set(Keys.Parent, callSite.ParentId);
+                callSiteJson.Set(Keys.RunNode, callSite.RunNodeGuid.ToString());
             }
 
-            return json;
+            return callSiteJson;
         }
 
-        private static void AddEvents(fsData json, BehaviorTreeEventRing events)
+        private static void AddEvents(fsData recordingJson, BehaviorTreeEventRing events)
         {
             var described = FsJson.List();
 
@@ -71,116 +77,132 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 described.Add(DescribeEvent(recorded));
             }
 
-            json.Set("events", described);
+            recordingJson.Set(Keys.Events, described);
         }
 
         private static fsData DescribeEvent(in BehaviorTreeEvent recorded)
         {
-            var json = DescribeStamp(recorded);
+            var eventJson = DescribeStamp(recorded);
 
-            if (recorded.NodeGuid != Guid.Empty) json.Set("node", recorded.NodeGuid.ToString());
+            if (recorded.NodeGuid != Guid.Empty) eventJson.Set(Keys.Node, recorded.NodeGuid.ToString());
 
             switch (recorded.Kind)
             {
                 case BehaviorTreeEventKind.NodeExit:
-                    AddExitStatus(json, recorded);
+                    AddExitStatus(eventJson, recorded);
                     break;
 
                 case BehaviorTreeEventKind.GuardEval:
-                    AddGuardResult(json, recorded);
+                    AddGuardResult(eventJson, recorded);
                     break;
 
                 case BehaviorTreeEventKind.NodeAborted:
                 case BehaviorTreeEventKind.NodeSkipped:
-                    AddResponsibleGuard(json, recorded);
+                    AddResponsibleGuard(eventJson, recorded);
                     break;
 
                 case BehaviorTreeEventKind.NodeTakenOver:
-                    AddResponsibleGuard(json, recorded);
-                    AddPreemptor(json, recorded);
+                    AddResponsibleGuard(eventJson, recorded);
+                    AddPreemptor(eventJson, recorded);
                     break;
 
                 case BehaviorTreeEventKind.VariableWrite:
-                    AddVariableWrite(json, recorded);
+                    AddVariableWrite(eventJson, recorded);
                     break;
 
                 case BehaviorTreeEventKind.TreePushed:
                 case BehaviorTreeEventKind.TreePopped:
-                    AddSubTreeAsset(json, recorded);
+                    AddSubTreeAsset(eventJson, recorded);
                     break;
             }
 
-            return json;
+            return eventJson;
         }
 
         private static fsData DescribeStamp(in BehaviorTreeEvent recorded)
         {
-            var json = FsJson.Object();
+            var eventJson = FsJson.Object();
 
-            json.Set("tick", recorded.Tick);
-            json.Set("seq", recorded.Sequence);
-            json.Set("frame", recorded.Frame);
-            json.Set("time", recorded.Time);
-            json.Set("kind", recorded.Kind.ToString());
-            json.Set("callSite", recorded.CallSiteId);
+            eventJson.Set(Keys.Tick, recorded.Tick);
+            eventJson.Set(Keys.Sequence, recorded.Sequence);
+            eventJson.Set(Keys.Frame, recorded.Frame);
+            eventJson.Set(Keys.Time, recorded.Time);
+            eventJson.Set(Keys.Kind, recorded.Kind.ToString());
+            eventJson.Set(Keys.CallSite, recorded.CallSiteId);
 
-            return json;
+            return eventJson;
         }
 
-        private static void AddExitStatus(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddExitStatus(fsData eventJson, in BehaviorTreeEvent recorded)
         {
             if (recorded.Status == ExecutionStatus.None) return;
 
-            json.Set("status", recorded.Status.ToString());
+            eventJson.Set(Keys.ExitStatus, recorded.Status.ToString());
         }
 
-        private static void AddGuardResult(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddGuardResult(fsData eventJson, in BehaviorTreeEvent recorded)
         {
-            json.Set("result", recorded.GuardResult);
+            eventJson.Set(Keys.GuardResult, recorded.GuardResult);
 
-            if (recorded.RelatedGuid != Guid.Empty) json.Set("owner", recorded.RelatedGuid.ToString());
+            if (recorded.RelatedGuid != Guid.Empty)
+            {
+                eventJson.Set(Keys.Owner, recorded.RelatedGuid.ToString());
+            }
         }
 
-        private static void AddResponsibleGuard(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddResponsibleGuard(fsData eventJson, in BehaviorTreeEvent recorded)
         {
             if (recorded.RelatedGuid == Guid.Empty) return;
 
-            json.Set("guard", recorded.RelatedGuid.ToString());
+            eventJson.Set(Keys.Guard, recorded.RelatedGuid.ToString());
         }
 
-        private static void AddPreemptor(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddPreemptor(fsData eventJson, in BehaviorTreeEvent recorded)
         {
-            if (!string.IsNullOrEmpty(recorded.PreemptorName)) json.Set("preemptor", recorded.PreemptorName);
+            if (!string.IsNullOrEmpty(recorded.PreemptorName))
+            {
+                eventJson.Set(Keys.Preemptor, recorded.PreemptorName);
+            }
 
-            if (recorded.PreemptorGuid != Guid.Empty) json.Set("preemptorNode", recorded.PreemptorGuid.ToString());
+            if (recorded.PreemptorGuid != Guid.Empty)
+            {
+                eventJson.Set(Keys.PreemptorNode, recorded.PreemptorGuid.ToString());
+            }
         }
 
-        private static void AddVariableWrite(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddVariableWrite(fsData eventJson, in BehaviorTreeEvent recorded)
         {
-            json.Set("key", recorded.VariableName ?? BehaviorTreeRecordingNames.Unnamed);
-            json.Set("variableKind", recorded.VariableKind.ToString());
-            json.Set("from", recorded.OldValue ?? "null");
-            json.Set("to", recorded.NewValue ?? "null");
+            eventJson.Set(Keys.VariableName, recorded.VariableName ?? BehaviorTreeRecordingNames.Unnamed);
+            eventJson.Set(Keys.VariableKind, recorded.VariableKind.ToString());
+            eventJson.Set(Keys.From, recorded.OldValue ?? BehaviorTreeRecordingNames.NullValue);
+            eventJson.Set(Keys.To, recorded.NewValue ?? BehaviorTreeRecordingNames.NullValue);
 
-            AddWriter(json, recorded);
+            AddWriter(eventJson, recorded);
         }
 
-        private static void AddWriter(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddWriter(fsData eventJson, in BehaviorTreeEvent recorded)
         {
-            if (recorded.RelatedGuid != Guid.Empty) json.Set("writer", recorded.RelatedGuid.ToString());
-            else if (!string.IsNullOrEmpty(recorded.WriterName)) json.Set("writer", recorded.WriterName);
+            if (recorded.RelatedGuid != Guid.Empty)
+            {
+                eventJson.Set(Keys.Writer, recorded.RelatedGuid.ToString());
+            }
+            else if (!string.IsNullOrEmpty(recorded.WriterName))
+            {
+                eventJson.Set(Keys.Writer, recorded.WriterName);
+            }
         }
 
-        private static void AddSubTreeAsset(fsData json, in BehaviorTreeEvent recorded)
+        private static void AddSubTreeAsset(fsData eventJson, in BehaviorTreeEvent recorded)
         {
-            json.Set("asset", recorded.SubTreeAssetName ?? BehaviorTreeRecordingNames.NoAssetAssigned);
+            eventJson.Set(
+                Keys.Asset, recorded.SubTreeAssetName ?? BehaviorTreeRecordingNames.NoAssetAssigned);
         }
 
         /// <summary>
         /// Nested in their events, most events would carry an empty field, and traces that had scrolled
         /// out of their shorter ring would read as though the guards were never traced.
         /// </summary>
-        private static void AddTraces(fsData json, BehaviorTreeFlightRecorder recorder)
+        private static void AddTraces(fsData recordingJson, BehaviorTreeFlightRecorder recorder)
         {
             if (recorder.TraceCount == 0) return;
 
@@ -194,27 +216,31 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 traces.Add(DescribeTrace(trace));
             }
 
-            json.Set("traces", traces);
+            recordingJson.Set(Keys.Traces, traces);
         }
 
         private static fsData DescribeTrace(GuardTrace trace)
         {
-            var json = FsJson.Object();
+            var traceJson = FsJson.Object();
 
-            json.Set("tick", trace.Tick);
-            json.Set("seq", trace.Sequence);
-            json.Set("callSite", trace.CallSiteId);
-            json.Set("guard", trace.GuardGuid.ToString());
-            if (trace.OwnerGuid != Guid.Empty) json.Set("owner", trace.OwnerGuid.ToString());
-            json.Set("result", trace.Result);
+            traceJson.Set(Keys.Tick, trace.Tick);
+            traceJson.Set(Keys.Sequence, trace.Sequence);
+            traceJson.Set(Keys.CallSite, trace.CallSiteId);
+            traceJson.Set(Keys.Guard, trace.GuardGuid.ToString());
+            traceJson.Set(Keys.GuardResult, trace.Result);
 
-            AddChain(json, trace);
-            AddSnapshots(json, trace);
+            if (trace.OwnerGuid != Guid.Empty)
+            {
+                traceJson.Set(Keys.Owner, trace.OwnerGuid.ToString());
+            }
 
-            return json;
+            AddChain(traceJson, trace);
+            AddSnapshots(traceJson, trace);
+
+            return traceJson;
         }
 
-        private static void AddChain(fsData json, GuardTrace trace)
+        private static void AddChain(fsData traceJson, GuardTrace trace)
         {
             var chain = FsJson.List();
 
@@ -223,26 +249,26 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 chain.Add(DescribeChainNode(node));
             }
 
-            json.Set("chain", chain);
+            traceJson.Set(Keys.Chain, chain);
         }
 
         private static fsData DescribeChainNode(GuardTraceNode node)
         {
-            var json = FsJson.Object();
+            var nodeJson = FsJson.Object();
 
-            json.Set("node", node.NodeGuid.ToString());
-            json.Set("name", node.Name ?? BehaviorTreeRecordingNames.Unnamed);
-            json.Set("type", node.TypeName ?? BehaviorTreeRecordingNames.UnknownNodeType);
-            json.Set("value", node.Value ?? "null");
-            json.Set("depth", node.Depth);
-            json.Set("parent", node.ParentIndex);
+            nodeJson.Set(Keys.Node, node.NodeGuid.ToString());
+            nodeJson.Set(Keys.Name, node.Name ?? BehaviorTreeRecordingNames.Unnamed);
+            nodeJson.Set(Keys.Type, node.TypeName ?? BehaviorTreeRecordingNames.UnknownNodeType);
+            nodeJson.Set(Keys.Value, node.Value ?? BehaviorTreeRecordingNames.NullValue);
+            nodeJson.Set(Keys.Depth, node.Depth);
+            nodeJson.Set(Keys.Parent, node.ParentIndex);
 
-            if (node.HasSnapshot) json.Set("snapshot", node.SnapshotIndex);
+            if (node.HasSnapshot) nodeJson.Set(Keys.Snapshot, node.SnapshotIndex);
 
-            return json;
+            return nodeJson;
         }
 
-        private static void AddSnapshots(fsData json, GuardTrace trace)
+        private static void AddSnapshots(fsData traceJson, GuardTrace trace)
         {
             if (trace.Snapshots.Count == 0) return;
 
@@ -253,18 +279,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 snapshots.Add(DescribeSnapshot(snapshot));
             }
 
-            json.Set("snapshots", snapshots);
+            traceJson.Set(Keys.Snapshots, snapshots);
         }
 
         private static fsData DescribeSnapshot(GuardGraphSnapshot snapshot)
         {
-            var json = FsJson.Object();
+            var snapshotJson = FsJson.Object();
 
-            json.Set("owner", snapshot.OwnerNodeGuid.ToString());
-            json.Set("graph", snapshot.GraphName ?? BehaviorTreeRecordingNames.Unnamed);
-            json.Set("wires", DescribeWires(snapshot));
+            snapshotJson.Set(Keys.Owner, snapshot.OwnerNodeGuid.ToString());
+            snapshotJson.Set(Keys.Graph, snapshot.GraphName ?? BehaviorTreeRecordingNames.Unnamed);
+            snapshotJson.Set(Keys.Wires, DescribeWires(snapshot));
 
-            return json;
+            return snapshotJson;
         }
 
         private static fsData DescribeWires(GuardGraphSnapshot snapshot)
@@ -281,18 +307,21 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static fsData DescribeWire(GuardWireValue wire)
         {
-            var json = FsJson.Object();
+            var wireJson = FsJson.Object();
 
-            json.Set("connection", wire.ConnectionGuid.ToString());
-            json.Set("sourceUnit", wire.SourceUnitGuid.ToString());
-            json.Set("sourceKey", wire.SourceKey ?? "");
-            json.Set("destUnit", wire.DestinationUnitGuid.ToString());
-            json.Set("destKey", wire.DestinationKey ?? "");
-            json.Set("evaluated", wire.WasEvaluated);
+            wireJson.Set(Keys.Connection, wire.ConnectionGuid.ToString());
+            wireJson.Set(Keys.SourceUnit, wire.SourceUnitGuid.ToString());
+            wireJson.Set(Keys.SourceKey, wire.SourceKey ?? "");
+            wireJson.Set(Keys.DestinationUnit, wire.DestinationUnitGuid.ToString());
+            wireJson.Set(Keys.DestinationKey, wire.DestinationKey ?? "");
+            wireJson.Set(Keys.WasEvaluated, wire.WasEvaluated);
 
-            if (wire.WasEvaluated) json.Set("value", wire.Value ?? "null");
+            if (wire.WasEvaluated)
+            {
+                wireJson.Set(Keys.Value, wire.Value ?? BehaviorTreeRecordingNames.NullValue);
+            }
 
-            return json;
+            return wireJson;
         }
     }
 }

@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using ArcaneOnyx.VisualScriptingExtension;
 using Unity.VisualScripting.FullSerializer;
+using Keys = ArcaneOnyx.BehaviorTree.Debugging.BehaviorTreeRecordingKeys;
 
 namespace ArcaneOnyx.BehaviorTree.Debugging
 {
-    /// <summary>
-    /// Unknown event kinds and missing optional fields are skipped rather than fatal, so a recording
-    /// written by a newer build still opens in an older one. A malformed document throws.
-    /// </summary>
     public static class BehaviorTreeRecordingImport
     {
         public static BehaviorTreeRecordingSnapshot FromJson(string json)
@@ -35,19 +32,19 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             if (root == null || root.IsNull) return null;
 
-            var agent = root.Get("agent").AsStringOr(BehaviorTreeRecordingNames.UnnamedAgent);
-            var tree = root.Get("tree").AsStringOr(BehaviorTreeRecordingNames.UnnamedTree);
-            var tick = root.Get("tick").AsIntOr();
-            var dropped = root.Get("dropped").AsIntOr();
+            var agent = root.Get(Keys.Agent).AsStringOr(BehaviorTreeRecordingNames.UnnamedAgent);
+            var tree = root.Get(Keys.Tree).AsStringOr(BehaviorTreeRecordingNames.UnnamedTree);
+            var tick = root.Get(Keys.Tick).AsIntOr();
+            var dropped = root.Get(Keys.Dropped).AsIntOr();
 
             return new BehaviorTreeRecordingSnapshot(
                 agent,
                 tree,
                 tick,
-                ReadEvents(root.Get("events")),
-                ReadCallSites(root.Get("callSites"), tree),
+                ReadEvents(root.Get(Keys.Events)),
+                ReadCallSites(root.Get(Keys.CallSites), tree),
                 dropped,
-                ReadTraces(root.Get("traces")));
+                ReadTraces(root.Get(Keys.Traces)));
         }
 
         private static List<BehaviorTreeCallSite> ReadCallSites(fsData callSiteArray, string treeName)
@@ -64,17 +61,19 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static BehaviorTreeCallSite ReadCallSite(fsData callSiteJson, string treeName)
         {
-            var id = callSiteJson.Get("id").AsIntOr();
+            var id = callSiteJson.Get(Keys.Id).AsIntOr();
             var isRoot = id == BehaviorTreeCallSite.RootId;
 
-            var parentId = callSiteJson.Has("parent")
-                ? callSiteJson.Get("parent").AsIntOr()
+            var parentId = callSiteJson.Has(Keys.Parent)
+                ? callSiteJson.Get(Keys.Parent).AsIntOr()
                 : BehaviorTreeCallSite.RootId;
 
-            var assetName = callSiteJson.Get("asset")
+            var assetName = callSiteJson.Get(Keys.Asset)
                 .AsStringOr(isRoot ? treeName : BehaviorTreeRecordingNames.Unnamed);
 
-            return new BehaviorTreeCallSite(id, parentId, ReadGuid(callSiteJson.Get("runNode")), assetName);
+            var runNodeGuid = ReadGuid(callSiteJson.Get(Keys.RunNode));
+
+            return new BehaviorTreeCallSite(id, parentId, runNodeGuid, assetName);
         }
 
         private static List<BehaviorTreeEvent> ReadEvents(fsData eventArray)
@@ -93,66 +92,79 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static BehaviorTreeEvent? ReadEvent(fsData eventJson)
         {
-            if (!Enum.TryParse<BehaviorTreeEventKind>(eventJson.Get("kind").AsStringOr(), out var kind))
+            if (!Enum.TryParse<BehaviorTreeEventKind>(eventJson.Get(Keys.Kind).AsStringOr(), out var kind))
             {
                 return null;
             }
 
             var stamp = ReadStamp(eventJson);
-            var node = ReadGuid(eventJson.Get("node"));
+            var nodeGuid = ReadGuid(eventJson.Get(Keys.Node));
 
             return kind switch
             {
-                BehaviorTreeEventKind.NodeEnter => BehaviorTreeEvent.NodeEntered(stamp, node),
-                BehaviorTreeEventKind.NodeExit => ReadNodeExited(eventJson, stamp, node),
+                BehaviorTreeEventKind.NodeEnter => BehaviorTreeEvent.NodeEntered(stamp, nodeGuid),
+                BehaviorTreeEventKind.NodeExit => ReadNodeExited(eventJson, stamp, nodeGuid),
                 BehaviorTreeEventKind.NodeSkipped =>
-                    BehaviorTreeEvent.NodeSkippedByGuard(stamp, node, ReadGuardGuid(eventJson)),
+                    BehaviorTreeEvent.NodeSkippedByGuard(stamp, nodeGuid, ReadGuardGuid(eventJson)),
                 BehaviorTreeEventKind.NodeAborted =>
-                    BehaviorTreeEvent.NodeAbortedByGuard(stamp, node, ReadGuardGuid(eventJson)),
-                BehaviorTreeEventKind.NodeTakenOver => ReadNodeTakenOver(eventJson, stamp, node),
-                BehaviorTreeEventKind.GuardEval => ReadGuardChanged(eventJson, stamp, node),
+                    BehaviorTreeEvent.NodeAbortedByGuard(stamp, nodeGuid, ReadGuardGuid(eventJson)),
+                BehaviorTreeEventKind.NodeTakenOver => ReadNodeTakenOver(eventJson, stamp, nodeGuid),
+                BehaviorTreeEventKind.GuardEval => ReadGuardChanged(eventJson, stamp, nodeGuid),
                 BehaviorTreeEventKind.VariableWrite => ReadVariableWrite(eventJson, stamp),
                 BehaviorTreeEventKind.TreePushed =>
-                    BehaviorTreeEvent.SubTreePushed(stamp, node, ReadAssetName(eventJson)),
+                    BehaviorTreeEvent.SubTreePushed(stamp, nodeGuid, ReadAssetName(eventJson)),
                 BehaviorTreeEventKind.TreePopped =>
-                    BehaviorTreeEvent.SubTreePopped(stamp, node, ReadAssetName(eventJson)),
+                    BehaviorTreeEvent.SubTreePopped(stamp, nodeGuid, ReadAssetName(eventJson)),
                 _ => null,
             };
         }
 
-        private static BehaviorTreeEvent ReadNodeExited(
-            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid node)
+        private static BehaviorTreeEventStamp ReadStamp(fsData eventJson)
         {
-            Enum.TryParse<ExecutionStatus>(eventJson.Get("status").AsStringOr(), out var status);
+            return new BehaviorTreeEventStamp(
+                eventJson.Get(Keys.Tick).AsIntOr(),
+                eventJson.Get(Keys.Sequence).AsIntOr(),
+                eventJson.Get(Keys.Frame).AsIntOr(),
+                eventJson.Get(Keys.Time).AsFloatOr(),
+                eventJson.Get(Keys.CallSite).AsIntOr());
+        }
 
-            return BehaviorTreeEvent.NodeExited(stamp, node, status);
+        private static BehaviorTreeEvent ReadNodeExited(
+            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid nodeGuid)
+        {
+            Enum.TryParse<ExecutionStatus>(eventJson.Get(Keys.ExitStatus).AsStringOr(), out var status);
+
+            return BehaviorTreeEvent.NodeExited(stamp, nodeGuid, status);
         }
 
         private static BehaviorTreeEvent ReadGuardChanged(
-            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid guard)
+            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid guardGuid)
         {
             return BehaviorTreeEvent.GuardChanged(
-                stamp, guard, ReadGuid(eventJson.Get("owner")), eventJson.Get("result").AsBoolOr());
+                stamp,
+                guardGuid,
+                ReadGuid(eventJson.Get(Keys.Owner)),
+                eventJson.Get(Keys.GuardResult).AsBoolOr());
         }
 
         private static BehaviorTreeEvent ReadNodeTakenOver(
-            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid victim)
+            fsData eventJson, in BehaviorTreeEventStamp stamp, Guid victimGuid)
         {
             return BehaviorTreeEvent.NodeTakenOver(
                 stamp,
-                victim,
+                victimGuid,
                 ReadGuardGuid(eventJson),
-                eventJson.Get("preemptor").AsStringOr(null),
-                ReadGuid(eventJson.Get("preemptorNode")));
+                eventJson.Get(Keys.Preemptor).AsStringOr(null),
+                ReadGuid(eventJson.Get(Keys.PreemptorNode)));
         }
 
         private static BehaviorTreeEvent ReadVariableWrite(fsData eventJson, in BehaviorTreeEventStamp stamp)
         {
-            var variableName = eventJson.Get("key").AsStringOr();
-            var oldValue = eventJson.Get("from").AsStringOr("null");
-            var newValue = eventJson.Get("to").AsStringOr("null");
+            var variableName = eventJson.Get(Keys.VariableName).AsStringOr();
+            var oldValue = eventJson.Get(Keys.From).AsStringOr(BehaviorTreeRecordingNames.NullValue);
+            var newValue = eventJson.Get(Keys.To).AsStringOr(BehaviorTreeRecordingNames.NullValue);
             var variableKind = ReadVariableKind(eventJson);
-            var writer = eventJson.Get("writer").AsStringOr();
+            var writer = eventJson.Get(Keys.Writer).AsStringOr();
 
             return Guid.TryParse(writer, out var writerNodeGuid)
                 ? BehaviorTreeEvent.VariableWrittenByNode(
@@ -168,8 +180,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// </summary>
         private static BehaviorTreeVariableKind ReadVariableKind(fsData eventJson)
         {
-            var stored = eventJson.Get("variableKind").AsStringOr();
-            if (string.IsNullOrEmpty(stored)) stored = eventJson.Get("scope").AsStringOr();
+            var stored = eventJson.Get(Keys.VariableKind).AsStringOr();
+            if (string.IsNullOrEmpty(stored))
+            {
+                stored = eventJson.Get(Keys.VariableKindBeforeRename).AsStringOr();
+            }
 
             return Enum.TryParse<BehaviorTreeVariableKind>(stored, out var parsed)
                 ? parsed
@@ -191,14 +206,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static GuardTrace ReadTrace(fsData traceJson)
         {
             return new GuardTrace(
-                traceJson.Get("tick").AsIntOr(),
-                traceJson.Get("seq").AsIntOr(),
-                traceJson.Get("callSite").AsIntOr(),
-                ReadGuid(traceJson.Get("guard")),
-                ReadGuid(traceJson.Get("owner")),
-                traceJson.Get("result").AsBoolOr(),
-                ReadChain(traceJson.Get("chain")),
-                ReadSnapshots(traceJson.Get("snapshots")));
+                traceJson.Get(Keys.Tick).AsIntOr(),
+                traceJson.Get(Keys.Sequence).AsIntOr(),
+                traceJson.Get(Keys.CallSite).AsIntOr(),
+                ReadGuid(traceJson.Get(Keys.Guard)),
+                ReadGuid(traceJson.Get(Keys.Owner)),
+                traceJson.Get(Keys.GuardResult).AsBoolOr(),
+                ReadChain(traceJson.Get(Keys.Chain)),
+                ReadSnapshots(traceJson.Get(Keys.Snapshots)));
         }
 
         private static List<GuardTraceNode> ReadChain(fsData chainArray)
@@ -216,13 +231,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static GuardTraceNode ReadChainNode(fsData nodeJson)
         {
             return new GuardTraceNode(
-                ReadGuid(nodeJson.Get("node")),
-                nodeJson.Get("name").AsStringOr(BehaviorTreeRecordingNames.Unnamed),
-                nodeJson.Get("type").AsStringOr(BehaviorTreeRecordingNames.UnknownNodeType),
-                nodeJson.Get("value").AsStringOr("null"),
-                nodeJson.Get("depth").AsIntOr(),
-                ReadOptionalIndex(nodeJson, "parent"),
-                ReadOptionalIndex(nodeJson, "snapshot"));
+                ReadGuid(nodeJson.Get(Keys.Node)),
+                nodeJson.Get(Keys.Name).AsStringOr(BehaviorTreeRecordingNames.Unnamed),
+                nodeJson.Get(Keys.Type).AsStringOr(BehaviorTreeRecordingNames.UnknownNodeType),
+                nodeJson.Get(Keys.Value).AsStringOr(BehaviorTreeRecordingNames.NullValue),
+                nodeJson.Get(Keys.Depth).AsIntOr(),
+                ReadOptionalIndex(nodeJson, Keys.Parent),
+                ReadOptionalIndex(nodeJson, Keys.Snapshot));
         }
 
         private static List<GuardGraphSnapshot> ReadSnapshots(fsData snapshotArray)
@@ -240,9 +255,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static GuardGraphSnapshot ReadSnapshot(fsData snapshotJson)
         {
             return new GuardGraphSnapshot(
-                ReadGuid(snapshotJson.Get("owner")),
-                snapshotJson.Get("graph").AsStringOr(BehaviorTreeRecordingNames.Unnamed),
-                ReadWires(snapshotJson.Get("wires")));
+                ReadGuid(snapshotJson.Get(Keys.Owner)),
+                snapshotJson.Get(Keys.Graph).AsStringOr(BehaviorTreeRecordingNames.Unnamed),
+                ReadWires(snapshotJson.Get(Keys.Wires)));
         }
 
         private static List<GuardWireValue> ReadWires(fsData wireArray)
@@ -259,35 +274,29 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private static GuardWireValue ReadWire(fsData wireJson)
         {
-            var wasEvaluated = wireJson.Get("evaluated").AsBoolOr();
+            var wasEvaluated = wireJson.Get(Keys.WasEvaluated).AsBoolOr();
 
             return new GuardWireValue(
-                ReadGuid(wireJson.Get("connection")),
-                ReadGuid(wireJson.Get("sourceUnit")),
-                wireJson.Get("sourceKey").AsStringOr(""),
-                ReadGuid(wireJson.Get("destUnit")),
-                wireJson.Get("destKey").AsStringOr(""),
-                wasEvaluated ? wireJson.Get("value").AsStringOr("null") : "(not evaluated)",
+                ReadGuid(wireJson.Get(Keys.Connection)),
+                ReadGuid(wireJson.Get(Keys.SourceUnit)),
+                wireJson.Get(Keys.SourceKey).AsStringOr(""),
+                ReadGuid(wireJson.Get(Keys.DestinationUnit)),
+                wireJson.Get(Keys.DestinationKey).AsStringOr(""),
+                wasEvaluated
+                    ? wireJson.Get(Keys.Value).AsStringOr(BehaviorTreeRecordingNames.NullValue)
+                    : BehaviorTreeRecordingNames.NotEvaluated,
                 wasEvaluated);
         }
 
-        private static BehaviorTreeEventStamp ReadStamp(fsData eventJson)
-        {
-            return new BehaviorTreeEventStamp(
-                eventJson.Get("tick").AsIntOr(),
-                eventJson.Get("seq").AsIntOr(),
-                eventJson.Get("frame").AsIntOr(),
-                eventJson.Get("time").AsFloatOr(),
-                eventJson.Get("callSite").AsIntOr());
-        }
+        private static Guid ReadGuardGuid(fsData eventJson) => ReadGuid(eventJson.Get(Keys.Guard));
 
-        private static Guid ReadGuardGuid(fsData eventJson) => ReadGuid(eventJson.Get("guard"));
-
-        private static string ReadAssetName(fsData eventJson) => eventJson.Get("asset").AsStringOr();
+        private static string ReadAssetName(fsData eventJson) => eventJson.Get(Keys.Asset).AsStringOr();
 
         private static int ReadOptionalIndex(fsData json, string property)
         {
-            return json.Has(property) ? json.Get(property).AsIntOr(-1) : -1;
+            if (!json.Has(property)) return GuardTraceNode.NoIndex;
+
+            return json.Get(property).AsIntOr(GuardTraceNode.NoIndex);
         }
 
         private static Guid ReadGuid(fsData value)

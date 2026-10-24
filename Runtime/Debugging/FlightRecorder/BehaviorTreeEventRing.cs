@@ -14,7 +14,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             if (capacity <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(capacity), "A ring needs room for at least one event.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(capacity), "A ring needs room for at least one event.");
             }
 
             events = new BehaviorTreeEvent[capacity];

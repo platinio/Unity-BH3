@@ -71,6 +71,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             sequenceWithinTick = 0;
         }
 
+        public void Clear()
+        {
+            events.Clear();
+            guardTraces.Clear();
+            lastGuardResults.Clear();
+            sequenceWithinTick = 0;
+        }
+
         public int RegisterCallSite(
             BehaviorTreeVariableScope scope,
             BehaviorTreeVariableScope parentScope,
@@ -96,7 +104,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             callSiteIdsByScope[scope] = BehaviorTreeCallSite.RootId;
         }
 
-        public int CallSiteOf(BehaviorTreeNode node) => CallSiteIdOf(node?.VariableScope);
+        public int CallSiteIdOf(BehaviorTreeNode node) => CallSiteIdOf(node?.VariableScope);
 
         private int CallSiteIdOf(BehaviorTreeVariableScope scope)
         {
@@ -105,21 +113,13 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             return callSiteIdsByScope.TryGetValue(scope, out var id) ? id : BehaviorTreeCallSite.RootId;
         }
 
-        public void Clear()
-        {
-            events.Clear();
-            guardTraces.Clear();
-            lastGuardResults.Clear();
-            sequenceWithinTick = 0;
-        }
-
         public void NodeEnter(BehaviorTreeNode node)
         {
             if (!IsRecording || node == null) return;
 
-            var callSiteId = CallSiteOf(node);
+            var callSiteId = CallSiteIdOf(node);
 
-            Record(BehaviorTreeEvent.NodeEntered(NextStamp(callSiteId), node.guid));
+            Record(BehaviorTreeEvent.NodeEntered(TakeNextStamp(callSiteId), node.guid));
             RecordSubTreeEntered(node, callSiteId);
         }
 
@@ -127,10 +127,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             if (!IsRecording || node == null) return;
 
-            var callSiteId = CallSiteOf(node);
+            var callSiteId = CallSiteIdOf(node);
 
             RecordSubTreeLeft(node, callSiteId);
-            Record(BehaviorTreeEvent.NodeExited(NextStamp(callSiteId), node.guid, status));
+            Record(BehaviorTreeEvent.NodeExited(TakeNextStamp(callSiteId), node.guid, status));
         }
 
         private void RecordSubTreeEntered(BehaviorTreeNode node, int callSiteId)
@@ -138,7 +138,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (node is RunBehaviorTreeGraphNode runNode)
             {
                 Record(BehaviorTreeEvent.SubTreePushed(
-                    NextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
+                    TakeNextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
             }
         }
 
@@ -147,7 +147,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (node is RunBehaviorTreeGraphNode runNode)
             {
                 Record(BehaviorTreeEvent.SubTreePopped(
-                    NextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
+                    TakeNextStamp(callSiteId), node.guid, BehaviorTreeRecordingNames.AssetNameOf(runNode)));
             }
         }
 
@@ -156,7 +156,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (!IsRecording || node == null) return;
 
             Record(BehaviorTreeEvent.NodeSkippedByGuard(
-                NextStamp(CallSiteOf(node)), node.guid, GuidOf(guard)));
+                TakeNextStamp(CallSiteIdOf(node)), node.guid, GuidOf(guard)));
         }
 
         public void NodeAborted(BehaviorTreeNode node, ConditionalExecution guard)
@@ -164,7 +164,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (!IsRecording || node == null) return;
 
             Record(BehaviorTreeEvent.NodeAbortedByGuard(
-                NextStamp(CallSiteOf(node)), node.guid, GuidOf(guard)));
+                TakeNextStamp(CallSiteIdOf(node)), node.guid, GuidOf(guard)));
         }
 
         public void NodeTakenOver(
@@ -173,7 +173,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (!IsRecording || victim == null) return;
 
             Record(BehaviorTreeEvent.NodeTakenOver(
-                NextStamp(CallSiteOf(victim)),
+                TakeNextStamp(CallSiteIdOf(victim)),
                 victim.guid,
                 GuidOf(guard),
                 NameOf(preemptor),
@@ -188,14 +188,14 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         {
             if (!IsRecording || guardedNode == null || guard == null) return;
 
-            var callSiteId = CallSiteOf(guardedNode);
+            var callSiteId = CallSiteIdOf(guardedNode);
             var guardAtCallSite = new GuardAtCallSite(callSiteId, guard.guid);
 
             if (IsSameAsLastResult(guardAtCallSite, result)) return;
 
             lastGuardResults[guardAtCallSite] = result;
 
-            var stamp = NextStamp(callSiteId);
+            var stamp = TakeNextStamp(callSiteId);
 
             Record(BehaviorTreeEvent.GuardChanged(stamp, guard.guid, guardedNode.guid, result));
             CaptureTrace(guardedNode, guard, result, stamp);
@@ -220,18 +220,18 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public void VariableWrite(
             BehaviorTreeNode writer,
-            string key,
+            string variableName,
             BehaviorTreeVariableKind variableKind,
             object oldValue,
             object newValue)
         {
-            if (!IsRecording || string.IsNullOrEmpty(key)) return;
+            if (!IsRecording || string.IsNullOrEmpty(variableName)) return;
 
             Record(
                 BehaviorTreeEvent.VariableWrittenByNode(
-                    NextStamp(CallSiteOf(writer)),
+                    TakeNextStamp(CallSiteIdOf(writer)),
                     GuidOf(writer),
-                    key,
+                    variableName,
                     variableKind,
                     BehaviorTreeEvent.DescribeValue(oldValue),
                     BehaviorTreeEvent.DescribeValue(newValue)),
@@ -239,42 +239,42 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         }
 
         /// <summary>
-        /// Unused inside BH3, and kept because sensors outside the tree publish most of the facts a tree
-        /// reads: without it, who wrote the value that flipped a guard has no answer in that common case.
+        /// Sensors outside the tree publish most of the facts a tree reads, so without these writes the
+        /// question "who flipped this guard" has no answer in the common case.
         /// </summary>
         public void ExternalVariableWrite(
             string writerName,
-            string key,
+            string variableName,
             object oldValue,
             object newValue,
             BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object)
         {
-            if (!IsRecording || string.IsNullOrEmpty(key)) return;
+            if (!IsRecording || string.IsNullOrEmpty(variableName)) return;
 
             Record(
                 BehaviorTreeEvent.VariableWrittenOutsideTree(
-                    NextStamp(BehaviorTreeCallSite.RootId),
+                    TakeNextStamp(BehaviorTreeCallSite.RootId),
                     NameOfExternalWriter(writerName),
-                    key,
+                    variableName,
                     variableKind,
                     BehaviorTreeEvent.DescribeValue(oldValue),
                     BehaviorTreeEvent.DescribeValue(newValue)),
                 newValue);
         }
 
-        private BehaviorTreeEventStamp NextStamp(int callSiteId)
+        private BehaviorTreeEventStamp TakeNextStamp(int callSiteId)
         {
             return new BehaviorTreeEventStamp(
                 Tick, sequenceWithinTick++, UnityEngine.Time.frameCount, UnityEngine.Time.time, callSiteId);
         }
 
-        private void Record(in BehaviorTreeEvent recorded, object valueForBreakpointMatching = null)
+        private void Record(in BehaviorTreeEvent newEvent, object valueForBreakpointMatching = null)
         {
-            events.Add(recorded);
+            events.Add(newEvent);
 
             // After the ring, never before: a breakpoint hit pauses the editor and parks the scrubber on this
             // tick, so the event that caused it has to already be in the recording the reader will look at.
-            BehaviorTreeBreakpoints.Evaluate(this, recorded, valueForBreakpointMatching);
+            BehaviorTreeBreakpoints.Evaluate(this, newEvent, valueForBreakpointMatching);
         }
 
         private static Guid GuidOf(ConditionalExecution guard) => guard?.guid ?? Guid.Empty;
@@ -293,20 +293,20 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private readonly struct GuardAtCallSite : IEquatable<GuardAtCallSite>
         {
             private readonly int callSiteId;
-            private readonly Guid guard;
+            private readonly Guid guardGuid;
 
-            public GuardAtCallSite(int callSiteId, Guid guard)
+            public GuardAtCallSite(int callSiteId, Guid guardGuid)
             {
                 this.callSiteId = callSiteId;
-                this.guard = guard;
+                this.guardGuid = guardGuid;
             }
 
             public bool Equals(GuardAtCallSite other) =>
-                callSiteId == other.callSiteId && guard.Equals(other.guard);
+                callSiteId == other.callSiteId && guardGuid.Equals(other.guardGuid);
 
             public override bool Equals(object obj) => obj is GuardAtCallSite other && Equals(other);
 
-            public override int GetHashCode() => unchecked((callSiteId * 397) ^ guard.GetHashCode());
+            public override int GetHashCode() => HashCode.Combine(callSiteId, guardGuid);
         }
     }
 }

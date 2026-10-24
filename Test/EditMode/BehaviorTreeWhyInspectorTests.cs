@@ -985,6 +985,43 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void AnImportedRecordingKeepsWhoTookOverAndWhichNodeTheyWere()
+        {
+            var preemptor = Guid.NewGuid();
+            var recorder = new BehaviorTreeFlightRecorder("Zombie", "ZombieTree");
+            recorder.Events.Add(BehaviorTreeEvent.NodeTakenOver(
+                new BehaviorTreeEventStamp(412, 0, 412, 8.24f, 0), Branch, Guard, "Attack", preemptor));
+
+            var reimported = BehaviorTreeRecordingImport.FromJson(BehaviorTreeRecordingDump.ToJson(recorder));
+
+            var takeover = reimported.EventAt(0);
+
+            Assert.AreEqual(BehaviorTreeEventKind.NodeTakenOver, takeover.Kind);
+            Assert.AreEqual("Attack", takeover.PreemptorName);
+            Assert.AreEqual(preemptor, takeover.PreemptorGuid,
+                "The canvas needs the preemptor's guid, and once the tree is gone only the recording has it.");
+        }
+
+        [Test]
+        public void AnEventKindThisBuildDoesNotKnowIsSkippedRatherThanFatal()
+        {
+            const string fromANewerBuild =
+                "{\"agent\":\"Zombie\",\"tree\":\"ZombieTree\",\"tick\":12,\"dropped\":0," +
+                "\"callSites\":[{\"id\":0,\"parent\":0,\"asset\":\"ZombieTree\"}]," +
+                "\"events\":[" +
+                "{\"tick\":10,\"seq\":0,\"frame\":10,\"time\":0.2,\"kind\":\"Teleported\",\"callSite\":0}," +
+                "{\"tick\":10,\"seq\":1,\"frame\":10,\"time\":0.2,\"kind\":\"NodeEnter\",\"callSite\":0," +
+                "\"node\":\"" + Branch + "\"}]}";
+
+            Assert.IsTrue(BehaviorTreeRecordingImport.TryFromJson(fromANewerBuild, out var imported));
+
+            Assert.AreEqual(1, imported.EventCount,
+                "A kind this build has never heard of is a newer recorder's business, not a reason to refuse the file.");
+            Assert.AreEqual(BehaviorTreeEventKind.NodeEnter, imported.EventAt(0).Kind);
+            Assert.AreEqual(Branch, imported.EventAt(0).NodeGuid);
+        }
+
+        [Test]
         public void MalformedJsonIsRejectedRatherThanPartiallyLoaded()
         {
             Assert.IsFalse(BehaviorTreeRecordingImport.TryFromJson("{ \"agent\": ", out _),

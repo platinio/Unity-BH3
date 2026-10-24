@@ -11,8 +11,11 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public static bool IsTracingGloballyEnabled { get; set; } = true;
 
-        /// <summary>Lowering this does not shrink recorders that already exist; a ring is never resized.</summary>
-        public static int DefaultEventCapacity { get; set; } = BehaviorTreeFlightRecorder.DefaultEventCapacity;
+        /// <summary>
+        /// Lowering this does not shrink recorders that already exist; a ring is never resized.
+        /// </summary>
+        public static int DefaultEventCapacity { get; set; } =
+            BehaviorTreeFlightRecorder.DefaultEventCapacity;
 
         public static int DefaultTraceCapacity { get; set; } = GuardTraceRing.DefaultCapacity;
 

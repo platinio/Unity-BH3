@@ -23,7 +23,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             if (machine == null) return;
 
             var recorder = new BehaviorTreeFlightRecorder(
-                machine.gameObject != null ? machine.gameObject.name : BehaviorTreeRecordingNames.UnnamedAgent,
+                BehaviorTreeRecordingNames.AgentNameOf(machine),
                 treeName,
                 BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity,
                 BehaviorTreeFlightRecorderRegistry.DefaultTraceCapacity);
@@ -32,10 +32,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             BehaviorTreeFlightRecorderRegistry.Register(recorder);
         }
 
-        /// <summary>
-        /// Clears the machine's own reference as well as the registration, because a destroyed machine goes
-        /// on answering FlightRecorder and would still read as recording.
-        /// </summary>
+        /// <summary>A destroyed machine still answers FlightRecorder, and would read as recording.</summary>
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void Detach(BehaviorTreeMachine machine)
         {
@@ -121,12 +118,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void VariableWrite(
             BehaviorTreeNode writer,
-            string key,
+            string variableName,
             BehaviorTreeVariableKind variableKind,
             object oldValue,
             object newValue)
         {
-            writer?.FlightRecorder?.VariableWrite(writer, key, variableKind, oldValue, newValue);
+            writer?.FlightRecorder?.VariableWrite(writer, variableName, variableKind, oldValue, newValue);
         }
 
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
@@ -145,34 +142,36 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         public static void ScriptGraphVariableWrite(
             BehaviorTreeMachine machine,
             string writerName,
-            string key,
-            BehaviorTreeVariableKind kind,
+            string variableName,
+            BehaviorTreeVariableKind variableKind,
             object oldValue,
             object newValue)
         {
-            if (kind == BehaviorTreeVariableKind.None) return;
+            if (variableKind == BehaviorTreeVariableKind.None) return;
 
             var owner = scriptGraphOwners.Count > 0 ? scriptGraphOwners.Peek() : null;
 
             if (owner != null)
             {
-                owner.FlightRecorder?.VariableWrite(owner, key, kind, oldValue, newValue);
+                owner.FlightRecorder?.VariableWrite(owner, variableName, variableKind, oldValue, newValue);
                 return;
             }
 
-            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, kind);
+            machine?.FlightRecorder?.ExternalVariableWrite(
+                writerName, variableName, oldValue, newValue, variableKind);
         }
 
         [Conditional(EditorDefine), Conditional(DevToolsDefine)]
         public static void ExternalVariableWrite(
             BehaviorTreeMachine machine,
             string writerName,
-            string key,
+            string variableName,
             object oldValue,
             object newValue,
             BehaviorTreeVariableKind variableKind = BehaviorTreeVariableKind.Object)
         {
-            machine?.FlightRecorder?.ExternalVariableWrite(writerName, key, oldValue, newValue, variableKind);
+            machine?.FlightRecorder?.ExternalVariableWrite(
+                writerName, variableName, oldValue, newValue, variableKind);
         }
     }
 }
