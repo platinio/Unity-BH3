@@ -104,6 +104,7 @@ the attack tree a unit's weapon names, so a Worker fights back with its hands by
 | `ProductionQueue` | What a building has been asked to train; publishes `queueCount`, `trainSeconds` and `nextKind`. |
 | `ResourceNode`, `Resource` | A tree or a gold outcrop: kind, what is left (published as `remaining`), shrinks as it empties, hides when bare. `NearestLike` serves the Function. |
 | `Carrier` | What a Worker holds, twenty of one kind at most; publishes `carriedKind`, `carriedAmount`, `isCarryingFull`. |
+| `NavMeshPathLine` | On the four player units: draws the NavMesh path being walked as a line, and hides it on arrival. |
 | `Depot`, `Treasury` | The Town Hall takes a carrier's load into the Treasury on the Game object, which publishes `wood` and `gold`. |
 | `Selectable`, `SelectionRing`, `SelectionBox` | The roster of what can be selected, the ring under a selected unit or building, and the drag rectangle that owns the selection. A building's ring widens itself to its kind's footprint, so a Keep is ringed wider than a Barracks. |
 | `PlayerCommands` | Right clicks become attack, build, gather or move orders for the selection, each numbered; the only writer of order facts. |

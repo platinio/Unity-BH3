@@ -2,7 +2,8 @@
 
 A capsule on a small arena. Left-click the ground and it hops its way there along the NavMesh, then settles
 back into a gentle breathing idle. Click somewhere else while it is on its way and it turns toward the new
-point on the next frame.
+point on the next frame. The path it is about to walk is drawn as a line ahead of it, bending around the blocks,
+and goes away when it arrives.
 
 Open `ClickToMove.unity` and press Play. Everything you see is primitives and tweens; there is no art and no
 animation clip in this sample.
