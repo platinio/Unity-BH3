@@ -11,8 +11,10 @@ release by itself:
        dependency's LATEST release .unitypackage, reads the module.json embedded in
        it to discover transitive deps, and recurses. Optional deps are skipped.
     3. If module.json declares a "sample", packs it into a separate
-       <name>.Samples.unitypackage -- the Samples~/ folder with the `~` stripped so
-       it installs as an importable Samples/.
+       <name>.Samples.unitypackage (--sample separate, the default) or folds it into
+       the core package (--sample bundled, the default with --asset-store, whose
+       listing holds one package). A Samples~/ folder has the `~` stripped so it
+       installs as an importable Samples/; a plain folder ships as it is.
     4. Verifies LOCALLY in a throwaway Unity project (skip with --skip-tests):
        the module's committed source + the downloaded dependency packages + the
        sample package (imported, so the sample is compiled too) + the UPM "packages".
@@ -43,8 +45,12 @@ Point at another repo / override the derived name:
 Handy flags:
     --skip-tests          skip the local Unity verify (faster; when already confirmed)
     --exclude A B         extra path prefixes to keep OUT of the core package
-                          (default: ReadmeResources; the "sample" path is auto-excluded,
-                          and so is everything in module.json's "exclude")
+                          (default: ReadmeResources; the "sample" path is auto-excluded
+                          unless --sample bundled, and so is everything in module.json's
+                          "exclude")
+    --sample separate|bundled
+                          ship module.json's "sample" as its own package, or inside the
+                          core (default: separate; bundled with --asset-store)
     --draft/--prerelease  make the GitHub release a draft / prerelease
     --asset-store         upload to the Asset Store draft instead of releasing on GitHub
     --asset-store-list    print the publisher's Asset Store packages and exit
@@ -85,9 +91,9 @@ release.py itself would get packed). Only "name" + "version" are required.
                                                 // build builds (post ~-strip path for a
                                                 // sample scene). Empty scene if omitted.
 
-        "sample": {                             // optional; a Samples~/ folder shipped as a
-            "path": "Samples~",                 // SEPARATE <name>.Samples.unitypackage (the `~`
-            "packages": {                       // is stripped -> importable Samples/). Excluded
+        "sample": {                             // optional; a sample folder (Samples~/ or a plain
+            "path": "Samples~",                 // Samples/) shipped as a SEPARATE <name>.Samples
+            "packages": {                       // .unitypackage (a `~` is stripped). Excluded
                 "com.unity.ugui": "2.0.0",      // from the core, and compile-tested by importing
                 "com.unity.inputsystem": "1.14.0"// it into the verify. "packages" = extra UPM
             }                                   // deps the SAMPLE needs. Shorthand: "sample":
@@ -146,7 +152,8 @@ ASSET STORE (--asset-store):
   to the listing named by module.json's "assetStore" (or --asset-store-package). It
   does NOT create the listing, edit its metadata, or submit it for review: the
   listing must already have a DRAFT version in the Publisher Portal, and Submit is
-  still pressed there. A "sample" package is not uploaded -- a listing holds one package.
+  still pressed there. A listing holds one package, so the "sample" is folded into the
+  core by default (--sample bundled); with --sample separate it is packed but not uploaded.
 
   The upload goes through Unity's own Asset Store Tools package, driven in a throwaway
   batch-mode project. That needs:
@@ -1193,6 +1200,9 @@ def main():
     ap.add_argument("--tag", help="git tag to use (default: the version verbatim)")
     ap.add_argument("--exclude", nargs="*", default=["ReadmeResources"],
                     help="path prefixes to keep OUT of the package")
+    ap.add_argument("--sample", choices=["separate", "bundled"],
+                    help="ship module.json's \"sample\" as its own <name>.Samples.unitypackage, "
+                         "or inside the core (default: separate; bundled with --asset-store)")
     ap.add_argument("--unity", help="path to Unity.exe (default: auto-detect from version)")
     ap.add_argument("--unity-version", help="Unity version to test with (default: parent project's)")
     ap.add_argument("--test-platforms", nargs="+", default=["EditMode"],
@@ -1264,12 +1274,13 @@ def main():
         found = store.run("check", package=store_package)
         info("  " + next(ln for ln in found if ln.startswith("draft ")))
 
-    # A "sample" in module.json ships as a SEPARATE <name>.Samples.unitypackage:
-    # excluded from the CORE package, packed with the ~ stripped so Samples~/ installs
-    # as an importable Samples/, and -- so it is actually tested -- imported into the
-    # verify scaffold (exercising the real shipped artifact). "sample" is a path
-    # string, or {path, packages} where packages are extra UPM deps the sample needs
-    # (e.g. TextMeshPro / Input System) added to the verify scaffold.
+    # A "sample" in module.json ships as a SEPARATE <name>.Samples.unitypackage by
+    # default: excluded from the CORE package, packed with any ~ stripped so Samples~/
+    # installs as an importable Samples/, and -- so it is actually tested -- imported
+    # into the verify scaffold (exercising the real shipped artifact). With --sample
+    # bundled it stays inside the core and is verified as part of its source. "sample"
+    # is a path string, or {path, packages} where packages are extra UPM deps the
+    # sample needs (e.g. TextMeshPro / Input System) added to the verify scaffold.
     sample = (manifest or {}).get("sample")
     if isinstance(sample, str):
         sample_path, sample_packages = sample, {}
@@ -1281,7 +1292,9 @@ def main():
         fail('module.json "exclude" must be a list of path prefixes, e.g. ["docs"].')
     manifest_exclude = [p.replace("\\", "/").strip("/") for p in manifest_exclude]
     exclude = list(args.exclude) + manifest_exclude
-    core_exclude = exclude + ([sample_path] if sample_path else [])
+    sample_mode = args.sample or ("bundled" if args.asset_store else "separate")
+    ships_sample_separately = bool(sample_path) and sample_mode == "separate"
+    core_exclude = exclude + ([sample_path] if ships_sample_separately else [])
 
     # 2. resolve + download the dependency closure ---------------------------
     dep_packages = resolve_dependency_closure(manifest, tok, layout)
@@ -1289,7 +1302,9 @@ def main():
 
     # 3. pack the separate sample package early (so the verify can import it) -
     sample_out, sample_raw = None, None
-    if sample_path:
+    if sample_path and not ships_sample_separately:
+        info(f"bundling sample '{sample_path}' into the core package (--sample bundled).")
+    if ships_sample_separately:
         sample_out = os.path.join(repo, "dist", f"{name}.Samples.unitypackage")
         info(f"packing separate sample package from '{sample_path}' ...")
         if not build_unitypackage(repo, install_path, sample_out, exclude,
@@ -1316,7 +1331,7 @@ def main():
                        args.test_platforms, args.keep_test_project,
                        dep_packages=dep_packages,
                        build_scene=(manifest or {}).get("buildScene"),
-                       exclude_prefixes=manifest_exclude + ([sample_path] if sample_path else []),
+                       exclude_prefixes=manifest_exclude + ([sample_path] if ships_sample_separately else []),
                        sample_raw=sample_raw, install_path=install_path)
 
     # 5. pack the core package (+ bundled dependency closure) ----------------
