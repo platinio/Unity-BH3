@@ -25,11 +25,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// </summary>
     public static class BehaviorTreeLayout
     {
-        public const float GapBetweenSiblings = 90.0f;
-        public const float GapBetweenGenerations = 320.0f;
-        public const float GapBeforeFeeders = 70.0f;
-        public const float GapBetweenFeeders = 45.0f;
-        public const float GapBetweenUnrelatedBlocks = 240.0f;
+        public const float GapBetweenSiblings = 8 * CanvasGrid.Spacing;
+        public const float GapBetweenGenerations = 27 * CanvasGrid.Spacing;
+        public const float GapBeforeFeeders = 6 * CanvasGrid.Spacing;
+        public const float GapBetweenFeeders = 4 * CanvasGrid.Spacing;
+        public const float GapBetweenUnrelatedBlocks = 20 * CanvasGrid.Spacing;
 
         /// <summary>
         /// How far a wire may run before the node at its end is given a read of its own: about the width
@@ -41,8 +41,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         /// <summary>
         /// Arranges <paramref name="asset"/> and every tree it runs, deepest first, and saves the ones that
-        /// changed. A tree whose nodes do not overlap and whose wires all reach is left as its author left
-        /// it. Returns a line per tree.
+        /// changed. A tree whose nodes do not overlap and whose wires all reach keeps its author's
+        /// arrangement, with any node off the canvas grid moved onto it. Returns a line per tree.
         /// </summary>
         public static IReadOnlyList<ArrangedTree> Arrange(BehaviorTreeGraphAsset asset) =>
             Walk(asset, leavingTidyTreesAlone: true);
@@ -86,6 +86,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return pairs;
         }
 
+        public static int CountNodesOffTheGrid(BehaviorTreeGraph graph) =>
+            graph == null ? 0 : PlaceableNodesOf(graph).Count(node => !CanvasGrid.IsOnTheGrid(node.Position.position));
+
         private static void ArrangeBranchesFirst(
             BehaviorTreeGraphAsset asset, HashSet<BehaviorTreeGraphAsset> alreadySeen, List<ArrangedTree> arranged,
             bool leavingTidyTreesAlone)
@@ -96,6 +99,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             var resized = ResizeBranchNodes(asset.graph, out var arrangedAroundAStaleWidth);
             var overlapsBefore = CountOverlappingPairs(asset.graph);
+            var offTheGridBefore = CountNodesOffTheGrid(asset.graph);
 
             // Asked twice on purpose: once about the tree as its author left it, where a wire running the
             // length of a tidy canvas is the whole complaint, and once about where this pass has just put
@@ -105,6 +109,12 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                               || overlapsBefore > 0
                               || readsAdded > 0
                               || arrangedAroundAStaleWidth;
+
+            if (!wasArranged && offTheGridBefore > 0)
+            {
+                SnapToTheGrid(asset.graph);
+                wasArranged = CountOverlappingPairs(asset.graph) > 0;
+            }
 
             if (wasArranged)
             {
@@ -116,10 +126,23 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 readsAdded += readsAddedOnceItWasLaidOut;
             }
 
-            if (wasArranged || resized) SaveOnlyThisTree(asset);
+            if (wasArranged || resized || offTheGridBefore > 0) SaveOnlyThisTree(asset);
 
             arranged.Add(new ArrangedTree(
-                AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph), readsAdded));
+                AssetDatabase.GetAssetPath(asset), overlapsBefore, wasArranged, CountOverlappingPairs(asset.graph), readsAdded,
+                offTheGridBefore));
+        }
+
+        /// <summary>
+        /// Moves every node to where a drag would leave it, keeping the author's arrangement. A node off the
+        /// grid is not untidy enough to overrule how somebody laid the tree out.
+        /// </summary>
+        private static void SnapToTheGrid(BehaviorTreeGraph graph)
+        {
+            foreach (var node in PlaceableNodesOf(graph))
+            {
+                node.Position = new Rect(CanvasGrid.Nearest(node.Position.position), node.Position.size);
+            }
         }
 
         /// <summary>
@@ -172,9 +195,15 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// when it is opened, and a branch somebody added nodes to needs arranging again without anything
         /// having been collapsed at all.
         /// </para>
+        /// <para>
+        /// A grid step or less is not stale. Snapping a branch's nodes to the grid moves each edge of its
+        /// frame by up to half a step, and re-spacing every caller over that would throw away the
+        /// arrangement the snapping just kept. Growth that does reach a neighbour is an overlap, which is
+        /// caught on its own.
+        /// </para>
         /// </summary>
         private static bool IsArrangedAroundAStaleWidth(RunBehaviorTreeGraphNode node, Rect drawnAs) =>
-            !Mathf.Approximately(drawnAs.width, node.Position.width);
+            Mathf.Abs(drawnAs.width - node.Position.width) > CanvasGrid.Spacing;
 
         private static void Place(BehaviorTreeGraph graph)
         {
@@ -264,7 +293,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
             if (branch.Children.Count == 0) return;
 
-            var childrenTop = top + branch.Node.Position.height + GapBetweenGenerations
+            var childrenTop = branch.Node.Position.yMax + GapBetweenGenerations
                             + branch.Children.Max(child => child.RoomAbove);
             var childLeft = left + (branch.Width - branch.ChildrenWidth) * 0.5f;
 
@@ -535,11 +564,12 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             public void PlaceAt(float left, float top)
             {
                 var blockLeft = left + (Width - BlockWidth) * 0.5f;
-                var nodeLeft = blockLeft + FeedersWidth;
+                var nodeLeft = CanvasGrid.RoundUp(blockLeft + FeedersWidth);
+                var nodeTop = CanvasGrid.RoundUp(top);
 
-                Node.Position = new Rect(nodeLeft, top, Node.Position.width, Node.Position.height);
+                Node.Position = new Rect(nodeLeft, nodeTop, Node.Position.width, Node.Position.height);
 
-                PlaceFeeders(nodeLeft, top);
+                PlaceFeeders(nodeLeft, nodeTop);
             }
 
             private float BlockWidth => FeedersWidth + Node.Position.width;
@@ -567,8 +597,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     foreach (var feeder in column)
                     {
                         var size = feeder.Node.Position.size;
-                        feeder.Node.Position = new Rect(columnRight - size.x, top, size.x, size.y);
-                        top += size.y + GapBetweenFeeders;
+                        feeder.Node.Position = new Rect(CanvasGrid.RoundUp(columnRight - size.x), CanvasGrid.RoundUp(top), size.x, size.y);
+                        top = feeder.Node.Position.yMax + GapBetweenFeeders;
                     }
 
                     columnRight -= columnWidth + GapBeforeFeeders;
@@ -582,13 +612,15 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
     /// <summary>What <see cref="BehaviorTreeLayout.Arrange"/> did to one tree.</summary>
     public sealed class ArrangedTree
     {
-        public ArrangedTree(string tree, int overlapsBefore, bool arranged, int overlapsAfter, int readsAdded)
+        public ArrangedTree(
+            string tree, int overlapsBefore, bool arranged, int overlapsAfter, int readsAdded, int offTheGridBefore)
         {
             this.tree = tree;
             this.overlapsBefore = overlapsBefore;
             this.arranged = arranged;
             this.overlapsAfter = overlapsAfter;
             this.readsAdded = readsAdded;
+            this.offTheGridBefore = offTheGridBefore;
         }
 
         public string tree { get; }
@@ -600,5 +632,7 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         public int overlapsAfter { get; }
 
         public int readsAdded { get; }
+
+        public int offTheGridBefore { get; }
     }
 }
