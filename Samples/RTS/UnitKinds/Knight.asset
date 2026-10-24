@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e330224baba07d34b80c8a20610b257c, type: 3}
+  m_Name: Knight
+  m_EditorClassIdentifier: ArcaneOnyx.BH3.Samples::ArcaneOnyx.BH3.Samples.UnitKind
+  prefab: {fileID: 1515965207677720143, guid: ce150768c570cb343ab54a5bcef89524, type: 3}
+  bodyMaterial: {fileID: 0}
+  weapon: {fileID: 11400000, guid: 1e3c212e892deae4eb652cae72c97014, type: 2}
+  tree: {fileID: 11400000, guid: ed69d24f8e766544dbca7095f5b1c3db, type: 2}
+  maxHealth: 250
+  speed: 3
+  sightRadius: 8
+  keepDistance: 0
+  bodyScale: 1.3
+  goldCost: 150
+  woodCost: 50
+  trainSeconds: 15
