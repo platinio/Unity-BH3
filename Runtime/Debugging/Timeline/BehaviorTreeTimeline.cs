@@ -373,7 +373,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     recorded.CallSiteId,
                     recorded.NodeGuid,
                     Guid.Empty,
-                    recorded.Key,
+                    recorded.SubTreeAssetName,
                     open.TryGetValue(key, out var running) ? running.Depth : DepthOf(recorded.CallSiteId),
                     index));
 

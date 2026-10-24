@@ -40,8 +40,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             Agent = null;
 
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         /// <summary>

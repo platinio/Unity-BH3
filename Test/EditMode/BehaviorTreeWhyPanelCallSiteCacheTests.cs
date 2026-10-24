@@ -61,8 +61,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             public CountingRecording Enter(Guid node, int callSiteId)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.NodeEnter, Tick, events.Count, Tick, Tick * 0.02f, callSiteId, node));
+                events.Add(BehaviorTreeEvent.NodeEntered(NextStamp(callSiteId), node));
 
                 return this;
             }
@@ -75,13 +74,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             public CountingRecording WrapWith(Guid node, int callSiteId)
             {
                 events.RemoveAt(0);
-                events.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.NodeEnter, Tick, events.Count, Tick, Tick * 0.02f, callSiteId, node));
+                events.Add(BehaviorTreeEvent.NodeEntered(NextStamp(callSiteId), node));
 
                 dropped++;
 
                 return this;
             }
+
+            private BehaviorTreeEventStamp NextStamp(int callSiteId) =>
+                new(Tick, events.Count, Tick, Tick * 0.02f, callSiteId);
 
             public CountingRecording Forget()
             {

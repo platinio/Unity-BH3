@@ -559,7 +559,7 @@ namespace ArcaneOnyx.BehaviorTree
             // The scope chain is already one scope per call site, so it is what the recorder numbers to tell
             // two uses of the same branch apart. Registered here because this is the moment the call site
             // comes into existence.
-            Debugging.BehaviorTreeRecorder.RegisterCallSite(this, innerScope, scope);
+            Debugging.BehaviorTreeDevRecorder.RegisterCallSite(this, innerScope, scope);
 
             foreach (var node in instance.graph.Nodes)
             {

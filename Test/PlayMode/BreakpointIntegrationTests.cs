@@ -188,7 +188,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             Assert.AreEqual(1, hits.Count, "3 is, and the comparison is numeric on the live int — not on rendered text.");
             Assert.AreEqual(BehaviorTreeEventKind.VariableWrite, hits[0].Cause.Kind);
             Assert.AreEqual("3", hits[0].Cause.NewValue);
-            Assert.AreEqual("TestSensor", hits[0].Cause.Writer, "The hit names the sensor, which is the answer to \"who wrote this\".");
+            Assert.AreEqual("TestSensor", hits[0].Cause.WriterName, "The hit names the sensor, which is the answer to \"who wrote this\".");
         }
 
         [UnityTest]
@@ -213,12 +213,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             AgentVariableWriter.SetOn(machine.gameObject, "alertLevel", 1);
 
             Assert.AreEqual(1, hits.Count, "A SetOn write is a recorded write, so an any-write breakpoint sees it.");
-            Assert.AreEqual("(external)", hits[0].Cause.Writer, "An unnamed publisher is attributed as external rather than invisibly.");
+            Assert.AreEqual("(external)", hits[0].Cause.WriterName, "An unnamed publisher is attributed as external rather than invisibly.");
 
             AgentVariableWriter.SetOn(machine.gameObject, "alertLevel", 2, "DemoDriver");
 
             Assert.AreEqual(2, hits.Count);
-            Assert.AreEqual("DemoDriver", hits[1].Cause.Writer, "A caller that names itself is attributed by that name.");
+            Assert.AreEqual("DemoDriver", hits[1].Cause.WriterName, "A caller that names itself is attributed by that name.");
 
             Assert.AreEqual(2, AgentVariableWriter.On(machine.gameObject).VersionOf("alertLevel"),
                 "The version half is unchanged — both writes were changes, so guards watching the key still wake.");
@@ -304,7 +304,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             Assert.AreEqual(1, hits.Count);
             Assert.AreEqual(BehaviorTreeEventKind.GuardEval, hits[0].Cause.Kind);
-            Assert.IsTrue(hits[0].Cause.Flag);
+            Assert.IsTrue(hits[0].Cause.GuardResult);
             Assert.AreEqual(guard.guid, hits[0].Cause.NodeGuid, "The subject of a guard hit is the guard, not the node it protects.");
         }
 

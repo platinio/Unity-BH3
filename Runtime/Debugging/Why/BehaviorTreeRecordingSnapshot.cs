@@ -87,7 +87,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 recorder.Tick,
                 recorder.Events,
                 recorder.CallSites,
-                recorder.Events.Dropped,
+                recorder.Events.DroppedEventCount,
                 recorder.Traces);
         }
     }

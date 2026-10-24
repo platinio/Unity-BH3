@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             storePath = BehaviorTreeBreakpointStore.OverridePath;
             BehaviorTreeBreakpointStore.OverridePath = System.IO.Path.GetTempFileName();
 
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
             BehaviorTreeBreakpoints.Clear();
             BehaviorTreeBreakpoints.AgentFilter = null;
         }
@@ -28,7 +28,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [TearDown]
         public void TearDown()
         {
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
             BehaviorTreeBreakpoints.Clear();
             BehaviorTreeBreakpoints.AgentFilter = null;
 
@@ -43,33 +43,33 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void ANewPlaySessionStartsWithNoRegisteredRecorders()
         {
-            BehaviorTreeFlightRecorders.Register(new BehaviorTreeFlightRecorder("Ghost", "Tree"));
-            Assert.AreEqual(1, BehaviorTreeFlightRecorders.Active.Count, "Fixture check.");
+            BehaviorTreeFlightRecorderRegistry.Register(new BehaviorTreeFlightRecorder("Ghost", "Tree"));
+            Assert.AreEqual(1, BehaviorTreeFlightRecorderRegistry.Active.Count, "Fixture check.");
 
-            BehaviorTreeFlightRecorders.ResetForPlaySession();
+            BehaviorTreeFlightRecorderRegistry.ResetForPlaySession();
 
-            Assert.IsEmpty(BehaviorTreeFlightRecorders.Active,
+            Assert.IsEmpty(BehaviorTreeFlightRecorderRegistry.Active,
                 "A recorder carried across the boundary is an agent that no longer exists sitting in the triage view.");
         }
 
         [Test]
         public void ANewPlaySessionKeepsTheSwitchesAlone()
         {
-            BehaviorTreeFlightRecorders.GloballyEnabled = false;
-            BehaviorTreeFlightRecorders.TracingGloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled = false;
 
             try
             {
-                BehaviorTreeFlightRecorders.ResetForPlaySession();
+                BehaviorTreeFlightRecorderRegistry.ResetForPlaySession();
 
-                Assert.IsFalse(BehaviorTreeFlightRecorders.GloballyEnabled,
+                Assert.IsFalse(BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled,
                     "The Rec button's choice lives in this static without a domain reload to restore it from.");
-                Assert.IsFalse(BehaviorTreeFlightRecorders.TracingGloballyEnabled);
+                Assert.IsFalse(BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled);
             }
             finally
             {
-                BehaviorTreeFlightRecorders.GloballyEnabled = true;
-                BehaviorTreeFlightRecorders.TracingGloballyEnabled = true;
+                BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
+                BehaviorTreeFlightRecorderRegistry.IsTracingGloballyEnabled = true;
             }
         }
 
@@ -119,6 +119,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         private static BehaviorTreeEvent Enter(Guid node) =>
-            BehaviorTreeEvent.Create(BehaviorTreeEventKind.NodeEnter, 0, 0, 0, 0.0f, 0, node);
+            BehaviorTreeEvent.NodeEntered(new BehaviorTreeEventStamp(0, 0, 0, 0.0f, 0), node);
     }
 }

@@ -44,33 +44,33 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeRecordingSwitch.Enabled = false;
 
             // What a domain reload does to the static: back to its initializer.
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             BehaviorTreeRecordingSwitch.Restore();
 
-            Assert.That(BehaviorTreeFlightRecorders.GloballyEnabled, Is.False);
+            Assert.That(BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled, Is.False);
         }
 
         [Test]
         public void Restore_ReappliesOnAfterTheRuntimeWasTurnedOffDirectly()
         {
             BehaviorTreeRecordingSwitch.Enabled = true;
-            BehaviorTreeFlightRecorders.GloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = false;
 
             BehaviorTreeRecordingSwitch.Restore();
 
-            Assert.That(BehaviorTreeFlightRecorders.GloballyEnabled, Is.True);
+            Assert.That(BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled, Is.True);
         }
 
         [Test]
         public void Restore_WithNoChoiceStored_DefaultsToRecording()
         {
             BehaviorTreeRecordingSwitch.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = false;
 
             BehaviorTreeRecordingSwitch.Restore();
 
-            Assert.That(BehaviorTreeFlightRecorders.GloballyEnabled, Is.True);
+            Assert.That(BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled, Is.True);
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeRecordingSwitch.Reset();
 
             Assert.That(BehaviorTreeRecordingSwitch.Enabled, Is.True);
-            Assert.That(BehaviorTreeFlightRecorders.GloballyEnabled, Is.True);
+            Assert.That(BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled, Is.True);
         }
     }
 }

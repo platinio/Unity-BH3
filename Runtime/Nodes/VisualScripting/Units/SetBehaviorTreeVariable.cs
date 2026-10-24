@@ -25,7 +25,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// </para>
     ///
     /// <para>
-    /// The recording costs a shipped build nothing. <see cref="Debugging.BehaviorTreeRecorder"/> is
+    /// The recording costs a shipped build nothing. <see cref="Debugging.BehaviorTreeDevRecorder"/> is
     /// <c>[Conditional]</c>-gated, so outside the editor and dev builds the compiler removes the call
     /// <em>and its arguments</em> — which is why the machine lookup and the read of the previous value are
     /// written inline as arguments rather than as locals. The assignment itself is outside that call and
@@ -120,7 +120,7 @@ namespace ArcaneOnyx.BehaviorTree
             // Recorded before the write, while the previous value still exists — "what did it change from" is
             // half of what makes a write worth recording. Every argument here is removed by the compiler
             // outside the editor and dev builds, including the lookup and the read.
-            Debugging.BehaviorTreeRecorder.ScriptGraphVariableWrite(
+            Debugging.BehaviorTreeDevRecorder.ScriptGraphVariableWrite(
                 MachineOf(flow), WriterName, key, kind, ReadCurrent(flow, key), value);
 
             // Object kind writes to whatever the @object port resolves to, which is the machine's own

@@ -23,8 +23,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             agent = new GameObject("Agent");
         }
@@ -34,8 +34,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             if (agent != null) Object.DestroyImmediate(agent);
 
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         [Test]
@@ -43,14 +43,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var machine = agent.AddComponent<BehaviorTreeMachine>();
 
-            BehaviorTreeRecorder.Attach(machine, "Tree");
+            BehaviorTreeDevRecorder.Attach(machine, "Tree");
 
             Assert.IsNotNull(machine.FlightRecorder, "Fixture check: nothing to detach otherwise.");
-            Assert.AreEqual(1, BehaviorTreeFlightRecorders.Active.Count);
+            Assert.AreEqual(1, BehaviorTreeFlightRecorderRegistry.Active.Count);
 
-            BehaviorTreeRecorder.Detach(machine);
+            BehaviorTreeDevRecorder.Detach(machine);
 
-            Assert.IsEmpty(BehaviorTreeFlightRecorders.Active);
+            Assert.IsEmpty(BehaviorTreeFlightRecorderRegistry.Active);
             Assert.IsNull(machine.FlightRecorder,
                 "Unregistering alone left the recorder reachable through the machine, which is exactly what "
                 + "every editor-side recording check reads.");
@@ -61,10 +61,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var machine = agent.AddComponent<BehaviorTreeMachine>();
 
-            BehaviorTreeRecorder.Attach(machine, "Tree");
+            BehaviorTreeDevRecorder.Attach(machine, "Tree");
             Assert.IsTrue(BehaviorTreeDebugTarget.IsRecording(machine), "Fixture check.");
 
-            BehaviorTreeRecorder.Detach(machine);
+            BehaviorTreeDevRecorder.Detach(machine);
 
             Assert.IsFalse(BehaviorTreeDebugTarget.IsRecording(machine));
         }
@@ -106,7 +106,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var machine = agent.AddComponent<BehaviorTreeMachine>();
 
-            BehaviorTreeRecorder.Attach(machine, "Tree");
+            BehaviorTreeDevRecorder.Attach(machine, "Tree");
 
             Assert.IsTrue(BehaviorTreeDebugTarget.IsRecording(machine),
                 "Otherwise the fix would be to reject everything, which no other test here would catch.");

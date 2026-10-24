@@ -323,7 +323,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             // Counted, never scanned: asking every recorder whether it holds a write would walk every ring on
             // every repaint, and the count alone is enough to point somewhere.
-            var others = BehaviorTreeFlightRecorders.Active.Count - 1;
+            var others = BehaviorTreeFlightRecorderRegistry.Active.Count - 1;
 
             if (others <= 0) return reason;
 

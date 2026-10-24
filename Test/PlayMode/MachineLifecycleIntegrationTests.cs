@@ -126,14 +126,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             var recorder = machine.FlightRecorder;
 
-            Assert.Contains(recorder, BehaviorTreeFlightRecorders.Active.ToArray(),
+            Assert.Contains(recorder, BehaviorTreeFlightRecorderRegistry.Active.ToArray(),
                 "A live agent is registered, which is what the multi-agent view lists.");
 
             Object.DestroyImmediate(Agent);
 
             yield return null;
 
-            CollectionAssert.DoesNotContain(BehaviorTreeFlightRecorders.Active.ToArray(), recorder,
+            CollectionAssert.DoesNotContain(BehaviorTreeFlightRecorderRegistry.Active.ToArray(), recorder,
                 "and a destroyed one is not. OnDestroy detaches it; without that the registry grows for the "
                 + "lifetime of the session and lists agents that are gone.");
         }
