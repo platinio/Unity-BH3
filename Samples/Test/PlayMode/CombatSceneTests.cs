@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.BehaviorTree.Debugging;
 using NUnit.Framework;
 using UnityEngine;
@@ -48,6 +49,9 @@ namespace ArcaneOnyx.BH3.Samples.Tests.PlayMode
             Assert.IsTrue(EnteredSince(recorder, mark, Attack), "In range, Engage runs the attack the weapon names,");
             Assert.Less(playerHealth.Fraction, healthBefore, "and the swing lands.");
 
+            Guid strike = StrikeOf(grunt);
+            int strikesSoFar = EntriesAtLeast(recorder, strike);
+            yield return Until(() => EntriesAtLeast(recorder, strike) > strikesSoFar, 3f, "The next strike");
             mark = Mark(recorder);
             Teleport(player, grunt.transform.position + Vector3.right * 30f);
             yield return Seconds(1.5f);
@@ -57,6 +61,12 @@ namespace ArcaneOnyx.BH3.Samples.Tests.PlayMode
             Unit unit = Unit.Of(grunt.gameObject);
             Assert.Less(Quaternion.Angle(unit.Body.localRotation, unit.RestingPose.Rotation), 2f,
                 "The interrupted swing left the body back in its resting pose.");
+        }
+
+        private static Guid StrikeOf(Combatant fighter)
+        {
+            var attackTree = (BehaviorTreeGraphAsset)Fact(fighter, CombatFacts.AttackTree);
+            return attackTree.graph.Nodes.First(node => node is Strike).guid;
         }
 
         [UnityTest]
