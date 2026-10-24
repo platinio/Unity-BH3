@@ -92,7 +92,8 @@ New to BH3? Start with the [BH3 introduction and tutorial playlist](https://www.
 |---|---|
 | `Runtime/` | Nodes, the machine, variables, the flight recorder |
 | `Editor/` | The graph window, panels, inspectors, authoring and verification tools |
-| `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over. Feature demos live in the reference project; see [Demos and tests](docs/5-reference/01-samples-and-demos.md) |
+| `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over |
+| `Samples/` | Four small games built on BH3, for learning how trees are put together. Not in the release package; start at [Samples/README.md](Samples/README.md) |
 | `docs/` | This documentation. [docs/README.md](docs/README.md) is the same table of contents, for browsing inside the folder |
 
 ## New to behavior trees?

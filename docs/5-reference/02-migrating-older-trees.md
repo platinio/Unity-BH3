@@ -155,4 +155,3 @@ unrepaired asset fails where you can see it rather than succeeding silently.
 ## Next
 
 - [Glossary](03-glossary.md)
-- [Demos and tests](01-samples-and-demos.md)
