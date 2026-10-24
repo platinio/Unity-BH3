@@ -1,33 +1,11 @@
 # Click to move
 
-A capsule on a small arena. Left-click the ground and it hops its way there along the NavMesh, then settles
-back into a gentle breathing idle. Click somewhere else while it is on its way and it turns toward the new
-point on the next frame. The path it is about to walk is drawn as a line ahead of it, bending around the blocks,
-and goes away when it arrives.
+One agent on a NavMesh arena. Left-click the ground and it walks there, hopping as it goes; on arrival it
+idles, which is a slow scale pulse from the Idle tree. Click somewhere else mid-trip and it turns toward the
+new point on the next frame. The path it will walk is drawn as a line and removed on arrival.
 
-Open `ClickToMove.unity` and press Play. Everything you see is primitives and tweens; there is no art and no
-animation clip in this sample.
-
-## The trees
-
-```
-ClickToMove
-└─ Repeater → Selector            (priority left → right)
-   ├─ MoveTo    Reactive Guard: OrdersDiffer(orderNumber, completedOrder), woken by either key changing
-   │            tripDestination ← Function ClickToMove.destinationRead
-   │            acceptedOrder   ← orderNumber
-   └─ Idle      no guard, the fallback
-
-MoveTo   (Required parameters: tripDestination, acceptedOrder)
-└─ Parallel Selector              ends when any child succeeds
-   ├─ Sequence: WalkTo(tripDestination) → Set Variable completedOrder = acceptedOrder
-   └─ Until Success → Boolean Condition ← OrdersDiffer(orderNumber, acceptedOrder)
-
-Idle
-└─ Repeater → Punch Scale         the breathing
-```
-
-Each tree is its own asset. `ClickToMove` is the only one that knows the other two exist.
+Open `ClickToMove.unity` and press Play. The agent is a Kenney character; every animation is a tween on a
+body part, there are no animation clips.
 
 ## What each piece demonstrates
 

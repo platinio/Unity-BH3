@@ -7,28 +7,6 @@ lives and the board resets to wave 1. Kenney blocky characters, Kenney siege eng
 
 Open `Defense.unity` and press Play.
 
-## The trees
-
-```
-Turret                                      Walker
-└─ Repeater → Selector                      └─ Repeater → Selector
-   ├─ Shoot   RG: hasTarget                    ├─ Perish      RG: isDead
-   │   └─ ArrowShot (dynamic)   Tree <- attackTree
-   └─ Idle                                     ├─ Breach      RG: reachedEnd
-                                               └─ FollowPath
-
-ArrowShot / CannonShot / FrostShot (target):  Cooldown(attackCooldown) → [ Face Target → a tween → Strike(target) → … ]
-FollowPath:  Sequence [ WalkTo(nextWaypoint) → Advance Waypoint ]
-Perish:      Flash Color → Scale To 0 → Destroy Object(This)
-Breach:      Breach Base → Destroy Object(This)
-
-WaveDirector (on the Game object)
-└─ Repeater → Sequence: Wait 5 → Spawn Wave → Wait 12 → Next Wave
-```
-
-`Idle` comes from Click to move. `Health`, `Weapon`, `Sight`, `Projectile` and the rest of
-the gameplay components are the Combat sample's, now in `Samples/Common`.
-
 ## What each piece demonstrates
 
 | Feature | Where | What to watch |

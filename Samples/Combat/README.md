@@ -1,53 +1,13 @@
 # Combat
 
-A small arena. Your character starts at the bottom between two chests. Left-click the ground to move,
-left-click an enemy to attack it: your unit chases until in range, stops, and strikes on a cooldown until
-the target dies. Three kinds of enemy roam the far side. **Grunts** swing swords, the
-**archer** throws from a distance and keeps it, the big **brute** holds its ground and swings a hammer that
-knocks you back. Walk into a chest to take its weapon, sword or hammer, and over a potion to heal. Whoever dies
-flashes, shrinks away and respawns a couple of seconds later, so the fight never ends. Kenney blocky
-characters, primitives and tweens; every animation is a tween on a body part.
+An arena with a player character and three kinds of enemy. Left-click the ground to move, left-click an
+enemy to attack it: the player chases until in range, stops, and strikes on a cooldown until the target
+dies. **Grunts** use swords, the **archer** shoots from range and keeps its distance, the **brute** stays
+where it is and swings a hammer with knockback. Walking into a chest takes its weapon, sword or hammer;
+walking over a potion heals. A dead unit flashes, shrinks and respawns two seconds later. Kenney characters
+and primitives; every animation is a tween on a body part.
 
 Open `Combat.unity` and press Play.
-
-## The trees
-
-```
-Enemy (grunt, archer)                    Brute                                Player
-└─ Repeater → Selector                   └─ Repeater → Selector               └─ Repeater → Selector
-   ├─ Die         RG: isDead                ├─ Die      RG: isDead               ├─ Die      RG: isDead
-   ├─ ReturnHome  RG: IsFarFrom(home, 12)   ├─ Engage   RG: hasTarget            ├─ Engage   RG: hasTarget
-   ├─ Engage      RG: hasTarget             └─ Idle                              ├─ MoveTo   RG: OrdersDiffer
-   └─ Wander                                                                      └─ Idle
-
-Engage   (Required: target)
-└─ Repeater → Selector
-   ├─ Kite      RG: IsTargetInRange(target, keepDistance), every 0.1 s
-   ├─ Attack    RG: IsTargetInRange(target, attackRange), every 0.1 s, Stops Its Own Branch OFF
-   │   └─ Attack    Tree <- attackTree, default PunchAttack
-   └─ Chase     RG: not IsTargetInRange(target, attackRange), every 0.1 s
-
-SwordAttack (target):   Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ Charge(target) | Swing Part(arm-right up) → Swing Part(arm-right down) ] → Strike(target) → Recover ]
-HammerAttack (target):  Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Parallel Sequence [ both arms up ] → Parallel Sequence [ both arms down | Charge(target) ] → Strike(target) → Recover ]
-BowAttack (target):     Stop Nav Agent → Cooldown(attackCooldown) → [ Face Target → Swing Part(arm-left aims) → Swing Part(arm-right draws) → Strike(target) → Recover ]
-Chase:                                StepToward(PositionOf(target), 0.25 s)
-Kite:                                 StepToward(RetreatPointFrom(target, 4), 0.3 s)
-ReturnHome:                           WalkTo(home)
-Wander:                               WalkTo(a random NavMesh point), then linger 1–3 s
-
-WalkTo (destination)                  Parallel Selector [ Sequence [ Set Nav Agent Position(destination) → Wait Until Reach ] | Repeater → Hop ]
-StepToward (destination, seconds)     the same race, waiting 'seconds' instead of arrival, so a chaser re-paths at an interval
-Die:                                  Flash Color → Scale To 0 → Wait 2 → Respawn
-
-Pickup (chests and health packs)
-└─ Repeater → Selector
-   ├─ HandOut   RG: canPickup, Stops Its Own Branch OFF
-   │   └─ Punch Scale → Apply Pickup → Scale To 0.5 → Wait 20 → Scale To 1
-   └─ Wait 0.2
-```
-
-`Die`, `Engage`, `Chase`, `Kite` and the attack trees are the same assets on every combatant. `MoveTo` and
-`Idle` come from the Click to move sample.
 
 ## What each piece demonstrates
 

@@ -1,12 +1,12 @@
 # RTS
 
-A small real-time strategy map. You start with a Town Hall, three Workers, a little wood and gold, two
-forests, two gold outcrops and three enemy camps in the far corners. Workers gather wood and gold and
-carry it home; wood raises a Barracks or a Keep; buildings train Soldiers, Archers and Knights for gold;
-your fighters attack-move across the map and clear the camps. When no enemy is left standing the HUD says
-**Victory** and the game keeps running. The Town Hall cannot be destroyed, but a dead unit is gone for good:
-lose every Worker with no gold left to train another and the game is over in all but name. Kenney blocky characters, Kenney castle and forest pieces,
-primitives and tweens; every animation is a tween on a body part.
+A real-time strategy map. You start with a Town Hall, three Workers, some wood and gold, two forests, two
+gold outcrops and three enemy camps in the corners. Workers gather wood and gold and carry it home; wood
+raises a Barracks or a Keep; buildings train Soldiers, Archers and Knights for gold; fighters attack-move
+across the map and clear the camps. When no enemy is left the HUD shows **Victory** and the game keeps
+running. The Town Hall cannot be destroyed. A dead unit is not replaced, so with no Workers and no gold
+there is nothing left to do. Kenney characters, Kenney castle and forest pieces, primitives; every animation
+is a tween on a body part.
 
 Open `RTS.unity` and press Play.
 
@@ -27,53 +27,6 @@ A Worker sent to a site builds until the building stands. Any unit that is hit w
 fights back and then **resumes what it was doing**, which falls out of the tree shape below rather than out
 of code. The one order that outranks a fight is a plain move: right-click the ground and the unit breaks
 off, walks there and does not swing at anything on the way, because that is what you asked for.
-
-## The trees
-
-```
-Worker                                               Soldier / Archer / Knight (Fighter)
-└─ Repeater → Selector                               └─ Repeater → Selector
-   ├─ Perish     RG: isDead                             ├─ Perish    RG: isDead
-   ├─ FightBack  RG: hasTarget        (Combat's Engage)  ├─ Engage    RG: hasTarget   (Combat's Engage)
-   ├─ Build      RG: HasNewOrder(buildOrder, completedBuildOrder)      ├─ AttackMove RG: HasNewOrder(orderNumber, completedOrder)
-   ├─ Gather     RG: HasNewOrder(gatherOrder, completedGatherOrder)    │             (Click to move's MoveTo)
-   ├─ MoveTo     RG: HasNewOrder(orderNumber, completedOrder)          └─ Idle
-   └─ Idle
-
-Gather (resource, acceptedGatherOrder)                            one trip per run
-└─ Sequence
-   ├─ WalkTo(ApproachPoint(resource, 2))
-   ├─ Until Failure → Sequence [ Face Target(TransformOf(resource)) → Swing Part up → Swing Part down → Harvest(resource) → Wait 0.5 ]
-   ├─ Return Success → Sequence [ Boolean Condition(IsCarryingSomething) → WalkTo(ApproachPoint(depot, 3.5)) → Deposit(depot) ]
-   └─ Selector
-      ├─ Boolean Condition(HasResource(resource))                                   same node next time
-      ├─ Sequence [ Boolean Condition(Is Not Null(NearestResource(resource))) → Set Variable resource ← NearestResource(resource) ]
-      └─ Set Variable completedGatherOrder ← acceptedGatherOrder                   nothing left: the guard drops
-
-Build (site, acceptedBuildOrder)
-└─ Sequence
-   ├─ WalkTo(ApproachPoint(site, 3.5))
-   ├─ Until Failure → Sequence [ Face Target(TransformOf(site)) → Swing Part up → Swing Part down → Construct(site, 1 s) → Wait 0.3 ]
-   └─ Set Variable completedBuildOrder ← acceptedBuildOrder
-
-Building
-└─ Repeater → Selector
-   ├─ UnderConstruction  RG: not isBuilt      → Grow → Wait 0.1
-   ├─ Produce            RG: HasQueuedUnit    → Train → Spawn Unit → Dequeue
-   └─ Wait 0.2
-
-Enemy (grunt, archer)                                  Brute
-└─ Repeater → Selector                                 └─ Repeater → Selector
-   ├─ Perish      RG: isDead      (Defense's Perish)      ├─ Perish   RG: isDead
-   ├─ ReturnHome  RG: IsFarFrom(home, 12), every 0.25 s   ├─ Engage   RG: hasTarget
-   ├─ Engage      RG: hasTarget                           └─ Idle
-   └─ Wander
-```
-
-`Engage`, the attack trees, `Chase`, `Kite`, `ReturnHome` and `Wander` are Combat's assets; `WalkTo` and
-`StepToward` are Common's, and every branch above that moves a unit runs one of them;
-`MoveTo` and `Idle` are Click to move's; `Perish` is Defense's. Combat's `Engage` gained a fourth branch,
-the attack tree a unit's weapon names, so a Worker fights back with its hands by holding `Fists`.
 
 ## What each piece demonstrates
 
