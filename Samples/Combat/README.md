@@ -80,6 +80,7 @@ Pickup (chests and health packs)
 | `Sight` | Enemy perception: radius plus a line-of-sight ray, every 0.2 s. |
 | `Pickup`, `Pickups` | Publishes `canPickup` while a living player in reach passes its canPickup Function; `Apply()` runs the effect Function on that player. `Pickups` holds the four static helpers those Functions call. |
 | `PlayerOrders` | Clicks become move or attack orders; an attack order cancels a pending move; death forgets everything. |
+| `NavMeshPathLine` | On the player only: draws the NavMesh path being walked as a line, and hides it on arrival. |
 | `Retaliation`, `UnitTargeting` | A hit with no target makes the attacker the target; a dead target is dropped. Shared with the RTS sample. |
 | `HealthBar`, `Unit` | A bar over each head; the body, its renderers and its named parts that the tween nodes and the hurt flash act on, the hand socket the weapon visual hangs from, and the resting pose that Recover and Respawn return to. |
 | `Strike`, `Respawn`, `Apply Pickup`, `Scale To`, `Swing Part`, `Charge`, `Recover` | The custom nodes this sample adds. |
