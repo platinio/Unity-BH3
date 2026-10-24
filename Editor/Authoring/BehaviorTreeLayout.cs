@@ -66,6 +66,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// <summary>
         /// How many pairs of nodes are drawn over each other, counting the band a node's guards occupy
         /// above it. Zero is a canvas a person can read.
+        /// <para>
+        /// A sub-tree node is measured as the frame it is drawn as, not the rect saved in the asset: the
+        /// saved size is only brought up to date when the tree is laid out, and until then a branch that
+        /// grew is drawn over its neighbours while its saved rect still fits between them.
+        /// </para>
         /// </summary>
         public static int CountOverlappingPairs(BehaviorTreeGraph graph)
         {
@@ -259,7 +264,9 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         private static Rect DrawnRectOf(BehaviorTreeNode node)
         {
-            var drawn = node.Position;
+            var drawn = node is RunBehaviorTreeGraphNode { BehaviorTreeGraphAsset: not null } runsABranch
+                ? SubTreeFootprint.DrawnAs(runsABranch)
+                : node.Position;
             drawn.yMin -= SubTreeFootprint.RoomAbove(node);
 
             return drawn;

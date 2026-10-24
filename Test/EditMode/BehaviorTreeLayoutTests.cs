@@ -169,6 +169,21 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void CountsASubTreeNodeAsTheFrameItIsDrawnAsRatherThanTheRectSaved()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+            var frame = runsTheBranch.Position;
+            runsTheBranch.Position = new Rect(frame.position, SubTreeFootprint.EmptyNodeSize);
+
+            var wait = caller.graph.Nodes.OfType<WaitTime>().First();
+            wait.Position = new Rect(frame.x, frame.yMax - wait.Position.height, wait.Position.width, wait.Position.height);
+            Assert.That(wait.Position.Overlaps(runsTheBranch.Position), Is.False,
+                "the node is supposed to sit outside the saved rect; nothing is being tested");
+
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.GreaterThan(0));
+        }
+
+        [Test]
         public void AddsANodeWhereADragWouldHaveLeftIt()
         {
             var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 13.7f, 100.2f);
