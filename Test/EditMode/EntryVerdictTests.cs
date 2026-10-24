@@ -241,6 +241,42 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
         #endregion
 
+        #region 2.13 -- awake goes through the node's lifecycle wrapper
+
+        [Test]
+        public void ANodeLeftRunningIsEnteredAgainAfterItsTreeAwakesAgain()
+        {
+            var graph = new BehaviorTreeGraph();
+            var leaf = BehaviorTreeAuthoring.AddNode<AlwaysRunningNode>(graph, 0.0f, 100.0f);
+            BehaviorTreeAuthoring.Connect(graph, graph.EntryNode, leaf);
+
+            graph.OnAwake();
+            graph.EntryNode.OnNodeEnter();
+            graph.EntryNode.OnUpdateInternal();
+            Assert.IsTrue(leaf.IsRunning, "the fixture must have the leaf mid-run before the second awake");
+
+            graph.OnAwake();
+            graph.EntryNode.OnNodeEnter();
+            graph.EntryNode.OnUpdateInternal();
+
+            Assert.AreEqual(2, leaf.EnterCalls,
+                "a tree that awakes again starts over, so the leaf is entered rather than ticked as though live");
+        }
+
+        [Test]
+        public void AFailedAwakeIsRecordedOnTheNodeThatThrew()
+        {
+            var graph = new BehaviorTreeGraph();
+            var node = BehaviorTreeAuthoring.AddNode<ThrowsOnAwakeNode>(graph, 0.0f, 100.0f);
+
+            var thrown = Assert.Throws<InvalidOperationException>(() => graph.OnAwake());
+
+            Assert.AreSame(thrown, node.runtimeException);
+            Assert.AreEqual(ExecutionStatus.Exception, node.LastExecutionStatus);
+        }
+
+        #endregion
+
         #region The composites, which decide this for themselves
 
         /// <summary>

@@ -855,12 +855,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <inheritdoc cref="InvokeAwake"/>
         protected sealed override void InvokeExit() => OnExit(Context);
 
-        /// <summary>
-        /// Runs this node's awake body. The graph's awake pass calls nodes directly rather than through
-        /// <c>OnNodeAwake</c>, so this is where that pass enters the context seam.
-        /// </summary>
-        public void AwakeNode() => InvokeAwake();
-
         [DoNotSerialize]
         private object nodeMemory;
 

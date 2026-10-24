@@ -206,6 +206,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
     }
 
+    internal sealed class ThrowsOnAwakeNode : BehaviorTreeNode
+    {
+        public override string NodeName => "Throws On Awake Test Node";
+
+        public override void OnAwake() => throw new InvalidOperationException("OnAwake failed");
+    }
+
     /// <summary>
     /// Enters normally and throws on the way out. Models the second fault in an unwind: the container is
     /// already exiting the children it entered because a later one failed to enter.
