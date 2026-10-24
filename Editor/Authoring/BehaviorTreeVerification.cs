@@ -573,10 +573,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
         }
 
-        /// <summary>
-        /// Asked of the nodes rather than read from the dump: the tree being verified is a reloaded copy, so
-        /// the dump does not recognise it as the asset a branch runs and reports the loop one lap late.
-        /// </summary>
         private static IEnumerable<string> SubTreeRecursion(BehaviorTreeGraphAsset asset, string treeName) =>
             asset.graph.Nodes
                 .OfType<RunBehaviorTreeGraphNode>()

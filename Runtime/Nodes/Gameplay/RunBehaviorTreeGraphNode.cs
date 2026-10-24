@@ -271,10 +271,6 @@ namespace ArcaneOnyx.BehaviorTree
             // An unfed required parameter is just an unset port, which the base reports for every node.
         }
 
-        /// <summary>
-        /// No repair is offered: breaking a loop means choosing which call site to change, so the fix names
-        /// the tree that holds the call closing it.
-        /// </summary>
         private static NodeProblem RecursionProblem(IReadOnlyList<BehaviorTreeGraphAsset> loop)
         {
             var closingTree = loop[loop.Count - 2];
@@ -303,15 +299,6 @@ namespace ArcaneOnyx.BehaviorTree
             throw new Exception($"'{NodeName}' causes recursion: {DescribeLoop(loop)}.");
         }
 
-        /// <summary>
-        /// The trees this node's branch runs, in order, until one repeats, ending with the repeated tree:
-        /// <c>B -> A -> B</c> for a branch B that runs A, which runs B again. Empty when every branch below
-        /// this node finishes.
-        /// <para>
-        /// Only a tree already on the current path closes a loop. The same branch run twice side by side is
-        /// reuse, which is what sub-trees are for.
-        /// </para>
-        /// </summary>
         public IReadOnlyList<BehaviorTreeGraphAsset> FindRecursion() => FindRecursion(behaviorTreeGraphAsset);
 
         private static IReadOnlyList<BehaviorTreeGraphAsset> FindRecursion(BehaviorTreeGraphAsset tree)
