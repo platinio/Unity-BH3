@@ -1,12 +1,12 @@
 # RTS
 
-A small real-time strategy map. You start with a Town Hall, three Workers, a little wood and gold, two
-forests, two gold outcrops and three enemy camps in the far corners. Workers gather wood and gold and
-carry it home; wood raises a Barracks or a Keep; buildings train Soldiers, Archers and Knights for gold;
-your fighters attack-move across the map and clear the camps. When no enemy is left standing the HUD says
-**Victory** and the game keeps running. The Town Hall cannot be destroyed, but a dead unit is gone for good:
-lose every Worker with no gold left to train another and the game is over in all but name. Kenney blocky characters, Kenney castle and forest pieces,
-primitives and tweens; every animation is a tween on a body part.
+A real-time strategy map. You start with a Town Hall, three Workers, some wood and gold, two forests, two
+gold outcrops and three enemy camps in the corners. Workers gather wood and gold and carry it home; wood
+raises a Barracks or a Keep; buildings train Soldiers, Archers and Knights for gold; fighters attack-move
+across the map and clear the camps. When no enemy is left the HUD shows **Victory** and the game keeps
+running. The Town Hall cannot be destroyed. A dead unit is not replaced, so with no Workers and no gold
+there is nothing left to do. Kenney characters, Kenney castle and forest pieces, primitives; every animation
+is a tween on a body part.
 
 Open `RTS.unity` and press Play.
 

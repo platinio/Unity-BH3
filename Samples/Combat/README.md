@@ -1,12 +1,11 @@
 # Combat
 
-A small arena. Your character starts at the bottom between two chests. Left-click the ground to move,
-left-click an enemy to attack it: your unit chases until in range, stops, and strikes on a cooldown until
-the target dies. Three kinds of enemy roam the far side. **Grunts** swing swords, the
-**archer** throws from a distance and keeps it, the big **brute** holds its ground and swings a hammer that
-knocks you back. Walk into a chest to take its weapon, sword or hammer, and over a potion to heal. Whoever dies
-flashes, shrinks away and respawns a couple of seconds later, so the fight never ends. Kenney blocky
-characters, primitives and tweens; every animation is a tween on a body part.
+An arena with a player character and three kinds of enemy. Left-click the ground to move, left-click an
+enemy to attack it: the player chases until in range, stops, and strikes on a cooldown until the target
+dies. **Grunts** use swords, the **archer** shoots from range and keeps its distance, the **brute** stays
+where it is and swings a hammer with knockback. Walking into a chest takes its weapon, sword or hammer;
+walking over a potion heals. A dead unit flashes, shrinks and respawns two seconds later. Kenney characters
+and primitives; every animation is a tween on a body part.
 
 Open `Combat.unity` and press Play.
 

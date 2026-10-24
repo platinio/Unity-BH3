@@ -43,14 +43,14 @@ New to BH3? Start with the [BH3 introduction and tutorial playlist](https://www.
 ## Samples
 
 Four small games built on BH3, in [`Samples/`](Samples/README.md) of this repository, for learning how trees
-are put together. Each is a scene you press Play in and a README that draws its trees and says what each piece
-demonstrates. Read them in this order; [Samples/README.md](Samples/README.md) maps every BH3 idea to the
-place in a sample that shows it.
+are put together. Each is a scene you press Play in and a README that draws its trees and says what each piece shows.
+Read them in this order; [Samples/README.md](Samples/README.md) maps each BH3 idea to the place in a
+sample that uses it.
 
 | Sample | Teaches |
 |---|---|
 | [Click to move](Samples/ClickToMove/README.md) | The smallest complete agent: one guarded branch above an unguarded fallback, a branch as its own asset with parameters, a Function feeding a port |
-| [Combat](Samples/Combat/README.md) | One `Engage` branch shared by every agent, an attack tree chosen at run time by a fact, guards that poll beside guards that wake, a committed swing |
+| [Combat](Samples/Combat/README.md) | One `Engage` branch shared by every agent, an attack tree picked at run time from a fact, guards that poll next to guards that wake, a swing that must finish |
 | [Defense](Samples/Defense/README.md) | A tree running a game system, reactive guards on facts that components publish, agents spawned with their tree already set |
 | [RTS](Samples/RTS/README.md) | Numbered orders on three channels, interrupt and resume from tree shape alone, a branch that re-targets itself, a tree on a building |
 
