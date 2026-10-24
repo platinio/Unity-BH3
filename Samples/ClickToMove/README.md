@@ -7,27 +7,6 @@ new point on the next frame. The path it will walk is drawn as a line and remove
 Open `ClickToMove.unity` and press Play. The agent is a Kenney character; every animation is a tween on a
 body part, there are no animation clips.
 
-## The trees
-
-```
-ClickToMove
-└─ Repeater → Selector            (priority left → right)
-   ├─ MoveTo    Reactive Guard: OrdersDiffer(orderNumber, completedOrder), woken by either key changing
-   │            tripDestination ← Function ClickToMove.destinationRead
-   │            acceptedOrder   ← orderNumber
-   └─ Idle      no guard, the fallback
-
-MoveTo   (Required parameters: tripDestination, acceptedOrder)
-└─ Parallel Selector              ends when any child succeeds
-   ├─ Sequence: WalkTo(tripDestination) → Set Variable completedOrder = acceptedOrder
-   └─ Until Success → Boolean Condition ← OrdersDiffer(orderNumber, acceptedOrder)
-
-Idle
-└─ Repeater → Punch Scale         the breathing
-```
-
-Each tree is its own asset. `ClickToMove` is the only one that knows the other two exist.
-
 ## What each piece demonstrates
 
 | Feature | Where | What to watch |
