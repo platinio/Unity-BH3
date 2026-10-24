@@ -49,15 +49,15 @@ namespace ArcaneOnyx.BehaviorTree
         /// <para>
         /// <see cref="DrawTitle"/> is only ever reached through one of the <c>DrawForeground</c> overloads,
         /// and every one of them writes this before calling the base. Asking a second time meant a second
-        /// <c>Stack</c> and a second walk of the nested asset chain, per node per repaint, to re-derive an
-        /// answer that cannot have changed since a few lines earlier.
+        /// walk of the nested asset chain, per node per repaint, to re-derive an answer that cannot have
+        /// changed since a few lines earlier.
         /// </para>
         /// </summary>
         private bool willCauseRecursion;
 
         public override void DrawForeground(Vector2 offset, bool IsRepaint, bool useSelection = true)
         {
-            willCauseRecursion = GraphWillCauseRecursion();
+            willCauseRecursion = RunNode.FindRecursion().Count > 0;
 
             if (!element.DrawsSubTreePreview || willCauseRecursion)
             {
@@ -128,14 +128,6 @@ namespace ArcaneOnyx.BehaviorTree
 
             Reposition();
             GUI.changed = true;
-        }
-
-        private bool GraphWillCauseRecursion()
-        {
-            if (!(element is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)) return false;
-            
-            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { runBehaviorTreeGraphNode.BehaviorTreeGraphAsset });
-            return runBehaviorTreeGraphNode.GraphWillCauseRecursion(runStack);
         }
 
         private void DrawSubTreeNodes(BehaviorTreeGraph behaviorTreeGraph, Vector2 offset)

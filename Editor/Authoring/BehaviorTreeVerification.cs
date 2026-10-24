@@ -70,11 +70,11 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                 findings.AddRange(FunctionProblems(asset, name));
                 findings.AddRange(InvalidConnections(asset, name));
                 findings.AddRange(MisroutedTransitions(asset, name));
+                findings.AddRange(SubTreeRecursion(asset, name));
 
                 findings.AddRange(Occurrences(json, "\"error\": \"([^\"]+)\"", name, "node reported"));
                 findings.AddRange(Occurrences(json, "\"note\": \"(nothing reaches or reads this node)\"", name, "orphan"));
-                findings.AddRange(Occurrences(json, "\"subTree\": \"(\\(none assigned\\))\"", name, "sub-tree"));
-                findings.AddRange(Occurrences(json, "\"(recursion)\": \"[^\"]+\"", name, "sub-tree"));
+                findings.AddRange(Occurrences(json, "\"asset\": \"(\\(none assigned\\))\"", name, "sub-tree"));
             }
 
             return findings;
@@ -572,6 +572,18 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
                     "fits again and the wire comes back by itself.";
             }
         }
+
+        /// <summary>
+        /// Asked of the nodes rather than read from the dump: the tree being verified is a reloaded copy, so
+        /// the dump does not recognise it as the asset a branch runs and reports the loop one lap late.
+        /// </summary>
+        private static IEnumerable<string> SubTreeRecursion(BehaviorTreeGraphAsset asset, string treeName) =>
+            asset.graph.Nodes
+                .OfType<RunBehaviorTreeGraphNode>()
+                .Select(node => node.FindRecursion())
+                .Where(loop => loop.Count > 0)
+                .Select(loop => $"{treeName}: sub-tree recursion — {RunBehaviorTreeGraphNode.DescribeLoop(loop)}")
+                .Distinct();
 
         /// <summary>
         /// Nodes whose type no longer exists. The asset rewrites an unknown <c>$type</c> to
