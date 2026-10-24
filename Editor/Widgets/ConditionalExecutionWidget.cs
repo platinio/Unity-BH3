@@ -109,7 +109,8 @@ namespace ArcaneOnyx.BehaviorTree
             // measured height rather than a shared constant, because they are no longer all the same height.
             p.y -= StackHeightBelow(guard, owner) + Separation + p.height;
 
-            if (owner is RunBehaviorTreeGraphNode) p.y -= Height;
+            // Clear of the frame's header band, which only a node actually drawing a preview has.
+            if (owner.DrawsSubTreePreview) p.y -= Authoring.SubTreeFootprint.GroupHeaderLift;
 
             // Written before the base runs, not after: the base lays the ports out from whatever rect the
             // element currently has, so assigning afterwards left them positioned against the previous

@@ -1,0 +1,21 @@
+{
+    "name": "ArcaneOnyx.BH3.Samples",
+    "rootNamespace": "ArcaneOnyx.BH3.Samples",
+    "references": [
+        "ArcaneOnyx.BehaviorTree",
+        "ArcaneOnyx.GraphCore",
+        "Unity.VisualScripting.Core",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

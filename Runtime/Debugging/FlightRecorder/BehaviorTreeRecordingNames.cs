@@ -11,9 +11,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         public static string AssetNameOf(RunBehaviorTreeGraphNode runNode)
         {
-            if (runNode == null || runNode.BehaviorTreeGraphAsset == null) return NoAssetAssigned;
+            if (runNode == null || runNode.RunningTree == null) return NoAssetAssigned;
 
-            return runNode.BehaviorTreeGraphAsset.name;
+            return runNode.RunningTree.name;
         }
     }
 }

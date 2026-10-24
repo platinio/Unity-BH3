@@ -239,9 +239,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         /// <summary>
         /// Expands a sub-behavior tree in place, to any depth.
         ///
-        /// Reads the serialized asset, never <c>BehaviorTreeGraphAssetInstance</c> or
-        /// <c>BehaviorTreeGraphInstance</c> — those call <c>Object.Instantiate</c>, so touching them would
-        /// have inspecting a tree quietly clone assets.
+        /// Reads the serialized asset rather than the running instance, so a dump describes the tree as it was
+        /// authored whether or not anything is playing.
         ///
         /// The guard is the asset path rather than a global visited set, because the same sub-tree used by
         /// two different branches is normal reuse, not recursion. Only an asset already on the current path

@@ -855,9 +855,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             // A RunBehaviorTreeGraphNode entering emits both NodeEnter and TreePushed. Matching the second one
             // as well would pause the editor twice for one thing happening.
             // Deliberately not SetFlightRecorder: RunBehaviorTreeGraphNode overrides it to reach into
-            // BehaviorTreeGraphAssetInstance, which Instantiates on first read and throws on a node with no
-            // asset assigned. The recorder does not need the node to hold a reference to it — the events go
-            // the other way — and NodeEnter reads the plain serialized asset rather than the instance.
+            // GetOrCreateBehaviorTreeGraphAssetInstance, which throws on a node with no asset assigned. The
+            // recorder does not need the node to hold a reference to it — the events go the other way — and
+            // NodeEnter reads the plain serialized asset rather than the instance.
             var runNode = new RunBehaviorTreeGraphNode();
 
             BehaviorTreeBreakpoints.SetNode(runNode.guid, BehaviorTreeNodeBreakEvents.All);

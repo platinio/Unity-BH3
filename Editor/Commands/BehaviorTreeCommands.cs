@@ -119,6 +119,34 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return new { verified = paths, clean = findings.Count == 0, findings = findings.ToArray() };
         }
 
+        [CliCommand("bt_layout",
+            "Arrange trees so nothing is drawn on top of anything else: parents centred over their " +
+            "children, siblings left to right in priority order, and the literals and reads that feed a " +
+            "node's ports in columns beside it. Run it once when a tree is finished rather than placing " +
+            "nodes by hand while authoring. A tree whose nodes do not overlap is left exactly as its author " +
+            "arranged it, so a hand-tidied canvas survives. The trees a tree runs are arranged first: a " +
+            "sub-tree node is drawn as the whole tree it runs, so how big it is follows from that tree's " +
+            "own layout, and a branch can be thousands of pixels wide.")]
+        public static object LayoutCommand(
+            [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Worker,Trees/Engage", Required = true)] string trees,
+            [CliArg("force", "Arrange even a tree that reads as tidy, for when these rules have changed since it was laid out.")] bool force = false)
+        {
+            var assets = trees
+                .Split(',')
+                .Select(tree => tree.Trim())
+                .Where(tree => tree.Length > 0)
+                .Select(tree => ResolveTree(tree, out _))
+                .ToArray();
+
+            if (assets.Length == 0) throw new ArgumentException("No tree paths given.");
+
+            var arranged = force
+                ? assets.SelectMany(BehaviorTreeLayout.RearrangeEverything)
+                : assets.SelectMany(BehaviorTreeLayout.Arrange);
+
+            return new { arranged = arranged.ToArray() };
+        }
+
         [CliCommand("bt_retarget_missing",
             "Replace nodes whose C# type no longer exists with a type that does, keeping every value, object " +
             "reference and connection the replacement still has a home for. This is the headless form of the " +
@@ -285,6 +313,23 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             Save(asset);
 
             return DescribeNode(node);
+        }
+
+        [CliCommand("bt_delete_node",
+            "Remove a node from a tree, together with the guards that name it as their owner, the " +
+            "transitions it sits on either end of, and the value wires into and out of its ports. Its " +
+            "remaining siblings are renumbered so their priority order stays 0..n-1. What fed the node is " +
+            "left alone, because a read or a literal may feed other branches too — run bt_verify afterwards " +
+            "and it names whatever is left with nothing reading it.")]
+        public static object DeleteNodeCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("node", "Guid of the node to remove, as bt_list_nodes and bt_describe_tree print it.", Required = true)] string node)
+        {
+            var asset = ResolveTree(tree, out var treePath);
+            var removed = DeleteNode(asset, ResolveNode(asset, node));
+            Save(asset);
+
+            return new { tree = treePath, removed = removed.ToArray() };
         }
 
         [CliCommand("bt_connect",
@@ -553,6 +598,39 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             return DescribeNode(guard);
         }
 
+        [CliCommand("bt_add_variable_get",
+            "Add a Get Variable node that reads one variable, for feeding a port. Use it when the value is " +
+            "an object a literal cannot express — bt_add_variable_read is the one to use when a missing " +
+            "variable needs a fallback, which only works for the scalar types it lists. The store matters: " +
+            "'Object' reads the agent's Variables component live, which is where AgentVariableWriter writes " +
+            "and so where a fact published while the game runs appears; 'Graph' reads the running tree's " +
+            "own variables, which is where a sub-tree's parameters land.")]
+        public static object AddVariableGetCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("variable", "Variable name to read.", Required = true)] string variable,
+            [CliArg("kind", "Which store to read: Object, Graph, Scene, Application or Saved.")] string kind = "Object",
+            [CliArg("x", "Canvas X position.")] float x = 0f,
+            [CliArg("y", "Canvas Y position.")] float y = 0f)
+        {
+            var asset = ResolveTree(tree, out _);
+
+            var read = AddNode<GetVariable>(asset, x, y);
+            SetValue(asset, ResolveValueInput(read, "Key"), variable, x, y);
+            SetVariableKind(read, ParseVariableKind(kind));
+
+            Save(asset);
+
+            return DescribeNode(read);
+        }
+
+        private static BehaviorTreeVariableKind ParseVariableKind(string kind)
+        {
+            if (Enum.TryParse(kind, true, out BehaviorTreeVariableKind parsed)) return parsed;
+
+            throw new ArgumentException(
+                $"'{kind}' is not a variable store. The stores are: {string.Join(", ", Enum.GetNames(typeof(BehaviorTreeVariableKind)))}.");
+        }
+
         [CliCommand("bt_add_variable_read",
             "Add a node that reads an agent variable through a Visual Scripting graph with a fallback, for " +
             "feeding a port. bt_guard_on_variable already does this for guards — use this for everything else.")]
@@ -573,6 +651,39 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             Save(asset);
 
             return DescribeNode(read);
+        }
+
+        [CliCommand("bt_connect_value",
+            "Wire one node's value output into another node's value input: the value counterpart of " +
+            "bt_connect, which wires execution. Leave from_port off when the producer has exactly one " +
+            "output, which is the usual case for a read or a literal. Whatever already fed the destination " +
+            "port is disconnected, because a port takes one source.")]
+        public static object ConnectValueCommand(
+            [CliArg("tree", "Asset path of the behavior tree.", Required = true)] string tree,
+            [CliArg("from", "Guid of the node producing the value.", Required = true)] string from,
+            [CliArg("to", "Guid of the node consuming it.", Required = true)] string to,
+            [CliArg("to_port", "Value input key on the consumer, e.g. Tree or target.", Required = true)] string toPort,
+            [CliArg("from_port", "Value output key on the producer. Omit when it has only one.")] string fromPort = null)
+        {
+            var asset = ResolveTree(tree, out var treePath);
+
+            var producer = ResolveNode(asset, from);
+            var consumer = ResolveNode(asset, to);
+
+            var output = ResolveValueOutput(producer, fromPort);
+            var input = ResolveValueInput(consumer, toPort);
+
+            ConnectValue(asset, output, input);
+            Save(asset);
+
+            return new
+            {
+                tree = treePath,
+                from = producer.NodeName,
+                fromPort = output.key,
+                to = consumer.NodeName,
+                toPort = input.key,
+            };
         }
 
         [CliCommand("bt_add_sub_tree",
@@ -730,6 +841,28 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             asset.graph.Nodes.Add(node);
 
             return node;
+        }
+
+        private static ValueOutput ResolveValueOutput(BehaviorTreeNode node, string portKey)
+        {
+            var outputs = node.valueOutputs?.ToList() ?? new List<ValueOutput>();
+
+            if (string.IsNullOrEmpty(portKey))
+            {
+                if (outputs.Count == 1) return outputs[0];
+
+                throw new ArgumentException(outputs.Count == 0
+                    ? $"{node.GetType().Name} publishes no value, so nothing can be wired from it."
+                    : $"{node.GetType().Name} publishes {outputs.Count} values, so say which: " +
+                      $"{string.Join(", ", outputs.Select(output => output.key))}.");
+            }
+
+            var port = outputs.FirstOrDefault(output => output.key == portKey);
+            if (port != null) return port;
+
+            throw new ArgumentException(
+                $"{node.GetType().Name} has no value output '{portKey}'. It has: " +
+                $"{string.Join(", ", outputs.Select(output => output.key))}.");
         }
 
         private static ValueInput ResolveValueInput(BehaviorTreeNode node, string portKey)

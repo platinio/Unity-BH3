@@ -103,6 +103,8 @@ namespace ArcaneOnyx.BehaviorTree
         public virtual bool CanCut => true;
         public override bool  DrawInSubTree => true;
 
+        public virtual bool DrawsSubTreePreview => false;
+
         public virtual string Description => string.Empty;
 
         /// <summary>

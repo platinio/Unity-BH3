@@ -40,6 +40,25 @@ New to BH3? Start with the [BH3 introduction and tutorial playlist](https://www.
 
 ---
 
+## Samples
+
+Four small games built on BH3, in [`Samples/`](Samples/README.md) of this repository, for learning how trees
+are put together. Each is a scene you press Play in and a README that draws its trees and says what each piece shows.
+Read them in this order; [Samples/README.md](Samples/README.md) maps each BH3 idea to the place in a
+sample that uses it.
+
+| Sample | Teaches |
+|---|---|
+| [Click to move](Samples/ClickToMove/README.md) | The smallest complete agent: one guarded branch above an unguarded fallback, a branch as its own asset with parameters, a Function feeding a port |
+| [Combat](Samples/Combat/README.md) | One `Engage` branch shared by every agent, an attack tree picked at run time from a fact, guards that poll next to guards that wake, a swing that must finish |
+| [Defense](Samples/Defense/README.md) | A tree running a game system, reactive guards on facts that components publish, agents spawned with their tree already set |
+| [RTS](Samples/RTS/README.md) | Numbered orders on three channels, interrupt and resume from tree shape alone, a branch that re-targets itself, a tree on a building |
+
+The samples are not in the release package; they need `com.unity.inputsystem` and `com.unity.ai.navigation`
+beside BH3.
+
+---
+
 ## Documentation
 
 ### 1. Start here
@@ -92,7 +111,8 @@ New to BH3? Start with the [BH3 introduction and tutorial playlist](https://www.
 |---|---|
 | `Runtime/` | Nodes, the machine, variables, the flight recorder |
 | `Editor/` | The graph window, panels, inspectors, authoring and verification tools |
-| `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over. Feature demos live in the reference project; see [Demos and tests](docs/5-reference/01-samples-and-demos.md) |
+| `Test/` | `EditMode/` and `PlayMode/` test assemblies, plus the fixture trees the verification test runs over |
+| `Samples/` | Four small games built on BH3, for learning how trees are put together. Not in the release package; start at [Samples/README.md](Samples/README.md) |
 | `docs/` | This documentation. [docs/README.md](docs/README.md) is the same table of contents, for browsing inside the folder |
 
 ## New to behavior trees?
