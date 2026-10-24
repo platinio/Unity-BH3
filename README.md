@@ -54,8 +54,8 @@ sample that uses it.
 | [Defense](Samples/Defense/README.md) | A tree running a game system, reactive guards on facts that components publish, agents spawned with their tree already set |
 | [RTS](Samples/RTS/README.md) | Numbered orders on three channels, interrupt and resume from tree shape alone, a branch that re-targets itself, a tree on a building |
 
-The samples are not in the release package; they need `com.unity.inputsystem` and `com.unity.ai.navigation`
-beside BH3.
+On the release page the samples are their own `BH3.Samples.unitypackage`, imported after `BH3.unitypackage`.
+They need `com.unity.inputsystem` and `com.unity.ai.navigation` beside BH3.
 
 ---
 

@@ -4,10 +4,12 @@ Four small games built on BH3, for learning how trees are put together. Each is 
 and a README that draws its trees and says what each piece shows. This page gives the order to read them
 in and where each BH3 idea is used.
 
-The samples are in this repository, not in the release package. They need Unity 6 with BH3,
-`com.unity.inputsystem` and `com.unity.ai.navigation`. The reference project
-[platinio/bh3-development](https://github.com/platinio/bh3-development) has this repository as a submodule
-at `Assets/ArcaneOnyx/BH3/` with all three installed; the scenes are under `Samples/` there.
+On the [release page](https://github.com/platinio/Unity-BH3/releases/latest) the samples are their own
+`BH3.Samples.unitypackage`, kept out of `BH3.unitypackage`. To use them: import BH3, add
+`com.unity.inputsystem` and `com.unity.ai.navigation`, then import the samples package; it lands under
+`Assets/ArcaneOnyx/BH3/Samples/`. In this repository they are this folder, and the reference project
+[platinio/bh3-development](https://github.com/platinio/bh3-development) has them in place as a submodule at
+`Assets/ArcaneOnyx/BH3/`.
 
 ---
 
