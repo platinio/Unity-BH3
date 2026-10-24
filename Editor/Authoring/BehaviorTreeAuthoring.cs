@@ -127,7 +127,8 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
         /// The size comes from the node's own <c>StartingSize</c> rather than from the caller — the same
         /// thing <c>BaseCanvas.CreateGraphElementWithType</c> does when a node is made from the create menu.
         /// A node whose rect does not match what it was drawn for renders wrong: too wide and the icon
-        /// overlaps the title, too short and the ports crowd.
+        /// overlaps the title, too short and the ports crowd. The position lands on the canvas grid, where a
+        /// drag would have put it.
         /// </para>
         /// </summary>
         public static T AddNode<T>(BehaviorTreeGraphAsset asset, float x, float y) where T : BehaviorTreeNode, new()
@@ -137,13 +138,26 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
 
         /// <summary>
         /// The same, on a graph with no asset behind it: a tree assembled in memory for a test, or a branch
-        /// built before it is embedded anywhere. How a node is created and sized is decided here once; the
-        /// asset overload only says which graph.
+        /// built before it is embedded anywhere.
         /// </summary>
         public static T AddNode<T>(BehaviorTreeGraph graph, float x, float y) where T : BehaviorTreeNode, new()
         {
-            var node = new T();
-            node.Position = new Rect(new Vector2(x, y), node.StartingSize);
+            return (T)AddNode(graph, typeof(T), x, y);
+        }
+
+        public static BehaviorTreeNode AddNode(BehaviorTreeGraphAsset asset, Type nodeType, float x, float y)
+        {
+            return AddNode(asset.graph, nodeType, x, y);
+        }
+
+        /// <summary>
+        /// How a node is created, sized and placed is decided here once; every other overload only says
+        /// which graph or which type.
+        /// </summary>
+        public static BehaviorTreeNode AddNode(BehaviorTreeGraph graph, Type nodeType, float x, float y)
+        {
+            var node = (BehaviorTreeNode)Activator.CreateInstance(nodeType);
+            node.Position = new Rect(CanvasGrid.Nearest(new Vector2(x, y)), node.StartingSize);
 
             // Nodes.Add fires AfterAdd -> Define(), so ports exist as soon as this returns
             graph.Nodes.Add(node);

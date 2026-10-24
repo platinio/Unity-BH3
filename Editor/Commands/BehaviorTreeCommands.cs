@@ -123,9 +123,10 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             "Arrange trees so nothing is drawn on top of anything else: parents centred over their " +
             "children, siblings left to right in priority order, and the literals and reads that feed a " +
             "node's ports in columns beside it. Run it once when a tree is finished rather than placing " +
-            "nodes by hand while authoring. A tree whose nodes do not overlap is left exactly as its author " +
-            "arranged it, so a hand-tidied canvas survives. The trees a tree runs are arranged first: a " +
-            "sub-tree node is drawn as the whole tree it runs, so how big it is follows from that tree's " +
+            "nodes by hand while authoring. A tree whose nodes do not overlap keeps its author's " +
+            "arrangement, so a hand-tidied canvas survives; only nodes off the canvas grid are moved onto " +
+            "it, the way a drag would. Every node it places lands on that grid. The trees a tree runs are " +
+            "arranged first: a sub-tree node is drawn as the whole tree it runs, so how big it is follows from that tree's " +
             "own layout, and a branch can be thousands of pixels wide.")]
         public static object LayoutCommand(
             [CliArg("trees", "Comma-separated asset paths, e.g. Trees/Worker,Trees/Engage", Required = true)] string trees,
@@ -830,17 +831,6 @@ namespace ArcaneOnyx.BehaviorTree.Authoring
             }
 
             return matches[0];
-        }
-
-        /// <summary>Reflective form of <see cref="AddNode{T}"/>, for a caller that only has the type name.</summary>
-        private static BehaviorTreeNode AddNode(BehaviorTreeGraphAsset asset, System.Type nodeType, float x, float y)
-        {
-            var node = (BehaviorTreeNode)Activator.CreateInstance(nodeType);
-            node.Position = new Rect(new Vector2(x, y), node.StartingSize);
-
-            asset.graph.Nodes.Add(node);
-
-            return node;
         }
 
         private static ValueOutput ResolveValueOutput(BehaviorTreeNode node, string portKey)

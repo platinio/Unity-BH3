@@ -121,6 +121,76 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
         }
 
+        [Test]
+        public void PutsEveryNodeItPlacesOnTheCanvasGrid()
+        {
+            var wait = caller.graph.Nodes.OfType<WaitTime>().First();
+            BehaviorTreeAuthoring.FeedFloat(caller, wait.Time, 1.5f, 0.0f, 0.0f);
+
+            BehaviorTreeLayout.Arrange(caller);
+
+            Assert.That(BehaviorTreeLayout.CountNodesOffTheGrid(caller.graph), Is.Zero);
+            Assert.That(BehaviorTreeLayout.CountNodesOffTheGrid(branch.graph), Is.Zero);
+        }
+
+        [Test]
+        public void MovesANodeOffTheGridOntoItWithoutRearrangingTheTree()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+            var arrangedAt = selector.Position;
+            var everyOtherNode = PositionsOf(caller).Where(position => position != arrangedAt).ToList();
+
+            selector.Position = new Rect(arrangedAt.position + new Vector2(5.0f, 5.0f), arrangedAt.size);
+            var secondRun = BehaviorTreeLayout.Arrange(caller).Single(tree => tree.tree == CallerPath);
+
+            Assert.That(secondRun.offTheGridBefore, Is.EqualTo(1));
+            Assert.That(secondRun.arranged, Is.False, "one node off the grid rearranged the whole tree");
+            Assert.That(selector.Position, Is.EqualTo(arrangedAt));
+            Assert.That(PositionsOf(caller).Where(position => position != arrangedAt), Is.EqualTo(everyOtherNode));
+        }
+
+        [Test]
+        public void RearrangesATreeWhenSnappingWouldDrawOneNodeOverAnother()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+            var waits = caller.graph.Nodes.OfType<WaitTime>().ToList();
+
+            // Far right of everything else, a pixel apart: the first rounds right by 5, the second left by 2.
+            waits[0].Position = new Rect(12007.0f, 0.0f, 150.0f, 100.0f);
+            waits[1].Position = new Rect(12158.0f, 0.0f, 150.0f, 100.0f);
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.Zero,
+                "the two nodes are supposed to start apart; nothing is being tested");
+
+            var secondRun = BehaviorTreeLayout.Arrange(caller).Single(tree => tree.tree == CallerPath);
+
+            Assert.That(secondRun.arranged, Is.True);
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.Zero);
+            Assert.That(BehaviorTreeLayout.CountNodesOffTheGrid(caller.graph), Is.Zero);
+        }
+
+        [Test]
+        public void CountsASubTreeNodeAsTheFrameItIsDrawnAsRatherThanTheRectSaved()
+        {
+            BehaviorTreeLayout.Arrange(caller);
+            var frame = runsTheBranch.Position;
+            runsTheBranch.Position = new Rect(frame.position, SubTreeFootprint.EmptyNodeSize);
+
+            var wait = caller.graph.Nodes.OfType<WaitTime>().First();
+            wait.Position = new Rect(frame.x, frame.yMax - wait.Position.height, wait.Position.width, wait.Position.height);
+            Assert.That(wait.Position.Overlaps(runsTheBranch.Position), Is.False,
+                "the node is supposed to sit outside the saved rect; nothing is being tested");
+
+            Assert.That(BehaviorTreeLayout.CountOverlappingPairs(caller.graph), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void AddsANodeWhereADragWouldHaveLeftIt()
+        {
+            var wait = BehaviorTreeAuthoring.AddNode<WaitTime>(caller, 13.7f, 100.2f);
+
+            Assert.That(wait.Position.position, Is.EqualTo(new Vector2(12.0f, 96.0f)));
+        }
+
         private static List<Rect> PositionsOf(BehaviorTreeGraphAsset tree) =>
             tree.graph.Nodes.Select(node => node.Position).ToList();
     }

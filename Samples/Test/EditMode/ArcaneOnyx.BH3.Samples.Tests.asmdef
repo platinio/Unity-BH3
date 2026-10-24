@@ -4,6 +4,7 @@
     "references": [
         "ArcaneOnyx.BH3.Samples",
         "ArcaneOnyx.BehaviorTree",
+        "ArcaneOnyx.BehaviorTree.Editor",
         "ArcaneOnyx.GraphCore",
         "Unity.VisualScripting.Core",
         "Unity.VisualScripting.Flow",
