@@ -259,6 +259,9 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
+            var loop = FindRecursion();
+            if (loop.Count > 0) into.Add(RecursionProblem(loop));
+
             foreach (var line in DescribeContractDrift())
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error, line, "Refresh Parameters.",
@@ -267,6 +270,19 @@ namespace ArcaneOnyx.BehaviorTree
 
             // An unfed required parameter is just an unset port, which the base reports for every node.
         }
+
+        private static NodeProblem RecursionProblem(IReadOnlyList<BehaviorTreeGraphAsset> loop)
+        {
+            var closingTree = loop[loop.Count - 2];
+            var repeatedTree = loop[loop.Count - 1];
+
+            return new NodeProblem(NodeProblemSeverity.Error,
+                $"Causes recursion ({DescribeLoop(loop)}), so the agent throws when it starts.",
+                $"Open {closingTree.name} and change the sub-tree node there that runs {repeatedTree.name}.");
+        }
+
+        public static string DescribeLoop(IReadOnlyList<BehaviorTreeGraphAsset> loop) =>
+            string.Join(" -> ", loop.Select(tree => tree.name));
 
         public override void OnAwake()
         {
@@ -277,24 +293,38 @@ namespace ArcaneOnyx.BehaviorTree
 
         private void ThrowIfCausesRecursion(BehaviorTreeGraphAsset tree)
         {
-            var runStack = new Stack<BehaviorTreeGraphAsset>(new[] { tree });
-            if (!GraphWillCauseRecursion(runStack)) return;
-          
-            string stackTraceLog = "";
-               
-            var runStackList = runStack.ToList();
-            string firstNode = runStack.First().name;
-                
-            while (runStackList.Count > 0)
+            var loop = FindRecursion(tree);
+            if (loop.Count == 0) return;
+
+            throw new Exception($"'{NodeName}' causes recursion: {DescribeLoop(loop)}.");
+        }
+
+        public IReadOnlyList<BehaviorTreeGraphAsset> FindRecursion() => FindRecursion(behaviorTreeGraphAsset);
+
+        private static IReadOnlyList<BehaviorTreeGraphAsset> FindRecursion(BehaviorTreeGraphAsset tree)
+        {
+            var path = new List<BehaviorTreeGraphAsset>();
+
+            return ReachesATreeAlreadyOnThePath(tree, path) ? path : Array.Empty<BehaviorTreeGraphAsset>();
+        }
+
+        private static bool ReachesATreeAlreadyOnThePath(BehaviorTreeGraphAsset tree, List<BehaviorTreeGraphAsset> path)
+        {
+            if (tree == null) return false;
+
+            var isAlreadyOnThePath = path.Contains(tree);
+            path.Add(tree);
+
+            if (isAlreadyOnThePath) return true;
+
+            foreach (var runsABranch in tree.graph.Nodes.OfType<RunBehaviorTreeGraphNode>())
             {
-                var graphAsset = runStackList[0];
-                stackTraceLog += $"{graphAsset.name} ->";
-                runStackList.RemoveAt(0);
+                if (ReachesATreeAlreadyOnThePath(runsABranch.behaviorTreeGraphAsset, path)) return true;
             }
 
-            stackTraceLog += $" {firstNode}";
-               
-            throw new Exception("RunBehaviorTreeNode causes recursion stack trace: " + stackTraceLog);
+            path.RemoveAt(path.Count - 1);
+
+            return false;
         }
 
         /// <summary>
@@ -436,27 +466,6 @@ namespace ArcaneOnyx.BehaviorTree
                         "the port has nothing connected and declares no default.", e);
                 }
             }
-        }
-
-        public bool GraphWillCauseRecursion(Stack<BehaviorTreeGraphAsset> runStack)
-        {
-            var graphAsset = runStack.Peek();
-            if (graphAsset == null) return false;
-            
-            foreach (var node in graphAsset.graph.Nodes)
-            {
-                if (node is RunBehaviorTreeGraphNode runBehaviorTreeGraphNode)
-                {
-                    if (runStack.Contains(runBehaviorTreeGraphNode.behaviorTreeGraphAsset)) return true;
-                    
-                    runStack.Push(runBehaviorTreeGraphNode.behaviorTreeGraphAsset);
-                    if (GraphWillCauseRecursion(runStack)) return true;
-
-                    runStack.Pop();
-                }
-            }
-
-            return false;
         }
 
         public override ExecutionStatus OnUpdate()
