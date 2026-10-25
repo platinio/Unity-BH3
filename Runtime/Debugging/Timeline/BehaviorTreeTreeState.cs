@@ -121,7 +121,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 if (recorded.Tick > tick) break;
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
 
-                guards[new NodeKey(recorded.CallSiteId, recorded.NodeGuid)] = recorded.Flag;
+                guards[new NodeKey(recorded.CallSiteId, recorded.NodeGuid)] = recorded.GuardResult;
             }
         }
 

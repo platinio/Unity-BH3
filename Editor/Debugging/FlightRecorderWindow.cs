@@ -65,7 +65,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
         private void OnGUI()
         {
-            var recorders = BehaviorTreeFlightRecorders.Active;
+            var recorders = BehaviorTreeFlightRecorderRegistry.Active;
 
             if (recorders.Count == 0)
             {
@@ -110,8 +110,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 selectedAgent = EditorGUILayout.Popup(selectedAgent, names, EditorStyles.toolbarPopup, GUILayout.Width(220.0f));
 
-                recorder.Enabled = GUILayout.Toggle(
-                    recorder.Enabled, recorder.Enabled ? "Recording" : "Paused", EditorStyles.toolbarButton, GUILayout.Width(80.0f));
+                recorder.IsEnabled = GUILayout.Toggle(
+                    recorder.IsEnabled, recorder.IsEnabled ? "Recording" : "Paused", EditorStyles.toolbarButton, GUILayout.Width(80.0f));
 
                 kindFilter = (BehaviorTreeEventKind) EditorGUILayout.EnumPopup(
                     kindFilter, EditorStyles.toolbarPopup, GUILayout.Width(110.0f));
@@ -133,7 +133,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 EditorGUILayout.LabelField(
                     $"tick {recorder.Tick}   ·   {recorder.Events.Count}/{recorder.Events.Capacity} events"
-                    + (recorder.Events.Dropped > 0 ? $"   ·   {recorder.Events.Dropped} dropped" : "")
+                    + (recorder.Events.DroppedEventCount > 0 ? $"   ·   {recorder.Events.DroppedEventCount} dropped" : "")
                     + $"   ·   {recorder.CallSites.Count} call site(s)",
                     EditorStyles.miniLabel);
             }
@@ -237,20 +237,20 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 case BehaviorTreeEventKind.GuardEval:
                     // The inverted one: the subject is the guard, and RelatedGuid is what it protects.
-                    return $"guard {Name(recorded.NodeGuid)} → {(recorded.Flag ? "true" : "false")} "
+                    return $"guard {Name(recorded.NodeGuid)} → {(recorded.GuardResult ? "true" : "false")} "
                            + $"(protects {Name(recorded.RelatedGuid)}){where}";
 
                 case BehaviorTreeEventKind.VariableWrite:
                     string writer = recorded.RelatedGuid != Guid.Empty
                         ? Name(recorded.RelatedGuid)
-                        : recorded.Writer ?? "(unknown)";
-                    return $"{recorded.Key}: {recorded.OldValue} → {recorded.NewValue}   by {writer}";
+                        : recorded.WriterName ?? "(unknown)";
+                    return $"{recorded.VariableName}: {recorded.OldValue} → {recorded.NewValue}   by {writer}";
 
                 case BehaviorTreeEventKind.TreePushed:
-                    return $"entered sub-tree {recorded.Key} via {Name(recorded.NodeGuid)}";
+                    return $"entered sub-tree {recorded.SubTreeAssetName} via {Name(recorded.NodeGuid)}";
 
                 case BehaviorTreeEventKind.TreePopped:
-                    return $"left sub-tree {recorded.Key} via {Name(recorded.NodeGuid)}";
+                    return $"left sub-tree {recorded.SubTreeAssetName} via {Name(recorded.NodeGuid)}";
 
                 default:
                     return Name(recorded.NodeGuid);

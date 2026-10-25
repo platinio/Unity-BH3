@@ -19,7 +19,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     ///
     /// <para>
     /// <b>The consequence, stated plainly: breakpoints fire only while the agent is recording.</b> Turning a
-    /// recorder off, or <see cref="BehaviorTreeFlightRecorders.GloballyEnabled"/> off, turns breakpoints off
+    /// recorder off, or <see cref="BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled"/> off, turns breakpoints off
     /// with it. That is the right trade rather than an accident — everything the editor does on a hit
     /// (park the scrubber on the tick, explain the moment, name the writer) reads the recording, so a
     /// breakpoint without one could pause the editor and then have nothing to show. The breakpoints panel says
@@ -29,7 +29,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// <para>
     /// Cost when nothing is armed is one <c>Count</c> compare per recorded event, which is why the check can
     /// sit on the recorder's hot path at all. The whole class is unreachable outside the editor and dev builds
-    /// regardless, since the only caller is behind <see cref="BehaviorTreeRecorder"/>'s
+    /// regardless, since the only caller is behind <see cref="BehaviorTreeDevRecorder"/>'s
     /// <see cref="System.Diagnostics.ConditionalAttribute"/> gate.
     /// </para>
     /// </summary>
@@ -44,7 +44,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static readonly Dictionary<string, BehaviorTreeBreakpoint> variables = new(StringComparer.Ordinal);
 
         /// <summary>
-        /// The kill switch, mirroring <see cref="BehaviorTreeFlightRecorders.GloballyEnabled"/>. Off means
+        /// The kill switch, mirroring <see cref="BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled"/>. Off means
         /// nothing fires while every breakpoint stays armed, which is what you want when you have found the
         /// bug and would like to watch the rest of the run without re-arming six breakpoints afterwards.
         /// </summary>
@@ -404,7 +404,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 case BehaviorTreeEventKind.GuardEval:
                 {
                     var guard = ForGuard(recorded.NodeGuid);
-                    return guard != null && guard.Enabled && guard.MatchesGuard(recorded.Flag) ? guard : null;
+                    return guard != null && guard.Enabled && guard.MatchesGuard(recorded.GuardResult) ? guard : null;
                 }
 
                 // The one kind given the live value as well as its rendering. The ring still only ever holds
@@ -412,7 +412,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 // through so numbers can be compared as numbers.
                 case BehaviorTreeEventKind.VariableWrite:
                 {
-                    var variable = ForVariable(recorded.Key);
+                    var variable = ForVariable(recorded.VariableName);
                     return variable != null && variable.Enabled && variable.MatchesWrite(writtenValue, recorded.NewValue)
                         ? variable
                         : null;

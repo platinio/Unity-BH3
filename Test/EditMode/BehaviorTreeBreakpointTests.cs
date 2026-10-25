@@ -30,8 +30,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             BehaviorTreeBreakpoints.Clear();
             BehaviorTreeBreakpoints.GloballyEnabled = true;
@@ -65,8 +65,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             BehaviorTreeBreakpointStore.OverridePath = null;
             BehaviorTreeBreakpointStore.Load();
 
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         private void Record(BehaviorTreeBreakpointHit hit) => hits.Add(hit);
@@ -226,8 +226,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             recorder.GuardEval(owner, guard, false);
 
             Assert.AreEqual(2, hits.Count);
-            Assert.IsTrue(hits[0].Cause.Flag);
-            Assert.IsFalse(hits[1].Cause.Flag);
+            Assert.IsTrue(hits[0].Cause.GuardResult);
+            Assert.IsFalse(hits[1].Cause.GuardResult);
         }
 
         [Test]
@@ -619,7 +619,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.AreEqual(1, breakpoint.HitsFor(recorder));
             Assert.AreEqual(1, breakpoint.AgentsMatched);
 
-            BehaviorTreeFlightRecorders.Unregister(recorder);
+            BehaviorTreeFlightRecorderRegistry.Unregister(recorder);
 
             Assert.AreEqual(0, breakpoint.HitsFor(recorder), "A destroyed agent's count describes a run that is over.");
             Assert.AreEqual(0, breakpoint.AgentsMatched, "and its recording must not be held as a dictionary key.");
@@ -631,9 +631,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             // Reset drops every recorder at once — a domain reload, or the next fixture starting clean — and
             // the tallies keyed by those recordings have to go with them for the same reason Unregister's do.
-            // Registering by hand because that is what BehaviorTreeRecorder.Attach does for a real agent; an
+            // Registering by hand because that is what BehaviorTreeDevRecorder.Attach does for a real agent; an
             // edit-mode recorder is built directly and would otherwise never be in the list Reset walks.
-            BehaviorTreeFlightRecorders.Register(recorder);
+            BehaviorTreeFlightRecorderRegistry.Register(recorder);
 
             var node = BoundNode();
             var breakpoint = BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
@@ -642,7 +642,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(1, breakpoint.AgentsMatched, "The tally has to exist for dropping it to prove anything.");
 
-            BehaviorTreeFlightRecorders.Reset();
+            BehaviorTreeFlightRecorderRegistry.Reset();
 
             Assert.AreEqual(0, breakpoint.AgentsMatched, "A recorder dropped wholesale takes its tally with it.");
             Assert.AreEqual(0, breakpoint.HitCount);
@@ -699,7 +699,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             recorder.ExternalVariableWrite("VisionSensor", "lastKnownTargetPos", null, Vector3.one);
 
             Assert.AreEqual(1, hits.Count);
-            Assert.AreEqual("VisionSensor", hits[0].Cause.Writer);
+            Assert.AreEqual("VisionSensor", hits[0].Cause.WriterName);
         }
 
         #endregion
@@ -791,12 +791,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var node = BoundNode();
             BehaviorTreeBreakpoints.SetNode(node.guid, BehaviorTreeNodeBreakEvents.Enter);
 
-            recorder.Enabled = false;
+            recorder.IsEnabled = false;
             node.OnNodeEnter();
 
             Assert.IsEmpty(hits);
 
-            recorder.Enabled = true;
+            recorder.IsEnabled = true;
             node.OnNodeEnter();
 
             Assert.AreEqual(1, hits.Count);
