@@ -1039,13 +1039,18 @@ def verify_locally(repo, name, unity_version, deps, unity_exe, platforms, keep,
                 ["-runTests", "-testPlatform", platform, "-testResults", res_xml],
                 log, timeout=2400, nographics=False,
             )
+            parsed = parse_test_results(res_xml)
             if cs:
-                fail("compilation failed:\n  " + "\n  ".join(cs[:25]))
+                # Unity runs no tests while any script fails to compile, so results mean the
+                # errors came from an earlier pass the API updater fixed (6000.4's Shader Graph).
+                if parsed is None:
+                    fail("compilation failed:\n  " + "\n  ".join(cs[:25]))
+                info("  compile errors from a pass the API updater fixed; the tests ran:\n    "
+                     + "\n    ".join(cs[:25]))
             # -runTests: 0 = all passed / no tests, 2 = some failed, else = error
             if rc not in (0, 2):
                 fail(f"Unity exited {rc} during {platform} tests. Log tail:\n"
                      + "\n".join(logtxt.splitlines()[-25:]))
-            parsed = parse_test_results(res_xml)
             if parsed is None:
                 info(f"  {platform}: compiled OK, no test results produced (no tests).")
             else:
