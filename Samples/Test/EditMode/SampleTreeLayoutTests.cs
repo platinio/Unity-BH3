@@ -33,13 +33,17 @@ namespace ArcaneOnyx.BH3.Samples.Tests
 
         private static List<BehaviorTreeGraphAsset> SampleTrees()
         {
-            var trees = AssetDatabase.FindAssets("t:" + nameof(BehaviorTreeGraphAsset), new[] { SamplesFolder })
+            var samples = SamplesFolder;
+
+            // Test fixtures are left messy on purpose, the layout tests arrange copies of them.
+            var trees = AssetDatabase.FindAssets("t:" + nameof(BehaviorTreeGraphAsset), new[] { samples })
                 .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => !path.StartsWith(samples + "/Test/"))
                 .Distinct()
                 .Select(AssetDatabase.LoadAssetAtPath<BehaviorTreeGraphAsset>)
                 .ToList();
 
-            Assert.That(trees, Is.Not.Empty, "no sample trees found under " + SamplesFolder);
+            Assert.That(trees, Is.Not.Empty, "no sample trees found under " + samples);
 
             return trees;
         }
