@@ -9,7 +9,8 @@ On the [release page](https://github.com/platinio/Unity-BH3/releases/latest) the
 the default for new Unity 6 projects; in a Built-in Render Pipeline project their materials render magenta.
 To use them: import BH3 into a URP project, add `com.unity.inputsystem` and `com.unity.ai.navigation`, then
 import the samples package; it lands under
-`Assets/ArcaneOnyx/BH3/Samples/`. In this repository they are this folder, and the reference project
+`Assets/ArcaneOnyx/BH3/Samples/`. If either package is missing, the Editor offers to install it; without
+`com.unity.ai.navigation` the scenes have no NavMesh. In this repository they are this folder, and the reference project
 [platinio/bh3-development](https://github.com/platinio/bh3-development) has them in place as a submodule at
 `Assets/ArcaneOnyx/BH3/`.
 
