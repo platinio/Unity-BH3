@@ -446,7 +446,7 @@ namespace ArcaneOnyx.BehaviorTree
         /// alone never learns it stopped: a <c>NavMeshAgent</c> is left walking, an animation left playing.
         /// </para>
         /// </summary>
-        public void OnExit()
+        public override void OnExit()
         {
             // Guarded, unlike OnEnter, which should fail loudly on a graph that has no entry node.
             EntryNode?.OnNodeExit();

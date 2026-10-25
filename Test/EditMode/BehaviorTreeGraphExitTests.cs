@@ -159,5 +159,16 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(0, leaf.ExitCalls, "and nothing in it is told to stop, because nothing started.");
         }
+
+        [Test]
+        public void ExitingAGraphThroughItsStateInterfaceExitsTheLeafThatWasStillRunning()
+        {
+            IState graph = RunningTree(out var leaf);
+
+            graph.OnExit();
+
+            Assert.AreEqual(1, leaf.ExitCalls,
+                "Exiting through IState must reach the tree's own OnExit, not an empty one on the base graph.");
+        }
     }
 }
