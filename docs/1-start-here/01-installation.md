@@ -50,7 +50,8 @@ ArcaneOnyx modules BH3 is built on are bundled inside it, so there is nothing el
    detect it; expect one extra recompile.
 
 The same release page carries `BH3.Samples.unitypackage`, four small games built on BH3. It is optional:
-import it after BH3, with `com.unity.inputsystem` and `com.unity.ai.navigation` installed, and it lands
+import it after BH3 into a project that uses the Universal Render Pipeline, with `com.unity.inputsystem` and
+`com.unity.ai.navigation` installed, and it lands
 under `BH3/Samples/` with a README that says where to start.
 
 Upgrading is the same import over the existing folders. Unity matches assets by GUID, so a project that
