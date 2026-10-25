@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ArcaneOnyx.BehaviorTree;
 using ArcaneOnyx.BehaviorTree.Authoring;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace ArcaneOnyx.BehaviorTree.Tests
+namespace ArcaneOnyx.BH3.Samples.Tests
 {
     /// <summary>
     /// Runs the layout over a copy of the RTS Worker — a real tree, six branches deep, authored at
