@@ -1,0 +1,16 @@
+{
+    "name": "ArcaneOnyx.BH3.Samples.Editor",
+    "rootNamespace": "ArcaneOnyx.BH3.Samples",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

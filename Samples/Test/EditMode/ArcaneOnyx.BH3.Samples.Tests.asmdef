@@ -3,6 +3,7 @@
     "rootNamespace": "ArcaneOnyx.BH3.Samples.Tests",
     "references": [
         "ArcaneOnyx.BH3.Samples",
+        "ArcaneOnyx.BH3.Samples.Editor",
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.BehaviorTree.Editor",
         "ArcaneOnyx.GraphCore",
