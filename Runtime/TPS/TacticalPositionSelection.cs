@@ -139,7 +139,6 @@ namespace ArcaneOnyx.BehaviorTree
             // assigned or the Function fails the query contract.
             using var selection = item.CreateTacticalPositionSelectionQuery(evaluator);
 
-            // RecorderIfEnabled is null while the overlay is off, so a tree left with the port on draws nothing.
             var recorder = DrawGizmo.GetValue<bool>() ? TacticalPositionGizmo.RecorderIfEnabled : null;
 
             var minimumScore = MinimumScore.GetValue<float>();
