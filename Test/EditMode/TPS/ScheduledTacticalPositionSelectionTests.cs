@@ -50,7 +50,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.AreEqual(ExecutionStatus.Success, TickSchedulerUntilNodeFinishes(node));
             Assert.IsTrue(outputs.HasPosition.Read());
-            Assert.AreNotEqual(Vector3.zero, outputs.SelectedPosition.Read(), "The winner is a ring spot, never the origin.");
+            Assert.AreNotEqual(Vector3.zero, outputs.SelectedPosition.Read(),
+                "The borrowed FlankTargetQuery's arc never includes the origin, so the winner can't be zero.");
         }
 
         [Test]
@@ -113,6 +114,52 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             node.OnDestroy();
 
             Assert.AreEqual(pendingBefore, TPSScheduler.Shared.PendingCount);
+        }
+
+        [Test]
+        public void TheQuery_IsBuiltOnce_AndReusedForTheNextDecision()
+        {
+            var (node, _) = ScheduledNode(minimumScore: 0f);
+
+            node.OnNodeEnter();
+            TickSchedulerUntilNodeFinishes(node);
+            var firstBuild = node.BuiltQuery;
+
+            node.OnNodeEnter();
+            TickSchedulerUntilNodeFinishes(node);
+
+            Assert.IsNotNull(firstBuild);
+            Assert.AreSame(firstBuild, node.BuiltQuery, "A second decision by the same agent must reuse its query.");
+        }
+
+        [Test]
+        public void EditingThePreset_BuildsTheQueryAgain()
+        {
+            var (node, _) = ScheduledNode(minimumScore: 0f);
+
+            node.OnNodeEnter();
+            TickSchedulerUntilNodeFinishes(node);
+            var firstBuild = node.BuiltQuery;
+
+            item.Query.Invalidate();
+            node.OnNodeEnter();
+
+            Assert.AreNotSame(firstBuild, node.BuiltQuery, "An edited preset must not keep running the old query.");
+        }
+
+        [Test]
+        public void ReleasingTheTree_DisposesTheBuiltQuery()
+        {
+            var (node, _) = ScheduledNode(minimumScore: 0f);
+
+            node.OnNodeEnter();
+            TickSchedulerUntilNodeFinishes(node);
+            var built = node.BuiltQuery;
+
+            node.OnDestroy();
+
+            Assert.Throws<System.ObjectDisposedException>(() => built.SelectPosition(new StandingAgent(), Vector3.zero),
+                "The query's evaluators must be back in the pool.");
         }
 
         [Test]

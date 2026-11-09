@@ -42,12 +42,14 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string NodeName => "Tactical Position Selection (Scheduled)";
 
+        /// <summary>The query this node built for its agent and keeps between decisions; null before the first.</summary>
+        internal TacticalPositionSelectionQuery BuiltQuery => Context.Memory<Memory>().BuiltQuery;
+
         public override string Description =>
             "Schedules the selected tactical position query and runs until it answers; succeeds when the winner clears Minimum Score";
 
         public override Vector2 StartingSize => new(240.0f, 220.0f);
 
-        // The built query is kept for the agent's next decision, and disposed when the tree is released.
         private sealed class Memory
         {
             public TPSQueryHandle Handle;
@@ -94,7 +96,6 @@ namespace ArcaneOnyx.BehaviorTree
             if (memory.Handle.IsCanceled) return ExecutionStatus.Failure;
             if (!memory.Handle.IsDone) return ExecutionStatus.Running;
 
-            // The scheduler already applied MinimumScore: a rejected winner comes back as no position.
             memory.Result = memory.Handle.Result;
             memory.Handle.Dispose();
 
@@ -121,7 +122,6 @@ namespace ArcaneOnyx.BehaviorTree
             TPSQueryNodeChecks.CollectQueryProblems(Query.GetValue<TacticalPositionSelectionQueryItem>(), into);
         }
 
-        // Built once per agent and preset; another preset or agent, or an edit to the preset, builds afresh.
         private static TacticalPositionSelectionQuery QueryFor(
             Memory memory, TacticalPositionSelectionQueryItem item, ITacticalAgent agent)
         {
@@ -147,7 +147,6 @@ namespace ArcaneOnyx.BehaviorTree
             memory.BuiltFor = null;
         }
 
-        // Unconnected, the target is the agent itself.
         private Vector3 ResolveTarget(BTContext ctx, ITacticalAgent agent)
             => TargetPosition.hasValidConnection ? ctx.GetValue<Vector3>(TargetPosition) : agent.Position;
 
