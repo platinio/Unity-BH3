@@ -123,8 +123,8 @@ Every input defaults to 0, except `Divide`'s `B`, which defaults to 1.
 
 **Tactical Position Selection** is a data node: it runs the query the moment another node reads its output,
 inside that frame. **Tactical Position Selection (Scheduled)** is an action node: put it in the flow before
-the node that moves the agent, and many agents asking at once stay inside the TPS frame budget. It builds the
-query from its preset every time it is entered.
+the node that moves the agent, and many agents asking at once stay inside the TPS frame budget. It builds its
+query once per agent and reuses it, building again only when the preset or the agent changes.
 
 On **Set Nav Agent Position**, **Set Nav Agent Speed**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
 be left empty and means the agent itself.
