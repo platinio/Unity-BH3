@@ -122,10 +122,10 @@ namespace ArcaneOnyx.BehaviorTree
 
                 var any = false;
 
-                foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(TacticalPositionSelectionQueryItemDabatabase)}"))
+                foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(TacticalPositionSelectionQueryItemDatabase)}"))
                 {
                     var path = AssetDatabase.GUIDToAssetPath(guid);
-                    var database = AssetDatabase.LoadAssetAtPath<TacticalPositionSelectionQueryItemDabatabase>(path);
+                    var database = AssetDatabase.LoadAssetAtPath<TacticalPositionSelectionQueryItemDatabase>(path);
                     if (database == null || database.Count == 0) continue;
 
                     var group = new AdvancedDropdownItem(database.name);

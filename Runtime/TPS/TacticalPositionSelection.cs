@@ -190,7 +190,7 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            if (item.GeneratorFunction == null)
+            if (item.Function == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
                     $"Query '{item.Name}' has no Function assigned, so it cannot build a query.",
