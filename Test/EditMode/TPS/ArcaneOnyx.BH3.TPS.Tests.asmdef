@@ -1,0 +1,32 @@
+{
+    "name": "ArcaneOnyx.BH3.TPS.Tests",
+    "rootNamespace": "ArcaneOnyx.BehaviorTree.Tests",
+    "references": [
+        "ArcaneOnyx.BehaviorTree",
+        "ArcaneOnyx.BH3.TPS",
+        "ArcaneOnyx.GraphCore",
+        "ArcaneOnyx.UnityTacticalPositionSelection.Runtime",
+        "ArcaneOnyx.VisualScriptingExtension.Runtime",
+        "ArcaneOnyx.ScriptableObjectDatabase",
+        "Unity.VisualScripting.Core",
+        "Unity.VisualScripting.Flow",
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "MODULE_TACTICAL_POSITION_SELECTION_EXIST"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

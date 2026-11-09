@@ -119,6 +119,13 @@ Every input defaults to 0, except `Divide`'s `B`, which defaults to 1.
 | Set Nav Agent Speed | `SetNavAgentSpeed` | Makes the NavMeshAgent walk at `Speed` metres per second until something sets another speed. `Speed` must be fed |
 | Stop Nav Agent | `StopNavAgent` | Stops the NavMeshAgent |
 | Tactical Position Selection | `TacticalPositionSelection` | Runs a TPS query and outputs `SelectedPosition` and `HasPosition`. Needs the Tactical Position Selection module |
+| Tactical Position Selection (Scheduled) | `ScheduledTacticalPositionSelection` | Schedules a TPS query on the shared scheduler and runs until it answers, usually one to three frames; succeeds when the winner clears `MinimumScore`, fails otherwise, and cancels the query if the node is left early. Outputs `SelectedPosition` and `HasPosition`. Needs the Tactical Position Selection module |
+
+**Tactical Position Selection** is a data node: it runs the query the moment another node reads its output,
+inside that frame. **Tactical Position Selection (Scheduled)** is an action node: put it in the flow before
+the node that moves the agent, and many agents asking at once stay inside the TPS frame budget. It builds its
+query once per agent and reuses it, building again only when the preset or the agent changes; each agent's
+first decision still pays that build in the frame it enters the node.
 
 On **Set Nav Agent Position**, **Set Nav Agent Speed**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
 be left empty and means the agent itself.

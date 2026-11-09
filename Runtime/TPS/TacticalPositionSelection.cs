@@ -120,20 +120,11 @@ namespace ArcaneOnyx.BehaviorTree
 
             var evaluator = ResolveEvaluator();
 
-            if (evaluator == null)
-            {
-                throw new System.InvalidOperationException(
-                    $"'{NodeName}' has no evaluator: nothing feeds the Evaluator port and " +
-                    $"'{gameObject?.name}' has no GameEntity to fall back to.");
-            }
+            if (evaluator == null) throw TPSQueryNodeChecks.NoEvaluator(NodeName, gameObject);
 
             var item = ResolveQuery();
 
-            if (item == null)
-            {
-                throw new System.InvalidOperationException(
-                    $"'{NodeName}' has no query: nothing feeds the Query port and no inline value is set.");
-            }
+            if (item == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
 
             // CreateTacticalPositionSelectionQuery already throws, naming the item, when no Function is
             // assigned or the Function fails the query contract.
@@ -180,22 +171,7 @@ namespace ArcaneOnyx.BehaviorTree
             // the connection, which a problem scan must not do.
             if (Query.hasValidConnection) return;
 
-            var item = ResolveQuery();
-
-            if (item == null)
-            {
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    "No query selected, so this node has nothing to run.",
-                    "Pick a query on the Query port, or feed the port a connection."));
-                return;
-            }
-
-            if (item.Function == null)
-            {
-                into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Query '{item.Name}' has no Function assigned, so it cannot build a query.",
-                    "Assign a Function on the query item."));
-            }
+            TPSQueryNodeChecks.CollectQueryProblems(ResolveQuery(), into);
         }
     }
 }
