@@ -139,9 +139,7 @@ namespace ArcaneOnyx.BehaviorTree
             // assigned or the Function fails the query contract.
             using var selection = item.CreateTacticalPositionSelectionQuery(evaluator);
 
-            // The gizmo applies its own IsDebugEnabled check on top of this, so a tree left with the port
-            // on does not draw in a scene where the overlay is off.
-            var debug = DrawGizmo.GetValue<bool>();
+            var recorder = DrawGizmo.GetValue<bool>() ? TacticalPositionGizmo.RecorderIfEnabled : null;
 
             var minimumScore = MinimumScore.GetValue<float>();
 
@@ -149,8 +147,8 @@ namespace ArcaneOnyx.BehaviorTree
             // the querier instead of on a zero nobody chose.
             var valid = TargetPosition.hasValidConnection
                 ? selection.TrySelectPosition(
-                    evaluator, TargetPosition.GetValue<Vector3>(), out var result, minimumScore, debug)
-                : selection.TrySelectPosition(evaluator, out result, minimumScore, debug);
+                    evaluator, TargetPosition.GetValue<Vector3>(), out var result, recorder, minimumScore)
+                : selection.TrySelectPosition(evaluator, out result, recorder, minimumScore);
 
             lastValid = valid;
             lastResult = valid ? result : TPSQueryResult.None;
