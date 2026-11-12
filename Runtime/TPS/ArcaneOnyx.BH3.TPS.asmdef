@@ -5,6 +5,7 @@
         "ArcaneOnyx.BehaviorTree",
         "ArcaneOnyx.GraphCore",
         "ArcaneOnyx.UnityTacticalPositionSelection.Runtime",
+        "ArcaneOnyx.Scoring",
         "ArcaneOnyx.UnityTacticalPositionSelection.Adapters.Runtime",
         "ArcaneOnyx.AIEntities.Runtime",
         "ArcaneOnyx.ScriptableObjectDatabase",

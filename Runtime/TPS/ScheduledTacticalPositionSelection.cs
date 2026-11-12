@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ArcaneOnyx.AIEntities;
 using ArcaneOnyx.GraphCore;
+using ArcaneOnyx.Scoring;
 using ArcaneOnyx.UnityTacticalPositionSelection;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -42,8 +43,8 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override string NodeName => "Tactical Position Selection (Scheduled)";
 
-        /// <summary>The query this node built for its agent and keeps between decisions; null before the first.</summary>
-        internal TacticalPositionSelectionQuery BuiltQuery => Context.Memory<Memory>().BuiltQuery;
+        /// <summary>The instance this node built for its agent and keeps between decisions; null before the first.</summary>
+        internal IPositionQueryInstance BuiltInstance => Context.Memory<Memory>().Instance;
 
         public override string Description =>
             "Schedules the selected tactical position query and runs until it answers; succeeds when the winner clears Minimum Score";
@@ -54,17 +55,16 @@ namespace ArcaneOnyx.BehaviorTree
         {
             public TPSQueryHandle Handle;
             public TPSQueryResult Result = TPSQueryResult.None;
-            public TacticalPositionSelectionQuery BuiltQuery;
-            public TacticalPositionSelectionQueryItem BuiltFrom;
-            public ITacticalAgent BuiltFor;
-            public int BuiltAtVersion;
+            public readonly BuiltPositionQuery Built = new();
+            public IPositionQueryInstance Instance;
         }
 
         protected override void Definition()
         {
             base.Definition();
 
-            Query = ValueInput<TacticalPositionSelectionQueryItem>(nameof(Query), null);
+            // An interface port has no inline value, so an unconnected port is reported by CollectProblems.
+            Query = ValueInput<IPositionQuerySource>(nameof(Query)).SafeToLeaveUnconnected();
             TargetPosition = ValueInput<Vector3>(nameof(TargetPosition)).SafeToLeaveUnconnected();
             Evaluator = ValueInput<ITacticalAgent>(nameof(Evaluator)).SafeToLeaveUnconnected();
             MinimumScore = ValueInput<float>(nameof(MinimumScore), 0f);
@@ -82,11 +82,12 @@ namespace ArcaneOnyx.BehaviorTree
             memory.Result = TPSQueryResult.None;
 
             var agent = ResolveEvaluator(ctx);
-            var query = QueryFor(memory, ResolveQuery(ctx), agent);
+            memory.Instance = memory.Built.For(ResolveSource(ctx), agent, RowOpinions.None);
             var recorder = ctx.GetValue<bool>(DrawGizmo) ? TacticalPositionGizmo.RecorderIfEnabled : null;
+            var request = new PositionQueryRequest(ResolveTarget(ctx, agent), ctx.GetValue<float>(MinimumScore));
 
-            memory.Handle = TPSScheduler.Shared.Schedule(query, agent, ResolveTarget(ctx, agent),
-                ctx.GetValue<TPSPriority>(Priority), recorder, ctx.GetValue<float>(MinimumScore));
+            memory.Handle = memory.Instance.Schedule(
+                TPSScheduler.Shared, request, ctx.GetValue<TPSPriority>(Priority), recorder);
         }
 
         public override ExecutionStatus OnUpdate(BTContext ctx)
@@ -110,7 +111,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             var memory = Context.Memory<Memory>();
             memory.Handle.Dispose();
-            ForgetBuiltQuery(memory);
+            memory.Built.Dispose();
         }
 
         public override void CollectProblems(List<NodeProblem> into)
@@ -119,32 +120,7 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (Query.hasValidConnection) return;
 
-            TPSQueryNodeChecks.CollectQueryProblems(Query.GetValue<TacticalPositionSelectionQueryItem>(), into);
-        }
-
-        private static TacticalPositionSelectionQuery QueryFor(
-            Memory memory, TacticalPositionSelectionQueryItem item, ITacticalAgent agent)
-        {
-            if (IsBuiltFor(memory, item, agent)) return memory.BuiltQuery;
-
-            ForgetBuiltQuery(memory);
-            memory.BuiltQuery = item.CreateTacticalPositionSelectionQuery(agent);
-            memory.BuiltFrom = item;
-            memory.BuiltFor = agent;
-            memory.BuiltAtVersion = item.Query.Version;
-            return memory.BuiltQuery;
-        }
-
-        private static bool IsBuiltFor(Memory memory, TacticalPositionSelectionQueryItem item, ITacticalAgent agent)
-            => memory.BuiltQuery != null && memory.BuiltFrom == item && memory.BuiltFor == agent
-               && memory.BuiltAtVersion == item.Query.Version;
-
-        private static void ForgetBuiltQuery(Memory memory)
-        {
-            memory.BuiltQuery?.Dispose();
-            memory.BuiltQuery = null;
-            memory.BuiltFrom = null;
-            memory.BuiltFor = null;
+            TPSQueryNodeChecks.CollectQueryProblems(null, into);
         }
 
         private Vector3 ResolveTarget(BTContext ctx, ITacticalAgent agent)
@@ -161,13 +137,13 @@ namespace ArcaneOnyx.BehaviorTree
             return agent;
         }
 
-        private TacticalPositionSelectionQueryItem ResolveQuery(BTContext ctx)
+        private IPositionQuerySource ResolveSource(BTContext ctx)
         {
-            var item = ctx.GetValue<TacticalPositionSelectionQueryItem>(Query);
+            var source = Query.hasValidConnection ? ctx.GetValue<IPositionQuerySource>(Query) : null;
 
-            if (item == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
+            if (source == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
 
-            return item;
+            return source;
         }
     }
 }

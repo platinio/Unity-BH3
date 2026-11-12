@@ -6,6 +6,7 @@
         "ArcaneOnyx.BH3.TPS",
         "ArcaneOnyx.GraphCore",
         "ArcaneOnyx.UnityTacticalPositionSelection.Runtime",
+        "ArcaneOnyx.Scoring",
         "ArcaneOnyx.VisualScriptingExtension.Runtime",
         "ArcaneOnyx.ScriptableObjectDatabase",
         "Unity.VisualScripting.Core",

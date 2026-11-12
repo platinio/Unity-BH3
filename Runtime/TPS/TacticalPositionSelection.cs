@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ArcaneOnyx.AIEntities;
 using ArcaneOnyx.GraphCore;
+using ArcaneOnyx.Scoring;
 using ArcaneOnyx.UnityTacticalPositionSelection;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -9,10 +10,9 @@ using UnityEngine;
 namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
-    /// Feeds a tactical position into the tree: runs the selected query preset through
-    /// <c>TrySelectPosition</c> and offers the winning position plus whether it cleared this node's
-    /// <see cref="MinimumScore"/> — the act/no-act bar is authored where the acting happens, not on the
-    /// query asset.
+    /// Feeds a tactical position into the tree: runs the query source on the Query port and offers the winning
+    /// position plus whether it cleared this node's <see cref="MinimumScore"/> — the act/no-act bar is authored
+    /// where the acting happens, not on the query asset. The query is built once per agent and run on every pull.
     ///
     /// <para>
     /// <b>A data node, not an action.</b> It never enters the execution flow
@@ -32,9 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
     public class TacticalPositionSelection : GameplayNode
     {
         // The pre-port serialized slot, kept (without [Inspectable]) so trees authored before Query was a
-        // port keep their selection: ResolveQuery falls back to it whenever the port yields nothing. The
-        // one edge that buys: a port cleared back to None on such a tree resolves to the legacy value —
-        // pick a query and save once to leave the legacy slot behind for good.
+        // port keep their selection: ResolveSource falls back to it whenever nothing is connected to the port.
         [Serialize] private TacticalPositionSelectionQueryItem query;
 
         [DoNotSerialize]
@@ -61,8 +59,6 @@ namespace ArcaneOnyx.BehaviorTree
         /// <summary>The run both outputs describe. Valid only for <see cref="lastFrame"/>.</summary>
         [DoNotSerialize] private TPSQueryResult lastResult = TPSQueryResult.None;
 
-        [DoNotSerialize] private bool lastValid;
-
         [DoNotSerialize] private int lastFrame = -1;
 
         public override string NodeName => "Tactical Position Selection";
@@ -75,15 +71,23 @@ namespace ArcaneOnyx.BehaviorTree
         // creation never goes stale.
         public override Vector2 StartingSize => new(240.0f, 200.0f);
 
+        /// <summary>The instance this node built for its agent and keeps between pulls; null before the first.</summary>
+        internal IPositionQueryInstance BuiltInstance => Context.Memory<Memory>().Instance;
+
+        private sealed class Memory
+        {
+            public readonly BuiltPositionQuery Built = new();
+            public IPositionQueryInstance Instance;
+        }
+
         protected override void Definition()
         {
             base.Definition();
 
-            // A port rather than an inspector field, so a query can arrive the way any other argument
-            // does — a graph, a variable, a sub-tree parameter — while the inline default keeps the
-            // dropdown workflow (the item type's registered Inspector draws it). Declared with the legacy
-            // field as its default so pre-port trees migrate on load without an asset touch.
-            Query = ValueInput<TacticalPositionSelectionQueryItem>(nameof(Query), query);
+            // A port rather than an inspector field, so a query can arrive the way any other argument does — a
+            // TPS Query literal, a variable, a sub-tree parameter. An interface port has no inline value, so an
+            // unconnected port is reported by CollectProblems, not as a missing connection.
+            Query = ValueInput<IPositionQuerySource>(nameof(Query)).SafeToLeaveUnconnected();
 
             // Both inputs have a meaning when unconnected — see ResolveEvaluator and Select — so neither
             // may be reported as a missing connection.
@@ -102,11 +106,7 @@ namespace ArcaneOnyx.BehaviorTree
             DrawGizmo = ValueInput<bool>(nameof(DrawGizmo), false);
 
             SelectedPosition = ValueOutput<Vector3>(nameof(SelectedPosition), () => Select().Position);
-            HasPosition = ValueOutput<bool>(nameof(HasPosition), () =>
-            {
-                Select();
-                return lastValid;
-            });
+            HasPosition = ValueOutput<bool>(nameof(HasPosition), () => Select().HasPosition);
         }
 
         /// <summary>
@@ -122,31 +122,36 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (evaluator == null) throw TPSQueryNodeChecks.NoEvaluator(NodeName, gameObject);
 
-            var item = ResolveQuery();
+            var source = ResolveSource();
 
-            if (item == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
+            if (source == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
 
-            // CreateTacticalPositionSelectionQuery already throws, naming the item, when no Function is
-            // assigned or the Function fails the query contract.
-            using var selection = item.CreateTacticalPositionSelectionQuery(evaluator);
+            // Building already throws, naming the query, when no Function is assigned or the Function fails the
+            // query contract.
+            var memory = Context.Memory<Memory>();
+            memory.Instance = memory.Built.For(source, evaluator, RowOpinions.None);
 
             var recorder = DrawGizmo.GetValue<bool>() ? TacticalPositionGizmo.RecorderIfEnabled : null;
+            var request = new PositionQueryRequest(ResolveTarget(evaluator), MinimumScore.GetValue<float>());
+            var result = memory.Instance.Run(request, recorder);
 
-            var minimumScore = MinimumScore.GetValue<float>();
-
-            // An unconnected target runs the targetless overload, which centres target-relative knobs on
-            // the querier instead of on a zero nobody chose.
-            var valid = TargetPosition.hasValidConnection
-                ? selection.TrySelectPosition(
-                    evaluator, TargetPosition.GetValue<Vector3>(), out var result, recorder, minimumScore)
-                : selection.TrySelectPosition(evaluator, out result, recorder, minimumScore);
-
-            lastValid = valid;
-            lastResult = valid ? result : TPSQueryResult.None;
+            lastResult = result;
             lastFrame = Time.frameCount;
 
             return lastResult;
         }
+
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+
+            Context.Memory<Memory>().Built.Dispose();
+        }
+
+        // An unconnected target is the querier's own position, which centres target-relative knobs on the
+        // querier instead of on a zero nobody chose.
+        private Vector3 ResolveTarget(ITacticalAgent evaluator)
+            => TargetPosition.hasValidConnection ? TargetPosition.GetValue<Vector3>() : evaluator.Position;
 
         private ITacticalAgent ResolveEvaluator()
         {
@@ -155,13 +160,15 @@ namespace ArcaneOnyx.BehaviorTree
             return TPSAdapters.GetAgent(gameObject != null ? gameObject.GetComponent<GameEntity>() : null);
         }
 
-        /// <summary>The port's answer — connection or inline value — falling back to the legacy field.</summary>
-        private TacticalPositionSelectionQueryItem ResolveQuery()
+        private IPositionQuerySource ResolveSource()
         {
-            var item = Query.GetValue<TacticalPositionSelectionQueryItem>();
+            var connected = Query.hasValidConnection ? Query.GetValue<IPositionQuerySource>() : null;
 
-            return item != null ? item : query;
+            return connected ?? LegacyQuery();
         }
+
+        // A deleted item is Unity-null but not C#-null, so it is turned into a real null before it reaches the port.
+        private IPositionQuerySource LegacyQuery() => query != null ? query : null;
 
         public override void CollectProblems(List<NodeProblem> into)
         {
@@ -171,7 +178,7 @@ namespace ArcaneOnyx.BehaviorTree
             // the connection, which a problem scan must not do.
             if (Query.hasValidConnection) return;
 
-            TPSQueryNodeChecks.CollectQueryProblems(ResolveQuery(), into);
+            TPSQueryNodeChecks.CollectQueryProblems(query, into);
         }
     }
 }

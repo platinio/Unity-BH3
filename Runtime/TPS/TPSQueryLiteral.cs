@@ -6,14 +6,13 @@ namespace ArcaneOnyx.BehaviorTree
 {
     /// <summary>
     /// A query preset as a value node, the way <see cref="StringLiteral"/> carries a string: picked in the
-    /// inspector, offered on a port.
+    /// inspector, offered on a port as an <see cref="IPositionQuerySource"/>.
     ///
     /// <para>
-    /// The counterpart to <see cref="TacticalPositionSelection"/>'s query becoming a port. An inline value
-    /// on that port serves the single-consumer case; this literal is for the query a designer wants
-    /// <i>visible on the canvas</i> — named by its comment, feeding several selection nodes from one
-    /// place, swapped in one edit. The inspector shows the same database-grouped dropdown as the port's
-    /// inline value, via the query item type's registered Inspector.
+    /// The way to give <see cref="TacticalPositionSelection"/> a query picked from a database: its Query port
+    /// takes any query source and so has no inline value. The literal is <i>visible on the canvas</i> — named by
+    /// its comment, feeding several selection nodes from one place, swapped in one edit. The inspector shows a
+    /// database-grouped dropdown.
     /// </para>
     ///
     /// <para>
@@ -37,7 +36,10 @@ namespace ArcaneOnyx.BehaviorTree
         {
             base.Definition();
 
-            Value = ValueOutput<TacticalPositionSelectionQueryItem>(nameof(Value), () => value);
+            Value = ValueOutput<IPositionQuerySource>(nameof(Value), PickedQuery);
         }
+
+        // A deleted item is Unity-null but not C#-null, so it is turned into a real null before it reaches a port.
+        private IPositionQuerySource PickedQuery() => value != null ? value : null;
     }
 }

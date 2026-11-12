@@ -14,8 +14,8 @@ namespace ArcaneOnyx.BehaviorTree
             if (item == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    "No query selected, so this node has nothing to run.",
-                    "Pick a query on the Query port, or feed the port a connection."));
+                    "No query connected, so this node has nothing to run.",
+                    "Connect a TPS Query literal, or another query source, to the Query port."));
                 return;
             }
 
@@ -32,7 +32,7 @@ namespace ArcaneOnyx.BehaviorTree
                    $"'{(agentObject != null ? agentObject.name : "(no object)")}' has no GameEntity to fall back to.");
 
         public static InvalidOperationException NoQuery(string nodeName)
-            => new($"'{nodeName}' has no query: nothing feeds the Query port and no inline value is set.");
+            => new($"'{nodeName}' has no query: nothing feeds the Query port.");
     }
 }
 #endif
