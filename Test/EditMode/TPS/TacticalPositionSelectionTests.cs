@@ -66,7 +66,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             selectedPosition.Read();
             var firstBuild = node.BuiltInstance;
-            StartTheNextFrame(node);
+            node.ForgetThisFramesSelection();
             selectedPosition.Read();
 
             Assert.AreEqual(1, source.Builds);
@@ -97,13 +97,77 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void AnOutputOfTheQueryItemType_StillConnectsToTheQueryPort()
+        public void AQueryItemWiredFromAnOutputOfItsOwnType_StillRuns()
         {
             var node = SelectionNode();
             var itemOutput = AddNode<ValueSource<TacticalPositionSelectionQueryItem>>();
+            itemOutput.Published = item;
+            itemOutput.Value.ValidlyConnectTo(node.Query);
+            var (hasPosition, _) = ReadOutputs(node);
 
-            Assert.IsTrue(itemOutput.Value.CanValidlyConnectTo(node.Query),
-                "Trees that wired an item into the node must keep their connection.");
+            Assert.IsTrue(hasPosition.Read(), "Trees that wired an item into the node must keep working.");
+        }
+
+        [Test]
+        public void APresetPickedInlineOnThePort_BeforeItTookSources_StillRuns()
+        {
+            var node = new TacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
+            node.defaultValues[nameof(node.Query)] = item;
+            graph.Nodes.Add(node);
+            var agent = AddNode<ValueSource<ITacticalAgent>>();
+            agent.Published = new StandingAgent();
+            agent.Value.ValidlyConnectTo(node.Evaluator);
+            var (hasPosition, _) = ReadOutputs(node);
+
+            Assert.IsTrue(hasPosition.Read());
+        }
+
+        [Test]
+        public void AnInlinePreset_ReplacesAnOlderPresetPickedBeforeTheQueryWasAPort()
+        {
+            var older = CreateFlankItem();
+            try
+            {
+                var node = new TacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
+                SetPrivateField(node, "query", older);
+                node.defaultValues[nameof(node.Query)] = item;
+                graph.Nodes.Add(node);
+
+                Assert.AreSame(item, GetPrivateField(node, "query"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(older);
+            }
+        }
+
+        [Test]
+        public void ADeletedQueryItem_IsReportedAsNoQuery_NotRun()
+        {
+            var node = SelectionNode();
+            var deleted = CreateFlankItem();
+            Object.DestroyImmediate(deleted);
+            var itemOutput = AddNode<ValueSource<TacticalPositionSelectionQueryItem>>();
+            itemOutput.Published = deleted;
+            itemOutput.Value.ValidlyConnectTo(node.Query);
+            var (hasPosition, _) = ReadOutputs(node);
+
+            var exception = Assert.Throws<InvalidOperationException>(() => hasPosition.Read());
+            StringAssert.Contains("has no query", exception.Message);
+        }
+
+        [Test]
+        public void ATPSQueryLiteralHoldingADeletedItem_OffersNoQuery()
+        {
+            var node = SelectionNode();
+            var deleted = CreateFlankItem();
+            Object.DestroyImmediate(deleted);
+            var literal = AddNode<TPSQueryLiteral>();
+            SetPrivateField(literal, "value", deleted);
+            literal.Value.ValidlyConnectTo(node.Query);
+            var (hasPosition, _) = ReadOutputs(node);
+
+            Assert.Throws<InvalidOperationException>(() => hasPosition.Read());
         }
 
         [Test]
@@ -114,7 +178,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.CollectProblems(problems);
 
-            Assert.IsTrue(problems.Exists(problem => problem.Severity == NodeProblemSeverity.Error));
+            Assert.IsTrue(problems.Exists(problem =>
+                problem.Severity == NodeProblemSeverity.Error && problem.Summary.Contains("No query connected")));
         }
 
         private TacticalPositionSelection SelectionNode()
@@ -147,22 +212,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return (hasPosition, selectedPosition);
         }
 
-        // Ports only exist once the node is in a graph: Nodes.Add fires AfterAdd -> Define().
-        private T AddNode<T>() where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(0f, 0f, 150f, 100f) };
-            graph.Nodes.Add(node);
-            return node;
-        }
-
-        // The node keeps one selection per frame, and frames don't advance in an EditMode test.
-        private static void StartTheNextFrame(TacticalPositionSelection node) => SetPrivateField(node, "lastFrame", -1);
+        private T AddNode<T>() where T : BehaviorTreeNode, new() => TPSNodeTestDoubles.AddNode<T>(graph);
 
         private static void SetPrivateField(object target, string fieldName, object value)
+            => PrivateField(target, fieldName).SetValue(target, value);
+
+        private static object GetPrivateField(object target, string fieldName)
+            => PrivateField(target, fieldName).GetValue(target);
+
+        private static FieldInfo PrivateField(object target, string fieldName)
         {
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, $"{target.GetType().Name} has no field '{fieldName}'.");
-            field.SetValue(target, value);
+            return field;
         }
     }
 }

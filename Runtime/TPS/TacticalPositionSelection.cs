@@ -31,8 +31,10 @@ namespace ArcaneOnyx.BehaviorTree
     [GraphCreateMenu("Navigation/Tactical Position Selection")]
     public class TacticalPositionSelection : GameplayNode
     {
-        // The pre-port serialized slot, kept (without [Inspectable]) so trees authored before Query was a
-        // port keep their selection: ResolveSource falls back to it whenever nothing is connected to the port.
+        private const int NoFrame = -1;
+
+        // A preset saved before the port took query sources: picked here before Query was a port, or inline on the
+        // port while it took a query item. ResolveSource falls back to it whenever nothing is connected.
         [Serialize] private TacticalPositionSelectionQueryItem query;
 
         [DoNotSerialize]
@@ -56,11 +58,6 @@ namespace ArcaneOnyx.BehaviorTree
         [DoNotSerialize]
         public ValueOutput HasPosition { get; private set; }
 
-        /// <summary>The run both outputs describe. Valid only for <see cref="lastFrame"/>.</summary>
-        [DoNotSerialize] private TPSQueryResult lastResult = TPSQueryResult.None;
-
-        [DoNotSerialize] private int lastFrame = -1;
-
         public override string NodeName => "Tactical Position Selection";
         public override string Description => "Runs the selected tactical position query and feeds the winning position to other nodes";
         public override bool CanBeUsedAsTransitionDestination => false;
@@ -72,13 +69,26 @@ namespace ArcaneOnyx.BehaviorTree
         public override Vector2 StartingSize => new(240.0f, 200.0f);
 
         /// <summary>The instance this node built for its agent and keeps between pulls; null before the first.</summary>
-        internal IPositionQueryInstance BuiltInstance => Context.Memory<Memory>().Instance;
+        internal IPositionQueryInstance BuiltInstance => Context.Memory<Memory>().Built.Current;
 
         private sealed class Memory
         {
             public readonly BuiltPositionQuery Built = new();
-            public IPositionQueryInstance Instance;
+
+            /// <summary>The run both outputs describe. Valid only for <see cref="LastFrame"/>.</summary>
+            public TPSQueryResult LastResult = TPSQueryResult.None;
+
+            public int LastFrame = NoFrame;
         }
+
+        public override void AfterAdd()
+        {
+            KeepThePresetPickedOnThePort();
+            base.AfterAdd();
+        }
+
+        /// <summary>Drops this frame's cached selection, so the next pull runs the query again.</summary>
+        internal void ForgetThisFramesSelection() => Context.Memory<Memory>().LastFrame = NoFrame;
 
         protected override void Definition()
         {
@@ -116,7 +126,8 @@ namespace ArcaneOnyx.BehaviorTree
         /// </summary>
         private TPSQueryResult Select()
         {
-            if (lastFrame == Time.frameCount) return lastResult;
+            var memory = Context.Memory<Memory>();
+            if (memory.LastFrame == Time.frameCount) return memory.LastResult;
 
             var evaluator = ResolveEvaluator();
 
@@ -126,19 +137,14 @@ namespace ArcaneOnyx.BehaviorTree
 
             if (source == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
 
-            // Building already throws, naming the query, when no Function is assigned or the Function fails the
-            // query contract.
-            var memory = Context.Memory<Memory>();
-            memory.Instance = memory.Built.For(source, evaluator, RowOpinions.None);
-
+            var instance = memory.Built.For(source, evaluator, RowOpinions.None);
             var recorder = DrawGizmo.GetValue<bool>() ? TacticalPositionGizmo.RecorderIfEnabled : null;
             var request = new PositionQueryRequest(ResolveTarget(evaluator), MinimumScore.GetValue<float>());
-            var result = memory.Instance.Run(request, recorder);
 
-            lastResult = result;
-            lastFrame = Time.frameCount;
+            memory.LastResult = instance.Run(request, recorder);
+            memory.LastFrame = Time.frameCount;
 
-            return lastResult;
+            return memory.LastResult;
         }
 
         public override void OnDestroy()
@@ -162,13 +168,16 @@ namespace ArcaneOnyx.BehaviorTree
 
         private IPositionQuerySource ResolveSource()
         {
-            var connected = Query.hasValidConnection ? Query.GetValue<IPositionQuerySource>() : null;
+            var connected = Query.hasValidConnection ? TPSQuerySources.Live(Query.GetValue<IPositionQuerySource>()) : null;
 
-            return connected ?? LegacyQuery();
+            return connected ?? TPSQuerySources.Live(query);
         }
 
-        // A deleted item is Unity-null but not C#-null, so it is turned into a real null before it reaches the port.
-        private IPositionQuerySource LegacyQuery() => query != null ? query : null;
+        private void KeepThePresetPickedOnThePort()
+        {
+            var picked = TPSQuerySources.InlinePickSavedOnThePort(this, nameof(Query));
+            if (picked != null) query = picked;
+        }
 
         public override void CollectProblems(List<NodeProblem> into)
         {

@@ -128,8 +128,10 @@ query once per agent and reuses it, building again only when the query or the ag
 first decision still pays that build in the frame it enters the node. The data node builds once per agent
 the same way.
 
-Both take their query on the `Query` port as any TPS query source: a graph, a query written in C#, or a
-preset. The port has no inline value, so pick a preset on a `TPS Query` literal and connect it.
+Both take their query on the `Query` port as any TPS query source. Pick a preset on a `TPS Query` literal and
+connect it; a query graph or a query written in C# arrives through a variable or a sub-tree parameter. The port
+has no inline value. A tree saved while the port took a preset inline (BH3 1.0.10 to 1.0.14) keeps that preset:
+the node reads it on load and runs it whenever nothing is connected.
 
 On **Set Nav Agent Position**, **Set Nav Agent Speed**, **Wait Until Reach Nav Target Position** and **Stop Nav Agent**, `Target` may
 be left empty and means the agent itself.

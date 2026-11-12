@@ -50,6 +50,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             }
         }
 
+        /// <summary>Adds a node of type <typeparamref name="T"/>; ports only exist once it is in a graph.</summary>
+        public static T AddNode<T>(BehaviorTreeGraph graph) where T : BehaviorTreeNode, new()
+        {
+            var node = new T { Position = new Rect(0f, 0f, 150f, 100f) };
+            graph.Nodes.Add(node);
+            return node;
+        }
+
         public sealed class StandingAgent : ITacticalAgent
         {
             public Vector3 Position => Vector3.zero;

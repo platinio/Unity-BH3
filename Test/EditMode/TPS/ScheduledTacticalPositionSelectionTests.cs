@@ -170,6 +170,21 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
+        public void APresetPickedInlineOnThePort_BeforeItTookSources_StillRuns()
+        {
+            var agent = AddNode<ValueSource<ITacticalAgent>>();
+            agent.Published = new StandingAgent();
+            var node = new ScheduledTacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
+            node.defaultValues[nameof(node.Query)] = item;
+            graph.Nodes.Add(node);
+            agent.Value.ValidlyConnectTo(node.Evaluator);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Success, TickSchedulerUntilNodeFinishes(node));
+        }
+
+        [Test]
         public void ANodeWithNoQuery_ReportsAProblemOnTheCanvas()
         {
             var node = AddNode<ScheduledTacticalPositionSelection>();
@@ -177,8 +192,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.CollectProblems(problems);
 
-            Assert.IsTrue(problems.Exists(problem => problem.Severity == NodeProblemSeverity.Error),
-                "A node with no preset must say so before Play.");
+            Assert.IsTrue(problems.Exists(IsNoQueryProblem), "A node with no preset must say so before Play.");
         }
 
         private (ScheduledTacticalPositionSelection node, Outputs outputs) ScheduledNode(
@@ -206,13 +220,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return (node, new Outputs(hasPosition, selectedPosition));
         }
 
-        // Ports only exist once the node is in a graph: Nodes.Add fires AfterAdd -> Define().
-        private T AddNode<T>() where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(0f, 0f, 150f, 100f) };
-            graph.Nodes.Add(node);
-            return node;
-        }
+        private T AddNode<T>() where T : BehaviorTreeNode, new() => TPSNodeTestDoubles.AddNode<T>(graph);
 
         private static ExecutionStatus TickSchedulerUntilNodeFinishes(ScheduledTacticalPositionSelection node)
         {
@@ -227,6 +235,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             Assert.Fail("The scheduled query never answered.");
             return ExecutionStatus.Running;
         }
+
+        private static bool IsNoQueryProblem(NodeProblem problem)
+            => problem.Severity == NodeProblemSeverity.Error && problem.Summary.Contains("No query connected");
 
         private readonly struct Outputs
         {

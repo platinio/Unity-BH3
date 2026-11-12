@@ -9,7 +9,7 @@ namespace ArcaneOnyx.BehaviorTree
     /// inspector, offered on a port as an <see cref="IPositionQuerySource"/>.
     ///
     /// <para>
-    /// The way to give <see cref="TacticalPositionSelection"/> a query picked from a database: its Query port
+    /// The way to give the TPS nodes a query picked from a database: their Query port
     /// takes any query source and so has no inline value. The literal is <i>visible on the canvas</i> — named by
     /// its comment, feeding several selection nodes from one place, swapped in one edit. The inspector shows a
     /// database-grouped dropdown.
@@ -39,7 +39,6 @@ namespace ArcaneOnyx.BehaviorTree
             Value = ValueOutput<IPositionQuerySource>(nameof(Value), PickedQuery);
         }
 
-        // A deleted item is Unity-null but not C#-null, so it is turned into a real null before it reaches a port.
-        private IPositionQuerySource PickedQuery() => value != null ? value : null;
+        private IPositionQuerySource PickedQuery() => TPSQuerySources.Live(value);
     }
 }
