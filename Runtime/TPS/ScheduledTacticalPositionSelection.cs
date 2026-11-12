@@ -109,9 +109,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         public override void AfterAdd()
         {
-            var picked = TPSQuerySources.InlinePickSavedOnThePort(this, nameof(Query));
-            if (picked != null) query = picked;
-
+            KeepThePresetPickedOnThePort();
             base.AfterAdd();
         }
 
@@ -149,12 +147,18 @@ namespace ArcaneOnyx.BehaviorTree
 
         private IPositionQuerySource ResolveSource(BTContext ctx)
         {
-            var connected = Query.hasValidConnection ? TPSQuerySources.Live(ctx.GetValue<IPositionQuerySource>(Query)) : null;
-            var source = connected ?? TPSQuerySources.Live(query);
+            var connected = Query.hasValidConnection ? ctx.GetValue<IPositionQuerySource>(Query) : null;
+            var source = TPSQuerySources.Resolve(connected, query);
 
             if (source == null) throw TPSQueryNodeChecks.NoQuery(NodeName);
 
             return source;
+        }
+
+        private void KeepThePresetPickedOnThePort()
+        {
+            var picked = TPSQuerySources.InlinePickSavedOnThePort(this, nameof(Query));
+            if (picked != null) query = picked;
         }
     }
 }

@@ -58,6 +58,19 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return node;
         }
 
+        /// <summary>
+        /// Adds a node saved the way BH3 1.0.10 to 1.0.14 saved one: <paramref name="preset"/> as the Query port's
+        /// inline value.
+        /// </summary>
+        public static T AddNodeWithInlinePreset<T>(BehaviorTreeGraph graph, TacticalPositionSelectionQueryItem preset)
+            where T : BehaviorTreeNode, new()
+        {
+            var node = new T { Position = new Rect(0f, 0f, 150f, 100f) };
+            node.defaultValues["Query"] = preset;
+            graph.Nodes.Add(node);
+            return node;
+        }
+
         public sealed class StandingAgent : ITacticalAgent
         {
             public Vector3 Position => Vector3.zero;

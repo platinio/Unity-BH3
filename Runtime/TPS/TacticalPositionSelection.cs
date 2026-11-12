@@ -168,9 +168,9 @@ namespace ArcaneOnyx.BehaviorTree
 
         private IPositionQuerySource ResolveSource()
         {
-            var connected = Query.hasValidConnection ? TPSQuerySources.Live(Query.GetValue<IPositionQuerySource>()) : null;
+            var connected = Query.hasValidConnection ? Query.GetValue<IPositionQuerySource>() : null;
 
-            return connected ?? TPSQuerySources.Live(query);
+            return TPSQuerySources.Resolve(connected, query);
         }
 
         private void KeepThePresetPickedOnThePort()

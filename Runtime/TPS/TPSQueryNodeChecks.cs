@@ -9,9 +9,12 @@ namespace ArcaneOnyx.BehaviorTree
     /// <summary>What both TPS nodes report about a missing query or agent, on the canvas and at run time.</summary>
     internal static class TPSQueryNodeChecks
     {
-        public static void CollectQueryProblems(TacticalPositionSelectionQueryItem item, List<NodeProblem> into)
+        /// <summary>
+        /// What an unconnected Query port means, given the preset the node saved before the port took query sources.
+        /// </summary>
+        public static void CollectQueryProblems(TacticalPositionSelectionQueryItem savedPreset, List<NodeProblem> into)
         {
-            if (item == null)
+            if (savedPreset == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
                     "No query connected, so this node has nothing to run.",
@@ -19,10 +22,14 @@ namespace ArcaneOnyx.BehaviorTree
                 return;
             }
 
-            if (item.Function == null)
+            into.Add(new NodeProblem(NodeProblemSeverity.Warning,
+                $"Runs preset '{savedPreset.Name}', saved before the Query port took query sources; the canvas doesn't show it.",
+                "Connect a TPS Query literal holding it, or another query, to the Query port."));
+
+            if (savedPreset.Function == null)
             {
                 into.Add(new NodeProblem(NodeProblemSeverity.Error,
-                    $"Query '{item.Name}' has no Function assigned, so it cannot build a query.",
+                    $"Query '{savedPreset.Name}' has no Function assigned, so it cannot build a query.",
                     "Assign a Function on the query item."));
             }
         }

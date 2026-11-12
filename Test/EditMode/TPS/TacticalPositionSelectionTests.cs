@@ -111,9 +111,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void APresetPickedInlineOnThePort_BeforeItTookSources_StillRuns()
         {
-            var node = new TacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
-            node.defaultValues[nameof(node.Query)] = item;
-            graph.Nodes.Add(node);
+            var node = AddNodeWithInlinePreset<TacticalPositionSelection>(graph, item);
             var agent = AddNode<ValueSource<ITacticalAgent>>();
             agent.Published = new StandingAgent();
             agent.Value.ValidlyConnectTo(node.Evaluator);
@@ -130,7 +128,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 var node = new TacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
                 SetPrivateField(node, "query", older);
-                node.defaultValues[nameof(node.Query)] = item;
+                node.defaultValues["Query"] = item;
                 graph.Nodes.Add(node);
 
                 Assert.AreSame(item, GetPrivateField(node, "query"));
@@ -157,17 +155,28 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         }
 
         [Test]
-        public void ATPSQueryLiteralHoldingADeletedItem_OffersNoQuery()
+        public void ATPSQueryLiteralHoldingADeletedItem_OffersARealNull()
         {
-            var node = SelectionNode();
             var deleted = CreateFlankItem();
             Object.DestroyImmediate(deleted);
             var literal = AddNode<TPSQueryLiteral>();
             SetPrivateField(literal, "value", deleted);
-            literal.Value.ValidlyConnectTo(node.Query);
-            var (hasPosition, _) = ReadOutputs(node);
+            var reader = AddNode<ValueReader<IPositionQuerySource>>();
+            literal.Value.ValidlyConnectTo(reader.Input);
 
-            Assert.Throws<InvalidOperationException>(() => hasPosition.Read());
+            Assert.IsTrue(ReferenceEquals(reader.Read(), null), "A fake-null asset would pass any consumer's null check.");
+        }
+
+        [Test]
+        public void APresetSavedBeforeTheQueryTookSources_IsShownAsAWarningOnTheCanvas()
+        {
+            var node = AddNodeWithInlinePreset<TacticalPositionSelection>(graph, item);
+            var problems = new List<NodeProblem>();
+
+            node.CollectProblems(problems);
+
+            Assert.IsTrue(problems.Exists(problem =>
+                problem.Severity == NodeProblemSeverity.Warning && problem.Summary.Contains("Runs preset")));
         }
 
         [Test]

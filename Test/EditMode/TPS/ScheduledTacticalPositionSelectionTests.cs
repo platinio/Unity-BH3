@@ -174,9 +174,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var agent = AddNode<ValueSource<ITacticalAgent>>();
             agent.Published = new StandingAgent();
-            var node = new ScheduledTacticalPositionSelection { Position = new Rect(0f, 0f, 150f, 100f) };
-            node.defaultValues[nameof(node.Query)] = item;
-            graph.Nodes.Add(node);
+            var node = AddNodeWithInlinePreset<ScheduledTacticalPositionSelection>(graph, item);
             agent.Value.ValidlyConnectTo(node.Evaluator);
 
             node.OnNodeEnter();

@@ -13,6 +13,10 @@ namespace ArcaneOnyx.BehaviorTree
         public static IPositionQuerySource Live(IPositionQuerySource source)
             => source is UnityEngine.Object asset && asset == null ? null : source;
 
+        /// <summary>The live source connected to the Query port, otherwise the live preset the node saved.</summary>
+        public static IPositionQuerySource Resolve(IPositionQuerySource connected, TacticalPositionSelectionQueryItem savedPreset)
+            => Live(connected) ?? Live(savedPreset);
+
         /// <summary>
         /// The preset a tree saved as the Query port's inline value, from BH3 1.0.10 to 1.0.14 when the port took a
         /// query item; null when there is none. Read before <c>Define</c>, which drops values a port no longer declares.
