@@ -176,7 +176,7 @@ the canvas, or reformatting the asset does not break them.
 
 | Problem | Why |
 |---|---|
-| Nothing fires at all | Recording is off (the Timeline's **Rec** button, or `BehaviorTreeFlightRecorders.GloballyEnabled`), or that one agent's recorder was paused in the Flight Recorder window; the panel shows a warning when that applies. Check the **Breakpoints enabled** switch too |
+| Nothing fires at all | Recording is off (the Timeline's **Rec** button, or `BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled`), or that one agent's recorder was paused in the Flight Recorder window; the panel shows a warning when that applies. Check the **Breakpoints enabled** switch too |
 | It fires for the wrong agent, or not for the one you want | Read the line at the top of the panel. Select the agent in the hierarchy, or open its tree from the machine rather than from the asset |
 | A `<` or `>` breakpoint never fires | Read its row: if the value is not a number, it says so. Use `==` or `contains` for text |
 | A `contains` breakpoint fires too often | The variable is a number, so it is matching text. Use `==` |

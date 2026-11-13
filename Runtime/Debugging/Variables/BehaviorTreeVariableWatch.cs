@@ -89,7 +89,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 if (recorded.Kind != BehaviorTreeEventKind.VariableWrite) continue;
                 if (recorded.Tick > vantage) break;
-                if (string.IsNullOrEmpty(recorded.Key)) continue;
+                if (string.IsNullOrEmpty(recorded.VariableName)) continue;
 
                 var key = ScopeKey.For(recorded);
 
@@ -250,10 +250,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             public void Add(in BehaviorTreeEvent recorded, IBehaviorTreeTopology topology, int limit)
             {
-                if (!rows.TryGetValue(recorded.Key, out var row))
+                if (!rows.TryGetValue(recorded.VariableName, out var row))
                 {
-                    row = new RowBuilder(recorded.Key);
-                    rows.Add(recorded.Key, row);
+                    row = new RowBuilder(recorded.VariableName);
+                    rows.Add(recorded.VariableName, row);
                 }
 
                 row.Add(recorded, topology, limit);
@@ -325,7 +325,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                     return recorded.RelatedGuid.ToString();
                 }
 
-                return string.IsNullOrEmpty(recorded.Writer) ? "(unknown)" : recorded.Writer;
+                return string.IsNullOrEmpty(recorded.WriterName) ? "(unknown)" : recorded.WriterName;
             }
         }
     }

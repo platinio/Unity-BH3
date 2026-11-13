@@ -19,6 +19,8 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
     /// </summary>
     public readonly struct GuardTraceNode
     {
+        public const int NoIndex = -1;
+
         public readonly Guid NodeGuid;
 
         /// <summary>What the canvas calls it.</summary>

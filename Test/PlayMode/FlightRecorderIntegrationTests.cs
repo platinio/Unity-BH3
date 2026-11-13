@@ -139,9 +139,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             Assert.Greater(recorder.EventCount, 0, "and it did record something, rather than passing by silence.");
 
-            Assert.Less(recorder.EventCount, BehaviorTreeFlightRecorder.DefaultCapacity / 2,
+            Assert.Less(recorder.EventCount, BehaviorTreeFlightRecorder.DefaultEventCapacity / 2,
                 $"Margin has to stay comfortable: {recorder.EventCount} of "
-                + $"{BehaviorTreeFlightRecorder.DefaultCapacity} after 25 frames. Approaching the capacity "
+                + $"{BehaviorTreeFlightRecorder.DefaultEventCapacity} after 25 frames. Approaching the capacity "
                 + "means the suite is one longer test away from silently mis-counting.");
         }
 

@@ -231,11 +231,9 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var guardGuid = takeover.RelatedGuid;
             var guardName = NameOf(topology, guardGuid);
 
-            // The event carries the preemptor twice: its guid in NewValue for the topology and the canvas,
-            // and its name at the moment of recording in Key — which is what an imported recording with no
-            // tree to ask still has.
-            var preemptorGuid = Guid.TryParse(takeover.NewValue, out var parsed) ? parsed : Guid.Empty;
-            var preemptorName = PreemptorName(topology, preemptorGuid, takeover.Key);
+            // The event carries the preemptor twice: its guid for the topology and the canvas, and its
+            // name at the moment of recording, which is what an imported recording with no tree to ask has.
+            var preemptorName = PreemptorName(topology, takeover.PreemptorGuid, takeover.PreemptorName);
 
             var headline = guardGuid == Guid.Empty
                 ? $"Taken over at tick {takeover.Tick}: '{preemptorName}' took its slot."
@@ -245,9 +243,10 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 BehaviorTreeClauseRole.Cause,
                 $"'{preemptorName}' outranks it and became able to run, so this branch was stopped to make way "
                 + "— nothing under this node turned false.",
-                preemptorGuid == Guid.Empty
+                takeover.PreemptorGuid == Guid.Empty
                     ? BehaviorTreeExplanationLink.ToTick(takeover.Tick, callSiteId, takeover.Sequence)
-                    : BehaviorTreeExplanationLink.ToNode(preemptorGuid, callSiteId, takeover.Tick, takeover.Sequence)));
+                    : BehaviorTreeExplanationLink.ToNode(
+                        takeover.PreemptorGuid, callSiteId, takeover.Tick, takeover.Sequence)));
 
             AddEnteredClause(recording, callSiteId, nodeGuid, clauses, episode, takeover.Tick);
 
@@ -365,7 +364,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             var eval = recording.EventAt(index);
             var ownerName = NameOf(topology, eval.RelatedGuid);
 
-            var headline = $"Guard is {(eval.Flag ? "true" : "false")}, since tick {eval.Tick}.";
+            var headline = $"Guard is {(eval.GuardResult ? "true" : "false")}, since tick {eval.Tick}.";
 
             if (eval.RelatedGuid != Guid.Empty)
             {
@@ -391,7 +390,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             return new BehaviorTreeExplanation(
                 guardGuid, callSiteId, subject, path, atTick,
-                eval.Flag ? BehaviorTreeOutcome.Running : BehaviorTreeOutcome.Skipped, headline, clauses, trace);
+                eval.GuardResult ? BehaviorTreeOutcome.Running : BehaviorTreeOutcome.Skipped, headline, clauses, trace);
         }
 
         private static BehaviorTreeExplanation ExplainNeverRan(
@@ -494,12 +493,12 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             var written = recording.EventAt(write);
             var writer = WriterName(written, topology);
-            var text = $"'{written.Key}' changed {written.OldValue} -> {written.NewValue} at tick {written.Tick} (step {written.Sequence}), written by {writer}.";
+            var text = $"'{written.VariableName}' changed {written.OldValue} -> {written.NewValue} at tick {written.Tick} (step {written.Sequence}), written by {writer}.";
 
             clauses.Add(new BehaviorTreeExplanationClause(
                 resolved ? BehaviorTreeClauseRole.Cause : BehaviorTreeClauseRole.Evidence,
                 text,
-                BehaviorTreeExplanationLink.ToVariable(written.Key, written.CallSiteId, written.Tick, written.Sequence)));
+                BehaviorTreeExplanationLink.ToVariable(written.VariableName, written.CallSiteId, written.Tick, written.Sequence)));
 
             if (!resolved)
             {
@@ -594,7 +593,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                 clauses.Add(new BehaviorTreeExplanationClause(
                     BehaviorTreeClauseRole.Context,
-                    $"Guard '{NameOf(topology, recorded.NodeGuid)}' has been {(recorded.Flag ? "true" : "false")} since tick {recorded.Tick}.",
+                    $"Guard '{NameOf(topology, recorded.NodeGuid)}' has been {(recorded.GuardResult ? "true" : "false")} since tick {recorded.Tick}.",
                     BehaviorTreeExplanationLink.ToGuard(recorded.NodeGuid, callSiteId, recorded.Tick, recorded.Sequence)));
             }
         }
@@ -781,7 +780,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.GuardEval) continue;
                 if (recorded.CallSiteId != callSiteId || recorded.NodeGuid != guardGuid) continue;
-                if (recorded.Flag != value) continue;
+                if (recorded.GuardResult != value) continue;
 
                 return i;
             }
@@ -817,7 +816,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
             {
                 var recorded = recording.EventAt(i);
                 if (recorded.Kind != BehaviorTreeEventKind.VariableWrite) continue;
-                if (keys != null && !Contains(keys, recorded.Key)) continue;
+                if (keys != null && !Contains(keys, recorded.VariableName)) continue;
 
                 return i;
             }
@@ -863,7 +862,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
         private static string WriterName(in BehaviorTreeEvent written, IBehaviorTreeTopology topology)
         {
             if (written.RelatedGuid != Guid.Empty) return NameOf(topology, written.RelatedGuid);
-            if (!string.IsNullOrEmpty(written.Writer)) return written.Writer;
+            if (!string.IsNullOrEmpty(written.WriterName)) return written.WriterName;
 
             return "(unknown writer)";
         }

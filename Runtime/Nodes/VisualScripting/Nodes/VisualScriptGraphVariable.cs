@@ -125,7 +125,7 @@ namespace ArcaneOnyx.BehaviorTree
             {
                 // Announced for the duration of the call so a Set BT Variable unit inside the graph can be
                 // attributed to this node rather than to a bare name. Compiles out with the recorder.
-                Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+                Debugging.BehaviorTreeDevRecorder.PushScriptGraphOwner(this);
 
                 try
                 {
@@ -145,7 +145,7 @@ namespace ArcaneOnyx.BehaviorTree
                 {
                     // A graph that throws must still leave the stack balanced, or every later write in this
                     // agent is attributed to a node that finished long ago.
-                    Debugging.BehaviorTreeRecorder.PopScriptGraphOwner();
+                    Debugging.BehaviorTreeDevRecorder.PopScriptGraphOwner();
                 }
             });
         }

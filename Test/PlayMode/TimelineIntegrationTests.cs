@@ -37,13 +37,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         [SetUp]
         public void RememberCapacity()
         {
-            capacityBeforeTest = BehaviorTreeFlightRecorders.DefaultCapacity;
+            capacityBeforeTest = BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity;
         }
 
         [TearDown]
         public void RestoreCapacity()
         {
-            BehaviorTreeFlightRecorders.DefaultCapacity = capacityBeforeTest;
+            BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity = capacityBeforeTest;
         }
 
         [UnityTest]
@@ -153,7 +153,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             // the other side: a run long enough to lose its own beginning. "The branch started here" and "the
             // buffer starts here" look identical on a timeline, so the count has to survive to the timeline,
             // and nothing may be drawn earlier than the oldest tick still held.
-            BehaviorTreeFlightRecorders.DefaultCapacity = 32;
+            BehaviorTreeFlightRecorderRegistry.DefaultEventCapacity = 32;
 
             var tree = NewTree();
             var graph = tree.graph;

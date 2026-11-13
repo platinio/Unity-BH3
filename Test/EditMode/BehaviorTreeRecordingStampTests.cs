@@ -29,15 +29,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         [TearDown]
         public void TearDown()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         private static BehaviorTreeFlightRecorder Saturated()

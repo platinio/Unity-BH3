@@ -303,7 +303,7 @@ namespace ArcaneOnyx.BehaviorTree
             // Recorded before the write, while the previous value still exists — "what did it change from" is
             // half of what makes a write worth recording. The call compiles out entirely outside the editor
             // and dev builds, arguments included.
-            Debugging.BehaviorTreeRecorder.ExternalVariableWrite(
+            Debugging.BehaviorTreeDevRecorder.ExternalVariableWrite(
                 machine, string.IsNullOrEmpty(sourceName) ? "(external)" : sourceName, key, previous, value);
 
             // Reached only on a real change, which the early-out above established -- so the compare inside

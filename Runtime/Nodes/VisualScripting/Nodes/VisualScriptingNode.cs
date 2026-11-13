@@ -53,10 +53,10 @@ namespace ArcaneOnyx.BehaviorTree
             // Each of these four announces this node for the duration of the graph it runs, so a
             // Set BT Variable unit inside any of them is attributed to a node the canvas can point at
             // rather than to a bare name. The push and pop compile out with the recorder.
-            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+            Debugging.BehaviorTreeDevRecorder.PushScriptGraphOwner(this);
 
             try { OnAwakeGraph.Run(gameObject); }
-            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
+            finally { Debugging.BehaviorTreeDevRecorder.PopScriptGraphOwner(); }
         }
 
         public override void OnEnter()
@@ -64,20 +64,20 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnEnter();
             if (OnEnterGraph == null || !OnEnterGraph.HasGraph) return;
 
-            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+            Debugging.BehaviorTreeDevRecorder.PushScriptGraphOwner(this);
 
             try { OnEnterGraph.Run(gameObject); }
-            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
+            finally { Debugging.BehaviorTreeDevRecorder.PopScriptGraphOwner(); }
         }
 
         public override ExecutionStatus OnUpdate()
         {
             if (OnUpdateGraph == null || !OnUpdateGraph.HasGraph) return ExecutionStatus.Success;
 
-            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+            Debugging.BehaviorTreeDevRecorder.PushScriptGraphOwner(this);
 
             try { return OnUpdateGraph.GetValue<ExecutionStatus>(gameObject); }
-            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
+            finally { Debugging.BehaviorTreeDevRecorder.PopScriptGraphOwner(); }
         }
 
         public override void OnExit()
@@ -85,10 +85,10 @@ namespace ArcaneOnyx.BehaviorTree
             base.OnExit();
             if (OnExitGraph == null || !OnExitGraph.HasGraph) return;
 
-            Debugging.BehaviorTreeRecorder.PushScriptGraphOwner(this);
+            Debugging.BehaviorTreeDevRecorder.PushScriptGraphOwner(this);
 
             try { OnExitGraph.Run(gameObject); }
-            finally { Debugging.BehaviorTreeRecorder.PopScriptGraphOwner(); }
+            finally { Debugging.BehaviorTreeDevRecorder.PopScriptGraphOwner(); }
         }
     }
 }

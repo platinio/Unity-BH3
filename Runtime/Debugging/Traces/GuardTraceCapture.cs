@@ -106,7 +106,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
             try
             {
-                return BehaviorTreeEvent.Describe(output.GetPortValue());
+                return BehaviorTreeEvent.DescribeValue(output.GetPortValue());
             }
             catch (Exception e)
             {
@@ -170,7 +170,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
 
                         if (data != null && data.assignedLastValue)
                         {
-                            value = BehaviorTreeEvent.Describe(data.lastValue);
+                            value = BehaviorTreeEvent.DescribeValue(data.lastValue);
                             evaluated = true;
                         }
                     }

@@ -79,7 +79,7 @@ namespace ArcaneOnyx.BehaviorTree
 
         /// <summary>
         /// This agent's black box, or null outside the editor and dev builds. Assigned through
-        /// <see cref="Debugging.BehaviorTreeRecorder"/>, which is what makes it disappear from a shipped build.
+        /// <see cref="Debugging.BehaviorTreeDevRecorder"/>, which is what makes it disappear from a shipped build.
         /// </summary>
         public Debugging.BehaviorTreeFlightRecorder FlightRecorder { get; private set; }
 
@@ -102,7 +102,7 @@ namespace ArcaneOnyx.BehaviorTree
             // call site can only be registered against a recorder that already exists. Attached once per
             // agent rather than per tree: Switch rebinds the new graph to this same recorder, so a
             // recording spans the swap instead of restarting at it.
-            Debugging.BehaviorTreeRecorder.Attach(this, OriginalMacro != null ? OriginalMacro.name : name);
+            Debugging.BehaviorTreeDevRecorder.Attach(this, OriginalMacro != null ? OriginalMacro.name : name);
 
             // Everything Switch depends on now exists, so it is allowed from here on.
             hasAwoken = true;
@@ -154,7 +154,7 @@ namespace ArcaneOnyx.BehaviorTree
                     node.SetMachine(this);
                 }
 
-                Debugging.BehaviorTreeRecorder.Bind(behaviorTreeGraph, FlightRecorder);
+                Debugging.BehaviorTreeDevRecorder.BindNodesToRecorder(behaviorTreeGraph, FlightRecorder);
 
                 // A fresh tree has not run, so it is not halted. Update stops ticking on a terminal root
                 // status and only this reopens it -- which is what lets a switch revive an agent whose
@@ -237,7 +237,7 @@ namespace ArcaneOnyx.BehaviorTree
             var rootScope = new BehaviorTreeVariableScope(graphAsset.declarations);
             rootScope.SeedDefaults(graphAsset.optionalDeclarations);
 
-            Debugging.BehaviorTreeRecorder.BindRootScope(this, rootScope);
+            Debugging.BehaviorTreeDevRecorder.BindRootScope(this, rootScope);
 
             // Each node opens its own child scope from here; RunBehaviorTreeGraphNode overrides
             // SetVariableScope to do exactly that and recurse.
@@ -322,7 +322,7 @@ namespace ArcaneOnyx.BehaviorTree
 
                 // Opens the tick before the tree runs, so everything the tree does this frame is stamped with
                 // the same tick and ordered within it.
-                Debugging.BehaviorTreeRecorder.BeginTick(this);
+                Debugging.BehaviorTreeDevRecorder.BeginTick(this);
 
                 lastExecutionStatus = behaviorTreeGraph.OnUpdate();
 
@@ -349,7 +349,7 @@ namespace ArcaneOnyx.BehaviorTree
         protected override void OnDestroy()
         {
             // Detached first so the registry is cleaned even if a node's exit throws on the way down.
-            Debugging.BehaviorTreeRecorder.Detach(this);
+            Debugging.BehaviorTreeDevRecorder.Detach(this);
 
             // The same teardown a switch performs -- a dying agent owes its running branch the same OnExit a
             // replaced one does, and keeping a second hand-rolled copy here is how Switch drifted from Awake.

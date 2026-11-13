@@ -56,9 +56,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             public RecordingBuilder Write(
                 string key, string from, string to, BehaviorTreeVariableKind kind, int callSite = 0, Guid? writer = null)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.VariableWrite, tick, sequence++, tick, tick * 0.02f, callSite,
-                    Guid.Empty, writer ?? Writer, ExecutionStatus.None, false, key, from, to, kind));
+                events.Add(BehaviorTreeEvent.VariableWrittenByNode(
+                    NextStamp(callSite), writer ?? Writer, key, kind, from, to));
 
                 return this;
             }
@@ -66,10 +65,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             /// <summary>A write by a sensor outside the tree, which has a name rather than a guid.</summary>
             public RecordingBuilder ExternalWrite(string key, string from, string to, string writer)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.VariableWrite, tick, sequence++, tick, tick * 0.02f,
-                    BehaviorTreeCallSite.RootId, Guid.Empty, Guid.Empty, ExecutionStatus.None, false,
-                    key, from, to, BehaviorTreeVariableKind.Object, writer));
+                events.Add(BehaviorTreeEvent.VariableWrittenOutsideTree(
+                    NextStamp(BehaviorTreeCallSite.RootId), writer, key, BehaviorTreeVariableKind.Object,
+                    from, to));
 
                 return this;
             }
@@ -77,11 +75,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             /// <summary>Anything that is not a write, to prove the watch ignores it.</summary>
             public RecordingBuilder Enter(Guid node, int callSite = 0)
             {
-                events.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.NodeEnter, tick, sequence++, tick, tick * 0.02f, callSite, node));
+                events.Add(BehaviorTreeEvent.NodeEntered(NextStamp(callSite), node));
 
                 return this;
             }
+
+            private BehaviorTreeEventStamp NextStamp(int callSite) =>
+                new(tick, sequence++, tick, tick * 0.02f, callSite);
 
             public BehaviorTreeRecordingSnapshot Build() =>
                 new("Zombie", "ZombieTree", tick, events, callSites, 0, new List<GuardTrace>());
@@ -457,7 +457,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 
@@ -542,7 +542,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 
@@ -583,7 +583,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(agent);
-                BehaviorTreeFlightRecorders.Reset();
+                BehaviorTreeFlightRecorderRegistry.Reset();
             }
         }
 

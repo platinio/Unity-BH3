@@ -30,8 +30,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             recorder = new BehaviorTreeFlightRecorder("TestAgent", "TestTree");
         }
@@ -39,8 +39,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [TearDown]
         public void TearDown()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         #region Fixtures
@@ -95,13 +95,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             for (int i = 0; i < 5; i++)
             {
-                ring.Add(BehaviorTreeEvent.Create(
-                    BehaviorTreeEventKind.NodeEnter, tick: i, sequence: 0, frame: 0, time: 0.0f,
-                    callSiteId: 0, nodeGuid: Guid.Empty));
+                ring.Add(BehaviorTreeEvent.NodeEntered(
+                    new BehaviorTreeEventStamp(tick: i, sequence: 0, frame: 0, time: 0.0f, callSiteId: 0),
+                    Guid.Empty));
             }
 
             Assert.AreEqual(3, ring.Count, "A ring holds its capacity and no more.");
-            Assert.AreEqual(2, ring.Dropped,
+            Assert.AreEqual(2, ring.DroppedEventCount,
                 "A clipped recording has to admit it is clipped, or it gets read as the whole story.");
 
             CollectionAssert.AreEqual(new[] { 2, 3, 4 }, ring.Select(recorded => recorded.Tick).ToArray(),
@@ -113,15 +113,15 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             var ring = new BehaviorTreeEventRing(1);
 
-            ring.Add(BehaviorTreeEvent.Create(BehaviorTreeEventKind.NodeEnter, 0, 0, 0, 0.0f, 0, Guid.Empty));
-            ring.Add(BehaviorTreeEvent.Create(BehaviorTreeEventKind.NodeEnter, 1, 0, 0, 0.0f, 0, Guid.Empty));
+            ring.Add(BehaviorTreeEvent.NodeEntered(new BehaviorTreeEventStamp(0, 0, 0, 0.0f, 0), Guid.Empty));
+            ring.Add(BehaviorTreeEvent.NodeEntered(new BehaviorTreeEventStamp(1, 0, 0, 0.0f, 0), Guid.Empty));
 
-            Assert.AreEqual(1, ring.Dropped);
+            Assert.AreEqual(1, ring.DroppedEventCount);
 
             ring.Clear();
 
             Assert.AreEqual(0, ring.Count);
-            Assert.AreEqual(0, ring.Dropped);
+            Assert.AreEqual(0, ring.DroppedEventCount);
         }
 
         #endregion
@@ -148,8 +148,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             var evaluations = EventsOfKind(BehaviorTreeEventKind.GuardEval);
 
             Assert.AreEqual(2, evaluations.Length, "The transition is the event.");
-            Assert.IsTrue(evaluations[0].Flag);
-            Assert.IsFalse(evaluations[1].Flag);
+            Assert.IsTrue(evaluations[0].GuardResult);
+            Assert.IsFalse(evaluations[1].GuardResult);
         }
 
         [Test]
@@ -336,7 +336,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [Test]
         public void NothingIsRecordedWhileTheGlobalSwitchIsOff()
         {
-            BehaviorTreeFlightRecorders.GloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = false;
 
             var graph = new BehaviorTreeGraph();
             var sequence = GuardedSequence(graph, guardStartsTrue: true, out _, out _);
@@ -359,7 +359,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             Assert.Greater(recorded, 0, "Precondition: something was recorded.");
 
-            recorder.Enabled = false;
+            recorder.IsEnabled = false;
             sequence.OnUpdateInternal();
 
             Assert.AreEqual(recorded, recorder.Events.Count,
@@ -422,10 +422,10 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             var write = EventsOfKind(BehaviorTreeEventKind.VariableWrite).Single();
 
-            Assert.AreEqual("hasTarget", write.Key);
+            Assert.AreEqual("hasTarget", write.VariableName);
             Assert.AreEqual("False", write.OldValue);
             Assert.AreEqual("True", write.NewValue);
-            Assert.AreEqual("TargetingSensor", write.Writer,
+            Assert.AreEqual("TargetingSensor", write.WriterName,
                 "Facts are produced by always-on sensors rather than by branches, so without a name for an "
                 + "out-of-graph writer the commonest 'who changed this?' has no answer at all.");
         }

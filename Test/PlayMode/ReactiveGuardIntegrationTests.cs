@@ -58,8 +58,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
             if (function != null) Object.DestroyImmediate(function);
 
             FunctionEvaluator.InvalidateAll();
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         /// <summary>

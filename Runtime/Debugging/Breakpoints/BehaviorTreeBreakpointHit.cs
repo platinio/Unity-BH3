@@ -69,7 +69,7 @@ namespace ArcaneOnyx.BehaviorTree.Debugging
                 BehaviorTreeEventKind.NodeExit => $"exited {Cause.Status}",
                 BehaviorTreeEventKind.NodeAborted => "was aborted",
                 BehaviorTreeEventKind.NodeSkipped => "was skipped",
-                BehaviorTreeEventKind.GuardEval => $"turned {(Cause.Flag ? "true" : "false")}",
+                BehaviorTreeEventKind.GuardEval => $"turned {(Cause.GuardResult ? "true" : "false")}",
                 BehaviorTreeEventKind.VariableWrite => $"was written {Cause.OldValue} → {Cause.NewValue}",
                 _ => Cause.Kind.ToString(),
             };

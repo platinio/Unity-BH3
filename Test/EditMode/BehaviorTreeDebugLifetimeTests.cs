@@ -23,8 +23,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         [SetUp]
         public void SetUp()
         {
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
 
             recorder = new BehaviorTreeFlightRecorder("Agent", "Tree");
             recorder.BeginTick();
@@ -36,8 +36,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         {
             BehaviorTreeDebugLifetime.Reset();
 
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         /// <summary>Parks the canvas on a moment, the way the timeline does when the playhead moves.</summary>

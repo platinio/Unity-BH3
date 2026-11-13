@@ -20,7 +20,7 @@ namespace ArcaneOnyx.BehaviorTree
             // from" is half of what makes a write worth recording. The call and everything inside its
             // arguments — the read included — are removed by the compiler outside the editor and dev builds,
             // so the extra lookup does not exist in a shipped build.
-            Debugging.BehaviorTreeRecorder.VariableWrite(
+            Debugging.BehaviorTreeDevRecorder.VariableWrite(
                 this, key, variableKind, ReadVariable(key, variableKind), value);
 
             switch (variableKind)
@@ -85,7 +85,7 @@ namespace ArcaneOnyx.BehaviorTree
             // the early return above means this store holds the key, and a scope read checks its own
             // declarations before walking outward -- but that is two facts holding hands, and only one of
             // them is in this method. Reading the object being changed needs neither.
-            Debugging.BehaviorTreeRecorder.VariableWrite(
+            Debugging.BehaviorTreeDevRecorder.VariableWrite(
                 this, key, variableKind, Read(declarations, key), null);
 
             if (variableKind == BehaviorTreeVariableKind.Object)

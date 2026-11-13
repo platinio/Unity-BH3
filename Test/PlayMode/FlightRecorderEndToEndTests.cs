@@ -36,8 +36,8 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         {
             if (agent != null) Object.DestroyImmediate(agent);
 
-            BehaviorTreeFlightRecorders.Reset();
-            BehaviorTreeFlightRecorders.GloballyEnabled = true;
+            BehaviorTreeFlightRecorderRegistry.Reset();
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = true;
         }
 
         [UnityTest]
@@ -49,7 +49,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             // Awake has run: the machine should have built a recorder and handed it to the graph.
             Assert.IsNotNull(machine.FlightRecorder, "The machine builds the recorder in Awake.");
-            Assert.Contains(machine.FlightRecorder, BehaviorTreeFlightRecorders.Active.ToArray(),
+            Assert.Contains(machine.FlightRecorder, BehaviorTreeFlightRecorderRegistry.Active.ToArray(),
                 "and registers it, which is what the multi-agent view lists.");
 
             // Three frames with no target: Idle should be the branch that holds.
@@ -85,14 +85,14 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
 
             // The causal chain, in order.
             var write = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.VariableWrite);
-            Assert.AreEqual("TargetingSensor", write.Writer);
+            Assert.AreEqual("TargetingSensor", write.WriterName);
 
             // The branch that takes over is the one whose guard flipped -- not the one that yielded. Idle is
             // evicted before it is ever asked again, which is the whole point: it no longer has to know that
             // Attack exists, and in a migrated tree it would carry no guard at all.
             var attackGuardFlip = recorder.Events.Last(e =>
                 e.Kind == BehaviorTreeEventKind.GuardEval && e.NodeGuid == attackGuard);
-            Assert.IsTrue(attackGuardFlip.Flag, "Attack's guard is hasTarget, so it goes true.");
+            Assert.IsTrue(attackGuardFlip.GuardResult, "Attack's guard is hasTarget, so it goes true.");
 
             var preemption = recorder.Events.Single(e => e.Kind == BehaviorTreeEventKind.NodeTakenOver);
             Assert.AreEqual(idle, preemption.NodeGuid, "Idle is what lost the slot,");
@@ -100,7 +100,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
                 "and the recording names the guard that bid for it -- which belongs to Attack, not to Idle. "
                 + "That is the inversion the feature exists for: the branch that wants to take over carries "
                 + "the condition, rather than every branch below it carrying the negation.");
-            Assert.IsNotEmpty(preemption.Key ?? string.Empty, "and names the preemptor, so an explanation can say who took over.");
+            Assert.IsNotEmpty(preemption.PreemptorName ?? string.Empty, "and names the preemptor, so an explanation can say who took over.");
 
             Assert.IsEmpty(recorder.Events.Where(e => e.Kind == BehaviorTreeEventKind.NodeAborted).ToArray(),
                 "and nothing self-aborted: Idle was taken over, which reads differently to whoever is asking why.");
@@ -116,7 +116,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheGlobalSwitchStopsARealAgentRecording()
         {
-            BehaviorTreeFlightRecorders.GloballyEnabled = false;
+            BehaviorTreeFlightRecorderRegistry.IsGloballyEnabled = false;
 
             var tree = BuildZombieTree(out _, out _, out _, out _);
             var machine = SpawnAgent(tree, hasTarget: false);
