@@ -1,11 +1,11 @@
+using System;
 using System.Collections.Generic;
 using ArcaneOnyx.GraphCore;
 using ArcaneOnyx.UnityTacticalPositionSelection;
-using ArcaneOnyx.VisualScriptingExtension;
 using NUnit.Framework;
-using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
+using static ArcaneOnyx.BehaviorTree.Tests.TPSNodeTestDoubles;
+using Object = UnityEngine.Object;
 
 namespace ArcaneOnyx.BehaviorTree.Tests
 {
@@ -13,7 +13,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
     public class ScheduledTacticalPositionSelectionTests
     {
         private const int MaxFrames = 100;
-        private const string FlankTargetQueryGuid = "65e32a658e111cf468590c3743d64cbc";
 
         private static readonly Vector3 TargetSixMetresAhead = new(0f, 0f, 6f);
 
@@ -24,13 +23,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
         public void SetUp()
         {
             graph = new BehaviorTreeGraph();
-
-            var function = AssetDatabase.LoadAssetAtPath<FunctionGraphAsset>(AssetDatabase.GUIDToAssetPath(FlankTargetQueryGuid));
-            Assert.IsNotNull(function, "The TPS GeneratorGallery demo's FlankTargetQuery, borrowed as this fixture's query, is missing.");
-
-            item = ScriptableObject.CreateInstance<TacticalPositionSelectionQueryItem>();
-            item.name = "Scheduled node test query";
-            item.Query.SetFunction(function);
+            item = CreateFlankItem();
         }
 
         [TearDown]
@@ -123,13 +116,13 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.OnNodeEnter();
             TickSchedulerUntilNodeFinishes(node);
-            var firstBuild = node.BuiltQuery;
+            var firstBuild = node.BuiltInstance;
 
             node.OnNodeEnter();
             TickSchedulerUntilNodeFinishes(node);
 
             Assert.IsNotNull(firstBuild);
-            Assert.AreSame(firstBuild, node.BuiltQuery, "A second decision by the same agent must reuse its query.");
+            Assert.AreSame(firstBuild, node.BuiltInstance, "A second decision by the same agent must reuse its query.");
         }
 
         [Test]
@@ -139,12 +132,12 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.OnNodeEnter();
             TickSchedulerUntilNodeFinishes(node);
-            var firstBuild = node.BuiltQuery;
+            var firstBuild = node.BuiltInstance;
 
             item.Query.Invalidate();
             node.OnNodeEnter();
 
-            Assert.AreNotSame(firstBuild, node.BuiltQuery, "An edited preset must not keep running the old query.");
+            Assert.AreNotSame(firstBuild, node.BuiltInstance, "An edited preset must not keep running the old query.");
         }
 
         [Test]
@@ -154,12 +147,39 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.OnNodeEnter();
             TickSchedulerUntilNodeFinishes(node);
-            var built = node.BuiltQuery;
+            var built = node.BuiltInstance;
 
             node.OnDestroy();
 
-            Assert.Throws<System.ObjectDisposedException>(() => built.SelectPosition(new StandingAgent(), Vector3.zero),
+            Assert.Throws<ObjectDisposedException>(() => built.Run(new PositionQueryRequest(Vector3.zero)),
                 "The query's evaluators must be back in the pool.");
+        }
+
+        [Test]
+        public void ACodeSource_IsScheduledAndAnswers_LikeAGraphOne()
+        {
+            var nearTheTarget = new Vector3(0f, 0f, 5f);
+            var source = new CountingCodeSource(new Vector3(0f, 0f, -10f), nearTheTarget);
+            var (node, outputs) = ScheduledNode(minimumScore: 0f, source);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Success, TickSchedulerUntilNodeFinishes(node));
+            Assert.AreEqual(nearTheTarget, outputs.SelectedPosition.Read());
+            Assert.AreEqual(1, source.Builds);
+        }
+
+        [Test]
+        public void APresetPickedInlineOnThePort_BeforeItTookSources_StillRuns()
+        {
+            var agent = AddNode<ValueSource<ITacticalAgent>>();
+            agent.Published = new StandingAgent();
+            var node = AddNodeWithInlinePreset<ScheduledTacticalPositionSelection>(graph, item);
+            agent.Value.ValidlyConnectTo(node.Evaluator);
+
+            node.OnNodeEnter();
+
+            Assert.AreEqual(ExecutionStatus.Success, TickSchedulerUntilNodeFinishes(node));
         }
 
         [Test]
@@ -170,19 +190,22 @@ namespace ArcaneOnyx.BehaviorTree.Tests
 
             node.CollectProblems(problems);
 
-            Assert.IsTrue(problems.Exists(problem => problem.Severity == NodeProblemSeverity.Error),
-                "A node with no preset must say so before Play.");
+            Assert.IsTrue(problems.Exists(IsNoQueryProblem), "A node with no preset must say so before Play.");
         }
 
-        private (ScheduledTacticalPositionSelection node, Outputs outputs) ScheduledNode(float minimumScore)
+        private (ScheduledTacticalPositionSelection node, Outputs outputs) ScheduledNode(
+            float minimumScore, IPositionQuerySource source = null)
         {
             var agent = AddNode<ValueSource<ITacticalAgent>>();
             agent.Published = new StandingAgent();
             var target = AddNode<ValueSource<Vector3>>();
             target.Published = TargetSixMetresAhead;
 
+            var query = AddNode<ValueSource<IPositionQuerySource>>();
+            query.Published = source ?? item;
+
             var node = AddNode<ScheduledTacticalPositionSelection>();
-            node.Query.SetDefaultValue(item);
+            query.Value.ValidlyConnectTo(node.Query);
             node.MinimumScore.SetDefaultValue(minimumScore);
             agent.Value.ValidlyConnectTo(node.Evaluator);
             target.Value.ValidlyConnectTo(node.TargetPosition);
@@ -195,13 +218,7 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return (node, new Outputs(hasPosition, selectedPosition));
         }
 
-        // Ports only exist once the node is in a graph: Nodes.Add fires AfterAdd -> Define().
-        private T AddNode<T>() where T : BehaviorTreeNode, new()
-        {
-            var node = new T { Position = new Rect(0f, 0f, 150f, 100f) };
-            graph.Nodes.Add(node);
-            return node;
-        }
+        private T AddNode<T>() where T : BehaviorTreeNode, new() => TPSNodeTestDoubles.AddNode<T>(graph);
 
         private static ExecutionStatus TickSchedulerUntilNodeFinishes(ScheduledTacticalPositionSelection node)
         {
@@ -217,6 +234,9 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             return ExecutionStatus.Running;
         }
 
+        private static bool IsNoQueryProblem(NodeProblem problem)
+            => problem.Severity == NodeProblemSeverity.Error && problem.Summary.Contains("No query connected");
+
         private readonly struct Outputs
         {
             public readonly ValueReader<bool> HasPosition;
@@ -226,47 +246,6 @@ namespace ArcaneOnyx.BehaviorTree.Tests
             {
                 HasPosition = hasPosition;
                 SelectedPosition = selectedPosition;
-            }
-        }
-
-        private sealed class StandingAgent : ITacticalAgent
-        {
-            public Vector3 Position => Vector3.zero;
-
-            public Vector3 Forward => Vector3.forward;
-        }
-
-        private sealed class ValueSource<T> : BehaviorTreeNode
-        {
-            public T Published { get; set; }
-
-            [DoNotSerialize]
-            public ValueOutput Value { get; private set; }
-
-            public override string NodeName => $"Test {typeof(T).Name} Source";
-
-            protected override void Definition()
-            {
-                base.Definition();
-
-                Value = ValueOutput<T>(nameof(Value), () => Published);
-            }
-        }
-
-        private sealed class ValueReader<T> : BehaviorTreeNode
-        {
-            [DoNotSerialize]
-            public ValueInput Input { get; private set; }
-
-            public override string NodeName => $"Test {typeof(T).Name} Reader";
-
-            public T Read() => Input.GetValue<T>();
-
-            protected override void Definition()
-            {
-                base.Definition();
-
-                Input = ValueInput<T>(nameof(Input));
             }
         }
     }
